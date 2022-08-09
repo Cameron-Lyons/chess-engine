@@ -1,9 +1,16 @@
 #include "ChessPiece.h"
 #include <string>
 
+
 struct PieceMoveSet {
     int moves[64];
 };
+
+
+int Position(int rank, int file){
+    return rank * 8 + file;
+};
+
 
 struct MoveArrays {
     PieceMoveSet blackPawnMoves;
@@ -27,6 +34,7 @@ struct MoveArrays {
     PieceMoveSet queenMoves8;
     PieceMoveSet kingMoves;
 };
+
 
 static void SetMovesBlackPawn(){
     for (int i = 8; i < 55; i++) {
@@ -57,6 +65,7 @@ static void SetMovesBlackPawn(){
     }
 }
 
+
 static void SetMovesWhitePawn(){
     for (int i = 8; i <= 55; i++) {
         PieceMoveSet moveset;
@@ -85,6 +94,7 @@ static void SetMovesWhitePawn(){
         MoveArrays.whitePawnMoves[i] = moveset;
     }
 }
+
 
 static void SetMovesKnight(){
     for (int y=0; y<8; y++){
@@ -128,12 +138,17 @@ static void SetMovesKnight(){
     }
 }
 
+
 static void SetMovesBishop(){
     for (int y=0; y<8; y++){
         for (int x=0; x<8; x++){
             int i = y+(8*x);
             PieceMoveSet moveset;
-            if (y < 7 && x < 7){
+            int rank = y;
+            int file = x;
+            while (rank < 7 && file < 7){
+                rank++;
+                file++;
                 moveset.moves[i] = i+9;
                 MoveArrays.bishopMoves1.moves[i]++;
             }
@@ -153,6 +168,36 @@ static void SetMovesBishop(){
             MoveArrays.bishopMoves2[i] = moveset;
             MoveArrays.bishopMoves3[i] = moveset;
             MoveArrays.bishopMoves4[i] = moveset;
+        }
+    }
+}
+
+
+static void SetMovesRook(){
+    for (int y=0; y<8; y++){
+        for (int x=0; x<8; x++){
+            int i = y+(8*x);
+            PieceMoveSet moveset;
+            if (y < 7){
+                moveset.moves[i] = i+8;
+                MoveArrays.rookMoves1.moves[i]++;
+            }
+            if (y > 0){
+                moveset.moves[i] = i-8;
+                MoveArrays.rookMoves2.moves[i]++;
+            }
+            if (x < 7){
+                moveset.moves[i] = i+1;
+                MoveArrays.rookMoves3.moves[i]++;
+            }
+            if (x > 0){
+                moveset.moves[i] = i-1;
+                MoveArrays.rookMoves4.moves[i]++;
+            }
+            MoveArrays.rookMoves1[i] = moveset;
+            MoveArrays.rookMoves2[i] = moveset;
+            MoveArrays.rookMoves3[i] = moveset;
+            MoveArrays.rookMoves4[i] = moveset;
         }
     }
 }
