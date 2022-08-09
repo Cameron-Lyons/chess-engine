@@ -166,3 +166,30 @@ void GenValidMovesKingCastle(Board board, Piece king){
 }
 
 
+void GenValidMoves(Board board){
+    board.whiteChecked = false;
+    board.blackChecked = false;
+
+    static bool BlackAttackBoard[64];
+    static bool WhiteAttackBoard[64];
+
+    for (int x=0; x<64; x++){
+        Square square = board.squares[x];
+        if square.Piece.PieceType == NONE{
+            continue;
+        }
+        square.Piece.ValidMoves.clear();
+        switch (square.Piece.PieceType)
+        {
+        case PAWN:
+            if (sqr.Piece.PieceColor == WHITE){
+                CheckValidMovesPawn(MoveArrays.whitePawnMoves[x].moves, square.Piece, x, board, MoveArrays.whitePawnTotalMove);
+            }
+            else{
+                CheckValidMovesPawn(MoveArrays.blackPawnMoves[x].moves, square.Piece, x, board, MoveArrays.blackPawnTotalMove);
+            }
+            break;
+        case KNIGHT:
+        }
+    }
+}
