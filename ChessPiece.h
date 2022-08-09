@@ -1,4 +1,6 @@
 #include <string>
+#include <vector>
+
 
 enum ChessPieceColor {
     WHITE,
@@ -26,7 +28,8 @@ class Piece {
         bool selected;
         bool moved;
         std::string possibleMoves [64];
-
+        std::vector<int> ValidMoves;
+    
     static short getPieceValue(ChessPieceType pieceType){
         switch(PieceType) {
             case PAWN:

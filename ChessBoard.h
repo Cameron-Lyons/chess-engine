@@ -6,17 +6,18 @@ struct Square {
 };
 
 class Board{
-    Square squares[64];
-    bool whiteChecked;
-    bool blackChecked;
-    bool whiteCheckmated;
-    bool blackCheckmated;
-    bool stalemate;
-    bool whiteCanCastle;
-    bool blackCanCastle;
-    bool isEndGame;
-    ChessPieceColor turn;
-    int moveCount;
+    public:
+        Square squares[64];
+        bool whiteChecked;
+        bool blackChecked;
+        bool whiteCheckmated;
+        bool blackCheckmated;
+        bool stalemate;
+        bool whiteCanCastle;
+        bool blackCanCastle;
+        bool isEndGame;
+        ChessPieceColor turn;
+        int moveCount;
 
     Board(){
         for(int i = 0; i < 64; i++){
