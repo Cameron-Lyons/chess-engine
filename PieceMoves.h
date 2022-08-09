@@ -305,3 +305,46 @@ static void SetMovesQueen(){
 }
 
 
+static void SetMovesKing(){
+    for(int y=0; y<8; y++){
+        for(int x=0; x<8; x++){
+            int i = y+(8*x);
+            PieceMoveSet moveset;
+            int rank = y;
+            int file = x;
+            if (rank < 7){
+                moveset.moves[i] = Position(rank+1, file);
+                MoveArrays.kingMoves1.moves[i]++;
+            }
+            if (rank > 0){
+                moveset.moves[i] = Position(rank-1, file);
+                MoveArrays.kingMoves2.moves[i]++;
+            }
+            if (file < 7){
+                moveset.moves[i] = Position(rank, file+1);
+                MoveArrays.kingMoves3.moves[i]++;
+            }
+            if (file > 0){
+                moveset.moves[i] = Position(rank, file-1);
+                MoveArrays.kingMoves4.moves[i]++;
+            }
+            if (rank < 7 && file < 7){
+                moveset.moves[i] = Position(rank+1, file+1);
+                MoveArrays.kingMoves5.moves[i]++;
+            }
+            if (rank < 7 && file > 0){
+                moveset.moves[i] = Position(rank+1, file-1);
+                MoveArrays.kingMoves6.moves[i]++;
+            }
+            if (rank > 0 && file < 7){
+                moveset.moves[i] = Position(rank-1, file+1);
+                MoveArrays.kingMoves7.moves[i]++;
+            }
+            if (rank > 0 && file > 0){
+                moveset.moves[i] = Position(rank-1, file-1);
+                MoveArrays.kingMoves8.moves[i]++;
+            }
+            MoveArrays.kingMoves[i] = moveset;
+        }
+    }
+}
