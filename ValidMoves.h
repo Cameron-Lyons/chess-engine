@@ -1,11 +1,15 @@
 #include "PieceMoves.h"
 #include "ChessBoard.h"
+#include <vector>
+
 
 static bool BlackAttackBoard[64];
 static bool WhiteAttackBoard[64];
 
+
 static int BlackKingPosition;
 static int WhiteKingPosition;
+
 
 static bool AnalyzeMove(Board board, int dest, Piece piece){
     // pawns cannot attack where they move
@@ -32,4 +36,31 @@ static bool AnalyzeMove(Board board, int dest, Piece piece){
             piece.ValidMoves.push_back(dest);
         }
     }
+    else {
+        return false;
+    }
+    attackedPiece.DefendedValue += piece.PieceValue;
 }
+
+
+void CheckValidMovesPawn(std::vector<int> moves, Piece piece, int start, Board board, int count){
+    for (int i=0; i<count; i++){
+        int dest = moves[i];
+        if (dest%8 != start%8){
+            if (piece.PieceColor == WHITE){
+                WhiteAttackBoard[dest] = true;
+            }
+            else {
+                BlackAttackBoard[dest] = true;
+            }
+        }
+        else if (board.squares[dest].Piece.PieceType != NONE){
+            return;
+        }
+        else{
+            piece.ValidMoves.push_back(dest);
+        }
+    }
+}
+
+
