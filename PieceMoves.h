@@ -3,7 +3,7 @@
 
 
 struct PieceMoveSet {
-    int moves[64];
+    std::vector<int> moves;
 };
 
 
@@ -44,24 +44,24 @@ static void SetMovesBlackPawn(){
 
         //attacking moves
         if ((y < 7) && (x < 7)) {  
-            moveset.moves[i] = i+8+1;
+            moveset.moves.push_back(i+8+1);
             MoveArrays.blackPawnMoves.moves[i]++;
         }
         if ((y < 7) && (x > 0)) {
-            moveset.moves[i] = i+8-1;
+            moveset.moves.push_back(i+8-1);
             MoveArrays.blackPawnMoves.moves[i]++;
         }
 
         //normal moves
-        moveset.moves[i] = i+8;
+        moveset.moves.push_back(i+8);
         MoveArrays.blackPawnMoves.moves[i]++;
 
-        // start move 2
+        // start can move 2 forward
         if (y == 6) {
-            moveset.moves[i] = i+16;
+            moveset.moves.push_back(i+16);
             MoveArrays.blackPawnMoves.moves[i]++;
         }
-        MoveArrays.blackPawnMoves.moves[i] = moveset;
+        MoveArrays.blackPawnMoves.moves.push_back(moveset;
     }
 }
 
@@ -74,24 +74,24 @@ static void SetMovesWhitePawn(){
 
         //attacking moves
         if ((y > 0) && (x < 7)) {  
-            moveset.moves[i] = i-8+1;
+            moveset.moves.push_back(i-8+1);
             MoveArrays.whitePawnMoves.moves[i]++;
         }
         if ((y > 0) && (x > 0)) {
-            moveset.moves[i] = i-8-1;
+            moveset.moves.push_back(i-8-1);
             MoveArrays.whitePawnMoves.moves[i]++;
         }
 
         //normal moves
-        moveset.moves[i] = i-8;
+        moveset.moves.push_back(i-8);
         MoveArrays.whitePawnMoves.moves[i]++;
 
         // start move 2
         if (y == 1) {
-            moveset.moves[i] = i-16;
+            moveset.moves.push_back(i-16);
             MoveArrays.whitePawnMoves.moves[i]++;
         }
-        MoveArrays.whitePawnMoves[i] = moveset;
+        MoveArrays.whitePawnMoves.push_back(moveset;
     }
 }
 
@@ -102,38 +102,38 @@ static void SetMovesKnight(){
             int i = y+(8*x);
             PieceMoveSet moveset;
             if (y < 6 && x < 0){
-                moveset.moves[i] = i+17;
+                moveset.moves.push_back(i+17);
                 MoveArrays.knightMoves.moves[i]++;
             }
             if (y > 1 && x < 7){
-                moveset.moves[i] = i+15;
+                moveset.moves.push_back(i+15);
                 MoveArrays.knightMoves.moves[i]++;
             }
             if (y < 1 && x > 0){
-                moveset.moves[i] = i-15; 
+                moveset.moves.push_back(i-15); 
                 MoveArrays.knightMoves.moves[i]++;
             }
             if (y < 6 && x < 7){
-                moveset.moves[i] = i+6;
+                moveset.moves.push_back(i+6;
                 MoveArrays.knightMoves.moves[i]++;
             }
             if (y > 0 && x < 6){
-                moveset.moves[i] = i+10;
+                moveset.moves.push_back(i+10);
                 MoveArrays.knightMoves.moves[i]++;
             }
             if (y < 7 && x > 1){
-                moveset.moves[i] = i-6;
+                moveset.moves.push_back(i-6);
                 MoveArrays.knightMoves.moves[i]++;
             }
             if (y > 0 && x > 1){
-                moveset.moves[i] = i-10;
+                moveset.moves.push_back(i-10);
                 MoveArrays.knightMoves.moves[i]++;
             }
             if ( y < 7 && x < 6){
-                moveset.moves[i] = i+17;
+                moveset.moves.push_back(i+17);
                 MoveArrays.knightMoves.moves[i]++;
             }
-            MoveArrays.knightMoves[i] = moveset;
+            MoveArrays.knightMoves.push_back(moveset;
         }
     }
 }
@@ -150,7 +150,7 @@ static void SetMovesBishop(){
                 rank++;
                 file++;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.bishopMoves1.moves[i]++;
             }
             int rank = y;
@@ -159,7 +159,7 @@ static void SetMovesBishop(){
                 rank++;
                 file--;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.bishopMoves2.moves[i]++;
             }
             int rank = y;
@@ -168,7 +168,7 @@ static void SetMovesBishop(){
                 rank--;
                 file++;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.bishopMoves3.moves[i]++;
             }
             int rank = y;
@@ -177,7 +177,7 @@ static void SetMovesBishop(){
                 rank--;
                 file--;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.bishopMoves4.moves[i]++;
             }
         };
@@ -195,7 +195,7 @@ static void SetMovesRook(){
             while (rank < 7){
                 rank++;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.rookMoves1.moves[i]++;
             }
             int rank = y;
@@ -203,7 +203,7 @@ static void SetMovesRook(){
             while (rank > 0){
                 rank--;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.rookMoves2.moves[i]++;
             }
             int rank = y;
@@ -211,7 +211,7 @@ static void SetMovesRook(){
             while (file < 7){
                 file++;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.rookMoves3.moves[i]++;
             }
             int rank = y;
@@ -219,7 +219,7 @@ static void SetMovesRook(){
             while (file > 0){
                 file--;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.rookMoves4.moves[i]++;
             }
         }
@@ -237,7 +237,7 @@ static void SetMovesQueen(){
             while(rank < 7){
                 rank++;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.queenMoves1.moves[i]++;
             }
             int rank = y;
@@ -245,7 +245,7 @@ static void SetMovesQueen(){
             while(rank > 0){
                 rank--;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.queenMoves2.moves[i]++;
             }
             int rank = y;
@@ -253,7 +253,7 @@ static void SetMovesQueen(){
             while(file < 7){
                 file++;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.queenMoves3.moves[i]++;
             }
             int rank = y;
@@ -261,7 +261,7 @@ static void SetMovesQueen(){
             while(file > 0){
                 file--;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.queenMoves4.moves[i]++;
             }
             int rank = y;
@@ -270,7 +270,7 @@ static void SetMovesQueen(){
                 rank++;
                 file++;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.queenMoves5.moves[i]++;
             }
             int rank = y;
@@ -279,7 +279,7 @@ static void SetMovesQueen(){
                 rank++;
                 file--;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.queenMoves6.moves[i]++;
             }
             int rank = y;
@@ -288,7 +288,7 @@ static void SetMovesQueen(){
                 rank--;
                 file++;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.queenMoves7.moves[i]++;
             }
             int rank = y;
@@ -297,7 +297,7 @@ static void SetMovesQueen(){
                 rank--;
                 file--;
                 int move = Position(rank, file);
-                moveset.moves[i] = move;
+                moveset.moves.push_back(move);
                 MoveArrays.queenMoves8.moves[i]++;
             }
         }
@@ -313,38 +313,40 @@ static void SetMovesKing(){
             int rank = y;
             int file = x;
             if (rank < 7){
-                moveset.moves[i] = Position(rank+1, file);
+                rank++;
+                int move = Position(rank, file);
+                moveset.moves.push_back(move);
                 MoveArrays.kingMoves1.moves[i]++;
             }
             if (rank > 0){
-                moveset.moves[i] = Position(rank-1, file);
+                moveset.moves.push_back(Position(rank-1, file));
                 MoveArrays.kingMoves2.moves[i]++;
             }
             if (file < 7){
-                moveset.moves[i] = Position(rank, file+1);
+                moveset.moves.push_back(Position(rank, file+1));
                 MoveArrays.kingMoves3.moves[i]++;
             }
             if (file > 0){
-                moveset.moves[i] = Position(rank, file-1);
+                moveset.moves.push_back(Position(rank, file-1));
                 MoveArrays.kingMoves4.moves[i]++;
             }
             if (rank < 7 && file < 7){
-                moveset.moves[i] = Position(rank+1, file+1);
+                moveset.moves.push_back(Position(rank+1, file+1));
                 MoveArrays.kingMoves5.moves[i]++;
             }
             if (rank < 7 && file > 0){
-                moveset.moves[i] = Position(rank+1, file-1);
+                moveset.moves.push_back(Position(rank+1, file-1));
                 MoveArrays.kingMoves6.moves[i]++;
             }
             if (rank > 0 && file < 7){
-                moveset.moves[i] = Position(rank-1, file+1);
+                moveset.moves.push_back(Position(rank-1, file+1));
                 MoveArrays.kingMoves7.moves[i]++;
             }
             if (rank > 0 && file > 0){
-                moveset.moves[i] = Position(rank-1, file-1);
+                moveset.moves.push_back(Position(rank-1, file-1));
                 MoveArrays.kingMoves8.moves[i]++;
             }
-            MoveArrays.kingMoves[i] = moveset;
+            MoveArrays.kingMoves.push_back(moveset;
         }
     }
 }
