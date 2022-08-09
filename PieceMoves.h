@@ -127,3 +127,32 @@ static void SetMovesKnight(){
         }
     }
 }
+
+static void SetMovesBishop(){
+    for (int y=0; y<8; y++){
+        for (int x=0; x<8; x++){
+            int i = y+(8*x);
+            PieceMoveSet moveset;
+            if (y < 7 && x < 7){
+                moveset.moves[i] = i+9;
+                MoveArrays.bishopMoves1.moves[i]++;
+            }
+            if (y > 0 && x < 7){
+                moveset.moves[i] = i+7;
+                MoveArrays.bishopMoves2.moves[i]++;
+            }
+            if (y < 7 && x > 0){
+                moveset.moves[i] = i-7;
+                MoveArrays.bishopMoves3.moves[i]++;
+            }
+            if (y > 0 && x > 0){
+                moveset.moves[i] = i-9;
+                MoveArrays.bishopMoves4.moves[i]++;
+            }
+            MoveArrays.bishopMoves1[i] = moveset;
+            MoveArrays.bishopMoves2[i] = moveset;
+            MoveArrays.bishopMoves3[i] = moveset;
+            MoveArrays.bishopMoves4[i] = moveset;
+        }
+    }
+}
