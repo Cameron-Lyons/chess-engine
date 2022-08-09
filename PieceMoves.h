@@ -2,7 +2,7 @@
 #include <string>
 
 struct PieceMoveSet {
-    const std::string moves[64];
+    int moves[64];
 };
 
 struct MoveArrays {
@@ -53,6 +53,7 @@ static void SetMovesBlackPawn(){
             moveset.moves[i] = i+16;
             MoveArrays.blackPawnMoves.moves[i]++;
         }
+        MoveArrays.blackPawnMoves.moves[i] = moveset;
     }
 }
 
@@ -80,6 +81,49 @@ static void SetMovesWhitePawn(){
         if (y == 1) {
             moveset.moves[i] = i-16;
             MoveArrays.whitePawnMoves.moves[i]++;
+        }
+        MoveArrays.whitePawnMoves[i] = moveset;
+    }
+}
+
+static void SetMovesKnight(){
+    for (int y=0; y<8; y++){
+        for (int x=0; x<8; x++){
+            int i = y+(8*x);
+            PieceMoveSet moveset;
+            if (y < 6 && x < 0){
+                moveset.moves[i] = i+17;
+                MoveArrays.knightMoves.moves[i]++;
+            }
+            if (y > 1 && x < 7){
+                moveset.moves[i] = i+15;
+                MoveArrays.knightMoves.moves[i]++;
+            }
+            if (y < 1 && x > 0){
+                moveset.moves[i] = i-15; 
+                MoveArrays.knightMoves.moves[i]++;
+            }
+            if (y < 6 && x < 7){
+                moveset.moves[i] = i+6;
+                MoveArrays.knightMoves.moves[i]++;
+            }
+            if (y > 0 && x < 6){
+                moveset.moves[i] = i+10;
+                MoveArrays.knightMoves.moves[i]++;
+            }
+            if (y < 7 && x > 1){
+                moveset.moves[i] = i-6;
+                MoveArrays.knightMoves.moves[i]++;
+            }
+            if (y > 0 && x > 1){
+                moveset.moves[i] = i-10;
+                MoveArrays.knightMoves.moves[i]++;
+            }
+            if ( y < 7 && x < 6){
+                moveset.moves[i] = i+17;
+                MoveArrays.knightMoves.moves[i]++;
+            }
+            MoveArrays.knightMoves[i] = moveset;
         }
     }
 }
