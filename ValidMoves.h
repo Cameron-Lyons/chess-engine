@@ -19,4 +19,17 @@ static bool AnalyzeMove(Board board, int dest, Piece piece){
         piece.ValidMoves.push_back(dest);
         return true;
     }
+
+    Piece attackedPiece = board.squares[dest].Piece;
+    if (attackedPiece.PieceColor != piece.PieceColor) {
+        if (attackedPiece.PieceType == KING) {
+            if (piece.PieceColor == WHITE) {
+                board.whiteChecked = true;
+            } else {
+                board.blackChecked = true;
+            }
+        } else {
+            piece.ValidMoves.push_back(dest);
+        }
+    }
 }
