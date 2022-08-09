@@ -64,3 +64,40 @@ void CheckValidMovesPawn(std::vector<int> moves, Piece piece, int start, Board b
 }
 
 
+void AnalyzeMovePawn(Board board, int dest, Piece piece){
+    Piece attackedPiece = board.squares[dest].Piece;
+    if (attackedPiece.PieceType == NONE){
+        return;
+    }
+    if (piece.PieceColor == WHITE){
+        WhiteAttackBoard[dest] = true;
+        if (attackedPiece.PieceColor == piece.PieceColor){
+            attackedPiece.DefendedValue += piece.PieceValue;
+            return;
+        }
+        else {
+            attackedPiece.AttackedValue += piece.PieceValue;
+        }
+        if (attackedPiece.PieceType == KING){
+            board.blackChecked = true;
+        }
+        else{
+            piece.ValidMoves.push_back(dest);
+        }
+
+    }
+    else {
+        BlackAttackBoard[dest] = true;
+        if (attackedPiece.PieceColor == piece.PieceColor){
+            return;
+        }
+        if (attackedPiece.PieceType == KING){
+            board.whiteChecked = true;
+        }
+        else{
+            piece.ValidMoves.push_back(dest);
+        }
+    }
+    return;
+}
+
