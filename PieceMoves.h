@@ -1,9 +1,11 @@
 #include "ChessPiece.h"
 #include <string>
+#include <vector>
 
 
 struct PieceMoveSet {
     std::vector<int> moves;
+    std::vector<PieceMoveSet> moveset;
 };
 
 
@@ -12,28 +14,47 @@ int Position(int rank, int file){
 };
 
 
-struct MoveArrays {
+struct {
     PieceMoveSet blackPawnMoves;
+    int blackPawnTotalMoves[64] = {};
     PieceMoveSet whitePawnMoves;
+    int whitePawnTotalMove[64] = {};
     PieceMoveSet knightMoves;
+    int knightTotalMove[64] = {};
     PieceMoveSet bishopMoves1;
+    int bishopTotalMove1[64] = {};
     PieceMoveSet bishopMoves2;
+    int bishopTotalMove2[64] = {};
     PieceMoveSet bishopMoves3;
+    int bishopTotalMove3[64] = {};
     PieceMoveSet bishopMoves4;
+    int bishopTotalMove4[64] = {};
     PieceMoveSet rookMoves1;
+    int rookTotalMove1[64] = {};
     PieceMoveSet rookMoves2;
+    int rookTotalMove2[64] = {};
     PieceMoveSet rookMoves3;
+    int rookTotalMove3[64] = {};
     PieceMoveSet rookMoves4;
+    int rookTotalMove4[64] = {};
     PieceMoveSet queenMoves1;
+    int queenTotalMove1[64] = {};
     PieceMoveSet queenMoves2;
+    int queenTotalMove2[64] = {};
     PieceMoveSet queenMoves3;
+    int queenTotalMove3[64] = {};
     PieceMoveSet queenMoves4;
+    int queenTotalMove4[64] = {};
     PieceMoveSet queenMoves5;
+    int queenTotalMove5[64] = {};
     PieceMoveSet queenMoves6;
+    int queenTotalMove6[64] = {};
     PieceMoveSet queenMoves7;
+    int queenTotalMove7[64] = {};
     PieceMoveSet queenMoves8;
+    int queenTotalMove8[64] = {};
     PieceMoveSet kingMoves;
-};
+} MoveArrays;
 
 
 static void SetMovesBlackPawn(){
@@ -45,11 +66,11 @@ static void SetMovesBlackPawn(){
         //attacking moves
         if ((y < 7) && (x < 7)) {  
             moveset.moves.push_back(i+8+1);
-            MoveArrays.blackPawnMoves.moves[i]++;
+            MoveArrays.blackPawnTotalMoves[i]++;
         }
         if ((y < 7) && (x > 0)) {
             moveset.moves.push_back(i+8-1);
-            MoveArrays.blackPawnMoves.moves[i]++;
+            MoveArrays.blackPawnTotalMoves[i]++;
         }
 
         //normal moves
@@ -61,7 +82,7 @@ static void SetMovesBlackPawn(){
             moveset.moves.push_back(i+16);
             MoveArrays.blackPawnMoves.moves[i]++;
         }
-        MoveArrays.blackPawnMoves.moves.push_back(moveset;
+        MoveArrays.blackPawnMoves.moveset[i] = moveset;
     }
 }
 
@@ -91,7 +112,7 @@ static void SetMovesWhitePawn(){
             moveset.moves.push_back(i-16);
             MoveArrays.whitePawnMoves.moves[i]++;
         }
-        MoveArrays.whitePawnMoves.push_back(moveset;
+        MoveArrays.whitePawnMoves.moveset[i] = moveset;
     }
 }
 
@@ -114,7 +135,7 @@ static void SetMovesKnight(){
                 MoveArrays.knightMoves.moves[i]++;
             }
             if (y < 6 && x < 7){
-                moveset.moves.push_back(i+6;
+                moveset.moves.push_back(i+6);
                 MoveArrays.knightMoves.moves[i]++;
             }
             if (y > 0 && x < 6){
@@ -133,7 +154,7 @@ static void SetMovesKnight(){
                 moveset.moves.push_back(i+17);
                 MoveArrays.knightMoves.moves[i]++;
             }
-            MoveArrays.knightMoves.push_back(moveset;
+            MoveArrays.knightMoves.moveset[i] = moveset;
         }
     }
 }
@@ -153,6 +174,9 @@ static void SetMovesBishop(){
                 moveset.moves.push_back(move);
                 MoveArrays.bishopMoves1.moves[i]++;
             }
+            MoveArrays.bishopMoves1.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while (rank < 7 && file > 0){
@@ -162,6 +186,9 @@ static void SetMovesBishop(){
                 moveset.moves.push_back(move);
                 MoveArrays.bishopMoves2.moves[i]++;
             }
+            MoveArrays.bishopMoves2.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while (rank > 0 && file > 7){
@@ -171,6 +198,9 @@ static void SetMovesBishop(){
                 moveset.moves.push_back(move);
                 MoveArrays.bishopMoves3.moves[i]++;
             }
+            MoveArrays.bishopMoves3.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while (rank > 0 && file > 0){
@@ -180,6 +210,7 @@ static void SetMovesBishop(){
                 moveset.moves.push_back(move);
                 MoveArrays.bishopMoves4.moves[i]++;
             }
+            MoveArrays.bishopMoves4.moveset[i] = moveset;
         };
     }
 }
@@ -198,6 +229,9 @@ static void SetMovesRook(){
                 moveset.moves.push_back(move);
                 MoveArrays.rookMoves1.moves[i]++;
             }
+            MoveArrays.rookMoves1.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while (rank > 0){
@@ -206,6 +240,9 @@ static void SetMovesRook(){
                 moveset.moves.push_back(move);
                 MoveArrays.rookMoves2.moves[i]++;
             }
+            MoveArrays.rookMoves2.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while (file < 7){
@@ -214,6 +251,9 @@ static void SetMovesRook(){
                 moveset.moves.push_back(move);
                 MoveArrays.rookMoves3.moves[i]++;
             }
+            MoveArrays.rookMoves3.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while (file > 0){
@@ -222,6 +262,7 @@ static void SetMovesRook(){
                 moveset.moves.push_back(move);
                 MoveArrays.rookMoves4.moves[i]++;
             }
+            MoveArrays.rookMoves4.moveset[i] = moveset;
         }
     }
 }
@@ -240,6 +281,9 @@ static void SetMovesQueen(){
                 moveset.moves.push_back(move);
                 MoveArrays.queenMoves1.moves[i]++;
             }
+            MoveArrays.queenMoves1.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while(rank > 0){
@@ -248,6 +292,9 @@ static void SetMovesQueen(){
                 moveset.moves.push_back(move);
                 MoveArrays.queenMoves2.moves[i]++;
             }
+            MoveArrays.queenMoves2.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while(file < 7){
@@ -256,6 +303,9 @@ static void SetMovesQueen(){
                 moveset.moves.push_back(move);
                 MoveArrays.queenMoves3.moves[i]++;
             }
+            MoveArrays.queenMoves3.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while(file > 0){
@@ -264,6 +314,9 @@ static void SetMovesQueen(){
                 moveset.moves.push_back(move);
                 MoveArrays.queenMoves4.moves[i]++;
             }
+            MoveArrays.queenMoves4.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while(rank < 7 && file < 7){
@@ -273,6 +326,9 @@ static void SetMovesQueen(){
                 moveset.moves.push_back(move);
                 MoveArrays.queenMoves5.moves[i]++;
             }
+            MoveArrays.queenMoves5.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while(rank < 7 && file > 0){
@@ -282,6 +338,9 @@ static void SetMovesQueen(){
                 moveset.moves.push_back(move);
                 MoveArrays.queenMoves6.moves[i]++;
             }
+            MoveArrays.queenMoves6.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while(rank > 0 && file > 7){
@@ -291,6 +350,9 @@ static void SetMovesQueen(){
                 moveset.moves.push_back(move);
                 MoveArrays.queenMoves7.moves[i]++;
             }
+            MoveArrays.queenMoves7.moveset[i] = moveset;
+
+            PieceMoveSet moveset;
             int rank = y;
             int file = x;
             while(rank > 0 && file > 0){
@@ -300,6 +362,7 @@ static void SetMovesQueen(){
                 moveset.moves.push_back(move);
                 MoveArrays.queenMoves8.moves[i]++;
             }
+            MoveArrays.queenMoves8.moveset[i] = moveset;
         }
     }
 }
@@ -316,37 +379,37 @@ static void SetMovesKing(){
                 rank++;
                 int move = Position(rank, file);
                 moveset.moves.push_back(move);
-                MoveArrays.kingMoves1.moves[i]++;
+                MoveArrays.kingMoves.moves[i]++;
             }
             if (rank > 0){
                 moveset.moves.push_back(Position(rank-1, file));
-                MoveArrays.kingMoves2.moves[i]++;
+                MoveArrays.kingMoves.moves[i]++;
             }
             if (file < 7){
                 moveset.moves.push_back(Position(rank, file+1));
-                MoveArrays.kingMoves3.moves[i]++;
+                MoveArrays.kingMoves.moves[i]++;
             }
             if (file > 0){
                 moveset.moves.push_back(Position(rank, file-1));
-                MoveArrays.kingMoves4.moves[i]++;
+                MoveArrays.kingMoves.moves[i]++;
             }
             if (rank < 7 && file < 7){
                 moveset.moves.push_back(Position(rank+1, file+1));
-                MoveArrays.kingMoves5.moves[i]++;
+                MoveArrays.kingMoves.moves[i]++;
             }
             if (rank < 7 && file > 0){
                 moveset.moves.push_back(Position(rank+1, file-1));
-                MoveArrays.kingMoves6.moves[i]++;
+                MoveArrays.kingMoves.moves[i]++;
             }
             if (rank > 0 && file < 7){
                 moveset.moves.push_back(Position(rank-1, file+1));
-                MoveArrays.kingMoves7.moves[i]++;
+                MoveArrays.kingMoves.moves[i]++;
             }
             if (rank > 0 && file > 0){
                 moveset.moves.push_back(Position(rank-1, file-1));
-                MoveArrays.kingMoves8.moves[i]++;
+                MoveArrays.kingMoves.moves[i]++;
             }
-            MoveArrays.kingMoves.push_back(moveset;
+            MoveArrays.kingMoves.moveset[i] = moveset;
         }
     }
 }
