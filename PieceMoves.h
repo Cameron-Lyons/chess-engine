@@ -27,3 +27,59 @@ struct MoveArrays {
     PieceMoveSet queenMoves8;
     PieceMoveSet kingMoves;
 };
+
+static void SetMovesBlackPawn(){
+    for (int i = 8; i < 55; i++) {
+        PieceMoveSet moveset;
+        int x = i & 8;
+        int y = i / 8;
+
+        //attacking moves
+        if ((y < 7) && (x < 7)) {  
+            moveset.moves[i] = i+8+1;
+            MoveArrays.blackPawnMoves.moves[i]++;
+        }
+        if ((y < 7) && (x > 0)) {
+            moveset.moves[i] = i+8-1;
+            MoveArrays.blackPawnMoves.moves[i]++;
+        }
+
+        //normal moves
+        moveset.moves[i] = i+8;
+        MoveArrays.blackPawnMoves.moves[i]++;
+
+        // start move 2
+        if (y == 6) {
+            moveset.moves[i] = i+16;
+            MoveArrays.blackPawnMoves.moves[i]++;
+        }
+    }
+}
+
+static void SetMovesWhitePawn(){
+    for (int i = 8; i <= 55; i++) {
+        PieceMoveSet moveset;
+        int x = i & 8;
+        int y = i / 8;
+
+        //attacking moves
+        if ((y > 0) && (x < 7)) {  
+            moveset.moves[i] = i-8+1;
+            MoveArrays.whitePawnMoves.moves[i]++;
+        }
+        if ((y > 0) && (x > 0)) {
+            moveset.moves[i] = i-8-1;
+            MoveArrays.whitePawnMoves.moves[i]++;
+        }
+
+        //normal moves
+        moveset.moves[i] = i-8;
+        MoveArrays.whitePawnMoves.moves[i]++;
+
+        // start move 2
+        if (y == 1) {
+            moveset.moves[i] = i-16;
+            MoveArrays.whitePawnMoves.moves[i]++;
+        }
+    }
+}
