@@ -225,3 +225,83 @@ static void SetMovesRook(){
         }
     }
 }
+
+
+static void SetMovesQueen(){
+    for(int y=0; y<8; y++){
+        for(int x=0; x<8; x++){
+            int i = y+(8*x);
+            PieceMoveSet moveset;
+            int rank = y;
+            int file = x;
+            while(rank < 7){
+                rank++;
+                int move = Position(rank, file);
+                moveset.moves[i] = move;
+                MoveArrays.queenMoves1.moves[i]++;
+            }
+            int rank = y;
+            int file = x;
+            while(rank > 0){
+                rank--;
+                int move = Position(rank, file);
+                moveset.moves[i] = move;
+                MoveArrays.queenMoves2.moves[i]++;
+            }
+            int rank = y;
+            int file = x;
+            while(file < 7){
+                file++;
+                int move = Position(rank, file);
+                moveset.moves[i] = move;
+                MoveArrays.queenMoves3.moves[i]++;
+            }
+            int rank = y;
+            int file = x;
+            while(file > 0){
+                file--;
+                int move = Position(rank, file);
+                moveset.moves[i] = move;
+                MoveArrays.queenMoves4.moves[i]++;
+            }
+            int rank = y;
+            int file = x;
+            while(rank < 7 && file < 7){
+                rank++;
+                file++;
+                int move = Position(rank, file);
+                moveset.moves[i] = move;
+                MoveArrays.queenMoves5.moves[i]++;
+            }
+            int rank = y;
+            int file = x;
+            while(rank < 7 && file > 0){
+                rank++;
+                file--;
+                int move = Position(rank, file);
+                moveset.moves[i] = move;
+                MoveArrays.queenMoves6.moves[i]++;
+            }
+            int rank = y;
+            int file = x;
+            while(rank > 0 && file > 7){
+                rank--;
+                file++;
+                int move = Position(rank, file);
+                moveset.moves[i] = move;
+                MoveArrays.queenMoves7.moves[i]++;
+            }
+            int rank = y;
+            int file = x;
+            while(rank > 0 && file > 0){
+                rank--;
+                file--;
+                int move = Position(rank, file);
+                moveset.moves[i] = move;
+                MoveArrays.queenMoves8.moves[i]++;
+            }
+        }
+    }
+}
+
+
