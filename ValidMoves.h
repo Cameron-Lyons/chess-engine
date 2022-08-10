@@ -175,21 +175,26 @@ void GenValidMoves(Board board){
 
     for (int x=0; x<64; x++){
         Square square = board.squares[x];
-        if square.Piece.PieceType == NONE{
+        if (square.Piece.PieceType == NONE) {
             continue;
         }
         square.Piece.ValidMoves.clear();
         switch (square.Piece.PieceType)
         {
         case PAWN:
-            if (sqr.Piece.PieceColor == WHITE){
-                CheckValidMovesPawn(MoveArrays.whitePawnMoves[x].moves, square.Piece, x, board, MoveArrays.whitePawnTotalMove);
+            if (square.Piece.PieceColor == WHITE){
+                CheckValidMovesPawn(MoveArrays.whitePawnMoves.moves, square.Piece, x, board, MoveArrays.whitePawnTotalMoves[x]);
             }
             else{
-                CheckValidMovesPawn(MoveArrays.blackPawnMoves[x].moves, square.Piece, x, board, MoveArrays.blackPawnTotalMove);
+                CheckValidMovesPawn(MoveArrays.blackPawnMoves.moves, square.Piece, x, board, MoveArrays.blackPawnTotalMoves[x]);
             }
             break;
         case KNIGHT:
+            for (int i=0; i<MoveArrays.knightTotalMoves[x]; i++){
+                AnalyzeMove(board, MoveArrays.knightMoves.moves[i], square.Piece);
+            }
+            break;
+        
         }
     }
 }

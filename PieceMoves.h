@@ -18,9 +18,9 @@ struct {
     PieceMoveSet blackPawnMoves;
     int blackPawnTotalMoves[64] = {};
     PieceMoveSet whitePawnMoves;
-    int whitePawnTotalMove[64] = {};
+    int whitePawnTotalMoves[64] = {};
     PieceMoveSet knightMoves;
-    int knightTotalMove[64] = {};
+    int knightTotalMoves[64] = {};
     PieceMoveSet bishopMoves1;
     int bishopTotalMove1[64] = {};
     PieceMoveSet bishopMoves2;
