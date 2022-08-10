@@ -278,6 +278,13 @@ void GenValidMoves(Board board){
                 }
             }
         case KING:
+            if (square.Piece.PieceColor == WHITE){
+                WhiteKingPosition = x;
+            }
+            else{
+                BlackKingPosition = x;
+            }
         }
     }
+    
 }
