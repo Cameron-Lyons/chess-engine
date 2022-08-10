@@ -194,6 +194,27 @@ void GenValidMoves(Board board){
                 AnalyzeMove(board, MoveArrays.knightMoves.moves[i], square.Piece);
             }
             break;
+        case BISHOP:
+            for (int i=0; i<MoveArrays.bishopTotalMoves1[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.bishopMoves1.moves[i], square.Piece);){
+                    break;
+                }
+            }   
+            for (int i=0; i<MoveArrays.bishopTotalMoves2[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.bishopMoves2.moves[i], square.Piece);){
+                    break;
+                }
+            }
+            for (int i=0; i<MoveArrays.bishopTotalMoves3[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.bishopMoves3.moves[i], square.Piece);){
+                    break;
+                }
+            }
+            for (int i=0; i<MoveArrays.bishopTotalMoves4[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.bishopMoves4.moves[i], square.Piece);){
+                    break;
+                }
+            }
         
         }
     }
