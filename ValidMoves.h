@@ -196,26 +196,46 @@ void GenValidMoves(Board board){
             break;
         case BISHOP:
             for (int i=0; i<MoveArrays.bishopTotalMoves1[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.bishopMoves1.moves[i], square.Piece);){
+                if(~AnalyzeMove(board, MoveArrays.bishopMoves1.moves[i], square.Piece)){
                     break;
                 }
             }   
             for (int i=0; i<MoveArrays.bishopTotalMoves2[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.bishopMoves2.moves[i], square.Piece);){
+                if(~AnalyzeMove(board, MoveArrays.bishopMoves2.moves[i], square.Piece)){
                     break;
                 }
             }
             for (int i=0; i<MoveArrays.bishopTotalMoves3[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.bishopMoves3.moves[i], square.Piece);){
+                if(~AnalyzeMove(board, MoveArrays.bishopMoves3.moves[i], square.Piece)){
                     break;
                 }
             }
             for (int i=0; i<MoveArrays.bishopTotalMoves4[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.bishopMoves4.moves[i], square.Piece);){
+                if(~AnalyzeMove(board, MoveArrays.bishopMoves4.moves[i], square.Piece)){
                     break;
                 }
             }
-        
+        case ROOK:
+            for (int i=0; i<MoveArrays.rookTotalMoves1[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.rookMoves1.moves[i], square.Piece)){
+                    break;
+                }
+            }   
+            for (int i=0; i<MoveArrays.rookTotalMoves2[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.rookMoves2.moves[i], square.Piece)){
+                    break;
+                }
+            }
+            for (int i=0; i<MoveArrays.rookTotalMoves3[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.rookMoves3.moves[i], square.Piece)){
+                    break;
+                }
+            }
+            for (int i=0; i<MoveArrays.rookTotalMoves4[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.rookMoves4.moves[i], square.Piece)){
+                    break;
+                }
+            }
         }
     }
 }
