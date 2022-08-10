@@ -286,5 +286,10 @@ void GenValidMoves(Board board){
             }
         }
     }
-    
+    if (board.WhoseTurn == WHITE){
+        GenValidMovesKing(WhiteAttackBoard, board.squares[WhiteKingPosition].Piece);
+    }
+    else{
+        GenValidMovesKing(BlackAttackBoard, board.squares[BlackKingPosition].Piece);
+    }
 }
