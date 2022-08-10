@@ -236,6 +236,48 @@ void GenValidMoves(Board board){
                     break;
                 }
             }
+        case QUEEN:
+            for (int i=0; i<MoveArrays.queenTotalMoves1[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.queenMoves1.moves[i], square.Piece)){
+                    break;
+                }
+            }   
+            for (int i=0; i<MoveArrays.queenTotalMoves2[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.queenMoves2.moves[i], square.Piece)){
+                    break;
+                }
+            }
+            for (int i=0; i<MoveArrays.queenTotalMoves3[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.queenMoves3.moves[i], square.Piece)){
+                    break;
+                }
+            }
+            for (int i=0; i<MoveArrays.queenTotalMoves4[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.queenMoves4.moves[i], square.Piece)){
+                    break;
+                }
+            }
+            for (int i=0; i<MoveArrays.queenTotalMoves5[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.queenMoves5.moves[i], square.Piece)){
+                    break;
+                }
+            }
+            for (int i=0; i<MoveArrays.queenTotalMoves6[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.queenMoves6.moves[i], square.Piece)){
+                    break;
+                }
+            }
+            for (int i=0; i<MoveArrays.queenTotalMoves7[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.queenMoves7.moves[i], square.Piece)){
+                    break;
+                }
+            }
+            for (int i=0; i<MoveArrays.queenTotalMoves8[x]; i++){
+                if(~AnalyzeMove(board, MoveArrays.queenMoves8.moves[i], square.Piece)){
+                    break;
+                }
+            }
+        case KING:
         }
     }
 }
