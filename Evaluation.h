@@ -164,6 +164,52 @@ class Evaluation{
                 }
     }
     else if (square.Piece.PieceType = KNIGHT){
-
+        score += KnightTable[idx];
+        // knights less useful in endgame
+        if (endGame){
+            score -= 10;
+        }
     }
+    else if (square.Piece.PieceType = BISHOP){
+        bishopCount++;
+        // both bishops are better than one
+        if (bishopCount > 1){
+            score += 10;
+        }
+        score += BishopTable[idx];
+    }
+    else if (square.Piece.PieceType = ROOK){
+        insufficientMaterial = false;
+        // encourage castling
+        if (square.Piece.moved && castled == false){
+            score -= 10;
+        }
+        score += RookTable[idx];
+    }
+    else if (square.Piece.PieceType == QUEEN){
+        insufficientMaterial = false;
+        score += QueenTable[idx];
+        // discourage moving early
+        if (square.Piece.moved && !endGame){
+            score -= 10;
+        }
+    }
+    else if (square.Piece.PieceType == KING){
+        // make sure king has moves
+        if (square.Piece.ValidMoves.count < 2){
+            score -= 5;
+        }
+        if (endGame){
+            score += KingTableEndGame[idx];
+        }
+        else{
+            score += KingTable[idx];
+        }
+        // encourage castling
+        if (square.Piece.moved && castled){
+            score -= 30;
+        }
+    }
+    }
+}
 };
