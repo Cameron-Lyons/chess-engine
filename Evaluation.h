@@ -211,5 +211,186 @@ class Evaluation{
         }
     }
     }
+    return score;
+
 }
+    void EvaluateBoardScore(Board board){
+        board.Score = 0;
+        bool insufficientMaterial = true;
+        // draws
+        if (board.StaleMate){
+            return;
+        }
+        if (board.FiftyMoveCount){
+            return;
+        }
+        if (board.RepeatedMoveCount == 3){
+            return;
+        }
+        if (board.blackCheckmated){
+            board.score = 32767;
+            return;
+        }
+        if (board.whiteCheckmated){
+            board.score = -32767;
+            return;
+        }
+        if (board.blackChecked){
+            board.score += 10;
+        }
+        else if (board.whiteChecked){
+            board.score -= 10;
+        }
+        if (board.blackCastled){
+            board.score -= 40
+        }
+        if (board.whiteCastled){
+            board.score += 40
+        }
+        // small bonus for tempo
+        if (board.whoseTurn == WHITE){
+            board.score += 10;
+        }
+        else{
+            board.score -= 10;
+        }
+        short blackBishopCount = 0;
+        short whiteBishopCount = 0;
+        short knightCount = 0;
+
+        short RemainingPieces = 0;
+
+        short blackPawnCount[8] = {};
+        short whitePawnCount[8] = {};
+
+        for (int i = 0; i < 64; i++){
+            Square square = board.Squares[i];
+            if (sqare.Piece.PieceType == NONE){
+                continue;
+            }
+            RemainingPieces++;
+            if (square.Piece.PieceColor == WHITE){
+                board.score += EvaluatePieceScore(square, i, board.whiteCastled,
+                                                  board.EndGame, whiteBishopCount,
+                                                  insufficientMaterial);
+            }
+            else{
+                board.score -= EvaluatePieceScore(square, i, board.blackCastled,
+                                                  board.EndGame, blackBishopCount,
+                                                  insufficientMaterial);
+            }
+            if (square.Piece.PieceType == KNIGHT){
+                knightCount++;
+            }
+            else if (square.Piece.PieceType == PAWN){
+                if (square.Piece.PieceColor == WHITE){
+                    whitePawnCount[i % 8]++;
+                }
+                else{
+                    blackPawnCount[i % 8]++;
+                }
+            }
+            else if (square.Piece.PieceType == BISHOP){
+                if (square.Piece.PieceColor == WHITE){
+                    whiteBishopCount++;
+                }
+                else{
+                    blackBishopCount++;
+                }
+            }
+            if (insufficientMaterial) {
+                board.Score = 0;
+                board.StaleMate = true;
+                board.InsufficientMaterial = true;
+            }
+            if (RemainingPieces < 10){
+                board.isEndGame = true;
+                if (board.blackChecked){
+                    board.score += 10;
+                }
+                else if (board.whiteChecked){
+                    board.score -= 10;
+                }
+            }
+        }
+    //Black Isolated Pawns
+    if (blackPawnCount[0] >= 1 && blackPawnCount[1] == 0)
+        {
+        board.Score += 12;
+        }
+    if (blackPawnCount[1] >= 1 && blackPawnCount[0] == 0 &&
+    blackPawnCount[2] == 0)
+        {
+        board.Score += 14;
+        }
+    if (blackPawnCount[2] >= 1 && blackPawnCount[1] == 0 &&
+    blackPawnCount[3] == 0)
+        {
+        board.Score += 16;
+        }
+    if (blackPawnCount[3] >= 1 && blackPawnCount[2] == 0 &&
+    blackPawnCount[4] == 0)
+        {
+        board.Score += 20;
+        }
+    if (blackPawnCount[4] >= 1 && blackPawnCount[3] == 0 &&
+    blackPawnCount[5] == 0)
+        {
+        board.Score += 20;
+        }
+    if (blackPawnCount[5] >= 1 && blackPawnCount[4] == 0 &&
+    blackPawnCount[6] == 0)
+        {
+        board.Score += 16;
+        }
+    if (blackPawnCount[6] >= 1 && blackPawnCount[5] == 0 &&
+    blackPawnCount[7] == 0)
+        {
+        board.Score += 14;
+        }
+    if (blackPawnCount[7] >= 1 && blackPawnCount[6] == 0)
+        {
+        board.Score += 12;
+        }
+    //White Isolated Pawns
+    if (whitePawnCount[0] >= 1 && whitePawnCount[1] == 0)
+        {
+        board.Score -= 12;
+        }
+    if (whitePawnCount[1] >= 1 && whitePawnCount[0] == 0 &&
+        whitePawnCount[2] == 0)
+        {
+        board.Score -= 14;
+        }
+    if (whitePawnCount[2] >= 1 && whitePawnCount[1] == 0 &&
+    whitePawnCount[3] == 0)
+        {
+        board.Score -= 16;
+        }
+    if (whitePawnCount[3] >= 1 && whitePawnCount[2] == 0 &&
+    whitePawnCount[4] == 0)
+        {
+        board.Score -= 20;
+        }
+    if (whitePawnCount[4] >= 1 && whitePawnCount[3] == 0 &&
+    whitePawnCount[5] == 0)
+        {
+        board.Score -= 20;
+        }
+    if (whitePawnCount[5] >= 1 && whitePawnCount[4] == 0 &&
+    whitePawnCount[6] == 0)
+        {
+        board.Score -= 16;
+        }
+    if (whitePawnCount[6] >= 1 && whitePawnCount[5] == 0 &&
+    whitePawnCount[7] == 0)
+        {
+        board.Score -= 14;
+        }
+    if (whitePawnCount[7] >= 1 && whitePawnCount[6] == 0)
+        {
+        board.Score -= 12;
+        }
+    
+    }
 };
