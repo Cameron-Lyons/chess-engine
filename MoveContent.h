@@ -48,6 +48,52 @@ struct PieceTaken{
 };
 
 
+std::string string GetColumnFromInt(int column)
+{
+    switch (column)
+    {
+        case 1:
+            return "a";
+        case 2:
+            return "b";
+        case 3:
+            return "c";
+        case 4:
+            return "d";
+        case 5:
+            return "e";
+        case 6:
+            return "f";
+        case 7:
+            return "g";
+        case 8:
+            return "h";
+        default:
+            return "Unknown";
+    }
+}
+
+
+std::string GetPgnMove(ChessPieceType pieceType)
+{
+    switch (pieceType)
+    {
+        case BISHOP:
+            return "B";
+        case KING:
+            return "K";
+        case KNIGHT:
+            return "N";
+        case QUEEN:
+            return "Q";
+        case ROOK:
+            return "R";
+        default:
+            return "";
+    }
+}
+
+
 std::string PortableGameNotation(){
     std::string pgn;
     int srcCol = MovingPiece.src%8;
@@ -71,13 +117,29 @@ std::string PortableGameNotation(){
             pgn += "O-O-O";
         }
     }
-    if (TakenPiece.PieceType != NONE){
-        pgn += "x";
-    }
+    else {
+        pgn += GetPGBMove(MovingPiece.PieceType);
+        switch (MovingPiece.PieceType)
+        {
+        case KNIGHT:
+            pgn += GetColumnFromInt(srcCol + 1);
+            pgn += srcRow;
+            break;
+        case ROOK:
+            pgn += GetColumnFromInt(srcCol + 1);
+            pgn += srcRow;
+            break;
+        case PAWN:
+            if (srcCol != destCol){
+                pgn += GetColummnFromInt(srcCol + 1);
+            }
+            break;
+        }
     pgn += GetColumnFromInt(destCol + 1);
     pgn += destRow;
     if (PawnPromoted){
         pgn += "Q";
+    }
     }
     return pgn;
 }
