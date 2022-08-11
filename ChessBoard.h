@@ -1,5 +1,6 @@
 #include "ChessPiece.h"
 
+
 struct Square {
     Piece Piece;
     int loc;
