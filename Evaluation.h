@@ -391,6 +391,71 @@ class Evaluation{
         {
         board.Score -= 12;
         }
-    
+    //Black Passed Pawns
+    if (blackPawnCount[0] >= 1 && whitePawnCount[0] == 0)
+        {
+        board.Score -= blackPawnCount[0];
+        }
+    if (blackPawnCount[1] >= 1 && whitePawnCount[1] == 0)
+        {
+        board.Score -= blackPawnCount[1];
+        }
+    if (blackPawnCount[2] >= 1 && whitePawnCount[2] == 0)
+        {
+        board.Score -= blackPawnCount[2];
+        }
+    if (blackPawnCount[3] >= 1 && whitePawnCount[3] == 0)
+        {
+        board.Score -= blackPawnCount[3];
+        }
+    if (blackPawnCount[4] >= 1 && whitePawnCount[4] == 0)
+        {
+        board.Score -= blackPawnCount[4];
+        }
+    if (blackPawnCount[5] >= 1 && whitePawnCount[5] == 0)
+        {
+        board.Score -= blackPawnCount[5];
+        }
+    if (blackPawnCount[6] >= 1 && whitePawnCount[6] == 0)
+        {
+        board.Score -= blackPawnCount[6];
+        }
+    if (blackPawnCount[7] >= 1 && whitePawnCount[7] == 0)
+        {
+        board.Score -= blackPawnCount[7];
+        }
+    //White Passed Pawns
+    if (whitePawnCount[0] >= 1 && blackPawnCount[0] == 0)
+        {
+        board.Score += whitePawnCount[0];
+        }
+    if (whitePawnCount[1] >= 1 && blackPawnCount[1] == 0)
+        {
+        board.Score += whitePawnCount[1];
+        }
+    if (whitePawnCount[2] >= 1 && blackPawnCount[2] == 0)
+        {
+        board.Score += whitePawnCount[2];
+        }
+    if (whitePawnCount[3] >= 1 && blackPawnCount[3] == 0)
+        {
+        board.Score += whitePawnCount[3];
+        }
+    if (whitePawnCount[4] >= 1 && blackPawnCount[4] == 0)
+        {
+        board.Score += whitePawnCount[4];
+        }
+    if (whitePawnCount[5] >= 1 && blackPawnCount[5] == 0)
+        {
+        board.Score += whitePawnCount[5];
+        }
+    if (whitePawnCount[6] >= 1 && blackPawnCount[6] == 0)
+        {
+        board.Score += whitePawnCount[6];
+        }
+    if (whitePawnCount[7] >= 1 && blackPawnCount[7] == 0)
+        {
+        board.Score += whitePawnCount[7];
+        }
     }
 };
