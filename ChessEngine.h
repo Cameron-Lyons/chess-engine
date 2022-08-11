@@ -2,7 +2,7 @@
 #include "ChessPiece.h"
 #include <stack>
 
-Board ChessBoard;
+Board ChessBoard = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 Board PrevBoard;
 
 
@@ -47,5 +47,3 @@ bool MovePiece(int srcCol, int srcRow,
     MoveHistory.push(ChessBoard.LastMove);
     return true;
 }
-
-
