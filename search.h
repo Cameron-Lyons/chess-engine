@@ -133,6 +133,38 @@ bool givesCheck(const Board& board, int srcPos, int destPos) {
     return false;
 }
 
+// Function to check if a given color is in check
+bool isInCheck(const Board& board, ChessPieceColor color) {
+    // Find the king of the given color
+    int kingPos = -1;
+    for (int i = 0; i < 64; i++) {
+        if (board.squares[i].Piece.PieceType == ChessPieceType::KING && 
+            board.squares[i].Piece.PieceColor == color) {
+            kingPos = i;
+            break;
+        }
+    }
+    
+    if (kingPos == -1) return false; // No king found (shouldn't happen in normal chess)
+    
+    // Check if any opponent piece can capture the king
+    ChessPieceColor opponentColor = (color == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+    
+    for (int i = 0; i < 64; i++) {
+        if (board.squares[i].Piece.PieceType != ChessPieceType::NONE && 
+            board.squares[i].Piece.PieceColor == opponentColor) {
+            // Check if this piece can move to the king's square
+            for (int move : board.squares[i].Piece.ValidMoves) {
+                if (move == kingPos) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
 // Function to get the history score for a move (for history heuristic)
 int getHistoryScore(const std::vector<std::vector<int>>& historyTable, int srcPos, int destPos) {
     return historyTable[srcPos][destPos];
@@ -276,6 +308,51 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         return mateScore;
     }
     
+    // NULL MOVE PRUNING
+    // Only try null move if we have enough depth and we're not in check
+    if (depth >= 3 && !isInCheck(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK)) {
+        // Try null move (pass the turn)
+        Board nullBoard = board;
+        nullBoard.turn = (nullBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+        
+        // Search with reduced depth (R=3 is typical)
+        int R = 3;
+        int nullValue = AlphaBetaSearch(nullBoard, depth - 1 - R, alpha, beta, !maximizingPlayer, historyTable, startTime, timeLimitMs);
+        
+        if (isTimeUp(startTime, timeLimitMs)) return 0;
+        
+        // Null move pruning: if opponent can't beat us even with an extra move, we're winning
+        if (maximizingPlayer) {
+            if (nullValue >= beta) {
+                // Beta cutoff - we're winning even after null move
+                // Optional: Add verification search for very high scores to avoid false positives
+                if (nullValue >= beta + 300) {
+                    return beta;
+                }
+                // For closer scores, do a verification search
+                int verificationValue = AlphaBetaSearch(nullBoard, depth - 1, alpha, beta, !maximizingPlayer, historyTable, startTime, timeLimitMs);
+                if (isTimeUp(startTime, timeLimitMs)) return 0;
+                if (verificationValue >= beta) {
+                    return beta;
+                }
+            }
+        } else {
+            if (nullValue <= alpha) {
+                // Alpha cutoff - we're winning even after null move
+                // Optional: Add verification search for very low scores to avoid false positives
+                if (nullValue <= alpha - 300) {
+                    return alpha;
+                }
+                // For closer scores, do a verification search
+                int verificationValue = AlphaBetaSearch(nullBoard, depth - 1, alpha, beta, !maximizingPlayer, historyTable, startTime, timeLimitMs);
+                if (isTimeUp(startTime, timeLimitMs)) return 0;
+                if (verificationValue <= alpha) {
+                    return alpha;
+                }
+            }
+        }
+    }
+    
     // Score and sort moves for better ordering
     std::vector<ScoredMove> scoredMoves = scoreMoves(board, moves, historyTable);
     std::sort(scoredMoves.begin(), scoredMoves.end());
@@ -285,37 +362,59 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     int flag = 0;
     
     if (maximizingPlayer) {
+        int moveCount = 0;
         for (const auto& scoredMove : scoredMoves) {
             const auto& move = scoredMove.move;
             Board newBoard = board;
             newBoard.MovePiece(newBoard, move.first, move.second, false);
-            int eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, historyTable, startTime, timeLimitMs);
+            int eval;
+            bool isCaptureMove = isCapture(board, move.first, move.second);
+            bool isCheckMove = givesCheck(board, move.first, move.second);
+            if (depth >= 3 && moveCount > 0 && !isCaptureMove && !isCheckMove) {
+                eval = AlphaBetaSearch(newBoard, depth - 2, alpha, beta, false, historyTable, startTime, timeLimitMs);
+                if (eval > alpha) {
+                    eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, historyTable, startTime, timeLimitMs);
+                }
+            } else {
+                eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, historyTable, startTime, timeLimitMs);
+            }
+            moveCount++;
             if (isTimeUp(startTime, timeLimitMs)) return 0;
             if (eval > bestValue) bestValue = eval;
             if (eval > alpha) alpha = eval;
             if (eval > origAlpha) updateHistoryTable(historyTable, move.first, move.second, depth);
             if (beta <= alpha) break;
         }
-        // Set TT flag
-        if (bestValue <= origAlpha) flag = -1; // alpha
-        else if (bestValue >= beta) flag = 1; // beta
-        else flag = 0; // exact
+        if (bestValue <= origAlpha) flag = -1;
+        else if (bestValue >= beta) flag = 1;
+        else flag = 0;
     } else {
+        int moveCount = 0;
         for (const auto& scoredMove : scoredMoves) {
             const auto& move = scoredMove.move;
             Board newBoard = board;
             newBoard.MovePiece(newBoard, move.first, move.second, false);
-            int eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, historyTable, startTime, timeLimitMs);
+            int eval;
+            bool isCaptureMove = isCapture(board, move.first, move.second);
+            bool isCheckMove = givesCheck(board, move.first, move.second);
+            if (depth >= 3 && moveCount > 0 && !isCaptureMove && !isCheckMove) {
+                eval = AlphaBetaSearch(newBoard, depth - 2, alpha, beta, true, historyTable, startTime, timeLimitMs);
+                if (eval < beta) {
+                    eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, historyTable, startTime, timeLimitMs);
+                }
+            } else {
+                eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, historyTable, startTime, timeLimitMs);
+            }
+            moveCount++;
             if (isTimeUp(startTime, timeLimitMs)) return 0;
             if (eval < bestValue) bestValue = eval;
             if (eval < beta) beta = eval;
             if (eval < origAlpha) updateHistoryTable(historyTable, move.first, move.second, depth);
             if (beta <= alpha) break;
         }
-        // Set TT flag
-        if (bestValue >= beta) flag = 1; // beta
-        else if (bestValue <= origAlpha) flag = -1; // alpha
-        else flag = 0; // exact
+        if (bestValue >= beta) flag = 1;
+        else if (bestValue <= origAlpha) flag = -1;
+        else flag = 0;
     }
     // Store in TT
     TransTable[hash] = {depth, bestValue, flag};
