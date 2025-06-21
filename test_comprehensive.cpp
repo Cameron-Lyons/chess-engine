@@ -3,11 +3,6 @@
 #include "ChessBoard.h"
 #include "BitboardMoves.h"
 
-bool BlackAttackBoard[64] = {false};
-bool WhiteAttackBoard[64] = {false};
-int BlackKingPosition = 0;
-int WhiteKingPosition = 0;
-
 std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color);
 std::vector<std::pair<int, int>> generatePawnMoves(Board& board, ChessPieceColor color);
 std::vector<std::pair<int, int>> generateKnightMoves(Board& board, ChessPieceColor color);
