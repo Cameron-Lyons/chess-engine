@@ -1,3 +1,6 @@
+#ifndef PIECE_MOVES_H
+#define PIECE_MOVES_H
+
 #include "ChessPiece.h"
 #include <string>
 #include <vector>
@@ -58,9 +61,9 @@ struct {
 
 
 static void SetMovesBlackPawn(){
-    for (int i = 8; i < 55; i++) {
+    for (int i = 8; i < 56; i++) {
         PieceMoveSet moveset;
-        int x = i & 8;
+        int x = i % 8;
         int y = i / 8;
 
         //attacking moves
@@ -75,44 +78,44 @@ static void SetMovesBlackPawn(){
 
         //normal moves
         moveset.moves.push_back(i+8);
-        MoveArrays.blackPawnMoves.moves[i]++;
+        MoveArrays.blackPawnTotalMoves[i]++;
 
         // start can move 2 forward
         if (y == 6) {
             moveset.moves.push_back(i+16);
-            MoveArrays.blackPawnMoves.moves[i]++;
+            MoveArrays.blackPawnTotalMoves[i]++;
         }
-        MoveArrays.blackPawnMoves.moveset[i] = moveset;
+        MoveArrays.blackPawnMoves.moveset.push_back(moveset);
     }
 }
 
 
 static void SetMovesWhitePawn(){
-    for (int i = 8; i <= 55; i++) {
+    for (int i = 8; i < 56; i++) {
         PieceMoveSet moveset;
-        int x = i & 8;
+        int x = i % 8;
         int y = i / 8;
 
         //attacking moves
         if ((y > 0) && (x < 7)) {  
             moveset.moves.push_back(i-8+1);
-            MoveArrays.whitePawnMoves.moves[i]++;
+            MoveArrays.whitePawnTotalMoves[i]++;
         }
         if ((y > 0) && (x > 0)) {
             moveset.moves.push_back(i-8-1);
-            MoveArrays.whitePawnMoves.moves[i]++;
+            MoveArrays.whitePawnTotalMoves[i]++;
         }
 
         //normal moves
         moveset.moves.push_back(i-8);
-        MoveArrays.whitePawnMoves.moves[i]++;
+        MoveArrays.whitePawnTotalMoves[i]++;
 
         // start move 2
         if (y == 1) {
             moveset.moves.push_back(i-16);
-            MoveArrays.whitePawnMoves.moves[i]++;
+            MoveArrays.whitePawnTotalMoves[i]++;
         }
-        MoveArrays.whitePawnMoves.moveset[i] = moveset;
+        MoveArrays.whitePawnMoves.moveset.push_back(moveset);
     }
 }
 
@@ -120,41 +123,23 @@ static void SetMovesWhitePawn(){
 static void SetMovesKnight(){
     for (int y=0; y<8; y++){
         for (int x=0; x<8; x++){
-            int i = y+(8*x);
+            int i = y*8 + x;
             PieceMoveSet moveset;
-            if (y < 6 && x < 0){
-                moveset.moves.push_back(i+17);
-                MoveArrays.knightMoves.moves[i]++;
+            
+            // All 8 possible knight moves
+            int knightMoves[8][2] = {{-2,-1}, {-2,1}, {-1,-2}, {-1,2}, {1,-2}, {1,2}, {2,-1}, {2,1}};
+            
+            for (int k = 0; k < 8; k++) {
+                int newY = y + knightMoves[k][0];
+                int newX = x + knightMoves[k][1];
+                
+                if (newY >= 0 && newY < 8 && newX >= 0 && newX < 8) {
+                    int move = Position(newY, newX);
+                    moveset.moves.push_back(move);
+                    MoveArrays.knightTotalMoves[i]++;
+                }
             }
-            if (y > 1 && x < 7){
-                moveset.moves.push_back(i+15);
-                MoveArrays.knightMoves.moves[i]++;
-            }
-            if (y < 1 && x > 0){
-                moveset.moves.push_back(i-15); 
-                MoveArrays.knightMoves.moves[i]++;
-            }
-            if (y < 6 && x < 7){
-                moveset.moves.push_back(i+6);
-                MoveArrays.knightMoves.moves[i]++;
-            }
-            if (y > 0 && x < 6){
-                moveset.moves.push_back(i+10);
-                MoveArrays.knightMoves.moves[i]++;
-            }
-            if (y < 7 && x > 1){
-                moveset.moves.push_back(i-6);
-                MoveArrays.knightMoves.moves[i]++;
-            }
-            if (y > 0 && x > 1){
-                moveset.moves.push_back(i-10);
-                MoveArrays.knightMoves.moves[i]++;
-            }
-            if ( y < 7 && x < 6){
-                moveset.moves.push_back(i+17);
-                MoveArrays.knightMoves.moves[i]++;
-            }
-            MoveArrays.knightMoves.moveset[i] = moveset;
+            MoveArrays.knightMoves.moveset.push_back(moveset);
         }
     }
 }
@@ -163,55 +148,68 @@ static void SetMovesKnight(){
 static void SetMovesBishop(){
     for (int y=0; y<8; y++){
         for (int x=0; x<8; x++){
-            int i = y+(8*x);
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while (rank < 7 && file < 7){
-                rank++;
-                file++;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.bishopMoves1.moves[i]++;
+            int i = y*8 + x;
+            
+            // Direction 1: diagonal up-right
+            {
+                PieceMoveSet moveset1;
+                int rank = y;
+                int file = x;
+                while (rank < 7 && file < 7){
+                    rank++;
+                    file++;
+                    int move = Position(rank, file);
+                    moveset1.moves.push_back(move);
+                    MoveArrays.bishopTotalMoves1[i]++;
+                }
+                MoveArrays.bishopMoves1.moveset.push_back(moveset1);
             }
-            MoveArrays.bishopMoves1.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while (rank < 7 && file > 0){
-                rank++;
-                file--;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.bishopMoves2.moves[i]++;
+            // Direction 2: diagonal up-left
+            {
+                PieceMoveSet moveset2;
+                int rank = y;
+                int file = x;
+                while (rank < 7 && file > 0){
+                    rank++;
+                    file--;
+                    int move = Position(rank, file);
+                    moveset2.moves.push_back(move);
+                    MoveArrays.bishopTotalMoves2[i]++;
+                }
+                MoveArrays.bishopMoves2.moveset.push_back(moveset2);
             }
-            MoveArrays.bishopMoves2.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while (rank > 0 && file > 7){
-                rank--;
-                file++;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.bishopMoves3.moves[i]++;
+            // Direction 3: diagonal down-right
+            {
+                PieceMoveSet moveset3;
+                int rank = y;
+                int file = x;
+                while (rank > 0 && file < 7){
+                    rank--;
+                    file++;
+                    int move = Position(rank, file);
+                    moveset3.moves.push_back(move);
+                    MoveArrays.bishopTotalMoves3[i]++;
+                }
+                MoveArrays.bishopMoves3.moveset.push_back(moveset3);
             }
-            MoveArrays.bishopMoves3.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while (rank > 0 && file > 0){
-                rank--;
-                file--;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.bishopMoves4.moves[i]++;
+            // Direction 4: diagonal down-left
+            {
+                PieceMoveSet moveset4;
+                int rank = y;
+                int file = x;
+                while (rank > 0 && file > 0){
+                    rank--;
+                    file--;
+                    int move = Position(rank, file);
+                    moveset4.moves.push_back(move);
+                    MoveArrays.bishopTotalMoves4[i]++;
+                }
+                MoveArrays.bishopMoves4.moveset.push_back(moveset4);
             }
-            MoveArrays.bishopMoves4.moveset[i] = moveset;
-        };
+        }
     }
 }
 
@@ -219,50 +217,63 @@ static void SetMovesBishop(){
 static void SetMovesRook(){
     for (int y=0; y<8; y++){
         for (int x=0; x<8; x++){
-            int i = y+(8*x);
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while (rank < 7){
-                rank++;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.rookMoves1.moves[i]++;
+            int i = y*8 + x;
+            
+            // Direction 1: up
+            {
+                PieceMoveSet moveset1;
+                int rank = y;
+                int file = x;
+                while (rank < 7){
+                    rank++;
+                    int move = Position(rank, file);
+                    moveset1.moves.push_back(move);
+                    MoveArrays.rookTotalMoves1[i]++;
+                }
+                MoveArrays.rookMoves1.moveset.push_back(moveset1);
             }
-            MoveArrays.rookMoves1.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while (rank > 0){
-                rank--;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.rookMoves2.moves[i]++;
+            // Direction 2: down
+            {
+                PieceMoveSet moveset2;
+                int rank = y;
+                int file = x;
+                while (rank > 0){
+                    rank--;
+                    int move = Position(rank, file);
+                    moveset2.moves.push_back(move);
+                    MoveArrays.rookTotalMoves2[i]++;
+                }
+                MoveArrays.rookMoves2.moveset.push_back(moveset2);
             }
-            MoveArrays.rookMoves2.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while (file < 7){
-                file++;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.rookMoves3.moves[i]++;
+            // Direction 3: right
+            {
+                PieceMoveSet moveset3;
+                int rank = y;
+                int file = x;
+                while (file < 7){
+                    file++;
+                    int move = Position(rank, file);
+                    moveset3.moves.push_back(move);
+                    MoveArrays.rookTotalMoves3[i]++;
+                }
+                MoveArrays.rookMoves3.moveset.push_back(moveset3);
             }
-            MoveArrays.rookMoves3.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while (file > 0){
-                file--;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.rookMoves4.moves[i]++;
+            // Direction 4: left
+            {
+                PieceMoveSet moveset4;
+                int rank = y;
+                int file = x;
+                while (file > 0){
+                    file--;
+                    int move = Position(rank, file);
+                    moveset4.moves.push_back(move);
+                    MoveArrays.rookTotalMoves4[i]++;
+                }
+                MoveArrays.rookMoves4.moveset.push_back(moveset4);
             }
-            MoveArrays.rookMoves4.moveset[i] = moveset;
         }
     }
 }
@@ -271,145 +282,162 @@ static void SetMovesRook(){
 static void SetMovesQueen(){
     for(int y=0; y<8; y++){
         for(int x=0; x<8; x++){
-            int i = y+(8*x);
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while(rank < 7){
-                rank++;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.queenMoves1.moves[i]++;
+            int i = y*8 + x;
+            
+            // Rook-like moves (4 directions)
+            // Direction 1: up
+            {
+                PieceMoveSet moveset1;
+                int rank = y;
+                int file = x;
+                while(rank < 7){
+                    rank++;
+                    int move = Position(rank, file);
+                    moveset1.moves.push_back(move);
+                    MoveArrays.queenTotalMoves1[i]++;
+                }
+                MoveArrays.queenMoves1.moveset.push_back(moveset1);
             }
-            MoveArrays.queenMoves1.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while(rank > 0){
-                rank--;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.queenMoves2.moves[i]++;
+            // Direction 2: down
+            {
+                PieceMoveSet moveset2;
+                int rank = y;
+                int file = x;
+                while(rank > 0){
+                    rank--;
+                    int move = Position(rank, file);
+                    moveset2.moves.push_back(move);
+                    MoveArrays.queenTotalMoves2[i]++;
+                }
+                MoveArrays.queenMoves2.moveset.push_back(moveset2);
             }
-            MoveArrays.queenMoves2.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while(file < 7){
-                file++;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.queenMoves3.moves[i]++;
+            // Direction 3: right
+            {
+                PieceMoveSet moveset3;
+                int rank = y;
+                int file = x;
+                while(file < 7){
+                    file++;
+                    int move = Position(rank, file);
+                    moveset3.moves.push_back(move);
+                    MoveArrays.queenTotalMoves3[i]++;
+                }
+                MoveArrays.queenMoves3.moveset.push_back(moveset3);
             }
-            MoveArrays.queenMoves3.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while(file > 0){
-                file--;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.queenMoves4.moves[i]++;
+            // Direction 4: left
+            {
+                PieceMoveSet moveset4;
+                int rank = y;
+                int file = x;
+                while(file > 0){
+                    file--;
+                    int move = Position(rank, file);
+                    moveset4.moves.push_back(move);
+                    MoveArrays.queenTotalMoves4[i]++;
+                }
+                MoveArrays.queenMoves4.moveset.push_back(moveset4);
             }
-            MoveArrays.queenMoves4.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while(rank < 7 && file < 7){
-                rank++;
-                file++;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.queenMoves5.moves[i]++;
+            // Bishop-like moves (4 directions)
+            // Direction 5: diagonal up-right
+            {
+                PieceMoveSet moveset5;
+                int rank = y;
+                int file = x;
+                while(rank < 7 && file < 7){
+                    rank++;
+                    file++;
+                    int move = Position(rank, file);
+                    moveset5.moves.push_back(move);
+                    MoveArrays.queenTotalMoves5[i]++;
+                }
+                MoveArrays.queenMoves5.moveset.push_back(moveset5);
             }
-            MoveArrays.queenMoves5.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while(rank < 7 && file > 0){
-                rank++;
-                file--;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.queenMoves6.moves[i]++;
+            // Direction 6: diagonal up-left
+            {
+                PieceMoveSet moveset6;
+                int rank = y;
+                int file = x;
+                while(rank < 7 && file > 0){
+                    rank++;
+                    file--;
+                    int move = Position(rank, file);
+                    moveset6.moves.push_back(move);
+                    MoveArrays.queenTotalMoves6[i]++;
+                }
+                MoveArrays.queenMoves6.moveset.push_back(moveset6);
             }
-            MoveArrays.queenMoves6.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while(rank > 0 && file > 7){
-                rank--;
-                file++;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.queenMoves7.moves[i]++;
+            // Direction 7: diagonal down-right
+            {
+                PieceMoveSet moveset7;
+                int rank = y;
+                int file = x;
+                while(rank > 0 && file < 7){
+                    rank--;
+                    file++;
+                    int move = Position(rank, file);
+                    moveset7.moves.push_back(move);
+                    MoveArrays.queenTotalMoves7[i]++;
+                }
+                MoveArrays.queenMoves7.moveset.push_back(moveset7);
             }
-            MoveArrays.queenMoves7.moveset[i] = moveset;
 
-            PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            while(rank > 0 && file > 0){
-                rank--;
-                file--;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.queenMoves8.moves[i]++;
+            // Direction 8: diagonal down-left
+            {
+                PieceMoveSet moveset8;
+                int rank = y;
+                int file = x;
+                while(rank > 0 && file > 0){
+                    rank--;
+                    file--;
+                    int move = Position(rank, file);
+                    moveset8.moves.push_back(move);
+                    MoveArrays.queenTotalMoves8[i]++;
+                }
+                MoveArrays.queenMoves8.moveset.push_back(moveset8);
             }
-            MoveArrays.queenMoves8.moveset[i] = moveset;
         }
     }
 }
 
 
 static void SetMovesKing(){
-    for(int y=0; y<8; y++){
-        for(int x=0; x<8; x++){
-            int i = y+(8*x);
+    for (int y=0; y<8; y++){
+        for (int x=0; x<8; x++){
+            int i = y*8 + x;
             PieceMoveSet moveset;
-            int rank = y;
-            int file = x;
-            if (rank < 7){
-                rank++;
-                int move = Position(rank, file);
-                moveset.moves.push_back(move);
-                MoveArrays.kingMoves.moves[i]++;
+            
+            // All 8 possible king moves
+            int kingMoves[8][2] = {{-1,-1}, {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,-1}, {1,0}, {1,1}};
+            
+            for (int k = 0; k < 8; k++) {
+                int newY = y + kingMoves[k][0];
+                int newX = x + kingMoves[k][1];
+                
+                if (newY >= 0 && newY < 8 && newX >= 0 && newX < 8) {
+                    int move = Position(newY, newX);
+                    moveset.moves.push_back(move);
+                }
             }
-            if (rank > 0){
-                moveset.moves.push_back(Position(rank-1, file));
-                MoveArrays.kingMoves.moves[i]++;
-            }
-            if (file < 7){
-                moveset.moves.push_back(Position(rank, file+1));
-                MoveArrays.kingMoves.moves[i]++;
-            }
-            if (file > 0){
-                moveset.moves.push_back(Position(rank, file-1));
-                MoveArrays.kingMoves.moves[i]++;
-            }
-            if (rank < 7 && file < 7){
-                moveset.moves.push_back(Position(rank+1, file+1));
-                MoveArrays.kingMoves.moves[i]++;
-            }
-            if (rank < 7 && file > 0){
-                moveset.moves.push_back(Position(rank+1, file-1));
-                MoveArrays.kingMoves.moves[i]++;
-            }
-            if (rank > 0 && file < 7){
-                moveset.moves.push_back(Position(rank-1, file+1));
-                MoveArrays.kingMoves.moves[i]++;
-            }
-            if (rank > 0 && file > 0){
-                moveset.moves.push_back(Position(rank-1, file-1));
-                MoveArrays.kingMoves.moves[i]++;
-            }
-            MoveArrays.kingMoves.moveset[i] = moveset;
+            MoveArrays.kingMoves.moveset.push_back(moveset);
         }
     }
 }
+
+// Initialize all move tables
+static void InitializeMoveTables() {
+    SetMovesBlackPawn();
+    SetMovesWhitePawn();
+    SetMovesKnight();
+    SetMovesBishop();
+    SetMovesRook();
+    SetMovesQueen();
+    SetMovesKing();
+}
+
+#endif // PIECE_MOVES_H

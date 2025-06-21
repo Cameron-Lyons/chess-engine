@@ -1,3 +1,6 @@
+#ifndef CHESS_PIECE_H
+#define CHESS_PIECE_H
+
 #include <string>
 #include <vector>
 
@@ -20,7 +23,7 @@ enum ChessPieceType {
 class Piece {
     public:
         ChessPieceColor PieceColor;
-        static ChessPieceType PieceType;
+        ChessPieceType PieceType;
         short PieceValue;
         short AttackedValue;
         short DefendedValue;
@@ -29,9 +32,24 @@ class Piece {
         bool moved;
         std::string possibleMoves [64];
         std::vector<int> ValidMoves;
+        
+        // Constructor
+        Piece() : PieceColor(WHITE), PieceType(NONE), PieceValue(0), 
+                  AttackedValue(0), DefendedValue(0), PieceActionValue(0),
+                  selected(false), moved(false) {
+            ValidMoves.clear();
+        }
+        
+        Piece(ChessPieceColor color, ChessPieceType type) : 
+              PieceColor(color), PieceType(type), AttackedValue(0), 
+              DefendedValue(0), selected(false), moved(false) {
+            PieceValue = getPieceValue(type);
+            PieceActionValue = getPieceActionValue(type);
+            ValidMoves.clear();
+        }
     
     static short getPieceValue(ChessPieceType pieceType){
-        switch(PieceType) {
+        switch(pieceType) {
             case PAWN:
                 return 100;
             case KNIGHT:
@@ -46,11 +64,13 @@ class Piece {
                 return 32767;
             case NONE:
                 return 0;
+            default:
+                return 0;
         }
     }
 
-    short getPieceActionValue(ChessPieceType pieceType){
-        switch(PieceType) {
+    static short getPieceActionValue(ChessPieceType pieceType){
+        switch(pieceType) {
             case PAWN:
                 return 6;
             case KNIGHT:
@@ -65,6 +85,10 @@ class Piece {
                 return 1;
             case NONE:
                 return 0;
+            default:
+                return 0;
         }
-    };
+    }
 };
+
+#endif // CHESS_PIECE_H

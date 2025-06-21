@@ -1,6 +1,8 @@
+#ifndef MOVE_CONTENT_H
+#define MOVE_CONTENT_H
+
 #include "ChessPiece.h"
 #include <string>
-
 
 struct PieceMoving{
     int dest;
@@ -10,21 +12,21 @@ struct PieceMoving{
     ChessPieceColor pieceColor;
 
     PieceMoving(ChessPieceColor pieceColor, ChessPieceType pieceType, bool moved){
-        this->dest = dest;
-        this->src = src;
+        this->dest = 0;
+        this->src = 0;
         this->moved = moved;
         this->pieceType = pieceType;
         this->pieceColor = pieceColor;
     }
+    
     PieceMoving(ChessPieceType pieceType){
-        pieceType = pieceType;
-        pieceColor = WHITE;
-        src = 0;
-        dest = 0;
-        moved = false;
+        this->pieceType = pieceType;
+        this->pieceColor = WHITE;
+        this->src = 0;
+        this->dest = 0;
+        this->moved = false;
     }
 };
-
 
 struct PieceTaken{
     bool moved;
@@ -36,43 +38,46 @@ struct PieceTaken{
         this->moved = moved;
         this->pieceType = pieceType;
         this->pieceColor = pieceColor;
-        this->position = position;
+        this->position = 0;
     }
 
     PieceTaken(ChessPieceType pieceType){
-        pieceType = pieceType;
-        pieceColor = WHITE;
-        position = 0;
-        moved = false;
+        this->pieceType = pieceType;
+        this->pieceColor = WHITE;
+        this->position = 0;
+        this->moved = false;
     }
 };
 
+// Global variables for move tracking
+extern PieceMoving MovingPiece;
+extern PieceMoving MovingPieceSecondary;
+extern bool PawnPromoted;
 
-std::string string GetColumnFromInt(int column)
+std::string GetColumnFromInt(int column)
 {
     switch (column)
     {
-        case 1:
+        case 0:
             return "a";
-        case 2:
+        case 1:
             return "b";
-        case 3:
+        case 2:
             return "c";
-        case 4:
+        case 3:
             return "d";
-        case 5:
+        case 4:
             return "e";
-        case 6:
+        case 5:
             return "f";
-        case 7:
+        case 6:
             return "g";
-        case 8:
+        case 7:
             return "h";
         default:
             return "Unknown";
     }
 }
-
 
 std::string GetPgnMove(ChessPieceType pieceType)
 {
@@ -93,55 +98,57 @@ std::string GetPgnMove(ChessPieceType pieceType)
     }
 }
 
-
 std::string PortableGameNotation(){
     std::string pgn;
-    int srcCol = MovingPiece.src%8;
-    int srcRow = MovingPiece.src/8;
-    int destCol = MovingPiece.dest%8;
-    int destRow = MovingPiece.dest/8;
+    int srcCol = MovingPiece.src % 8;
+    int srcRow = MovingPiece.src / 8;
+    int destCol = MovingPiece.dest % 8;
+    int destRow = MovingPiece.dest / 8;
 
-    if (MovingPieceSecondary.PieceColor == WHITE){
-        if (MovingPieceSecondary.src == 7){
+    if (MovingPieceSecondary.pieceColor == WHITE){
+        if (MovingPieceSecondary.src == 6){
             pgn += "O-O";
         }
-        else if (MovingPieceSecondary.src == 0){
+        else if (MovingPieceSecondary.src == 2){
             pgn += "O-O-O";
         }
     }
     else{
-        if (MovingPieceSecondary.src == 56){
+        if (MovingPieceSecondary.src == 62){
             pgn += "O-O";
         }
-        else if (MovingPieceSecondary.src == 63){
+        else if (MovingPieceSecondary.src == 58){
             pgn += "O-O-O";
         }
     }
-    else {
-        pgn += GetPGBMove(MovingPiece.PieceType);
-        switch (MovingPiece.PieceType)
+    
+    if (MovingPiece.pieceType != KING) {  // Not castling
+        pgn += GetPgnMove(MovingPiece.pieceType);
+        switch (MovingPiece.pieceType)
         {
         case KNIGHT:
-            pgn += GetColumnFromInt(srcCol + 1);
-            pgn += srcRow;
+            pgn += GetColumnFromInt(srcCol);
+            pgn += std::to_string(srcRow + 1);
             break;
         case ROOK:
-            pgn += GetColumnFromInt(srcCol + 1);
-            pgn += srcRow;
+            pgn += GetColumnFromInt(srcCol);
+            pgn += std::to_string(srcRow + 1);
             break;
         case PAWN:
             if (srcCol != destCol){
-                pgn += GetColummnFromInt(srcCol + 1);
+                pgn += GetColumnFromInt(srcCol);
             }
             break;
         }
-    pgn += GetColumnFromInt(destCol + 1);
-    pgn += destRow;
-    if (PawnPromoted){
-        pgn += "Q";
-    }
+        pgn += GetColumnFromInt(destCol);
+        pgn += std::to_string(destRow + 1);
+        if (PawnPromoted){
+            pgn += "=Q";
+        }
     }
     return pgn;
 }
+
+#endif // MOVE_CONTENT_H
 
 

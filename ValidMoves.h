@@ -1,17 +1,25 @@
+#ifndef VALID_MOVES_H
+#define VALID_MOVES_H
+
 #include "PieceMoves.h"
 #include "ChessBoard.h"
 #include <vector>
 
+// Global variables for attack boards
+extern bool BlackAttackBoard[64];
+extern bool WhiteAttackBoard[64];
+extern int BlackKingPosition;
+extern int WhiteKingPosition;
 
-static bool BlackAttackBoard[64];
-static bool WhiteAttackBoard[64];
+// Function declarations
+bool AnalyzeMove(Board& board, int dest, Piece& piece);
+void CheckValidMovesPawn(const std::vector<int>& moves, Piece& piece, int start, Board& board, int count);
+void AnalyzeMovePawn(Board& board, int dest, Piece& piece);
+void GenValidMovesKingCastle(Board& board, Piece& king);
+void GenValidMoves(Board& board);
 
-
-static int BlackKingPosition;
-static int WhiteKingPosition;
-
-
-static bool AnalyzeMove(Board board, int dest, Piece piece){
+// Implementation
+bool AnalyzeMove(Board& board, int dest, Piece& piece){
     // pawns cannot attack where they move
     if (piece.PieceColor == WHITE) {
         WhiteAttackBoard[dest] = true;
@@ -24,7 +32,7 @@ static bool AnalyzeMove(Board board, int dest, Piece piece){
         return true;
     }
 
-    Piece attackedPiece = board.squares[dest].Piece;
+    Piece& attackedPiece = board.squares[dest].Piece;
     if (attackedPiece.PieceColor != piece.PieceColor) {
         if (attackedPiece.PieceType == KING) {
             if (piece.PieceColor == WHITE) {
@@ -40,11 +48,11 @@ static bool AnalyzeMove(Board board, int dest, Piece piece){
         return false;
     }
     attackedPiece.DefendedValue += piece.PieceValue;
+    return true;
 }
 
-
-void CheckValidMovesPawn(std::vector<int> moves, Piece piece, int start, Board board, int count){
-    for (int i=0; i<count; i++){
+void CheckValidMovesPawn(const std::vector<int>& moves, Piece& piece, int start, Board& board, int count){
+    for (int i=0; i<count && i < moves.size(); i++){
         int dest = moves[i];
         if (dest%8 != start%8){
             if (piece.PieceColor == WHITE){
@@ -63,9 +71,8 @@ void CheckValidMovesPawn(std::vector<int> moves, Piece piece, int start, Board b
     }
 }
 
-
-void AnalyzeMovePawn(Board board, int dest, Piece piece){
-    Piece attackedPiece = board.squares[dest].Piece;
+void AnalyzeMovePawn(Board& board, int dest, Piece& piece){
+    Piece& attackedPiece = board.squares[dest].Piece;
     if (attackedPiece.PieceType == NONE){
         return;
     }
@@ -84,7 +91,6 @@ void AnalyzeMovePawn(Board board, int dest, Piece piece){
         else{
             piece.ValidMoves.push_back(dest);
         }
-
     }
     else {
         BlackAttackBoard[dest] = true;
@@ -98,21 +104,19 @@ void AnalyzeMovePawn(Board board, int dest, Piece piece){
             piece.ValidMoves.push_back(dest);
         }
     }
-    return;
 }
 
-
-void GenValidMovesKingCastle(Board board, Piece king){
+void GenValidMovesKingCastle(Board& board, Piece& king){
     if (king.PieceType == NONE){
         return;
     }
     if (king.moved){
         return;
     }
-    if (king.PieceColor == WHITE && ~board.whiteCanCastle){
+    if (king.PieceColor == WHITE && !board.whiteCanCastle){
         return;
     }
-    if (king.PieceColor == BLACK && ~board.blackCanCastle){
+    if (king.PieceColor == BLACK && !board.blackCanCastle){
         return;
     }
     if (king.PieceColor == WHITE && board.whiteChecked){
@@ -141,6 +145,7 @@ void GenValidMovesKingCastle(Board board, Piece king){
                 }
             }
         }
+    }
     if (king.PieceColor == WHITE){
         if (board.squares[7].Piece.PieceType == ROOK){
             if (board.squares[6].Piece.PieceType == NONE
@@ -162,134 +167,180 @@ void GenValidMovesKingCastle(Board board, Piece king){
             }
         }
     }
-    }
 }
 
-
-void GenValidMoves(Board board){
+void GenValidMoves(Board& board){
     board.whiteChecked = false;
     board.blackChecked = false;
 
-    static bool BlackAttackBoard[64];
-    static bool WhiteAttackBoard[64];
+    // Reset attack boards
+    for (int i = 0; i < 64; i++) {
+        BlackAttackBoard[i] = false;
+        WhiteAttackBoard[i] = false;
+    }
 
     for (int x=0; x<64; x++){
-        Square square = board.squares[x];
+        Square& square = board.squares[x];
         if (square.Piece.PieceType == NONE) {
             continue;
         }
         square.Piece.ValidMoves.clear();
+        
+        // Update king positions
+        if (square.Piece.PieceType == KING) {
+            if (square.Piece.PieceColor == WHITE) {
+                WhiteKingPosition = x;
+            } else {
+                BlackKingPosition = x;
+            }
+        }
+        
         switch (square.Piece.PieceType)
         {
         case PAWN:
             if (square.Piece.PieceColor == WHITE){
-                CheckValidMovesPawn(MoveArrays.whitePawnMoves.moves, square.Piece, x, board, MoveArrays.whitePawnTotalMoves[x]);
+                // Use pawn move generation from PieceMoves
+                // This is a simplified version - you'll need to implement proper pawn move generation
+                int forward = x - 8;
+                if (forward >= 0 && board.squares[forward].Piece.PieceType == NONE) {
+                    square.Piece.ValidMoves.push_back(forward);
+                    if (x >= 48 && x <= 55) { // Starting position
+                        int doubleForward = x - 16;
+                        if (board.squares[doubleForward].Piece.PieceType == NONE) {
+                            square.Piece.ValidMoves.push_back(doubleForward);
+                        }
+                    }
+                }
+                // Diagonal captures
+                if (x % 8 > 0) { // Can capture left
+                    int leftCapture = x - 9;
+                    if (leftCapture >= 0 && board.squares[leftCapture].Piece.PieceType != NONE &&
+                        board.squares[leftCapture].Piece.PieceColor == BLACK) {
+                        square.Piece.ValidMoves.push_back(leftCapture);
+                    }
+                }
+                if (x % 8 < 7) { // Can capture right
+                    int rightCapture = x - 7;
+                    if (rightCapture >= 0 && board.squares[rightCapture].Piece.PieceType != NONE &&
+                        board.squares[rightCapture].Piece.PieceColor == BLACK) {
+                        square.Piece.ValidMoves.push_back(rightCapture);
+                    }
+                }
             }
             else{
-                CheckValidMovesPawn(MoveArrays.blackPawnMoves.moves, square.Piece, x, board, MoveArrays.blackPawnTotalMoves[x]);
+                // Black pawn moves
+                int forward = x + 8;
+                if (forward < 64 && board.squares[forward].Piece.PieceType == NONE) {
+                    square.Piece.ValidMoves.push_back(forward);
+                    if (x >= 8 && x <= 15) { // Starting position
+                        int doubleForward = x + 16;
+                        if (doubleForward < 64 && board.squares[doubleForward].Piece.PieceType == NONE) {
+                            square.Piece.ValidMoves.push_back(doubleForward);
+                        }
+                    }
+                }
+                // Diagonal captures
+                if (x % 8 > 0) { // Can capture left
+                    int leftCapture = x + 7;
+                    if (leftCapture < 64 && board.squares[leftCapture].Piece.PieceType != NONE &&
+                        board.squares[leftCapture].Piece.PieceColor == WHITE) {
+                        square.Piece.ValidMoves.push_back(leftCapture);
+                    }
+                }
+                if (x % 8 < 7) { // Can capture right
+                    int rightCapture = x + 9;
+                    if (rightCapture < 64 && board.squares[rightCapture].Piece.PieceType != NONE &&
+                        board.squares[rightCapture].Piece.PieceColor == WHITE) {
+                        square.Piece.ValidMoves.push_back(rightCapture);
+                    }
+                }
             }
             break;
         case KNIGHT:
-            for (int i=0; i<MoveArrays.knightTotalMoves[x]; i++){
-                AnalyzeMove(board, MoveArrays.knightMoves.moves[i], square.Piece);
+            // Knight moves (simplified - 8 possible positions)
+            {
+                int knightMoves[8][2] = {{-2,-1}, {-2,1}, {-1,-2}, {-1,2}, {1,-2}, {1,2}, {2,-1}, {2,1}};
+                for (int i = 0; i < 8; i++) {
+                    int newRow = x / 8 + knightMoves[i][0];
+                    int newCol = x % 8 + knightMoves[i][1];
+                    if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                        int newPos = newRow * 8 + newCol;
+                        AnalyzeMove(board, newPos, square.Piece);
+                    }
+                }
             }
             break;
         case BISHOP:
-            for (int i=0; i<MoveArrays.bishopTotalMoves1[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.bishopMoves1.moves[i], square.Piece)){
-                    break;
-                }
-            }   
-            for (int i=0; i<MoveArrays.bishopTotalMoves2[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.bishopMoves2.moves[i], square.Piece)){
-                    break;
-                }
-            }
-            for (int i=0; i<MoveArrays.bishopTotalMoves3[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.bishopMoves3.moves[i], square.Piece)){
-                    break;
-                }
-            }
-            for (int i=0; i<MoveArrays.bishopTotalMoves4[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.bishopMoves4.moves[i], square.Piece)){
-                    break;
+            // Bishop moves (diagonal)
+            {
+                int directions[4][2] = {{-1,-1}, {-1,1}, {1,-1}, {1,1}};
+                for (int d = 0; d < 4; d++) {
+                    int row = x / 8;
+                    int col = x % 8;
+                    for (int step = 1; step < 8; step++) {
+                        int newRow = row + directions[d][0] * step;
+                        int newCol = col + directions[d][1] * step;
+                        if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+                        int newPos = newRow * 8 + newCol;
+                        if (!AnalyzeMove(board, newPos, square.Piece)) break;
+                    }
                 }
             }
+            break;
         case ROOK:
-            for (int i=0; i<MoveArrays.rookTotalMoves1[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.rookMoves1.moves[i], square.Piece)){
-                    break;
-                }
-            }   
-            for (int i=0; i<MoveArrays.rookTotalMoves2[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.rookMoves2.moves[i], square.Piece)){
-                    break;
-                }
-            }
-            for (int i=0; i<MoveArrays.rookTotalMoves3[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.rookMoves3.moves[i], square.Piece)){
-                    break;
-                }
-            }
-            for (int i=0; i<MoveArrays.rookTotalMoves4[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.rookMoves4.moves[i], square.Piece)){
-                    break;
+            // Rook moves (horizontal and vertical)
+            {
+                int directions[4][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}};
+                for (int d = 0; d < 4; d++) {
+                    int row = x / 8;
+                    int col = x % 8;
+                    for (int step = 1; step < 8; step++) {
+                        int newRow = row + directions[d][0] * step;
+                        int newCol = col + directions[d][1] * step;
+                        if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+                        int newPos = newRow * 8 + newCol;
+                        if (!AnalyzeMove(board, newPos, square.Piece)) break;
+                    }
                 }
             }
+            break;
         case QUEEN:
-            for (int i=0; i<MoveArrays.queenTotalMoves1[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.queenMoves1.moves[i], square.Piece)){
-                    break;
-                }
-            }   
-            for (int i=0; i<MoveArrays.queenTotalMoves2[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.queenMoves2.moves[i], square.Piece)){
-                    break;
-                }
-            }
-            for (int i=0; i<MoveArrays.queenTotalMoves3[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.queenMoves3.moves[i], square.Piece)){
-                    break;
-                }
-            }
-            for (int i=0; i<MoveArrays.queenTotalMoves4[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.queenMoves4.moves[i], square.Piece)){
-                    break;
+            // Queen moves (combination of bishop and rook)
+            {
+                int directions[8][2] = {{-1,-1}, {-1,1}, {1,-1}, {1,1}, {-1,0}, {1,0}, {0,-1}, {0,1}};
+                for (int d = 0; d < 8; d++) {
+                    int row = x / 8;
+                    int col = x % 8;
+                    for (int step = 1; step < 8; step++) {
+                        int newRow = row + directions[d][0] * step;
+                        int newCol = col + directions[d][1] * step;
+                        if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+                        int newPos = newRow * 8 + newCol;
+                        if (!AnalyzeMove(board, newPos, square.Piece)) break;
+                    }
                 }
             }
-            for (int i=0; i<MoveArrays.queenTotalMoves5[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.queenMoves5.moves[i], square.Piece)){
-                    break;
-                }
-            }
-            for (int i=0; i<MoveArrays.queenTotalMoves6[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.queenMoves6.moves[i], square.Piece)){
-                    break;
-                }
-            }
-            for (int i=0; i<MoveArrays.queenTotalMoves7[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.queenMoves7.moves[i], square.Piece)){
-                    break;
-                }
-            }
-            for (int i=0; i<MoveArrays.queenTotalMoves8[x]; i++){
-                if(~AnalyzeMove(board, MoveArrays.queenMoves8.moves[i], square.Piece)){
-                    break;
-                }
-            }
+            break;
         case KING:
-            if (square.Piece.PieceColor == WHITE){
-                WhiteKingPosition = x;
+            // King moves (one square in all directions)
+            {
+                int directions[8][2] = {{-1,-1}, {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,-1}, {1,0}, {1,1}};
+                for (int d = 0; d < 8; d++) {
+                    int row = x / 8;
+                    int col = x % 8;
+                    int newRow = row + directions[d][0];
+                    int newCol = col + directions[d][1];
+                    if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                        int newPos = newRow * 8 + newCol;
+                        AnalyzeMove(board, newPos, square.Piece);
+                    }
+                }
+                // Castling
+                GenValidMovesKingCastle(board, square.Piece);
             }
-            else{
-                BlackKingPosition = x;
-            }
+            break;
         }
     }
-    if (board.WhoseTurn == WHITE){
-        GenValidMovesKing(WhiteAttackBoard, board.squares[WhiteKingPosition].Piece);
-    }
-    else{
-        GenValidMovesKing(BlackAttackBoard, board.squares[BlackKingPosition].Piece);
-    }
 }
+
+#endif // VALID_MOVES_H
