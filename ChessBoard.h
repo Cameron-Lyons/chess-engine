@@ -137,12 +137,17 @@ class Board{
         
         size_t pos = 0;
         int square = 0;
+        int fenRank = 7;  // FEN starts with rank 8, which is row 7
+        int file = 0;
         
         while (pos < fen.length() && fen[pos] != ' ') {
             char c = fen[pos];
-            if (c >= '1' && c <= '8') {
-                square += (c - '0');
-            } else if (c != '/') {
+            if (c == '/') {
+                fenRank--;
+                file = 0;
+            } else if (c >= '1' && c <= '8') {
+                file += (c - '0');
+            } else {
                 ChessPieceType type = NONE;
                 ChessPieceColor color = WHITE;
                 
@@ -158,10 +163,14 @@ class Board{
                 if (isupper(c)) color = WHITE;
                 else color = BLACK;
                 
-                if (type != NONE) {
-                    squares[square].Piece = Piece(color, type);
+                if (type != NONE && fenRank >= 0 && fenRank < 8 && file >= 0 && file < 8) {
+                    int boardRow = fenRank;  // Now fenRank is the correct row
+                    int idx = boardRow * 8 + file;
+                    if (idx >= 0 && idx < 64) {
+                        squares[idx].Piece = Piece(color, type);
+                    }
                 }
-                square++;
+                file++;
             }
             pos++;
         }
