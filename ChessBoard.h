@@ -2,6 +2,7 @@
 #define CHESS_BOARD_H
 
 #include "ChessPiece.h"
+#include <array>
 
 struct Square {
     Piece Piece;
@@ -13,7 +14,7 @@ struct Square {
 
 class Board{
     public:
-        Square squares[64];
+        std::array<Square, 64> squares;
         bool whiteChecked;
         bool blackChecked;
         bool whiteCheckmated;
@@ -26,47 +27,33 @@ class Board{
         int moveCount;
         int LastMove;
 
-    Board(){
+    Board() : 
+        squares{}, 
+        whiteChecked{false}, 
+        blackChecked{false}, 
+        whiteCheckmated{false}, 
+        blackCheckmated{false}, 
+        stalemate{false}, 
+        whiteCanCastle{true}, 
+        blackCanCastle{true}, 
+        isEndGame{false}, 
+        turn{ChessPieceColor::WHITE}, 
+        moveCount{0}, 
+        LastMove{-1} {
         for(int i = 0; i < 64; i++){
             squares[i] = Square(i);
             squares[i].Piece = Piece();
         }
-        whiteChecked = false;
-        blackChecked = false;
-        whiteCheckmated = false;
-        blackCheckmated = false;
-        stalemate = false;
-        whiteCanCastle = true;
-        blackCanCastle = true;
-        isEndGame = false;
-        turn = WHITE;
-        moveCount = 0;
-        LastMove = -1;
-    };
+    }
 
-    Board(const Board &oldBoard) {
-        for(int i = 0; i < 64; i++){
-            squares[i] = Square(i);
-            squares[i].Piece = oldBoard.squares[i].Piece;
-        }
-        whiteChecked = oldBoard.whiteChecked;
-        blackChecked = oldBoard.blackChecked;
-        whiteCheckmated = oldBoard.whiteCheckmated;
-        blackCheckmated = oldBoard.blackCheckmated;
-        stalemate = oldBoard.stalemate;
-        whiteCanCastle = oldBoard.whiteCanCastle;
-        blackCanCastle = oldBoard.blackCanCastle;
-        isEndGame = oldBoard.isEndGame;
-        turn = oldBoard.turn;
-        moveCount = oldBoard.moveCount;
-        LastMove = oldBoard.LastMove;
-    }  
+    Board(const Board &oldBoard) = default;
+    Board& operator=(const Board &oldBoard) = default;
 
     bool PromotePawns(Board& board,
                       Piece piece,
                       int destSquare,
                       ChessPieceType promotePiece) {
-        if (piece.PieceType == PAWN) {
+        if (piece.PieceType == ChessPieceType::PAWN) {
             if (destSquare < 8)
             {
                 board.squares[destSquare].Piece.PieceType = promotePiece;
@@ -84,32 +71,32 @@ class Board{
     void Castle(Board& board,
                 Piece piece,
                 int destSquare) {
-        if (piece.PieceType == KING) {
-            if (piece.PieceColor == WHITE && board.whiteCanCastle) {
+        if (piece.PieceType == ChessPieceType::KING) {
+            if (piece.PieceColor == ChessPieceColor::WHITE && board.whiteCanCastle) {
                 if (destSquare == 2) {
-                    board.squares[destSquare].Piece.PieceType = KING;
-                    board.squares[3].Piece.PieceType = ROOK;
-                    board.squares[0].Piece.PieceType = NONE;
+                    board.squares[destSquare].Piece.PieceType = ChessPieceType::KING;
+                    board.squares[3].Piece.PieceType = ChessPieceType::ROOK;
+                    board.squares[0].Piece.PieceType = ChessPieceType::NONE;
                     board.whiteCanCastle = false;
                 }
                 if (destSquare == 6) {
-                    board.squares[destSquare].Piece.PieceType = KING;
-                    board.squares[5].Piece.PieceType = ROOK;
-                    board.squares[7].Piece.PieceType = NONE;
+                    board.squares[destSquare].Piece.PieceType = ChessPieceType::KING;
+                    board.squares[5].Piece.PieceType = ChessPieceType::ROOK;
+                    board.squares[7].Piece.PieceType = ChessPieceType::NONE;
                     board.whiteCanCastle = false;
                 }
             }
-            if (piece.PieceColor == BLACK && board.blackCanCastle) {
+            if (piece.PieceColor == ChessPieceColor::BLACK && board.blackCanCastle) {
                 if (destSquare == 58) {
-                    board.squares[destSquare].Piece.PieceType = KING;
-                    board.squares[59].Piece.PieceType = ROOK;
-                    board.squares[56].Piece.PieceType = NONE;
+                    board.squares[destSquare].Piece.PieceType = ChessPieceType::KING;
+                    board.squares[59].Piece.PieceType = ChessPieceType::ROOK;
+                    board.squares[56].Piece.PieceType = ChessPieceType::NONE;
                     board.blackCanCastle = false;
                 }
                 if (destSquare == 62) {
-                    board.squares[destSquare].Piece.PieceType = KING;
-                    board.squares[61].Piece.PieceType = ROOK;
-                    board.squares[63].Piece.PieceType = NONE;
+                    board.squares[destSquare].Piece.PieceType = ChessPieceType::KING;
+                    board.squares[61].Piece.PieceType = ChessPieceType::ROOK;
+                    board.squares[63].Piece.PieceType = ChessPieceType::NONE;
                     board.blackCanCastle = false;
                 }
             }
@@ -117,14 +104,14 @@ class Board{
     }
     void MovePiece(Board& board, int srcPos, int destPos, bool promotePawn) {
         Piece piece = board.squares[srcPos].Piece;
-        if (piece.PieceColor == BLACK){
+        if (piece.PieceColor == ChessPieceColor::BLACK){
             board.moveCount++;
         }
         if (promotePawn) {
-            board.PromotePawns(board, piece, destPos, QUEEN);
+            board.PromotePawns(board, piece, destPos, ChessPieceType::QUEEN);
         }
         board.squares[destPos].Piece = piece;
-        board.squares[srcPos].Piece.PieceType = NONE;
+        board.squares[srcPos].Piece.PieceType = ChessPieceType::NONE;
         board.Castle(board, piece, destPos);
         board.LastMove = destPos;
     }
@@ -136,7 +123,6 @@ class Board{
         }
         
         size_t pos = 0;
-        int square = 0;
         int fenRank = 7;  // FEN starts with rank 8, which is row 7
         int file = 0;
         
@@ -148,22 +134,22 @@ class Board{
             } else if (c >= '1' && c <= '8') {
                 file += (c - '0');
             } else {
-                ChessPieceType type = NONE;
-                ChessPieceColor color = WHITE;
+                ChessPieceType type = ChessPieceType::NONE;
+                ChessPieceColor color = ChessPieceColor::WHITE;
                 
                 switch (tolower(c)) {
-                    case 'p': type = PAWN; break;
-                    case 'n': type = KNIGHT; break;
-                    case 'b': type = BISHOP; break;
-                    case 'r': type = ROOK; break;
-                    case 'q': type = QUEEN; break;
-                    case 'k': type = KING; break;
+                    case 'p': type = ChessPieceType::PAWN; break;
+                    case 'n': type = ChessPieceType::KNIGHT; break;
+                    case 'b': type = ChessPieceType::BISHOP; break;
+                    case 'r': type = ChessPieceType::ROOK; break;
+                    case 'q': type = ChessPieceType::QUEEN; break;
+                    case 'k': type = ChessPieceType::KING; break;
                 }
                 
-                if (isupper(c)) color = WHITE;
-                else color = BLACK;
+                if (isupper(c)) color = ChessPieceColor::WHITE;
+                else color = ChessPieceColor::BLACK;
                 
-                if (type != NONE && fenRank >= 0 && fenRank < 8 && file >= 0 && file < 8) {
+                if (type != ChessPieceType::NONE && fenRank >= 0 && fenRank < 8 && file >= 0 && file < 8) {
                     int boardRow = fenRank;  // Now fenRank is the correct row
                     int idx = boardRow * 8 + file;
                     if (idx >= 0 && idx < 64) {

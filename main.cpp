@@ -5,6 +5,9 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <unordered_map>
+#include <cstdint>
+#include <map>
 
 // Global variable definitions
 Board ChessBoard;
@@ -18,9 +21,33 @@ int BlackKingPosition;
 int WhiteKingPosition;
 
 // Global variables for move tracking
-PieceMoving MovingPiece(WHITE, PAWN, false);
-PieceMoving MovingPieceSecondary(WHITE, PAWN, false);
+PieceMoving MovingPiece(ChessPieceColor::WHITE, ChessPieceType::PAWN, false);
+PieceMoving MovingPieceSecondary(ChessPieceColor::WHITE, ChessPieceType::PAWN, false);
 bool PawnPromoted = false;
+
+// Zobrist table definitions
+uint64_t ZobristTable[64][12];
+uint64_t ZobristBlackToMove;
+
+// Transposition table definition
+std::unordered_map<uint64_t, TTEntry> TransTable;
+
+// Opening book: maps FEN (without move clocks) to best move in coordinate notation (e.g., "e2e4")
+std::map<std::string, std::string> OpeningBook = {
+    // Initial position
+    {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "e2e4"},
+    // After 1.e4
+    {"rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", "e7e5"},
+    // After 1.e4 e5
+    {"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2", "g1f3"},
+    // After 1.e4 e5 2.Nf3
+    {"rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2", "b8c6"},
+    // After 1.e4 e5 2.Nf3 Nc6
+    {"r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3", "f1c4"},
+    // After 1.e4 e5 2.Nf3 Nc6 3.Bc4
+    {"r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3", "f8c5"},
+    // Add more lines as desired
+};
 
 // Function to parse algebraic notation (e.g., "e4", "Nf3", "O-O", "exd5")
 bool parseAlgebraicMove(const std::string& move, Board& board, int& srcCol, int& srcRow, int& destCol, int& destRow) {
@@ -33,7 +60,7 @@ bool parseAlgebraicMove(const std::string& move, Board& board, int& srcCol, int&
     // Handle castling
     if (cleanMove == "O-O" || cleanMove == "0-0") {
         // Kingside castling
-        if (board.turn == WHITE) {
+        if (board.turn == ChessPieceColor::WHITE) {
             srcCol = 4; srcRow = 0; destCol = 6; destRow = 0;
         } else {
             srcCol = 4; srcRow = 7; destCol = 6; destRow = 7;
@@ -42,7 +69,7 @@ bool parseAlgebraicMove(const std::string& move, Board& board, int& srcCol, int&
     }
     if (cleanMove == "O-O-O" || cleanMove == "0-0-0") {
         // Queenside castling
-        if (board.turn == WHITE) {
+        if (board.turn == ChessPieceColor::WHITE) {
             srcCol = 4; srcRow = 0; destCol = 2; destRow = 0;
         } else {
             srcCol = 4; srcRow = 7; destCol = 2; destRow = 7;
@@ -51,24 +78,24 @@ bool parseAlgebraicMove(const std::string& move, Board& board, int& srcCol, int&
     }
     
     // Parse piece moves
-    ChessPieceType pieceType = PAWN;
+    ChessPieceType pieceType = ChessPieceType::PAWN;
     size_t startPos = 0;
     int disambigCol = -1, disambigRow = -1;
     
     // Check for piece type
     if (cleanMove.length() > 0) {
         switch (cleanMove[0]) {
-            case 'N': pieceType = KNIGHT; startPos = 1; break;
-            case 'B': pieceType = BISHOP; startPos = 1; break;
-            case 'R': pieceType = ROOK; startPos = 1; break;
-            case 'Q': pieceType = QUEEN; startPos = 1; break;
-            case 'K': pieceType = KING; startPos = 1; break;
-            default: pieceType = PAWN; startPos = 0; break;
+            case 'N': pieceType = ChessPieceType::KNIGHT; startPos = 1; break;
+            case 'B': pieceType = ChessPieceType::BISHOP; startPos = 1; break;
+            case 'R': pieceType = ChessPieceType::ROOK; startPos = 1; break;
+            case 'Q': pieceType = ChessPieceType::QUEEN; startPos = 1; break;
+            case 'K': pieceType = ChessPieceType::KING; startPos = 1; break;
+            default: pieceType = ChessPieceType::PAWN; startPos = 0; break;
         }
     }
     
     // Handle pawn captures (e.g., "exd5")
-    if (pieceType == PAWN && cleanMove.length() >= 4 && cleanMove[1] == 'x') {
+    if (pieceType == ChessPieceType::PAWN && cleanMove.length() >= 4 && cleanMove[1] == 'x') {
         destCol = cleanMove[2] - 'a';
         destRow = cleanMove[3] - '1';
         srcCol = cleanMove[0] - 'a';
@@ -81,7 +108,7 @@ bool parseAlgebraicMove(const std::string& move, Board& board, int& srcCol, int&
             int pos = row * 8 + srcCol;
             Piece& piece = board.squares[pos].Piece;
             
-            if (piece.PieceType == PAWN && piece.PieceColor == board.turn) {
+            if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == board.turn) {
                 // Check if this pawn can capture to destination
                 for (int validDest : piece.ValidMoves) {
                     if (validDest == destRow * 8 + destCol) {
@@ -95,7 +122,7 @@ bool parseAlgebraicMove(const std::string& move, Board& board, int& srcCol, int&
     }
     
     // Handle piece disambiguation (e.g., "Nbd7")
-    if (cleanMove.length() >= 4 && pieceType != PAWN) {
+    if (cleanMove.length() >= 4 && pieceType != ChessPieceType::PAWN) {
         char secondChar = cleanMove[1];
         if (secondChar >= 'a' && secondChar <= 'h') {
             disambigCol = secondChar - 'a';
@@ -131,23 +158,11 @@ bool parseAlgebraicMove(const std::string& move, Board& board, int& srcCol, int&
                 if (disambigCol != -1 && col != disambigCol) continue;
                 if (disambigRow != -1 && row != disambigRow) continue;
                 
-                std::cout << "Debug: Found " << (pieceType == BISHOP ? "bishop" : "piece") 
-                          << " at (" << col << "," << row << ") with " 
-                          << piece.ValidMoves.size() << " valid moves: ";
-                for (int move : piece.ValidMoves) {
-                    int moveCol = move % 8;
-                    int moveRow = move / 8;
-                    std::cout << "(" << moveCol << "," << moveRow << ") ";
-                }
-                std::cout << "\n";
-                
                 // Check if this piece can move to destination
                 for (int validDest : piece.ValidMoves) {
                     if (validDest == destRow * 8 + destCol) {
                         srcCol = col;
                         srcRow = row;
-                        std::cout << "Debug: Found valid move from (" << col << "," << row 
-                                  << ") to (" << destCol << "," << destRow << ")\n";
                         return true;
                     }
                 }
@@ -155,14 +170,12 @@ bool parseAlgebraicMove(const std::string& move, Board& board, int& srcCol, int&
         }
     }
     
-    std::cout << "Debug: No valid piece found for move " << move << "\n";
     return false;
 }
 
 // Function to convert chess notation to board coordinates (legacy support)
 bool parseMove(const std::string& move, int& srcCol, int& srcRow, int& destCol, int& destRow) {
     if (move.length() < 4) {
-        std::cout << "Debug: Move too short: " << move << " (length: " << move.length() << ")\n";
         return false;
     }
     
@@ -171,14 +184,8 @@ bool parseMove(const std::string& move, int& srcCol, int& srcRow, int& destCol, 
     destCol = move[2] - 'a';
     destRow = move[3] - '1';
     
-    std::cout << "Debug: Parsed move " << move << " -> src(" << srcCol << "," << srcRow << ") dest(" << destCol << "," << destRow << ")\n";
-    
     bool valid = srcCol >= 0 && srcCol < 8 && srcRow >= 0 && srcRow < 8 &&
            destCol >= 0 && destCol < 8 && destRow >= 0 && destRow < 8;
-    
-    if (!valid) {
-        std::cout << "Debug: Invalid coordinates\n";
-    }
     
     return valid;
 }
@@ -195,14 +202,14 @@ void printBoard(const Board& board) {
             Piece piece = board.squares[pos].Piece;
             
             char symbol = '.';
-            if (piece.PieceType != NONE) {
+            if (piece.PieceType != ChessPieceType::NONE) {
                 switch (piece.PieceType) {
-                    case PAWN: symbol = piece.PieceColor == WHITE ? 'P' : 'p'; break;
-                    case KNIGHT: symbol = piece.PieceColor == WHITE ? 'N' : 'n'; break;
-                    case BISHOP: symbol = piece.PieceColor == WHITE ? 'B' : 'b'; break;
-                    case ROOK: symbol = piece.PieceColor == WHITE ? 'R' : 'r'; break;
-                    case QUEEN: symbol = piece.PieceColor == WHITE ? 'Q' : 'q'; break;
-                    case KING: symbol = piece.PieceColor == WHITE ? 'K' : 'k'; break;
+                    case ChessPieceType::PAWN: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'P' : 'p'; break;
+                    case ChessPieceType::KNIGHT: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'N' : 'n'; break;
+                    case ChessPieceType::BISHOP: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'B' : 'b'; break;
+                    case ChessPieceType::ROOK: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'R' : 'r'; break;
+                    case ChessPieceType::QUEEN: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'Q' : 'q'; break;
+                    case ChessPieceType::KING: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'K' : 'k'; break;
                     default: symbol = '.'; break;
                 }
             }
@@ -214,9 +221,16 @@ void printBoard(const Board& board) {
     std::cout << "  a b c d e f g h\n";
 }
 
-// Function to get computer move using alpha-beta search with move ordering
-std::pair<int, int> getComputerMove(Board& board, ChessPieceColor color, int depth = 3) {
-    return findBestMove(board, depth);
+// Function to get computer move using iterative deepening with time management
+std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 5000) {
+    // Use iterative deepening with time management
+    SearchResult result = iterativeDeepening(board, 10, timeLimitMs); // Max depth 10
+    
+    if (result.bestMove.first == -1) {
+        return {-1, -1}; // No moves available
+    }
+    
+    return result.bestMove;
 }
 
 // Function to convert board position to chess notation
@@ -224,6 +238,70 @@ std::string positionToNotation(int pos) {
     int col = pos % 8;
     int row = pos / 8;
     return std::string(1, 'a' + col) + std::string(1, '1' + row);
+}
+
+// Function to get the current FEN (without move clocks)
+std::string getFEN(const Board& board) {
+    // Piece placement
+    std::string fen;
+    for (int row = 7; row >= 0; --row) {
+        int empty = 0;
+        for (int col = 0; col < 8; ++col) {
+            int pos = row * 8 + col;
+            const Piece& piece = board.squares[pos].Piece;
+            if (piece.PieceType == ChessPieceType::NONE) {
+                ++empty;
+            } else {
+                if (empty > 0) {
+                    fen += std::to_string(empty);
+                    empty = 0;
+                }
+                char symbol = '.';
+                switch (piece.PieceType) {
+                    case ChessPieceType::PAWN:   symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'P' : 'p'; break;
+                    case ChessPieceType::KNIGHT: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'N' : 'n'; break;
+                    case ChessPieceType::BISHOP: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'B' : 'b'; break;
+                    case ChessPieceType::ROOK:   symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'R' : 'r'; break;
+                    case ChessPieceType::QUEEN:  symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'Q' : 'q'; break;
+                    case ChessPieceType::KING:   symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'K' : 'k'; break;
+                    default: symbol = '.'; break;
+                }
+                fen += symbol;
+            }
+        }
+        if (empty > 0) fen += std::to_string(empty);
+        if (row > 0) fen += '/';
+    }
+    // Active color
+    fen += board.turn == ChessPieceColor::WHITE ? " w " : " b ";
+    // Castling rights (not fully implemented, just placeholder)
+    fen += "KQkq ";
+    // En passant (not tracked, just '-')
+    fen += "- ";
+    // Move clocks (not tracked, just '0 1')
+    fen += "0 1";
+    return fen;
+}
+
+std::string to_string(ChessPieceType type) {
+    switch (type) {
+        case ChessPieceType::PAWN: return "PAWN";
+        case ChessPieceType::KNIGHT: return "KNIGHT";
+        case ChessPieceType::BISHOP: return "BISHOP";
+        case ChessPieceType::ROOK: return "ROOK";
+        case ChessPieceType::QUEEN: return "QUEEN";
+        case ChessPieceType::KING: return "KING";
+        case ChessPieceType::NONE: return "NONE";
+        default: return "UNKNOWN";
+    }
+}
+
+std::string to_string(ChessPieceColor color) {
+    switch (color) {
+        case ChessPieceColor::WHITE: return "WHITE";
+        case ChessPieceColor::BLACK: return "BLACK";
+        default: return "UNKNOWN";
+    }
 }
 
 int main() {
@@ -243,8 +321,8 @@ int main() {
     
     // Debug: Check pawn at e2 (position 12)
     int e2Pos = 12;
-    std::cout << "Debug: Pawn at e2 (pos 12): Type=" << ChessBoard.squares[e2Pos].Piece.PieceType 
-             << ", Color=" << ChessBoard.squares[e2Pos].Piece.PieceColor 
+    std::cout << "Debug: Pawn at e2 (pos 12): Type=" << to_string(ChessBoard.squares[e2Pos].Piece.PieceType)
+             << ", Color=" << to_string(ChessBoard.squares[e2Pos].Piece.PieceColor)
              << ", ValidMoves count=" << ChessBoard.squares[e2Pos].Piece.ValidMoves.size() << "\n";
     
     // Debug: Check all positions in rank 1 and 2
@@ -253,9 +331,9 @@ int main() {
         for (int col = 0; col < 8; col++) {
             int pos = row * 8 + col;
             Piece& piece = ChessBoard.squares[pos].Piece;
-            if (piece.PieceType != NONE) {
-                std::cout << "  Pos " << pos << " (" << col << "," << row << "): Type=" << piece.PieceType 
-                         << ", Color=" << piece.PieceColor << "\n";
+            if (piece.PieceType != ChessPieceType::NONE) {
+                std::cout << "  Pos " << pos << " (" << col << "," << row << "): Type=" << to_string(piece.PieceType)
+                          << ", Color=" << to_string(piece.PieceColor) << "\n";
             }
         }
     }
@@ -264,9 +342,9 @@ int main() {
     bool gameOver = false;
     
     while (!gameOver) {
-        std::cout << "\nCurrent turn: " << (ChessBoard.turn == WHITE ? "White" : "Black") << "\n";
+        std::cout << "\nCurrent turn: " << (ChessBoard.turn == ChessPieceColor::WHITE ? "White" : "Black") << "\n";
         
-        if (ChessBoard.turn == WHITE) {
+        if (ChessBoard.turn == ChessPieceColor::WHITE) {
             // Human player (White)
             std::cout << "Enter your move (e.g., e4, Nf3, O-O): ";
             std::getline(std::cin, input);
@@ -279,45 +357,16 @@ int main() {
             input.erase(0, input.find_first_not_of(" \t\r\n"));
             input.erase(input.find_last_not_of(" \t\r\n") + 1);
             
-            std::cout << "Debug: Input received: '" << input << "'\n";
-            
             int srcCol, srcRow, destCol, destRow;
             if (parseAlgebraicMove(input, ChessBoard, srcCol, srcRow, destCol, destRow)) {
-                std::cout << "Debug: Attempting move from (" << srcCol << "," << srcRow << ") to (" << destCol << "," << destRow << ")\n";
-                
-                // Check if there's a piece at the source position
-                int srcPos = srcRow * 8 + srcCol;
-                std::cout << "Debug: Source position calculated as: " << srcPos << " (row=" << srcRow << ", col=" << srcCol << ")\n";
-                std::cout << "Debug: Piece at source position: Type=" << ChessBoard.squares[srcPos].Piece.PieceType 
-                         << ", Color=" << ChessBoard.squares[srcPos].Piece.PieceColor << "\n";
-                if (ChessBoard.squares[srcPos].Piece.PieceType == NONE) {
-                    std::cout << "Error: No piece at source position!\n";
-                    continue;
-                }
-                
-                // Check if it's the player's piece
-                if (ChessBoard.squares[srcPos].Piece.PieceColor != WHITE) {
-                    std::cout << "Error: That's not your piece!\n";
-                    continue;
-                }
-                
-                // Debug: Show valid moves for this piece
-                std::cout << "Debug: Valid moves for piece at " << srcCol << "," << srcRow << ": ";
-                for (int validDest : ChessBoard.squares[srcPos].Piece.ValidMoves) {
-                    int validDestCol = validDest % 8;
-                    int validDestRow = validDest / 8;
-                    std::cout << "(" << validDestCol << "," << validDestRow << ") ";
-                }
-                std::cout << "\n";
-                
                 if (MovePiece(srcCol, srcRow, destCol, destRow)) {
                     std::cout << "Move: " << input << "\n";
                     printBoard(ChessBoard);
                     // Switch turn
-                    ChessBoard.turn = (ChessBoard.turn == WHITE) ? BLACK : WHITE;
+                    ChessBoard.turn = (ChessBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
                     // Check for game end conditions
                     bool blackMate = false, whiteMate = false, staleMate = false;
-                    if (SearchForMate(BLACK, ChessBoard, blackMate, whiteMate, staleMate)) {
+                    if (SearchForMate(ChessPieceColor::BLACK, ChessBoard, blackMate, whiteMate, staleMate)) {
                         if (whiteMate) {
                             std::cout << "Checkmate! Black wins!\n";
                             gameOver = true;
@@ -338,7 +387,7 @@ int main() {
             // Computer player (Black)
             std::cout << "Computer is thinking...\n";
             
-            std::pair<int, int> computerMove = getComputerMove(ChessBoard, BLACK, 3);
+            std::pair<int, int> computerMove = getComputerMove(ChessBoard);
             
             if (computerMove.first == -1) {
                 std::cout << "Computer has no valid moves!\n";
@@ -356,10 +405,10 @@ int main() {
                     std::cout << "Computer move: " << moveNotation << "\n";
                     printBoard(ChessBoard);
                     // Switch turn
-                    ChessBoard.turn = (ChessBoard.turn == WHITE) ? BLACK : WHITE;
+                    ChessBoard.turn = (ChessBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
                     // Check for game end conditions
                     bool blackMate = false, whiteMate = false, staleMate = false;
-                    if (SearchForMate(WHITE, ChessBoard, blackMate, whiteMate, staleMate)) {
+                    if (SearchForMate(ChessPieceColor::WHITE, ChessBoard, blackMate, whiteMate, staleMate)) {
                         if (blackMate) {
                             std::cout << "Checkmate! White wins!\n";
                             gameOver = true;

@@ -32,7 +32,7 @@ bool MovePiece(int srcCol, int srcRow,
     Piece piece = ChessBoard.squares[src].Piece;
     
     // Check if there's a piece at source
-    if (piece.PieceType == NONE) {
+    if (piece.PieceType == ChessPieceType::NONE) {
         return false;
     }
     
@@ -56,7 +56,7 @@ bool MovePiece(int srcCol, int srcRow,
         return false;
     }
 
-    bool promotePawn = (piece.PieceType == PAWN && (destRow == 0 || destRow == 7));
+    bool promotePawn = (piece.PieceType == ChessPieceType::PAWN && (destRow == 0 || destRow == 7));
     
     // Make the move
     ChessBoard.squares[dest].Piece = piece;
@@ -67,12 +67,12 @@ bool MovePiece(int srcCol, int srcRow,
     
     // Handle pawn promotion
     if (promotePawn) {
-        ChessBoard.squares[dest].Piece.PieceType = QUEEN;
+        ChessBoard.squares[dest].Piece.PieceType = ChessPieceType::QUEEN;
     }
     
     // Handle castling
-    if (piece.PieceType == KING) {
-        if (piece.PieceColor == WHITE) {
+    if (piece.PieceType == ChessPieceType::KING) {
+        if (piece.PieceColor == ChessPieceColor::WHITE) {
             if (destCol == 6 && srcCol == 4) { // Kingside castle
                 ChessBoard.squares[5].Piece = ChessBoard.squares[7].Piece;
                 ChessBoard.squares[7].Piece = Piece();
@@ -96,8 +96,8 @@ bool MovePiece(int srcCol, int srcRow,
     }
     
     // Update king positions
-    if (piece.PieceType == KING) {
-        if (piece.PieceColor == WHITE) {
+    if (piece.PieceType == ChessPieceType::KING) {
+        if (piece.PieceColor == ChessPieceColor::WHITE) {
             WhiteKingPosition = dest;
         } else {
             BlackKingPosition = dest;
@@ -108,7 +108,7 @@ bool MovePiece(int srcCol, int srcRow,
     GenValidMoves(ChessBoard);
 
     // Check if move leaves own king in check
-    if (piece.PieceColor == WHITE){
+    if (piece.PieceColor == ChessPieceColor::WHITE){
         if (ChessBoard.whiteChecked){
             ChessBoard = PrevBoard;
             GenValidMoves(ChessBoard);

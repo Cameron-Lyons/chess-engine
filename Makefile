@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++11 -Wall -Wextra -O2
+CXXFLAGS = -std=c++20 -Wall -Wextra -O2
 TARGET = chess_engine
 SOURCES = main.cpp
 HEADERS = ChessPiece.h ChessBoard.h ChessEngine.h ValidMoves.h MoveContent.h search.h PieceMoves.h Evaluation.h PieceTables.h

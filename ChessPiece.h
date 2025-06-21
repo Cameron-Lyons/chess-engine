@@ -4,13 +4,12 @@
 #include <string>
 #include <vector>
 
-
-enum ChessPieceColor {
+enum class ChessPieceColor {
     WHITE,
     BLACK
 };
 
-enum ChessPieceType {
+enum class ChessPieceType {
     PAWN,
     KNIGHT,
     BISHOP,
@@ -30,11 +29,11 @@ class Piece {
         short PieceActionValue;
         bool selected;
         bool moved;
-        std::string possibleMoves [64];
+        std::string possibleMoves[64];
         std::vector<int> ValidMoves;
         
         // Constructor
-        Piece() : PieceColor(WHITE), PieceType(NONE), PieceValue(0), 
+        Piece() : PieceColor(ChessPieceColor::WHITE), PieceType(ChessPieceType::NONE), PieceValue(0), 
                   AttackedValue(0), DefendedValue(0), PieceActionValue(0),
                   selected(false), moved(false) {
             ValidMoves.clear();
@@ -48,42 +47,42 @@ class Piece {
             ValidMoves.clear();
         }
     
-    static short getPieceValue(ChessPieceType pieceType){
+    static constexpr short getPieceValue(ChessPieceType pieceType){
         switch(pieceType) {
-            case PAWN:
+            case ChessPieceType::PAWN:
                 return 100;
-            case KNIGHT:
+            case ChessPieceType::KNIGHT:
                 return 320;
-            case BISHOP:
+            case ChessPieceType::BISHOP:
                 return 325;
-            case ROOK:
+            case ChessPieceType::ROOK:
                 return 500;
-            case QUEEN:
+            case ChessPieceType::QUEEN:
                 return 975;
-            case KING:
+            case ChessPieceType::KING:
                 return 32767;
-            case NONE:
+            case ChessPieceType::NONE:
                 return 0;
             default:
                 return 0;
         }
     }
 
-    static short getPieceActionValue(ChessPieceType pieceType){
+    static constexpr short getPieceActionValue(ChessPieceType pieceType){
         switch(pieceType) {
-            case PAWN:
+            case ChessPieceType::PAWN:
                 return 6;
-            case KNIGHT:
+            case ChessPieceType::KNIGHT:
                 return 3;
-            case BISHOP:
+            case ChessPieceType::BISHOP:
                 return 3;
-            case ROOK:
+            case ChessPieceType::ROOK:
                 return 2;
-            case QUEEN:
+            case ChessPieceType::QUEEN:
                 return 2;
-            case KING:
+            case ChessPieceType::KING:
                 return 1;
-            case NONE:
+            case ChessPieceType::NONE:
                 return 0;
             default:
                 return 0;

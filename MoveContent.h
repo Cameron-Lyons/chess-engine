@@ -21,7 +21,7 @@ struct PieceMoving{
     
     PieceMoving(ChessPieceType pieceType){
         this->pieceType = pieceType;
-        this->pieceColor = WHITE;
+        this->pieceColor = ChessPieceColor::WHITE;
         this->src = 0;
         this->dest = 0;
         this->moved = false;
@@ -43,7 +43,7 @@ struct PieceTaken{
 
     PieceTaken(ChessPieceType pieceType){
         this->pieceType = pieceType;
-        this->pieceColor = WHITE;
+        this->pieceColor = ChessPieceColor::WHITE;
         this->position = 0;
         this->moved = false;
     }
@@ -83,15 +83,15 @@ std::string GetPgnMove(ChessPieceType pieceType)
 {
     switch (pieceType)
     {
-        case BISHOP:
+        case ChessPieceType::BISHOP:
             return "B";
-        case KING:
+        case ChessPieceType::KING:
             return "K";
-        case KNIGHT:
+        case ChessPieceType::KNIGHT:
             return "N";
-        case QUEEN:
+        case ChessPieceType::QUEEN:
             return "Q";
-        case ROOK:
+        case ChessPieceType::ROOK:
             return "R";
         default:
             return "";
@@ -105,7 +105,7 @@ std::string PortableGameNotation(){
     int destCol = MovingPiece.dest % 8;
     int destRow = MovingPiece.dest / 8;
 
-    if (MovingPieceSecondary.pieceColor == WHITE){
+    if (MovingPieceSecondary.pieceColor == ChessPieceColor::WHITE){
         if (MovingPieceSecondary.src == 6){
             pgn += "O-O";
         }
@@ -122,22 +122,37 @@ std::string PortableGameNotation(){
         }
     }
     
-    if (MovingPiece.pieceType != KING) {  // Not castling
+    if (MovingPiece.pieceType != ChessPieceType::KING) {  // Not castling
         pgn += GetPgnMove(MovingPiece.pieceType);
         switch (MovingPiece.pieceType)
         {
-        case KNIGHT:
+        case ChessPieceType::KNIGHT:
             pgn += GetColumnFromInt(srcCol);
             pgn += std::to_string(srcRow + 1);
             break;
-        case ROOK:
+        case ChessPieceType::ROOK:
             pgn += GetColumnFromInt(srcCol);
             pgn += std::to_string(srcRow + 1);
             break;
-        case PAWN:
+        case ChessPieceType::BISHOP:
+            pgn += GetColumnFromInt(srcCol);
+            pgn += std::to_string(srcRow + 1);
+            break;
+        case ChessPieceType::QUEEN:
+            pgn += GetColumnFromInt(srcCol);
+            pgn += std::to_string(srcRow + 1);
+            break;
+        case ChessPieceType::KING:
+            pgn += GetColumnFromInt(srcCol);
+            pgn += std::to_string(srcRow + 1);
+            break;
+        case ChessPieceType::PAWN:
             if (srcCol != destCol){
                 pgn += GetColumnFromInt(srcCol);
             }
+            break;
+        case ChessPieceType::NONE:
+        default:
             break;
         }
         pgn += GetColumnFromInt(destCol);

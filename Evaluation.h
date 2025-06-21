@@ -85,22 +85,22 @@ int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor 
     int value = 0;
     
     switch (pieceType) {
-        case PAWN:
+        case ChessPieceType::PAWN:
             value = PAWN_TABLE[position];
             break;
-        case KNIGHT:
+        case ChessPieceType::KNIGHT:
             value = KNIGHT_TABLE[position];
             break;
-        case BISHOP:
+        case ChessPieceType::BISHOP:
             value = BISHOP_TABLE[position];
             break;
-        case ROOK:
+        case ChessPieceType::ROOK:
             value = ROOK_TABLE[position];
             break;
-        case QUEEN:
+        case ChessPieceType::QUEEN:
             value = QUEEN_TABLE[position];
             break;
-        case KING:
+        case ChessPieceType::KING:
             value = KING_TABLE[position];
             break;
         default:
@@ -109,8 +109,7 @@ int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor 
     }
     
     // For black pieces, flip the board and negate the value
-    if (color == BLACK) {
-        int flippedPosition = 63 - position;
+    if (color == ChessPieceColor::BLACK) {
         value = -value;
     }
     
@@ -126,8 +125,8 @@ int evaluatePawnStructure(const Board& board) {
         int whitePawns = 0, blackPawns = 0;
         for (int row = 0; row < 8; row++) {
             int pos = row * 8 + col;
-            if (board.squares[pos].Piece.PieceType == PAWN) {
-                if (board.squares[pos].Piece.PieceColor == WHITE) {
+            if (board.squares[pos].Piece.PieceType == ChessPieceType::PAWN) {
+                if (board.squares[pos].Piece.PieceColor == ChessPieceColor::WHITE) {
                     whitePawns++;
                 } else {
                     blackPawns++;
@@ -142,15 +141,15 @@ int evaluatePawnStructure(const Board& board) {
     for (int col = 0; col < 8; col++) {
         for (int row = 0; row < 8; row++) {
             int pos = row * 8 + col;
-            if (board.squares[pos].Piece.PieceType == PAWN) {
+            if (board.squares[pos].Piece.PieceType == ChessPieceType::PAWN) {
                 bool isolated = true;
                 // Check adjacent files for friendly pawns
                 for (int adjCol = std::max(0, col - 1); adjCol <= std::min(7, col + 1); adjCol++) {
                     if (adjCol == col) continue;
                     for (int adjRow = 0; adjRow < 8; adjRow++) {
                         int adjPos = adjRow * 8 + adjCol;
-                        if (board.squares[adjPos].Piece.PieceType == PAWN && 
-                            board.squares[adjPos].Piece.PieceColor == board.squares[pos].Piece.PieceColor) {
+                        if (board.squares[adjPos].Piece.PieceType == ChessPieceType::PAWN && 
+                            board.squares[adjPos].Piece.PieceColor == ChessPieceColor::WHITE) {
                             isolated = false;
                             break;
                         }
@@ -158,7 +157,7 @@ int evaluatePawnStructure(const Board& board) {
                     if (!isolated) break;
                 }
                 if (isolated) {
-                    if (board.squares[pos].Piece.PieceColor == WHITE) {
+                    if (board.squares[pos].Piece.PieceColor == ChessPieceColor::WHITE) {
                         score -= 30; // Penalty for white isolated pawn
                     } else {
                         score += 30; // Bonus for black isolated pawn (penalty for white)
@@ -176,9 +175,9 @@ int evaluateMobility(const Board& board) {
     int whiteMobility = 0, blackMobility = 0;
     
     for (int i = 0; i < 64; i++) {
-        if (board.squares[i].Piece.PieceType != NONE) {
+        if (board.squares[i].Piece.PieceType != ChessPieceType::NONE) {
             int moves = board.squares[i].Piece.ValidMoves.size();
-            if (board.squares[i].Piece.PieceColor == WHITE) {
+            if (board.squares[i].Piece.PieceColor == ChessPieceColor::WHITE) {
                 whiteMobility += moves;
             } else {
                 blackMobility += moves;
@@ -198,8 +197,8 @@ int evaluateCenterControl(const Board& board) {
     
     for (int square : centerSquares) {
         // Check if any piece attacks this square
-        if (board.squares[square].Piece.PieceType != NONE) {
-            if (board.squares[square].Piece.PieceColor == WHITE) {
+        if (board.squares[square].Piece.PieceType != ChessPieceType::NONE) {
+            if (board.squares[square].Piece.PieceColor == ChessPieceColor::WHITE) {
                 score += 30; // White controls center
             } else {
                 score -= 30; // Black controls center
@@ -217,11 +216,11 @@ int evaluatePosition(const Board& board) {
     // Material and piece-square table evaluation
     for (int i = 0; i < 64; i++) {
         const Piece& piece = board.squares[i].Piece;
-        if (piece.PieceType != NONE) {
+        if (piece.PieceType != ChessPieceType::NONE) {
             int materialValue = piece.PieceValue;
             int positionalValue = getPieceSquareValue(piece.PieceType, i, piece.PieceColor);
             
-            if (piece.PieceColor == WHITE) {
+            if (piece.PieceColor == ChessPieceColor::WHITE) {
                 score += materialValue + positionalValue;
             } else {
                 score -= materialValue + positionalValue;
