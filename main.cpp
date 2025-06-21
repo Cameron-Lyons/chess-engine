@@ -214,37 +214,9 @@ void printBoard(const Board& board) {
     std::cout << "  a b c d e f g h\n";
 }
 
-// Function to get computer move using alpha-beta search
+// Function to get computer move using alpha-beta search with move ordering
 std::pair<int, int> getComputerMove(Board& board, ChessPieceColor color, int depth = 3) {
-    std::vector<std::pair<int, int>> moves = GetAllMoves(board, color);
-    
-    if (moves.empty()) {
-        return {-1, -1}; // No moves available
-    }
-    
-    int bestScore = (color == WHITE) ? -10000 : 10000;
-    std::pair<int, int> bestMove = moves[0];
-    
-    for (const auto& move : moves) {
-        Board newBoard = board;
-        newBoard.MovePiece(newBoard, move.first, move.second, false);
-        
-        int score = AlphaBetaSearch(newBoard, depth - 1, -10000, 10000, color == BLACK);
-        
-        if (color == WHITE) {
-            if (score > bestScore) {
-                bestScore = score;
-                bestMove = move;
-            }
-        } else {
-            if (score < bestScore) {
-                bestScore = score;
-                bestMove = move;
-            }
-        }
-    }
-    
-    return bestMove;
+    return findBestMove(board, depth);
 }
 
 // Function to convert board position to chess notation
