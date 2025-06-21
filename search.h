@@ -3,6 +3,7 @@
 
 #include "ChessBoard.h"
 #include "ValidMoves.h"
+#include "Evaluation.h"
 #include <vector>
 
 // Function declarations
@@ -63,18 +64,8 @@ bool SearchForMate(ChessPieceColor movingSide, Board& board, bool& BlackMate, bo
 // Simple alpha-beta search implementation
 int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer) {
     if (depth == 0) {
-        // Return evaluation score
-        // This is a simplified evaluation - you should implement proper evaluation
-        int score = 0;
-        for (int i = 0; i < 64; i++) {
-            Piece& piece = board.squares[i].Piece;
-            if (piece.PieceType != NONE) {
-                int value = piece.PieceValue;
-                if (piece.PieceColor == BLACK) value = -value;
-                score += value;
-            }
-        }
-        return score;
+        // Return evaluation score using the new comprehensive evaluation
+        return evaluatePosition(board);
     }
     
     GenValidMoves(board);
