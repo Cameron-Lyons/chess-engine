@@ -4,11 +4,6 @@
 #include "ChessBoard.h"
 #include "ChessPiece.h"
 
-// Piece-square tables for positional evaluation
-// Values are from white's perspective (positive = good for white)
-// For black pieces, we'll negate these values
-
-// Pawn position values (encourage pawn advancement and center control)
 const int PAWN_TABLE[64] = {
     0,  0,  0,  0,  0,  0,  0,  0,
     50, 50, 50, 50, 50, 50, 50, 50,
@@ -20,7 +15,6 @@ const int PAWN_TABLE[64] = {
     0,  0,  0,  0,  0,  0,  0,  0
 };
 
-// Knight position values (favor center and outposts)
 const int KNIGHT_TABLE[64] = {
     -50,-40,-30,-30,-30,-30,-40,-50,
     -40,-20,  0,  0,  0,  0,-20,-40,
@@ -32,7 +26,6 @@ const int KNIGHT_TABLE[64] = {
     -50,-40,-30,-30,-30,-30,-40,-50
 };
 
-// Bishop position values (favor long diagonals)
 const int BISHOP_TABLE[64] = {
     -20,-10,-10,-10,-10,-10,-10,-20,
     -10,  0,  0,  0,  0,  0,  0,-10,
@@ -44,7 +37,6 @@ const int BISHOP_TABLE[64] = {
     -20,-10,-10,-10,-10,-10,-10,-20
 };
 
-// Rook position values (favor 7th rank and open files)
 const int ROOK_TABLE[64] = {
     0,  0,  0,  0,  0,  0,  0,  0,
     5, 10, 10, 10, 10, 10, 10,  5,
@@ -56,7 +48,6 @@ const int ROOK_TABLE[64] = {
     0,  0,  0,  5,  5,  0,  0,  0
 };
 
-// Queen position values (moderate center control)
 const int QUEEN_TABLE[64] = {
     -20,-10,-10, -5, -5,-10,-10,-20,
     -10,  0,  0,  0,  0,  0,  0,-10,
@@ -68,7 +59,6 @@ const int QUEEN_TABLE[64] = {
     -20,-10,-10, -5, -5,-10,-10,-20
 };
 
-// King position values (safety in endgame, center in opening)
 const int KING_TABLE[64] = {
     -30,-40,-40,-50,-50,-40,-40,-30,
     -30,-40,-40,-50,-50,-40,-40,-30,
@@ -80,7 +70,6 @@ const int KING_TABLE[64] = {
     20, 30, 10,  0,  0, 10, 30, 20
 };
 
-// Function to get piece-square table value
 int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor color) {
     int value = 0;
     
@@ -108,7 +97,6 @@ int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor 
             break;
     }
     
-    // For black pieces, flip the board and negate the value
     if (color == ChessPieceColor::BLACK) {
         value = -value;
     }
@@ -116,11 +104,9 @@ int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor 
     return value;
 }
 
-// Function to evaluate pawn structure
 int evaluatePawnStructure(const Board& board) {
     int score = 0;
     
-    // Count doubled pawns (penalty)
     for (int col = 0; col < 8; col++) {
         int whitePawns = 0, blackPawns = 0;
         for (int row = 0; row < 8; row++) {
@@ -133,17 +119,15 @@ int evaluatePawnStructure(const Board& board) {
                 }
             }
         }
-        if (whitePawns > 1) score -= 20 * (whitePawns - 1); // Penalty for doubled pawns
-        if (blackPawns > 1) score += 20 * (blackPawns - 1); // Bonus for opponent's doubled pawns
+        if (whitePawns > 1) score -= 20 * (whitePawns - 1);
+        if (blackPawns > 1) score += 20 * (blackPawns - 1);
     }
     
-    // Bonus for isolated pawns (penalty)
     for (int col = 0; col < 8; col++) {
         for (int row = 0; row < 8; row++) {
             int pos = row * 8 + col;
             if (board.squares[pos].Piece.PieceType == ChessPieceType::PAWN) {
                 bool isolated = true;
-                // Check adjacent files for friendly pawns
                 for (int adjCol = std::max(0, col - 1); adjCol <= std::min(7, col + 1); adjCol++) {
                     if (adjCol == col) continue;
                     for (int adjRow = 0; adjRow < 8; adjRow++) {
@@ -158,9 +142,9 @@ int evaluatePawnStructure(const Board& board) {
                 }
                 if (isolated) {
                     if (board.squares[pos].Piece.PieceColor == ChessPieceColor::WHITE) {
-                        score -= 30; // Penalty for white isolated pawn
+                        score -= 30;
                     } else {
-                        score += 30; // Bonus for black isolated pawn (penalty for white)
+                        score += 30;
                     }
                 }
             }
@@ -170,7 +154,6 @@ int evaluatePawnStructure(const Board& board) {
     return score;
 }
 
-// Function to evaluate mobility (number of legal moves)
 int evaluateMobility(const Board& board) {
     int whiteMobility = 0, blackMobility = 0;
     
@@ -185,23 +168,20 @@ int evaluateMobility(const Board& board) {
         }
     }
     
-    return (whiteMobility - blackMobility) * 10; // 10 points per move
+    return (whiteMobility - blackMobility) * 10;
 }
 
-// Function to evaluate center control
 int evaluateCenterControl(const Board& board) {
     int score = 0;
     
-    // Center squares: d4, e4, d5, e5
-    int centerSquares[] = {27, 28, 35, 36}; // d4, e4, d5, e5
+    int centerSquares[] = {27, 28, 35, 36};
     
     for (int square : centerSquares) {
-        // Check if any piece attacks this square
         if (board.squares[square].Piece.PieceType != ChessPieceType::NONE) {
             if (board.squares[square].Piece.PieceColor == ChessPieceColor::WHITE) {
-                score += 30; // White controls center
+                score += 30;
             } else {
-                score -= 30; // Black controls center
+                score -= 30;
             }
         }
     }
@@ -209,11 +189,9 @@ int evaluateCenterControl(const Board& board) {
     return score;
 }
 
-// Main evaluation function
 int evaluatePosition(const Board& board) {
     int score = 0;
     
-    // Material and piece-square table evaluation
     for (int i = 0; i < 64; i++) {
         const Piece& piece = board.squares[i].Piece;
         if (piece.PieceType != ChessPieceType::NONE) {
@@ -228,7 +206,6 @@ int evaluatePosition(const Board& board) {
         }
     }
     
-    // Add positional bonuses
     score += evaluatePawnStructure(board);
     score += evaluateMobility(board);
     score += evaluateCenterControl(board);
@@ -236,4 +213,4 @@ int evaluatePosition(const Board& board) {
     return score;
 }
 
-#endif // EVALUATION_H
+#endif

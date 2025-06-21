@@ -1,23 +1,19 @@
 #include "ChessEngine.h"
 #include "ValidMoves.h"
 #include "MoveContent.h"
-#include "search.h"
 #include <iostream>
 
-// Global variable definitions
 Board ChessBoard;
 Board PrevBoard;
 std::stack<int> MoveHistory;
 
-// Global variables for attack boards
 bool BlackAttackBoard[64];
 bool WhiteAttackBoard[64];
 int BlackKingPosition;
 int WhiteKingPosition;
 
-// Global variables for move tracking
-PieceMoving MovingPiece(WHITE, PAWN, false);
-PieceMoving MovingPieceSecondary(WHITE, PAWN, false);
+PieceMoving MovingPiece(ChessPieceColor::WHITE, ChessPieceType::PAWN, false);
+PieceMoving MovingPieceSecondary(ChessPieceColor::WHITE, ChessPieceType::PAWN, false);
 bool PawnPromoted = false;
 
 int main() {

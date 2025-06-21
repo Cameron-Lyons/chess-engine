@@ -32,7 +32,6 @@ class Piece {
         std::string possibleMoves[64];
         std::vector<int> ValidMoves;
         
-        // Constructor
         Piece() : PieceColor(ChessPieceColor::WHITE), PieceType(ChessPieceType::NONE), PieceValue(0), 
                   AttackedValue(0), DefendedValue(0), PieceActionValue(0),
                   selected(false), moved(false) {
@@ -90,4 +89,4 @@ class Piece {
     }
 };
 
-#endif // CHESS_PIECE_H
+#endif

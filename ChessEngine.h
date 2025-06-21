@@ -3,10 +3,11 @@
 #include "ValidMoves.h"
 #include <stack>
 #include <string>
+#include <iostream>
 
-extern Board ChessBoard;  // Declare as extern
-extern Board PrevBoard;   // Declare as extern
-extern std::stack<int> MoveHistory;  // Declare as extern
+extern Board ChessBoard;
+extern Board PrevBoard;
+extern std::stack<int> MoveHistory;
 
 void Engine(){
     ChessBoard = Board();
@@ -24,78 +25,55 @@ bool MovePiece(int srcCol, int srcRow,
     int src = srcCol + srcRow*8;
     int dest = destCol + destRow*8;
 
-    // Validate input
     if (src < 0 || src >= 64 || dest < 0 || dest >= 64) {
         return false;
     }
 
     Piece piece = ChessBoard.squares[src].Piece;
     
-    // Check if there's a piece at source
     if (piece.PieceType == ChessPieceType::NONE) {
         return false;
     }
     
-    // Check if it's the correct player's turn
     if (piece.PieceColor != ChessBoard.turn) {
         return false;
     }
 
-    PrevBoard = ChessBoard;  // Save previous board state
-
-    // Check if the move is in the valid moves list
-    bool moveIsValid = false;
-    for (int validDest : piece.ValidMoves) {
-        if (validDest == dest) {
-            moveIsValid = true;
-            break;
-        }
-    }
-    
-    if (!moveIsValid) {
+    if (!IsMoveLegal(ChessBoard, src, dest)) {
         return false;
     }
 
+    PrevBoard = ChessBoard;
+
     bool promotePawn = (piece.PieceType == ChessPieceType::PAWN && (destRow == 0 || destRow == 7));
+
+    ChessBoard.movePiece(src, dest);
     
-    // Make the move
-    ChessBoard.squares[dest].Piece = piece;
-    ChessBoard.squares[src].Piece = Piece();
-    
-    // Mark piece as moved
-    ChessBoard.squares[dest].Piece.moved = true;
-    
-    // Handle pawn promotion
     if (promotePawn) {
         ChessBoard.squares[dest].Piece.PieceType = ChessPieceType::QUEEN;
+        ChessBoard.updateBitboards();
     }
     
-    // Handle castling
     if (piece.PieceType == ChessPieceType::KING) {
         if (piece.PieceColor == ChessPieceColor::WHITE) {
-            if (destCol == 6 && srcCol == 4) { // Kingside castle
-                ChessBoard.squares[5].Piece = ChessBoard.squares[7].Piece;
-                ChessBoard.squares[7].Piece = Piece();
+            if (destCol == 6 && srcCol == 4) {
+                ChessBoard.movePiece(7, 5);
                 ChessBoard.whiteCanCastle = false;
-            } else if (destCol == 2 && srcCol == 4) { // Queenside castle
-                ChessBoard.squares[3].Piece = ChessBoard.squares[0].Piece;
-                ChessBoard.squares[0].Piece = Piece();
+            } else if (destCol == 2 && srcCol == 4) {
+                ChessBoard.movePiece(0, 3);
                 ChessBoard.whiteCanCastle = false;
             }
         } else {
-            if (destCol == 6 && srcCol == 4) { // Kingside castle
-                ChessBoard.squares[61].Piece = ChessBoard.squares[63].Piece;
-                ChessBoard.squares[63].Piece = Piece();
+            if (destCol == 6 && srcCol == 4) {
+                ChessBoard.movePiece(63, 61);
                 ChessBoard.blackCanCastle = false;
-            } else if (destCol == 2 && srcCol == 4) { // Queenside castle
-                ChessBoard.squares[59].Piece = ChessBoard.squares[56].Piece;
-                ChessBoard.squares[56].Piece = Piece();
+            } else if (destCol == 2 && srcCol == 4) {
+                ChessBoard.movePiece(56, 59);
                 ChessBoard.blackCanCastle = false;
             }
         }
     }
     
-    // Update king positions
     if (piece.PieceType == ChessPieceType::KING) {
         if (piece.PieceColor == ChessPieceColor::WHITE) {
             WhiteKingPosition = dest;
@@ -104,24 +82,15 @@ bool MovePiece(int srcCol, int srcRow,
         }
     }
     
-    // Generate valid moves for the new position
     GenValidMoves(ChessBoard);
 
-    // Check if move leaves own king in check
-    if (piece.PieceColor == ChessPieceColor::WHITE){
-        if (ChessBoard.whiteChecked){
-            ChessBoard = PrevBoard;
-            GenValidMoves(ChessBoard);
-            return false;
-        }
+    if (IsKingInCheck(ChessBoard, piece.PieceColor)){
+        ChessBoard = PrevBoard;
+        GenValidMoves(ChessBoard);
+        return false;
     }
-    else {
-        if (ChessBoard.blackChecked){
-            ChessBoard = PrevBoard;
-            GenValidMoves(ChessBoard);
-            return false;
-        }
-    }
+    
+    ChessBoard.turn = (ChessBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
     
     MoveHistory.push(ChessBoard.LastMove);
     return true;

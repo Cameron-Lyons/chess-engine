@@ -49,7 +49,6 @@ struct PieceTaken{
     }
 };
 
-// Global variables for move tracking
 extern PieceMoving MovingPiece;
 extern PieceMoving MovingPieceSecondary;
 extern bool PawnPromoted;
@@ -164,6 +163,4 @@ std::string PortableGameNotation(){
     return pgn;
 }
 
-#endif // MOVE_CONTENT_H
-
-
+#endif 

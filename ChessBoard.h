@@ -1,166 +1,225 @@
-#ifndef CHESS_BOARD_H
-#define CHESS_BOARD_H
+#ifndef CHESSBOARD_H
+#define CHESSBOARD_H
 
 #include "ChessPiece.h"
+#include "Bitboard.h"
 #include <array>
+#include <vector>
+#include <string>
+#include <string_view>
+#include <chrono>
+#include <algorithm>
+#include <memory>
+#include <functional>
+
+using ChessString = std::string_view;
+
+using ChessClock = std::chrono::steady_clock;
+using ChessDuration = std::chrono::milliseconds;
+using ChessTimePoint = ChessClock::time_point;
+
+enum class ChessError {
+    InvalidMove,
+    NoPieceAtSource,
+    WrongTurn,
+    MoveLeavesKingInCheck,
+    InvalidPosition,
+    InvalidFEN,
+    Timeout,
+    OutOfMemory
+};
 
 struct Square {
     Piece Piece;
     int loc;
+    std::vector<int> ValidMoves;
     
     Square() : loc(0) {}
     Square(int location) : loc(location) {}
-};
-
-class Board{
-    public:
-        std::array<Square, 64> squares;
-        bool whiteChecked;
-        bool blackChecked;
-        bool whiteCheckmated;
-        bool blackCheckmated;
-        bool stalemate;
-        bool whiteCanCastle;
-        bool blackCanCastle;
-        bool isEndGame;
-        ChessPieceColor turn;
-        int moveCount;
-        int LastMove;
-
-    Board() : 
-        squares{}, 
-        whiteChecked{false}, 
-        blackChecked{false}, 
-        whiteCheckmated{false}, 
-        blackCheckmated{false}, 
-        stalemate{false}, 
-        whiteCanCastle{true}, 
-        blackCanCastle{true}, 
-        isEndGame{false}, 
-        turn{ChessPieceColor::WHITE}, 
-        moveCount{0}, 
-        LastMove{-1} {
-        for(int i = 0; i < 64; i++){
-            squares[i] = Square(i);
-            squares[i].Piece = Piece();
+    
+    std::string toString() const {
+        if (Piece.PieceType == ChessPieceType::NONE) {
+            return ".";
         }
-    }
-
-    Board(const Board &oldBoard) = default;
-    Board& operator=(const Board &oldBoard) = default;
-
-    bool PromotePawns(Board& board,
-                      Piece piece,
-                      int destSquare,
-                      ChessPieceType promotePiece) {
-        if (piece.PieceType == ChessPieceType::PAWN) {
-            if (destSquare < 8)
-            {
-                board.squares[destSquare].Piece.PieceType = promotePiece;
-                return true;
-            }
-            if (destSquare > 55)
-            {
-                board.squares[destSquare].Piece.PieceType = promotePiece;
-                return true;
-            }
-        }
-        return false;                        
-    }
-
-    void Castle(Board& board,
-                Piece piece,
-                int destSquare) {
-        if (piece.PieceType == ChessPieceType::KING) {
-            if (piece.PieceColor == ChessPieceColor::WHITE && board.whiteCanCastle) {
-                if (destSquare == 2) {
-                    board.squares[destSquare].Piece.PieceType = ChessPieceType::KING;
-                    board.squares[3].Piece.PieceType = ChessPieceType::ROOK;
-                    board.squares[0].Piece.PieceType = ChessPieceType::NONE;
-                    board.whiteCanCastle = false;
-                }
-                if (destSquare == 6) {
-                    board.squares[destSquare].Piece.PieceType = ChessPieceType::KING;
-                    board.squares[5].Piece.PieceType = ChessPieceType::ROOK;
-                    board.squares[7].Piece.PieceType = ChessPieceType::NONE;
-                    board.whiteCanCastle = false;
-                }
-            }
-            if (piece.PieceColor == ChessPieceColor::BLACK && board.blackCanCastle) {
-                if (destSquare == 58) {
-                    board.squares[destSquare].Piece.PieceType = ChessPieceType::KING;
-                    board.squares[59].Piece.PieceType = ChessPieceType::ROOK;
-                    board.squares[56].Piece.PieceType = ChessPieceType::NONE;
-                    board.blackCanCastle = false;
-                }
-                if (destSquare == 62) {
-                    board.squares[destSquare].Piece.PieceType = ChessPieceType::KING;
-                    board.squares[61].Piece.PieceType = ChessPieceType::ROOK;
-                    board.squares[63].Piece.PieceType = ChessPieceType::NONE;
-                    board.blackCanCastle = false;
-                }
-            }
-        }
-    }
-    void MovePiece(Board& board, int srcPos, int destPos, bool promotePawn) {
-        Piece piece = board.squares[srcPos].Piece;
-        if (piece.PieceColor == ChessPieceColor::BLACK){
-            board.moveCount++;
-        }
-        if (promotePawn) {
-            board.PromotePawns(board, piece, destPos, ChessPieceType::QUEEN);
-        }
-        board.squares[destPos].Piece = piece;
-        board.squares[srcPos].Piece.PieceType = ChessPieceType::NONE;
-        board.Castle(board, piece, destPos);
-        board.LastMove = destPos;
-    }
-
-    void InitializeFromFEN(const std::string& fen) {
-        for(int i = 0; i < 64; i++){
-            squares[i] = Square(i);
-            squares[i].Piece = Piece();
-        }
-        
-        size_t pos = 0;
-        int fenRank = 7;  // FEN starts with rank 8, which is row 7
-        int file = 0;
-        
-        while (pos < fen.length() && fen[pos] != ' ') {
-            char c = fen[pos];
-            if (c == '/') {
-                fenRank--;
-                file = 0;
-            } else if (c >= '1' && c <= '8') {
-                file += (c - '0');
-            } else {
-                ChessPieceType type = ChessPieceType::NONE;
-                ChessPieceColor color = ChessPieceColor::WHITE;
-                
-                switch (tolower(c)) {
-                    case 'p': type = ChessPieceType::PAWN; break;
-                    case 'n': type = ChessPieceType::KNIGHT; break;
-                    case 'b': type = ChessPieceType::BISHOP; break;
-                    case 'r': type = ChessPieceType::ROOK; break;
-                    case 'q': type = ChessPieceType::QUEEN; break;
-                    case 'k': type = ChessPieceType::KING; break;
-                }
-                
-                if (isupper(c)) color = ChessPieceColor::WHITE;
-                else color = ChessPieceColor::BLACK;
-                
-                if (type != ChessPieceType::NONE && fenRank >= 0 && fenRank < 8 && file >= 0 && file < 8) {
-                    int boardRow = fenRank;  // Now fenRank is the correct row
-                    int idx = boardRow * 8 + file;
-                    if (idx >= 0 && idx < 64) {
-                        squares[idx].Piece = Piece(color, type);
-                    }
-                }
-                file++;
-            }
-            pos++;
-        }
+        std::string result;
+        result += (Piece.PieceColor == ChessPieceColor::WHITE ? "W" : "B");
+        result += std::to_string(static_cast<int>(Piece.PieceType));
+        return result;
     }
 };
 
-#endif // CHESS_BOARD_H
+struct Board {
+    std::array<Square, 64> squares;
+    ChessPieceColor turn;
+    bool whiteCanCastle;
+    bool blackCanCastle;
+    bool whiteChecked;
+    bool blackChecked;
+    int LastMove;
+    
+    Bitboard whitePawns, whiteKnights, whiteBishops, whiteRooks, whiteQueens, whiteKings;
+    Bitboard blackPawns, blackKnights, blackBishops, blackRooks, blackQueens, blackKings;
+    Bitboard whitePieces, blackPieces, allPieces;
+    
+    ChessTimePoint lastMoveTime;
+    
+    Board() : turn(ChessPieceColor::WHITE), whiteCanCastle(true), blackCanCastle(true), 
+              whiteChecked(false), blackChecked(false), LastMove(0), 
+              lastMoveTime(ChessClock::now()) {
+        for(int i = 0; i < 64; i++){
+            squares[i] = Square(i);
+        }
+    }
+    
+    template<typename T>
+    bool isValidIndex(T index) const {
+        return index >= 0 && index < 64;
+    }
+    
+    template<typename T>
+    ChessPieceColor getPieceColor(T pos) const {
+        if (!isValidIndex(pos)) return ChessPieceColor::WHITE;
+        return squares[pos].Piece.PieceColor;
+    }
+    
+    template<typename T>
+    ChessPieceType getPieceType(T pos) const {
+        if (!isValidIndex(pos)) return ChessPieceType::NONE;
+        return squares[pos].Piece.PieceType;
+    }
+    
+    std::vector<int> getPiecesOfType(ChessPieceType type) const {
+        std::vector<int> result;
+        for (int i = 0; i < 64; ++i) {
+            if (squares[i].Piece.PieceType == type) {
+                result.push_back(i);
+            }
+        }
+        return result;
+    }
+    
+    std::vector<int> getPiecesOfColor(ChessPieceColor color) const {
+        std::vector<int> result;
+        for (int i = 0; i < 64; ++i) {
+            if (squares[i].Piece.PieceColor == color) {
+                result.push_back(i);
+            }
+        }
+        return result;
+    }
+    
+    std::string toString() const {
+        std::string result = "Board:\n";
+        for (int row = 7; row >= 0; --row) {
+            result += std::to_string(row + 1) + " ";
+            for (int col = 0; col < 8; ++col) {
+                result += squares[row * 8 + col].toString() + " ";
+            }
+            result += std::to_string(row + 1) + "\n";
+        }
+        result += "  a b c d e f g h\n";
+        result += "Turn: " + std::string(turn == ChessPieceColor::WHITE ? "White" : "Black") + "\n";
+        return result;
+    }
+    
+    ChessTimePoint getCurrentTime() const {
+        return ChessClock::now();
+    }
+    
+    ChessDuration getTimeSinceLastMove() const {
+        return std::chrono::duration_cast<ChessDuration>(
+            ChessClock::now() - lastMoveTime);
+    }
+    
+    std::string toFEN() const;
+    bool fromFEN(ChessString fen);
+    
+    void InitializeFromFEN(ChessString fen);
+    
+    bool movePiece(int from, int to);
+    
+    void clearBitboards();
+    void updateBitboards();
+    void updateOccupancy();
+    Bitboard getPieceBitboard(ChessPieceType type, ChessPieceColor color) const;
+    
+    template<typename Func>
+    std::vector<int> generateMovesForPiece(int pos, Func&& filter) const {
+        std::vector<int> result;
+        if (isValidIndex(pos)) {
+            auto moves = squares[pos].ValidMoves;
+            std::copy_if(moves.begin(), moves.end(), std::back_inserter(result), filter);
+        }
+        return result;
+    }
+    
+    template<typename Func>
+    void forEachPiece(Func&& func) const {
+        for (int i = 0; i < 64; ++i) {
+            if (squares[i].Piece.PieceType != ChessPieceType::NONE) {
+                func(i, squares[i].Piece);
+            }
+        }
+    }
+    
+    template<typename Func>
+    std::vector<int> filterPositions(Func&& predicate) const {
+        std::vector<int> result;
+        for (int i = 0; i < 64; ++i) {
+            if (predicate(i, squares[i].Piece)) {
+                result.push_back(i);
+            }
+        }
+        return result;
+    }
+    
+    ChessError validateMove(int from, int to) const;
+    
+    void recordMoveTime() {
+        lastMoveTime = ChessClock::now();
+    }
+};
+
+namespace ChessUtils {
+    
+    inline bool isValidPosition(int row, int col) {
+        return row >= 0 && row < 8 && col >= 0 && col < 8;
+    }
+    
+    inline int positionToIndex(int row, int col) {
+        return row * 8 + col;
+    }
+    
+    inline std::pair<int, int> indexToPosition(int index) {
+        return {index / 8, index % 8};
+    }
+    
+    template<typename Container>
+    inline std::vector<int> filterValidMoves(const Container& moves) {
+        std::vector<int> result;
+        std::copy_if(moves.begin(), moves.end(), std::back_inserter(result),
+                    [](int move) { return move >= 0 && move < 64; });
+        return result;
+    }
+    
+    inline std::string formatMove(int from, int to) {
+        return std::string("Move from ") + std::to_string(from) + 
+               " to " + std::to_string(to);
+    }
+    
+    inline std::string formatError(ChessError error) {
+        switch (error) {
+            case ChessError::InvalidMove: return "Invalid move";
+            case ChessError::NoPieceAtSource: return "No piece at source position";
+            case ChessError::WrongTurn: return "Wrong player's turn";
+            case ChessError::MoveLeavesKingInCheck: return "Move leaves king in check";
+            case ChessError::InvalidPosition: return "Invalid position";
+            case ChessError::InvalidFEN: return "Invalid FEN string";
+            case ChessError::Timeout: return "Operation timed out";
+            case ChessError::OutOfMemory: return "Out of memory";
+            default: return "Unknown error";
+        }
+    }
+}
+
+#endif

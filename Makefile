@@ -1,8 +1,8 @@
 CXX = g++
 CXXFLAGS = -std=c++23 -Wall -Wextra -O2
 TARGET = chess_engine
-SOURCES = main.cpp
-HEADERS = ChessPiece.h ChessBoard.h ChessEngine.h ValidMoves.h MoveContent.h search.h PieceMoves.h Evaluation.h PieceTables.h
+SOURCES = main.cpp BitboardMoves.cpp ValidMoves.cpp ChessBoard.cpp
+HEADERS = ChessPiece.h ChessBoard.h ChessEngine.h ValidMoves.h MoveContent.h search.h PieceMoves.h Evaluation.h PieceTables.h Bitboard.h BitboardMoves.h
 
 # Default target
 all: $(TARGET)
@@ -34,5 +34,11 @@ install: $(TARGET)
 # Uninstall
 uninstall:
 	sudo rm -f /usr/local/bin/$(TARGET)
+
+test_bitboard_moves: test_bitboard_moves.cpp BitboardMoves.cpp ValidMoves.cpp
+	$(CXX) $(CXXFLAGS) -o test_bitboard_moves test_bitboard_moves.cpp BitboardMoves.cpp ValidMoves.cpp
+
+test_comprehensive: test_comprehensive.cpp BitboardMoves.cpp ValidMoves.cpp
+	$(CXX) $(CXXFLAGS) -o test_comprehensive test_comprehensive.cpp BitboardMoves.cpp ValidMoves.cpp
 
 .PHONY: all clean run debug release install uninstall 

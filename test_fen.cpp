@@ -10,14 +10,14 @@ void printBoard(const Board& board) {
             int pos = row * 8 + col;
             Piece piece = board.squares[pos].Piece;
             char symbol = '.';
-            if (piece.PieceType != NONE) {
+            if (piece.PieceType != ChessPieceType::NONE) {
                 switch (piece.PieceType) {
-                    case PAWN: symbol = piece.PieceColor == WHITE ? 'P' : 'p'; break;
-                    case KNIGHT: symbol = piece.PieceColor == WHITE ? 'N' : 'n'; break;
-                    case BISHOP: symbol = piece.PieceColor == WHITE ? 'B' : 'b'; break;
-                    case ROOK: symbol = piece.PieceColor == WHITE ? 'R' : 'r'; break;
-                    case QUEEN: symbol = piece.PieceColor == WHITE ? 'Q' : 'q'; break;
-                    case KING: symbol = piece.PieceColor == WHITE ? 'K' : 'k'; break;
+                    case ChessPieceType::PAWN: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'P' : 'p'; break;
+                    case ChessPieceType::KNIGHT: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'N' : 'n'; break;
+                    case ChessPieceType::BISHOP: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'B' : 'b'; break;
+                    case ChessPieceType::ROOK: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'R' : 'r'; break;
+                    case ChessPieceType::QUEEN: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'Q' : 'q'; break;
+                    case ChessPieceType::KING: symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'K' : 'k'; break;
                     default: symbol = '.'; break;
                 }
             }
@@ -34,7 +34,27 @@ int main() {
     Board testBoard;
     std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     testBoard.InitializeFromFEN(fen);
+    
+    testBoard.updateBitboards();
+    
     std::cout << "Board after FEN parsing:\n";
     printBoard(testBoard);
+    
+    std::cout << "\nDebug: Checking piece placement...\n";
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = testBoard.squares[i].Piece;
+        if (piece.PieceType != ChessPieceType::NONE) {
+            int row = i / 8;
+            int col = i % 8;
+            std::cout << "Piece at (" << col << "," << row << "): " 
+                      << (piece.PieceColor == ChessPieceColor::WHITE ? "White" : "Black") << " "
+                      << (piece.PieceType == ChessPieceType::PAWN ? "Pawn" : 
+                          piece.PieceType == ChessPieceType::KNIGHT ? "Knight" :
+                          piece.PieceType == ChessPieceType::BISHOP ? "Bishop" :
+                          piece.PieceType == ChessPieceType::ROOK ? "Rook" :
+                          piece.PieceType == ChessPieceType::QUEEN ? "Queen" : "King") << "\n";
+        }
+    }
+    
     return 0;
 } 

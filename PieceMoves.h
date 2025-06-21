@@ -59,20 +59,4 @@ struct {
     PieceMoveSet kingMoves;
 } MoveArrays;
 
-
-// Delete all unused SetMoves functions
-// Remove the entire block of SetMovesBlackPawn, SetMovesWhitePawn, SetMovesKnight, 
-// SetMovesBishop, SetMovesRook, SetMovesQueen, SetMovesKing functions
-
-// Initialize all move tables
-// static void InitializeMoveTables() {
-//     SetMovesBlackPawn();
-//     SetMovesWhitePawn();
-//     SetMovesKnight();
-//     SetMovesBishop();
-//     SetMovesRook();
-//     SetMovesQueen();
-//     SetMovesKing();
-// }
-
-#endif // PIECE_MOVES_H
+#endif
