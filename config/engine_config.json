@@ -1,0 +1,38 @@
+{
+  "engine": {
+    "name": "ModernChess",
+    "version": "1.0.0",
+    "author": "Chess Engine Team"
+  },
+  "search": {
+    "default_depth": 6,
+    "max_depth": 12,
+    "time_limit_ms": 5000,
+    "use_parallel_search": true,
+    "thread_count": "auto",
+    "transposition_table_size_mb": 128
+  },
+  "evaluation": {
+    "material_weights": {
+      "pawn": 100,
+      "knight": 320,
+      "bishop": 330,
+      "rook": 500,
+      "queen": 900,
+      "king": 10000
+    },
+    "positional_weight": 0.1,
+    "endgame_threshold": 1300
+  },
+  "ui": {
+    "board_style": "unicode",
+    "show_coordinates": true,
+    "show_last_move": true,
+    "show_timing": true
+  },
+  "debug": {
+    "log_level": "info",
+    "show_search_info": true,
+    "enable_move_validation": true
+  }
+} 
