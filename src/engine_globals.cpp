@@ -78,6 +78,8 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
     if (!cleanMove.empty() && (cleanMove.back() == '+' || cleanMove.back() == '#')) {
         cleanMove.pop_back();
     }
+    
+    // Handle castling
     if (cleanMove == "O-O" || cleanMove == "0-0") {
         if (board.turn == ChessPieceColor::WHITE) {
             srcCol = 4; srcRow = 0; destCol = 6; destRow = 0;
@@ -94,9 +96,11 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         }
         return true;
     }
+    
+    // Determine piece type
     ChessPieceType pieceType = ChessPieceType::PAWN;
     size_t startPos = 0;
-    int disambigCol = -1, disambigRow = -1;
+    bool isCapture = false;
     if (cleanMove.length() > 0) {
         switch (cleanMove[0]) {
             case 'N': pieceType = ChessPieceType::KNIGHT; startPos = 1; break;
@@ -107,14 +111,105 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             default: pieceType = ChessPieceType::PAWN; startPos = 0; break;
         }
     }
+    
+    // Check for capture notation
+    size_t xPos = cleanMove.find('x');
+    if (xPos != std::string::npos) {
+        isCapture = true;
+    }
+    
+    // Handle simple pawn moves like "e4"
+    if (cleanMove.length() == 2 && pieceType == ChessPieceType::PAWN) {
+        destCol = cleanMove[0] - 'a';
+        destRow = cleanMove[1] - '1';
+        
+        if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8) {
+            return false;
+        }
+        
+        // Find the pawn that can move to this square
+        if (board.turn == ChessPieceColor::WHITE) {
+            // Check one square back
+            if (destRow > 0) {
+                int checkRow = destRow - 1;
+                int pos = checkRow * 8 + destCol;
+                const Piece& piece = board.squares[pos].Piece;
+                if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == ChessPieceColor::WHITE) {
+                    // Check if destination is empty
+                    int destPos = destRow * 8 + destCol;
+                    if (board.squares[destPos].Piece.PieceType == ChessPieceType::NONE) {
+                        srcCol = destCol;
+                        srcRow = checkRow;
+                        return true;
+                    }
+                }
+            }
+            
+            // Check two squares back (for initial pawn moves)
+            if (destRow == 3) { // Moving to 4th rank
+                int checkRow = 1; // From 2nd rank
+                int pos = checkRow * 8 + destCol;
+                const Piece& piece = board.squares[pos].Piece;
+                if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == ChessPieceColor::WHITE) {
+                    // Check if both destination and intermediate square are empty
+                    int destPos = destRow * 8 + destCol;
+                    int intermediatPos = 2 * 8 + destCol;
+                    if (board.squares[destPos].Piece.PieceType == ChessPieceType::NONE && 
+                        board.squares[intermediatPos].Piece.PieceType == ChessPieceType::NONE) {
+                        srcCol = destCol;
+                        srcRow = checkRow;
+                        return true;
+                    }
+                }
+            }
+        } else { // Black's turn
+            // Check one square forward
+            if (destRow < 7) {
+                int checkRow = destRow + 1;
+                int pos = checkRow * 8 + destCol;
+                const Piece& piece = board.squares[pos].Piece;
+                if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == ChessPieceColor::BLACK) {
+                    // Check if destination is empty
+                    int destPos = destRow * 8 + destCol;
+                    if (board.squares[destPos].Piece.PieceType == ChessPieceType::NONE) {
+                        srcCol = destCol;
+                        srcRow = checkRow;
+                        return true;
+                    }
+                }
+            }
+            
+            // Check two squares forward (for initial pawn moves)
+            if (destRow == 4) { // Moving to 5th rank
+                int checkRow = 6; // From 7th rank
+                int pos = checkRow * 8 + destCol;
+                const Piece& piece = board.squares[pos].Piece;
+                if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == ChessPieceColor::BLACK) {
+                    // Check if both destination and intermediate square are empty
+                    int destPos = destRow * 8 + destCol;
+                    int intermediatPos = 5 * 8 + destCol;
+                    if (board.squares[destPos].Piece.PieceType == ChessPieceType::NONE && 
+                        board.squares[intermediatPos].Piece.PieceType == ChessPieceType::NONE) {
+                        srcCol = destCol;
+                        srcRow = checkRow;
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    
+    // Handle pawn captures like "exd4"
     if (pieceType == ChessPieceType::PAWN && cleanMove.length() >= 4 && cleanMove[1] == 'x') {
         destCol = cleanMove[2] - 'a';
         destRow = cleanMove[3] - '1';
         srcCol = cleanMove[0] - 'a';
         if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8 || srcCol < 0 || srcCol >= 8) return false;
+        
         for (int row = 0; row < 8; row++) {
             int pos = row * 8 + srcCol;
-            Piece& piece = board.squares[pos].Piece;
+            const Piece& piece = board.squares[pos].Piece;
             if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == board.turn) {
                 int from = pos;
                 int to = destRow * 8 + destCol;
@@ -139,93 +234,172 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         }
         return false;
     }
-    if (cleanMove.length() >= 4 && pieceType != ChessPieceType::PAWN) {
-        char secondChar = cleanMove[1];
-        if (secondChar >= 'a' && secondChar <= 'h') {
-            disambigCol = secondChar - 'a';
-            startPos = 2;
-        } else if (secondChar >= '1' && secondChar <= '8') {
-            disambigRow = secondChar - '1';
-            startPos = 2;
+    
+    // Handle other piece moves (Knight, Bishop, Rook, Queen, King)
+    if (pieceType != ChessPieceType::PAWN) {
+        if (cleanMove.length() < startPos + 2) return false;
+        
+        // Parse destination square
+        if (isCapture) {
+            size_t destStart = xPos + 1;
+            if (destStart + 1 >= cleanMove.length()) return false;
+            destCol = cleanMove[destStart] - 'a';
+            destRow = cleanMove[destStart + 1] - '1';
+        } else {
+            destCol = cleanMove[startPos] - 'a';
+            destRow = cleanMove[startPos + 1] - '1';
         }
-    }
-    if (cleanMove.length() < startPos + 2) return false;
-    if (cleanMove[startPos] == 'x') {
-        destCol = cleanMove[startPos + 1] - 'a';
-        destRow = cleanMove[startPos + 2] - '1';
-    } else {
-        destCol = cleanMove[startPos] - 'a';
-        destRow = cleanMove[startPos + 1] - '1';
-    }
-    if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8) return false;
-    bool found = false;
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-            int pos = row * 8 + col;
-            Piece& piece = board.squares[pos].Piece;
-            if (piece.PieceType == pieceType && piece.PieceColor == board.turn) {
-                if (disambigCol != -1 && col != disambigCol) continue;
-                if (disambigRow != -1 && row != disambigRow) continue;
-                for (int validDest : piece.ValidMoves) {
-                    if (validDest == destRow * 8 + destCol) {
-                        srcCol = col;
-                        srcRow = row;
-                        found = true;
-                        break;
-                    }
-                }
+        
+        if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8) return false;
+        
+        int destPos = destRow * 8 + destCol;
+        const Piece& destPiece = board.squares[destPos].Piece;
+        
+        // Check if destination is valid
+        if (isCapture) {
+            if (destPiece.PieceType == ChessPieceType::NONE || destPiece.PieceColor == board.turn) {
+                return false; // Can't capture empty square or own piece
             }
-            if (found) break;
+        } else {
+            if (destPiece.PieceType != ChessPieceType::NONE) {
+                return false; // Can't move to occupied square without capture notation
+            }
         }
-        if (found) break;
-    }
-    if (found) return true;
-    if (cleanMove.length() == 2 && pieceType == ChessPieceType::PAWN) {
-        destCol = cleanMove[0] - 'a';
-        destRow = cleanMove[1] - '1';
-        if (destCol >= 0 && destCol < 8 && destRow >= 0 && destRow < 8) {
-            for (int row = 0; row < 8; row++) {
-                for (int col = 0; col < 8; col++) {
-                    int pos = row * 8 + col;
-                    Piece& piece = board.squares[pos].Piece;
-                    if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == board.turn) {
-                        int pawnRow = pos / 8;
-                        int pawnCol = pos % 8;
-                        if (board.turn == ChessPieceColor::WHITE) {
-                            if (pawnCol == destCol && destRow > pawnRow) {
-                                bool pathClear = true;
-                                for (int r = pawnRow + 1; r <= destRow; r++) {
-                                    if (board.squares[r * 8 + pawnCol].Piece.PieceType != ChessPieceType::NONE) {
-                                        pathClear = false;
-                                        break;
-                                    }
-                                }
-                                if (pathClear && (destRow == pawnRow + 1 || (destRow == pawnRow + 2 && pawnRow == 1))) {
-                                    srcCol = pawnCol;
-                                    srcRow = pawnRow;
-                                    return true;
-                                }
-                            }
-                        } else {
-                            if (pawnCol == destCol && destRow < pawnRow) {
-                                bool pathClear = true;
-                                for (int r = pawnRow - 1; r >= destRow; r--) {
-                                    if (board.squares[r * 8 + pawnCol].Piece.PieceType != ChessPieceType::NONE) {
-                                        pathClear = false;
-                                        break;
-                                    }
-                                }
-                                if (pathClear && (destRow == pawnRow - 1 || (destRow == pawnRow - 2 && pawnRow == 6))) {
-                                    srcCol = pawnCol;
-                                    srcRow = pawnRow;
-                                    return true;
-                                }
-                            }
+        
+        // Find pieces of the right type that can reach the destination
+        std::vector<std::pair<int, int>> candidates;
+        
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                int pos = row * 8 + col;
+                const Piece& piece = board.squares[pos].Piece;
+                
+                if (piece.PieceType == pieceType && piece.PieceColor == board.turn) {
+                    bool canReach = false;
+                    
+                    switch (pieceType) {
+                        case ChessPieceType::KNIGHT: {
+                            int rowDiff = abs(destRow - row);
+                            int colDiff = abs(destCol - col);
+                            canReach = (rowDiff == 2 && colDiff == 1) || (rowDiff == 1 && colDiff == 2);
+                            break;
                         }
+                        case ChessPieceType::BISHOP: {
+                            int rowDiff = abs(destRow - row);
+                            int colDiff = abs(destCol - col);
+                            if (rowDiff == colDiff && rowDiff > 0) {
+                                // Check diagonal path is clear
+                                int rowStep = (destRow > row) ? 1 : -1;
+                                int colStep = (destCol > col) ? 1 : -1;
+                                canReach = true;
+                                for (int i = 1; i < rowDiff; i++) {
+                                    int checkPos = (row + i * rowStep) * 8 + (col + i * colStep);
+                                    if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE) {
+                                        canReach = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                        case ChessPieceType::ROOK: {
+                            if (row == destRow || col == destCol) {
+                                // Check path is clear
+                                canReach = true;
+                                if (row == destRow) {
+                                    int start = std::min(col, destCol) + 1;
+                                    int end = std::max(col, destCol);
+                                    for (int c = start; c < end; c++) {
+                                        if (board.squares[row * 8 + c].Piece.PieceType != ChessPieceType::NONE) {
+                                            canReach = false;
+                                            break;
+                                        }
+                                    }
+                                } else {
+                                    int start = std::min(row, destRow) + 1;
+                                    int end = std::max(row, destRow);
+                                    for (int r = start; r < end; r++) {
+                                        if (board.squares[r * 8 + col].Piece.PieceType != ChessPieceType::NONE) {
+                                            canReach = false;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                        case ChessPieceType::QUEEN: {
+                            int rowDiff = abs(destRow - row);
+                            int colDiff = abs(destCol - col);
+                            
+                            // Queen moves like rook or bishop
+                            if (row == destRow || col == destCol || rowDiff == colDiff) {
+                                canReach = true;
+                                
+                                if (row == destRow) {
+                                    // Horizontal movement
+                                    int start = std::min(col, destCol) + 1;
+                                    int end = std::max(col, destCol);
+                                    for (int c = start; c < end; c++) {
+                                        if (board.squares[row * 8 + c].Piece.PieceType != ChessPieceType::NONE) {
+                                            canReach = false;
+                                            break;
+                                        }
+                                    }
+                                } else if (col == destCol) {
+                                    // Vertical movement
+                                    int start = std::min(row, destRow) + 1;
+                                    int end = std::max(row, destRow);
+                                    for (int r = start; r < end; r++) {
+                                        if (board.squares[r * 8 + col].Piece.PieceType != ChessPieceType::NONE) {
+                                            canReach = false;
+                                            break;
+                                        }
+                                    }
+                                } else if (rowDiff == colDiff) {
+                                    // Diagonal movement
+                                    int rowStep = (destRow > row) ? 1 : -1;
+                                    int colStep = (destCol > col) ? 1 : -1;
+                                    for (int i = 1; i < rowDiff; i++) {
+                                        int checkPos = (row + i * rowStep) * 8 + (col + i * colStep);
+                                        if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE) {
+                                            canReach = false;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                        case ChessPieceType::KING: {
+                            int rowDiff = abs(destRow - row);
+                            int colDiff = abs(destCol - col);
+                            canReach = rowDiff <= 1 && colDiff <= 1 && (rowDiff + colDiff) > 0;
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                    
+                    if (canReach) {
+                        candidates.push_back({col, row});
                     }
                 }
             }
         }
+        
+        if (candidates.size() == 1) {
+            srcCol = candidates[0].first;
+            srcRow = candidates[0].second;
+            return true;
+        } else if (candidates.size() > 1) {
+            // TODO: Handle disambiguation (like Nbd2, R1e1, etc.)
+            // For now, just return the first candidate
+            srcCol = candidates[0].first;
+            srcRow = candidates[0].second;
+            return true;
+        }
     }
+    
     return false;
 } 

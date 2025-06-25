@@ -534,12 +534,12 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
     
     std::pair<int, int> bestMove = {-1, -1};
     int bestScore = (board.turn == ChessPieceColor::WHITE) ? -10000 : 10000;
+    ChessPieceColor currentTurn = board.turn; // Store the turn for lambda
     
     for (int depth = 1; depth <= maxDepth && !context.stopSearch.load() && !isTimeUp(context.startTime, context.timeLimitMs); depth++) {
         if (context.stopSearch.load()) break;
         
         std::vector<std::future<std::pair<std::pair<int, int>, int>>> futures;
-        std::atomic<int> futureCount(0);
         
         int movesPerThread = std::max(1, static_cast<int>(moves.size()) / numThreads);
         for (int t = 0; t < numThreads && !context.stopSearch.load(); t++) {
@@ -547,37 +547,32 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             int end = (t == numThreads - 1) ? moves.size() : (t + 1) * movesPerThread;
             if (start >= static_cast<int>(moves.size())) break;
             
-            futureCount.fetch_add(1);
-            futures.push_back(std::async(std::launch::async, [&, start, end, depth]() -> std::pair<std::pair<int, int>, int> {
+            futures.push_back(std::async(std::launch::async, [board, moves, start, end, depth, currentTurn, &context]() -> std::pair<std::pair<int, int>, int> {
                 std::pair<int, int> threadBestMove = {-1, -1};
-                int threadBestScore = (board.turn == ChessPieceColor::WHITE) ? -10000 : 10000;
+                int threadBestScore = (currentTurn == ChessPieceColor::WHITE) ? -10000 : 10000;
                 
                 for (int i = start; i < end && !context.stopSearch.load(); i++) {
                     const auto& move = moves[i];
-                    Board newBoard = board;
-                    newBoard.movePiece(move.first, move.second);
                     
-                    int nodesAtStart = context.nodeCount.load();
-                    std::vector<ScoredMove> scoredMoves = scoreMovesWithKillers(board, moves, context.historyTable, context.killerMoves, 0, numThreads);
-                    std::sort(scoredMoves.begin(), scoredMoves.end());
-                    int bestEval = (board.turn == ChessPieceColor::WHITE) ? -10000 : 10000;
-                    for (const auto& scoredMove : scoredMoves) {
-                        if (context.stopSearch.load()) break;
-                        const auto& move = scoredMove.move;
-                        Board newBoard = board;
-                        newBoard.movePiece(move.first, move.second);
-                        int eval = AlphaBetaSearch(newBoard, depth - 1, -10000, 10000, (board.turn == ChessPieceColor::BLACK), 0, context.historyTable, context);
-                        if (context.stopSearch.load()) break;
-                        if (board.turn == ChessPieceColor::WHITE) {
-                            if (eval > bestEval) {
-                                bestEval = eval;
-                                bestMove = move;
-                            }
-                        } else {
-                            if (eval < bestEval) {
-                                bestEval = eval;
-                                bestMove = move;
-                            }
+                    // Create a copy of the board for this thread to avoid race conditions
+                    Board localBoard = board;
+                    localBoard.movePiece(move.first, move.second);
+                    
+                    int eval = AlphaBetaSearch(localBoard, depth - 1, -10000, 10000, 
+                                             (currentTurn == ChessPieceColor::BLACK), 0, 
+                                             context.historyTable, context);
+                    
+                    if (context.stopSearch.load()) break;
+                    
+                    if (currentTurn == ChessPieceColor::WHITE) {
+                        if (eval > threadBestScore) {
+                            threadBestScore = eval;
+                            threadBestMove = move;
+                        }
+                    } else {
+                        if (eval < threadBestScore) {
+                            threadBestScore = eval;
+                            threadBestMove = move;
                         }
                     }
                 }
@@ -588,15 +583,17 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
         for (auto& future : futures) {
             if (context.stopSearch.load()) break;
             auto result = future.get();
-            if (board.turn == ChessPieceColor::WHITE) {
-                if (result.second > bestScore) {
-                    bestScore = result.second;
-                    bestMove = result.first;
-                }
-            } else {
-                if (result.second < bestScore) {
-                    bestScore = result.second;
-                    bestMove = result.first;
+            if (result.first.first != -1) { // Valid move found
+                if (currentTurn == ChessPieceColor::WHITE) {
+                    if (result.second > bestScore) {
+                        bestScore = result.second;
+                        bestMove = result.first;
+                    }
+                } else {
+                    if (result.second < bestScore) {
+                        bestScore = result.second;
+                        bestMove = result.first;
+                    }
                 }
             }
         }

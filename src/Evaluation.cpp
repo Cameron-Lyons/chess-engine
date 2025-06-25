@@ -3,9 +3,6 @@
 #include "ChessPiece.h"
 #include <algorithm>
 
-// If these functions are currently defined in Evaluation.h or elsewhere, move their full definitions here.
-
-// Example signatures (replace with actual code from your project):
 
 int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor color) {
     int value = 0;
@@ -299,4 +296,3 @@ int evaluatePosition(const Board& board) {
     
     return score;
 }
-
