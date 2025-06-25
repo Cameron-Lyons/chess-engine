@@ -40,7 +40,7 @@ void ThreadSafeTT::insert(uint64_t hash, const TTEntry& entry) {
         if (table.size() > 100000) { // Limit table size
             // Simple cleanup - remove 10% of entries (should use LRU in production)
             auto removeIt = table.begin();
-            for (int i = 0; i < table.size() / 10 && removeIt != table.end(); ++i) {
+            for (size_t i = 0; i < table.size() / 10 && removeIt != table.end(); ++i) {
                 removeIt = table.erase(removeIt);
             }
         }
@@ -288,7 +288,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
             
             // Piece-specific positional bonuses
             int srcRow = srcPos / 8;
-            int srcCol = srcPos % 8;
+            // int srcCol = srcPos % 8; // Currently unused
             int destRow = destPos / 8;
             int destCol = destPos % 8;
             
@@ -1047,7 +1047,7 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
     }
     
     // Simple SEE - just check if capture is profitable
-    int gain = getPieceValue(victim) - getPieceValue(attacker);
+    // int gain = getPieceValue(victim) - getPieceValue(attacker); // Currently unused
     
     // TODO: Full SEE would simulate the entire exchange sequence
     // For now, use a simplified version that checks basic profitability
@@ -1104,7 +1104,7 @@ bool isCastling(const Board& board, int from, int to);
 int staticExchangeEval(const Board& board, int fromSquare, int toSquare);
 
 // Helper function implementations
-bool isDiscoveredCheck(const Board& board, int from, int to) {
+bool isDiscoveredCheck(const Board& board, int from, int /* to */) {
     // Simplified check - assume any non-direct checking piece might be a discovered check
     ChessPieceType movingPiece = board.squares[from].Piece.PieceType;
     return (movingPiece != ChessPieceType::QUEEN && 

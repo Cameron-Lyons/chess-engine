@@ -633,32 +633,10 @@ int evaluateRooksOnOpenFiles(const Board& board) {
 
 int evaluateEndgame(const Board& board) {
     int totalMaterial = 0;
-    int whiteQueens = 0, blackQueens = 0;
-    int whiteRooks = 0, blackRooks = 0;
-    int whiteMinorPieces = 0, blackMinorPieces = 0;
-    
     for (int i = 0; i < 64; i++) {
         const Piece& piece = board.squares[i].Piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
             totalMaterial += piece.PieceValue;
-            
-            if (piece.PieceColor == ChessPieceColor::WHITE) {
-                switch (piece.PieceType) {
-                    case ChessPieceType::QUEEN: whiteQueens++; break;
-                    case ChessPieceType::ROOK: whiteRooks++; break;
-                    case ChessPieceType::BISHOP:
-                    case ChessPieceType::KNIGHT: whiteMinorPieces++; break;
-                    default: break;
-                }
-            } else {
-                switch (piece.PieceType) {
-                    case ChessPieceType::QUEEN: blackQueens++; break;
-                    case ChessPieceType::ROOK: blackRooks++; break;
-                    case ChessPieceType::BISHOP:
-                    case ChessPieceType::KNIGHT: blackMinorPieces++; break;
-                    default: break;
-                }
-            }
         }
     }
     

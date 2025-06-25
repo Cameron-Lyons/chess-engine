@@ -108,8 +108,6 @@ int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
 }
 
 std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 5000) {
-    ChessTimePoint startTime = ChessClock::now();
-    
     // Check opening book first
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
