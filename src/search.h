@@ -112,5 +112,9 @@ std::vector<ScoredMove> scoreMovesWithKillers(const Board& board, const std::vec
 std::string getBookMove(const std::string& fen);
 SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs, int numThreads = 0);
 std::pair<int, int> findBestMove(Board& board, int depth);
+int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, int ply, ThreadSafeHistory& historyTable, ParallelSearchContext& context, bool isPVNode = true);
+
+int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare);
+bool isGoodCapture(const Board& board, int fromSquare, int toSquare);
 
 #endif // SEARCH_H

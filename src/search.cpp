@@ -9,7 +9,28 @@
 
 void ThreadSafeTT::insert(uint64_t hash, const TTEntry& entry) {
     std::lock_guard<std::mutex> lock(mutex);
-    table[hash] = entry;
+    
+    // Better replacement strategy - always replace if new entry is deeper or exact
+    auto it = table.find(hash);
+    if (it != table.end()) {
+        const TTEntry& existing = it->second;
+        
+        // Replace if new entry is deeper, or same depth but exact bound, or much older
+        if (entry.depth >= existing.depth || 
+            (entry.depth >= existing.depth - 2 && entry.flag == 0)) {
+            table[hash] = entry;
+        }
+    } else {
+        // Table size management - keep it reasonable
+        if (table.size() > 100000) { // Limit table size
+            // Simple cleanup - remove 10% of entries (should use LRU in production)
+            auto removeIt = table.begin();
+            for (int i = 0; i < table.size() / 10 && removeIt != table.end(); ++i) {
+                removeIt = table.erase(removeIt);
+            }
+        }
+        table[hash] = entry;
+    }
 }
 
 bool ThreadSafeTT::find(uint64_t hash, TTEntry& entry) const {
@@ -146,69 +167,212 @@ int getHistoryScore(const ThreadSafeHistory& historyTable, int srcPos, int destP
     return historyTable.get(srcPos, destPos);
 }
 
-std::vector<ScoredMove> scoreMovesWithKillers(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply, int numThreads) {
+// Utility function to get piece value for delta pruning
+int getPieceValue(ChessPieceType pieceType) {
+    switch (pieceType) {
+        case ChessPieceType::PAWN: return 100;
+        case ChessPieceType::KNIGHT: return 300;
+        case ChessPieceType::BISHOP: return 300;
+        case ChessPieceType::ROOK: return 500;
+        case ChessPieceType::QUEEN: return 900;
+        case ChessPieceType::KING: return 10000;
+        case ChessPieceType::NONE: return 0;
+        default: return 0;
+    }
+}
+
+std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply) {
     std::vector<ScoredMove> scoredMoves;
     scoredMoves.reserve(moves.size());
     
-    if (moves.size() < static_cast<size_t>(numThreads * 4)) {
-        for (const auto& move : moves) {
-            int srcPos = move.first;
-            int destPos = move.second;
-            int score = 0;
+    for (const auto& move : moves) {
+        int srcPos = move.first;
+        int destPos = move.second;
+        int score = 0;
+        
+        const Piece& movingPiece = board.squares[srcPos].Piece;
+        const Piece& targetPiece = board.squares[destPos].Piece;
+        
+        // 1. Hash move bonus (if we had one from transposition table)
+        // TODO: Add hash move from TT
+        
+        // 2. Captures - MVV-LVA with bonuses
+        if (isCapture(board, srcPos, destPos)) {
+            score = 10000 + getMVVLVA_Score(board, srcPos, destPos);
             
-            if (isCapture(board, srcPos, destPos)) {
-                score = 10000 + getMVVLVA_Score(board, srcPos, destPos);
-            }
-            else if (givesCheck(board, srcPos, destPos)) {
-                score = 9000;
-            }
-            else if (board.squares[srcPos].Piece.PieceType == ChessPieceType::PAWN && (destPos < 8 || destPos >= 56)) {
-                score = 8000;
-            }
-            else if (killerMoves.isKiller(ply, move)) {
-                score = killerMoves.getKillerScore(ply, move);
-            }
-            else {
-                score = getHistoryScore(historyTable, srcPos, destPos);
+            // Bonus for capturing with less valuable piece
+            if (targetPiece.PieceValue > movingPiece.PieceValue) {
+                score += 500; // Good trade
             }
             
-            scoredMoves.emplace_back(move, score);
+            // Bonus for capturing undefended pieces
+            // TODO: Add SEE (Static Exchange Evaluation) here
+            score += 100;
         }
-    } else {
-        std::vector<std::future<std::vector<ScoredMove>>> futures;
-        int movesPerThread = moves.size() / numThreads;
-        for (int i = 0; i < numThreads; ++i) {
-            int start = i * movesPerThread;
-            int end = (i == numThreads - 1) ? moves.size() : (i + 1) * movesPerThread;
-            futures.push_back(std::async(std::launch::async, [&, start, end]() {
-                std::vector<ScoredMove> localScoredMoves;
-                for (int j = start; j < end; ++j) {
-                    const auto& move = moves[j];
-                    int srcPos = move.first;
-                    int destPos = move.second;
-                    int score = 0;
+        
+        // 3. Checks
+        else if (givesCheck(board, srcPos, destPos)) {
+            score = 9000;
+            
+            // Bonus for discovered checks
+            if (movingPiece.PieceType != ChessPieceType::QUEEN && 
+                movingPiece.PieceType != ChessPieceType::ROOK && 
+                movingPiece.PieceType != ChessPieceType::BISHOP) {
+                score += 200; // Likely discovered check
+            }
+        }
+        
+        // 4. Promotions
+        else if (movingPiece.PieceType == ChessPieceType::PAWN && 
+                 (destPos < 8 || destPos >= 56)) {
+            score = 8000;
+        }
+        
+        // 5. Castling
+        else if (movingPiece.PieceType == ChessPieceType::KING && 
+                 abs(destPos - srcPos) == 2) {
+            score = 7500; // Encourage castling
+        }
+        
+        // 6. Killer moves
+        else if (killerMoves.isKiller(ply, move)) {
+            score = killerMoves.getKillerScore(ply, move);
+        }
+        
+        // 7. Quiet moves with positional bonuses
+        else {
+            score = getHistoryScore(historyTable, srcPos, destPos);
+            
+            // Piece-specific bonuses
+            switch (movingPiece.PieceType) {
+                case ChessPieceType::PAWN: {
+                    int destRank = destPos / 8;
+                    int srcRank = srcPos / 8;
                     
-                    if (isCapture(board, srcPos, destPos)) {
-                        score = 10000 + getMVVLVA_Score(board, srcPos, destPos);
-                    } else if (givesCheck(board, srcPos, destPos)) {
-                        score = 9000;
-                    } else if (board.squares[srcPos].Piece.PieceType == ChessPieceType::PAWN && (destPos < 8 || destPos >= 56)) {
-                        score = 8000;
-                    } else if (killerMoves.isKiller(ply, move)) {
-                        score = killerMoves.getKillerScore(ply, move);
+                    // Pawn advance bonus
+                    if (movingPiece.PieceColor == ChessPieceColor::WHITE) {
+                        score += (destRank - srcRank) * 50; // Forward progress
+                        if (destRank >= 5) score += 100; // Advanced pawns
                     } else {
-                        score = getHistoryScore(historyTable, srcPos, destPos);
+                        score += (srcRank - destRank) * 50;
+                        if (destRank <= 2) score += 100; // Advanced pawns
                     }
-                    localScoredMoves.emplace_back(move, score);
+                    break;
                 }
-                return localScoredMoves;
-            }));
+                
+                case ChessPieceType::KNIGHT: {
+                    // Knight centralization bonus
+                    int destFile = destPos % 8;
+                    int destRank = destPos / 8;
+                    if (destFile >= 2 && destFile <= 5 && destRank >= 2 && destRank <= 5) {
+                        score += 150; // Central squares
+                    }
+                    if (destFile >= 3 && destFile <= 4 && destRank >= 3 && destRank <= 4) {
+                        score += 100; // Super center
+                    }
+                    break;
+                }
+                
+                case ChessPieceType::BISHOP: {
+                    // Bishop on long diagonal bonus
+                    if ((destPos % 9 == 0) || (destPos % 7 == 0 && destPos != 0 && destPos != 56)) {
+                        score += 80;
+                    }
+                    break;
+                }
+                
+                case ChessPieceType::ROOK: {
+                    int destFile = destPos % 8;
+                    int destRank = destPos / 8;
+                    
+                    // Rook on open/semi-open file bonus
+                    bool hasOwnPawn = false;
+                    bool hasEnemyPawn = false;
+                    for (int r = 0; r < 8; r++) {
+                        int pos = r * 8 + destFile;
+                        if (board.squares[pos].Piece.PieceType == ChessPieceType::PAWN) {
+                            if (board.squares[pos].Piece.PieceColor == movingPiece.PieceColor) {
+                                hasOwnPawn = true;
+                            } else {
+                                hasEnemyPawn = true;
+                            }
+                        }
+                    }
+                    if (!hasOwnPawn && !hasEnemyPawn) score += 200; // Open file
+                    else if (!hasOwnPawn) score += 100; // Semi-open file
+                    
+                    // 7th/2nd rank bonus
+                    if ((movingPiece.PieceColor == ChessPieceColor::WHITE && destRank == 6) ||
+                        (movingPiece.PieceColor == ChessPieceColor::BLACK && destRank == 1)) {
+                        score += 150;
+                    }
+                    break;
+                }
+                
+                case ChessPieceType::QUEEN: {
+                    // Queen development penalty in opening
+                    // Simple heuristic: if many pieces haven't moved, penalize early queen moves
+                    int piecesOnBackRank = 0;
+                    int backRank = (movingPiece.PieceColor == ChessPieceColor::WHITE) ? 0 : 7;
+                    for (int f = 0; f < 8; f++) {
+                        int pos = backRank * 8 + f;
+                        if (board.squares[pos].Piece.PieceType != ChessPieceType::NONE && 
+                            board.squares[pos].Piece.PieceColor == movingPiece.PieceColor &&
+                            board.squares[pos].Piece.PieceType != ChessPieceType::PAWN) {
+                            piecesOnBackRank++;
+                        }
+                    }
+                    if (piecesOnBackRank > 4) { // Early in game
+                        score -= 200; // Penalize early queen development
+                    }
+                    break;
+                }
+                
+                case ChessPieceType::KING: {
+                    // King safety - prefer moves towards safety in opening/middlegame
+                    int totalMaterial = 0;
+                    for (int i = 0; i < 64; i++) {
+                        if (board.squares[i].Piece.PieceType != ChessPieceType::NONE) {
+                            totalMaterial += board.squares[i].Piece.PieceValue;
+                        }
+                    }
+                    
+                    if (totalMaterial > 3000) { // Not endgame
+                        int destFile = destPos % 8;
+                        int destRank = destPos / 8;
+                        
+                        // Prefer king moves towards corners/safety
+                        if (movingPiece.PieceColor == ChessPieceColor::WHITE) {
+                            if (destRank == 0 && (destFile <= 2 || destFile >= 5)) {
+                                score += 100; // Towards corners for castling
+                            }
+                        } else {
+                            if (destRank == 7 && (destFile <= 2 || destFile >= 5)) {
+                                score += 100;
+                            }
+                        }
+                    }
+                    break;
+                }
+                
+                default:
+                    break;
+            }
+            
+            // General center control bonus
+            int destFile = destPos % 8;
+            int destRank = destPos / 8;
+            if (destFile >= 2 && destFile <= 5 && destRank >= 2 && destRank <= 5) {
+                score += 30; // Central squares
+            }
+            if (destFile >= 3 && destFile <= 4 && destRank >= 3 && destRank <= 4) {
+                score += 50; // Super center
+            }
         }
-        for (auto& future : futures) {
-            auto result = future.get();
-            scoredMoves.insert(scoredMoves.end(), result.begin(), result.end());
-        }
+        
+        scoredMoves.emplace_back(move, score);
     }
+    
     return scoredMoves;
 }
 
@@ -287,86 +451,105 @@ std::vector<std::pair<int, int>> GetQuietMoves(Board& board, ChessPieceColor col
 }
 
 int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context) {
-    if (context.stopSearch.load() || isTimeUp(context.startTime, context.timeLimitMs)) {
-        context.stopSearch.store(true);
-        return 0;
-    }
-    
+    if (context.stopSearch.load()) return 0;
     context.nodeCount.fetch_add(1);
     
+    // Stand pat evaluation
     int standPat = evaluatePosition(board);
     
     if (maximizingPlayer) {
-        if (standPat >= beta) {
-            return beta;
-        }
-        if (alpha < standPat) {
-            alpha = standPat;
-        }
+        if (standPat >= beta) return beta;
+        alpha = std::max(alpha, standPat);
     } else {
-        if (standPat <= alpha) {
+        if (standPat <= alpha) return alpha;
+        beta = std::min(beta, standPat);
+    }
+    
+    // Delta pruning - don't search moves that can't improve position significantly
+    const int DELTA_MARGIN = 900; // Queen value - if we can't improve by this much, prune
+    const int BIG_DELTA_MARGIN = 1200; // For very hopeless positions
+    
+    if (maximizingPlayer) {
+        if (standPat + DELTA_MARGIN < alpha) {
+            // Position is so bad that even winning a Queen won't help
             return alpha;
         }
-        if (beta > standPat) {
-            beta = standPat;
+        if (standPat + BIG_DELTA_MARGIN < alpha) {
+            // Even more hopeless - return immediately
+            return standPat;
+        }
+    } else {
+        if (standPat - DELTA_MARGIN > beta) {
+            return beta;
+        }
+        if (standPat - BIG_DELTA_MARGIN > beta) {
+            return standPat;
         }
     }
     
     GenValidMoves(board);
-    std::vector<std::pair<int, int>> noisyMoves = GetQuietMoves(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK);
+    std::vector<std::pair<int, int>> moves = GetAllMoves(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK);
     
-    if (noisyMoves.empty()) {
+    // Filter to only captures and checks
+    std::vector<std::pair<int, int>> tacticalMoves;
+    for (const auto& move : moves) {
+        if (isCapture(board, move.first, move.second) || givesCheck(board, move.first, move.second)) {
+            tacticalMoves.push_back(move);
+        }
+    }
+    
+    if (tacticalMoves.empty()) {
         return standPat;
     }
     
-    std::vector<ScoredMove> scoredMoves = scoreMovesWithKillers(board, noisyMoves, historyTable, context.killerMoves, context.ply, context.numThreads);
+    // Score and sort captures by MVV-LVA
+    std::vector<ScoredMove> scoredMoves;
+    for (const auto& move : tacticalMoves) {
+        int score = 0;
+        if (isCapture(board, move.first, move.second)) {
+            int victimValue = getPieceValue(board.squares[move.second].Piece.PieceType);
+            int attackerValue = getPieceValue(board.squares[move.first].Piece.PieceType);
+            score = victimValue * 100 - attackerValue; // MVV-LVA
+            
+            // Delta pruning for individual captures
+            if (maximizingPlayer && standPat + victimValue + 200 < alpha) {
+                continue; // Skip futile captures
+            }
+            if (!maximizingPlayer && standPat - victimValue - 200 > beta) {
+                continue; // Skip futile captures
+            }
+        }
+        if (givesCheck(board, move.first, move.second)) {
+            score += 100; // Checks are important
+        }
+        scoredMoves.push_back({move, score});
+    }
+    
+    // Sort by score (best first)
     std::sort(scoredMoves.begin(), scoredMoves.end());
     
     int bestValue = standPat;
     
-    if (maximizingPlayer) {
-        for (const auto& scoredMove : scoredMoves) {
-            if (context.stopSearch.load()) return 0;
-            
-            const auto& move = scoredMove.move;
-            Board newBoard = board;
-            newBoard.movePiece(move.first, move.second);
-            
-            int eval = QuiescenceSearch(newBoard, alpha, beta, false, historyTable, context);
-            
-            if (context.stopSearch.load()) return 0;
-            
-            if (eval > bestValue) {
-                bestValue = eval;
-            }
-            if (eval > alpha) {
-                alpha = eval;
-            }
-            if (beta <= alpha) {
-                break; // Beta cutoff
-            }
+    for (const auto& scoredMove : scoredMoves) {
+        if (context.stopSearch.load()) return 0;
+        
+        const auto& move = scoredMove.move;
+        Board newBoard = board;
+        newBoard.movePiece(move.first, move.second);
+        
+        int eval = QuiescenceSearch(newBoard, alpha, beta, !maximizingPlayer, historyTable, context);
+        if (context.stopSearch.load()) return 0;
+        
+        if (maximizingPlayer) {
+            bestValue = std::max(bestValue, eval);
+            alpha = std::max(alpha, eval);
+        } else {
+            bestValue = std::min(bestValue, eval);
+            beta = std::min(beta, eval);
         }
-    } else {
-        for (const auto& scoredMove : scoredMoves) {
-            if (context.stopSearch.load()) return 0;
-            
-            const auto& move = scoredMove.move;
-            Board newBoard = board;
-            newBoard.movePiece(move.first, move.second);
-            
-            int eval = QuiescenceSearch(newBoard, alpha, beta, true, historyTable, context);
-            
-            if (context.stopSearch.load()) return 0;
-            
-            if (eval < bestValue) {
-                bestValue = eval;
-            }
-            if (eval < beta) {
-                beta = eval;
-            }
-            if (beta <= alpha) {
-                break; // Alpha cutoff
-            }
+        
+        if (beta <= alpha) {
+            break; // Beta cutoff
         }
     }
     
@@ -379,6 +562,17 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         return 0;
     }
     context.nodeCount.fetch_add(1);
+    
+    // Check extensions - extend search for important positions
+    int extension = 0;
+    ChessPieceColor currentColor = maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
+    
+    if (depth > 0 && isInCheck(board, currentColor)) {
+        extension = 1; // Always extend when in check
+    }
+    
+    depth += extension;
+    
     uint64_t hash = ComputeZobrist(board);
     TTEntry entry;
     if (context.transTable.find(hash, entry)) {
@@ -433,7 +627,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             }
         }
     }
-    std::vector<ScoredMove> scoredMoves = scoreMovesWithKillers(board, moves, historyTable, context.killerMoves, ply, context.numThreads);
+    std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(board, moves, historyTable, context.killerMoves, ply);
     std::sort(scoredMoves.begin(), scoredMoves.end());
     int origAlpha = alpha;
     int bestValue = maximizingPlayer ? -10000 : 10000;
@@ -448,8 +642,22 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             int eval;
             bool isCaptureMove = isCapture(board, move.first, move.second);
             bool isCheckMove = givesCheck(board, move.first, move.second);
-            if (depth >= 3 && moveCount > 0 && !isCaptureMove && !isCheckMove) {
-                eval = AlphaBetaSearch(newBoard, depth - 2, alpha, beta, false, ply + 1, historyTable, context);
+            
+            // Improved Late Move Reduction with more conditions
+            if (depth >= 3 && moveCount > 0 && !isCaptureMove && !isCheckMove && 
+                !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor)) {
+                
+                // Reduce more for later moves
+                int reduction = 1;
+                if (moveCount > 3) reduction = 2;
+                if (moveCount > 6) reduction = 3;
+                
+                // Don't reduce too much in PV nodes or important positions
+                if (scoredMove.score > 1000) reduction = std::max(1, reduction - 1);
+                
+                eval = AlphaBetaSearch(newBoard, depth - 1 - reduction, alpha, beta, false, ply + 1, historyTable, context);
+                
+                // If the reduced search suggests this move is good, search full depth
                 if (eval > alpha) {
                     eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1, historyTable, context);
                 }
@@ -482,8 +690,18 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             int eval;
             bool isCaptureMove = isCapture(board, move.first, move.second);
             bool isCheckMove = givesCheck(board, move.first, move.second);
-            if (depth >= 3 && moveCount > 0 && !isCaptureMove && !isCheckMove) {
-                eval = AlphaBetaSearch(newBoard, depth - 2, alpha, beta, true, ply + 1, historyTable, context);
+            
+            // Improved Late Move Reduction for black
+            if (depth >= 3 && moveCount > 0 && !isCaptureMove && !isCheckMove && 
+                !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor)) {
+                
+                int reduction = 1;
+                if (moveCount > 3) reduction = 2;
+                if (moveCount > 6) reduction = 3;
+                
+                if (scoredMove.score > 1000) reduction = std::max(1, reduction - 1);
+                
+                eval = AlphaBetaSearch(newBoard, depth - 1 - reduction, alpha, beta, true, ply + 1, historyTable, context);
                 if (eval < beta) {
                     eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1, historyTable, context);
                 }
@@ -616,31 +834,121 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
 std::pair<int, int> findBestMove(Board& board, int depth) {
     ThreadSafeHistory historyTable;
     ParallelSearchContext context(1);
+    
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
     if (moves.empty()) {
         return {-1, -1};
     }
-    std::vector<ScoredMove> scoredMoves = scoreMovesWithKillers(board, moves, historyTable, context.killerMoves, 0, 1);
+    
+    // Use aspiration windows for better search efficiency
+    int previousScore = 0;
+    int aspirationWindow = 50;
+    int maxAspirationWindow = 400;
+    
+    std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(board, moves, historyTable, context.killerMoves, 0);
     std::sort(scoredMoves.begin(), scoredMoves.end());
+    
     int bestEval = (board.turn == ChessPieceColor::WHITE) ? -10000 : 10000;
     std::pair<int, int> bestMove = {-1, -1};
-    for (const auto& scoredMove : scoredMoves) {
-        const auto& move = scoredMove.move;
-        Board newBoard = board;
-        newBoard.movePiece(move.first, move.second);
-        int eval = AlphaBetaSearch(newBoard, depth - 1, -10000, 10000, (board.turn == ChessPieceColor::BLACK), 0, historyTable, context);
-        if (board.turn == ChessPieceColor::WHITE) {
-            if (eval > bestEval) {
-                bestEval = eval;
-                bestMove = move;
-            }
+    
+    // Iterative deepening with aspiration windows
+    for (int currentDepth = 1; currentDepth <= depth; currentDepth++) {
+        int alpha, beta;
+        
+        if (currentDepth == 1) {
+            // Full window for first iteration
+            alpha = -10000;
+            beta = 10000;
         } else {
-            if (eval < bestEval) {
-                bestEval = eval;
-                bestMove = move;
+            // Aspiration window around previous score
+            alpha = previousScore - aspirationWindow;
+            beta = previousScore + aspirationWindow;
+        }
+        
+        bool searchFailed = false;
+        int currentBestEval = bestEval;
+        std::pair<int, int> currentBestMove = bestMove;
+        
+        for (const auto& scoredMove : scoredMoves) {
+            const auto& move = scoredMove.move;
+            Board newBoard = board;
+            newBoard.movePiece(move.first, move.second);
+            
+            int eval = AlphaBetaSearch(newBoard, currentDepth - 1, alpha, beta, 
+                                     (board.turn == ChessPieceColor::BLACK), 0, 
+                                     historyTable, context);
+            
+            if (board.turn == ChessPieceColor::WHITE) {
+                if (eval > currentBestEval) {
+                    currentBestEval = eval;
+                    currentBestMove = move;
+                    
+                    if (eval > alpha) {
+                        alpha = eval;
+                    }
+                    
+                    // Check for aspiration window failure
+                    if (eval >= beta) {
+                        searchFailed = true;
+                        break; // Search failed high
+                    }
+                }
+            } else {
+                if (eval < currentBestEval) {
+                    currentBestEval = eval;
+                    currentBestMove = move;
+                    
+                    if (eval < beta) {
+                        beta = eval;
+                    }
+                    
+                    // Check for aspiration window failure
+                    if (eval <= alpha) {
+                        searchFailed = true;
+                        break; // Search failed low
+                    }
+                }
             }
         }
+        
+        // Handle aspiration window failures
+        if (searchFailed && currentDepth > 1) {
+            // Widen the window and research
+            aspirationWindow = std::min(aspirationWindow * 2, maxAspirationWindow);
+            
+            if (board.turn == ChessPieceColor::WHITE && currentBestEval >= beta) {
+                // Failed high - research with higher beta
+                beta = 10000;
+            } else if (board.turn == ChessPieceColor::BLACK && currentBestEval <= alpha) {
+                // Failed low - research with lower alpha
+                alpha = -10000;
+            } else {
+                // Failed both ways - use full window
+                alpha = -10000;
+                beta = 10000;
+            }
+            
+            // Redo this depth with wider window
+            currentDepth--;
+            continue;
+        }
+        
+        // Update best move and score
+        bestEval = currentBestEval;
+        bestMove = currentBestMove;
+        previousScore = bestEval;
+        
+        // Reset aspiration window for next iteration
+        aspirationWindow = std::max(50, aspirationWindow / 2);
+        
+        // Optional: Print search info
+        if (currentDepth >= 6) {
+            std::cout << "Depth " << currentDepth << ": score=" << bestEval 
+                      << ", move=" << (bestMove.first % 8) << "," << (bestMove.first / 8) 
+                      << " to " << (bestMove.second % 8) << "," << (bestMove.second / 8) << "\n";
+        }
     }
+    
     return bestMove;
 } 

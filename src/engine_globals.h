@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <cstdint>
 
-extern std::map<std::string, std::string> OpeningBook;
+extern std::unordered_map<std::string, std::string> OpeningBook;
 extern uint64_t ZobristTable[64][12];
 extern uint64_t ZobristBlackToMove;
 extern ThreadSafeTT TransTable;

@@ -71,13 +71,99 @@ void printBoard(const Board& board) {
     std::cout << "Time since last move: " << timeSinceLastMove.count() << "ms\n";
 }
 
+int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
+    // Base time allocation - assume 40 moves per game
+    int baseTime = totalTimeMs / std::max(1, 40 - movesPlayed);
+    
+    // Count material to determine game phase
+    int totalMaterial = 0;
+    for (int i = 0; i < 64; i++) {
+        if (board.squares[i].Piece.PieceType != ChessPieceType::NONE) {
+            totalMaterial += board.squares[i].Piece.PieceValue;
+        }
+    }
+    
+    // Complexity factors
+    float complexityMultiplier = 1.0f;
+    
+    // Opening: Use less time (book moves)
+    if (movesPlayed < 10) {
+        complexityMultiplier = 0.5f;
+    }
+    // Middlegame: Use more time (complex positions)
+    else if (totalMaterial > 3000) {
+        complexityMultiplier = 1.5f;
+    }
+    // Endgame: Use more time (precision needed)
+    else if (totalMaterial < 1500) {
+        complexityMultiplier = 1.3f;
+    }
+    
+    // Check if in check (need more time to find safe moves)
+    if (IsKingInCheck(board, board.turn)) {
+        complexityMultiplier *= 1.2f;
+    }
+    
+    return static_cast<int>(baseTime * complexityMultiplier);
+}
+
 std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 5000) {
     ChessTimePoint startTime = ChessClock::now();
     
-    // Use single-threaded search for stability
-    std::cout << "Using single-threaded search...\n";
+    // Check opening book first
+    std::string fen = getFEN(board);
+    std::string bookMove = getBookMove(fen);
+    if (!bookMove.empty()) {
+        std::cout << "Using opening book move: " << bookMove << "\n";
+        int srcCol, srcRow, destCol, destRow;
+        if (parseAlgebraicMove(bookMove, board, srcCol, srcRow, destCol, destRow)) {
+            return {srcRow * 8 + srcCol, destRow * 8 + destCol};
+        }
+    }
     
-    return findBestMove(board, 5); // Use depth 5 for good gameplay
+    // Calculate adaptive time allocation
+    static int movesPlayed = 0;
+    movesPlayed++;
+    int adaptiveTime = calculateTimeForMove(board, timeLimitMs * 10, movesPlayed);
+    adaptiveTime = std::min(adaptiveTime, timeLimitMs);
+    
+    std::cout << "Allocated " << adaptiveTime << "ms for this move\n";
+    
+    // Use optimized single-threaded search for stability and strength
+    std::cout << "Using optimized single-threaded search...\n";
+    
+    // Significantly increased adaptive depth based on time available and position complexity
+    int searchDepth = 8; // Base depth increased
+    if (adaptiveTime > 5000) searchDepth = 12;       // 5+ seconds: deep search
+    else if (adaptiveTime > 3000) searchDepth = 10;  // 3+ seconds: deeper search
+    else if (adaptiveTime > 1500) searchDepth = 9;   // 1.5+ seconds: good depth
+    else if (adaptiveTime < 500) searchDepth = 7;    // Under 0.5s: reduce depth
+    
+    // Complexity-based depth adjustment
+    GenValidMoves(board);
+    std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
+    int numMoves = moves.size();
+    
+    // More moves = more complex position = need deeper search
+    if (numMoves > 35) searchDepth += 1;  // Very complex position
+    else if (numMoves < 15) searchDepth -= 1; // Simple position
+    
+    // Check if in tactical position (many captures available)
+    int numCaptures = 0;
+    for (const auto& move : moves) {
+        if (isCapture(board, move.first, move.second)) {
+            numCaptures++;
+        }
+    }
+    if (numCaptures > 5) searchDepth += 1; // Tactical position needs deeper search
+    
+    // Ensure minimum and maximum bounds
+    searchDepth = std::max(6, std::min(searchDepth, 15));
+    
+    std::cout << "Search depth: " << searchDepth << " (moves: " << numMoves 
+              << ", captures: " << numCaptures << ")\n";
+    
+    return findBestMove(board, searchDepth);
 }
 
 std::string positionToNotation(int pos) {

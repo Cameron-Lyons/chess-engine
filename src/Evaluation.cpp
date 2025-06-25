@@ -273,8 +273,175 @@ int evaluateKingSafety(const Board& board, ChessPieceColor color) {
     return safety;
 }
 
+int evaluatePassedPawns(const Board& board) {
+    int score = 0;
+    
+    for (int col = 0; col < 8; col++) {
+        for (int row = 0; row < 8; row++) {
+            int pos = row * 8 + col;
+            const Piece& piece = board.squares[pos].Piece;
+            
+            if (piece.PieceType == ChessPieceType::PAWN) {
+                bool isPassed = true;
+                
+                if (piece.PieceColor == ChessPieceColor::WHITE) {
+                    // Check if any black pawn can stop this white pawn
+                    for (int checkCol = std::max(0, col - 1); checkCol <= std::min(7, col + 1); checkCol++) {
+                        for (int checkRow = row + 1; checkRow < 8; checkRow++) {
+                            int checkPos = checkRow * 8 + checkCol;
+                            if (board.squares[checkPos].Piece.PieceType == ChessPieceType::PAWN &&
+                                board.squares[checkPos].Piece.PieceColor == ChessPieceColor::BLACK) {
+                                isPassed = false;
+                                break;
+                            }
+                        }
+                        if (!isPassed) break;
+                    }
+                    if (isPassed) {
+                        int passedBonus = (row - 1) * 20 + 10; // More valuable closer to promotion
+                        score += passedBonus;
+                    }
+                } else {
+                    // Check if any white pawn can stop this black pawn
+                    for (int checkCol = std::max(0, col - 1); checkCol <= std::min(7, col + 1); checkCol++) {
+                        for (int checkRow = row - 1; checkRow >= 0; checkRow--) {
+                            int checkPos = checkRow * 8 + checkCol;
+                            if (board.squares[checkPos].Piece.PieceType == ChessPieceType::PAWN &&
+                                board.squares[checkPos].Piece.PieceColor == ChessPieceColor::WHITE) {
+                                isPassed = false;
+                                break;
+                            }
+                        }
+                        if (!isPassed) break;
+                    }
+                    if (isPassed) {
+                        int passedBonus = (6 - row) * 20 + 10; // More valuable closer to promotion
+                        score -= passedBonus;
+                    }
+                }
+            }
+        }
+    }
+    
+    return score;
+}
+
+int evaluateBishopPair(const Board& board) {
+    int whiteBishops = 0, blackBishops = 0;
+    
+    for (int i = 0; i < 64; i++) {
+        if (board.squares[i].Piece.PieceType == ChessPieceType::BISHOP) {
+            if (board.squares[i].Piece.PieceColor == ChessPieceColor::WHITE) {
+                whiteBishops++;
+            } else {
+                blackBishops++;
+            }
+        }
+    }
+    
+    int score = 0;
+    if (whiteBishops >= 2) score += 50; // Bishop pair bonus
+    if (blackBishops >= 2) score -= 50;
+    
+    return score;
+}
+
+int evaluateRooksOnOpenFiles(const Board& board) {
+    int score = 0;
+    
+    for (int i = 0; i < 64; i++) {
+        if (board.squares[i].Piece.PieceType == ChessPieceType::ROOK) {
+            int col = i % 8;
+            bool isOpenFile = true;
+            bool isSemiOpen = true;
+            
+            // Check if file has pawns
+            for (int row = 0; row < 8; row++) {
+                int pos = row * 8 + col;
+                if (board.squares[pos].Piece.PieceType == ChessPieceType::PAWN) {
+                    isOpenFile = false;
+                    if (board.squares[pos].Piece.PieceColor == board.squares[i].Piece.PieceColor) {
+                        isSemiOpen = false;
+                    }
+                }
+            }
+            
+            if (isOpenFile) {
+                if (board.squares[i].Piece.PieceColor == ChessPieceColor::WHITE) {
+                    score += 20;
+                } else {
+                    score -= 20;
+                }
+            } else if (isSemiOpen) {
+                if (board.squares[i].Piece.PieceColor == ChessPieceColor::WHITE) {
+                    score += 10;
+                } else {
+                    score -= 10;
+                }
+            }
+        }
+    }
+    
+    return score;
+}
+
+int evaluateEndgame(const Board& board) {
+    int totalMaterial = 0;
+    int whiteQueens = 0, blackQueens = 0;
+    int whiteRooks = 0, blackRooks = 0;
+    int whiteMinorPieces = 0, blackMinorPieces = 0;
+    
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = board.squares[i].Piece;
+        if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
+            totalMaterial += piece.PieceValue;
+            
+            if (piece.PieceColor == ChessPieceColor::WHITE) {
+                switch (piece.PieceType) {
+                    case ChessPieceType::QUEEN: whiteQueens++; break;
+                    case ChessPieceType::ROOK: whiteRooks++; break;
+                    case ChessPieceType::BISHOP:
+                    case ChessPieceType::KNIGHT: whiteMinorPieces++; break;
+                    default: break;
+                }
+            } else {
+                switch (piece.PieceType) {
+                    case ChessPieceType::QUEEN: blackQueens++; break;
+                    case ChessPieceType::ROOK: blackRooks++; break;
+                    case ChessPieceType::BISHOP:
+                    case ChessPieceType::KNIGHT: blackMinorPieces++; break;
+                    default: break;
+                }
+            }
+        }
+    }
+    
+    // Endgame bonus for active king
+    int score = 0;
+    if (totalMaterial < 2000) { // Endgame threshold
+        // Find kings and evaluate their activity
+        for (int i = 0; i < 64; i++) {
+            if (board.squares[i].Piece.PieceType == ChessPieceType::KING) {
+                int file = i % 8;
+                int rank = i / 8;
+                int centerDistance = std::max(abs(file - 3.5), abs(rank - 3.5));
+                
+                if (board.squares[i].Piece.PieceColor == ChessPieceColor::WHITE) {
+                    score += (7 - centerDistance) * 5; // Reward centralized king
+                } else {
+                    score -= (7 - centerDistance) * 5;
+                }
+            }
+        }
+    }
+    
+    return score;
+}
+
 int evaluatePosition(const Board& board) {
     int score = 0;
+    
+    // Material and positional evaluation
     for (int i = 0; i < 64; i++) {
         const Piece& piece = board.squares[i].Piece;
         if (piece.PieceType != ChessPieceType::NONE) {
@@ -287,10 +454,17 @@ int evaluatePosition(const Board& board) {
             }
         }
     }
+    
+    // Advanced positional factors
     score += evaluatePawnStructure(board);
     score += evaluateMobility(board);
     score += evaluateCenterControl(board);
+    score += evaluatePassedPawns(board);
+    score += evaluateBishopPair(board);
+    score += evaluateRooksOnOpenFiles(board);
+    score += evaluateEndgame(board);
     
+    // King safety
     score += evaluateKingSafety(board, ChessPieceColor::WHITE);
     score -= evaluateKingSafety(board, ChessPieceColor::BLACK);
     
