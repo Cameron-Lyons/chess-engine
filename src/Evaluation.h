@@ -82,5 +82,10 @@ int evaluateMobility(const Board& board);
 int evaluateCenterControl(const Board& board);
 int evaluateKingSafety(const Board& board, ChessPieceColor color);
 int evaluatePosition(const Board& board);
+int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor color);
+int evaluatePassedPawns(const Board& board);
+int evaluateBishopPair(const Board& board);
+int evaluateRooksOnOpenFiles(const Board& board);
+int evaluateEndgame(const Board& board);
 
 #endif

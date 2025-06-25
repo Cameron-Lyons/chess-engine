@@ -7,6 +7,8 @@
 #include <future>
 #include <thread>
 
+
+
 void ThreadSafeTT::insert(uint64_t hash, const TTEntry& entry) {
     std::lock_guard<std::mutex> lock(mutex);
     
@@ -15,10 +17,23 @@ void ThreadSafeTT::insert(uint64_t hash, const TTEntry& entry) {
     if (it != table.end()) {
         const TTEntry& existing = it->second;
         
+        // Check for hash collision
+        if (existing.zobristKey != 0 && existing.zobristKey != entry.zobristKey) {
+            // Hash collision detected - only replace if significantly better
+            if (entry.depth >= existing.depth + 2) {
+                TTEntry newEntry = entry;
+                newEntry.zobristKey = entry.zobristKey;
+                table[hash] = newEntry;
+            }
+            return;
+        }
+        
         // Replace if new entry is deeper, or same depth but exact bound, or much older
         if (entry.depth >= existing.depth || 
             (entry.depth >= existing.depth - 2 && entry.flag == 0)) {
-            table[hash] = entry;
+            TTEntry newEntry = entry;
+            newEntry.zobristKey = entry.zobristKey;
+            table[hash] = newEntry;
         }
     } else {
         // Table size management - keep it reasonable
@@ -29,7 +44,9 @@ void ThreadSafeTT::insert(uint64_t hash, const TTEntry& entry) {
                 removeIt = table.erase(removeIt);
             }
         }
-        table[hash] = entry;
+        TTEntry newEntry = entry;
+        newEntry.zobristKey = entry.zobristKey;
+        table[hash] = newEntry;
     }
 }
 
@@ -38,6 +55,10 @@ bool ThreadSafeTT::find(uint64_t hash, TTEntry& entry) const {
     auto it = table.find(hash);
     if (it != table.end()) {
         entry = it->second;
+        // Verify zobrist key to avoid hash collisions
+        if (entry.zobristKey != 0 && entry.zobristKey != hash) {
+            return false; // Hash collision
+        }
         return true;
     }
     return false;
@@ -181,7 +202,7 @@ int getPieceValue(ChessPieceType pieceType) {
     }
 }
 
-std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply) {
+std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply, const std::pair<int, int>& hashMove) {
     std::vector<ScoredMove> scoredMoves;
     scoredMoves.reserve(moves.size());
     
@@ -194,16 +215,19 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
         ChessPieceType targetPiece = board.squares[destPos].Piece.PieceType;
         ChessPieceColor movingColor = board.squares[srcPos].Piece.PieceColor;
         
-        // **PRIORITY 1: Hash moves (placeholder for future transposition table moves)**
-        // TODO: Implement hash move from transposition table
+        // **PRIORITY 1: Hash moves (best move from transposition table)**
+        if (hashMove.first != -1 && hashMove.second != -1 && 
+            move.first == hashMove.first && move.second == hashMove.second) {
+            score = 15000; // Highest priority
+        }
         
         // **PRIORITY 2: Captures with MVV-LVA + SEE evaluation**
-        if (targetPiece != ChessPieceType::NONE) {
+        else if (targetPiece != ChessPieceType::NONE) {
             int victimValue = getPieceValue(targetPiece);
             int attackerValue = getPieceValue(movingPiece);
             
-                         // Use Static Exchange Evaluation for better capture assessment
-             int seeValue = staticExchangeEvaluation(board, srcPos, destPos);
+            // Use Static Exchange Evaluation for better capture assessment
+            int seeValue = staticExchangeEvaluation(board, srcPos, destPos);
             
             // Base MVV-LVA score
             score = 10000 + (victimValue * 100) - attackerValue;
@@ -272,89 +296,89 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
             int centerDistance = std::abs(destRow - 3.5) + std::abs(destCol - 3.5);
             score += (7 - centerDistance) * 10;
             
-                         switch (movingPiece) {
-                 case ChessPieceType::PAWN: {
-                     // Forward progress
-                     if (movingColor == ChessPieceColor::WHITE && destRow > srcRow) {
-                         score += (destRow - srcRow) * 20;
-                     } else if (movingColor == ChessPieceColor::BLACK && destRow < srcRow) {
-                         score += (srcRow - destRow) * 20;
-                     }
-                     
-                     // Advanced pawn bonus
-                     if ((movingColor == ChessPieceColor::WHITE && destRow >= 5) ||
-                         (movingColor == ChessPieceColor::BLACK && destRow <= 2)) {
-                         score += 50;
-                     }
-                     break;
-                 }
-                     
-                 case ChessPieceType::KNIGHT: {
-                     // Knight centralization is especially important
-                     score += (7 - centerDistance) * 20;
-                     
-                     // Avoid edges
-                     if (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7) {
-                         score -= 50;
-                     }
-                     break;
-                 }
-                     
-                 case ChessPieceType::BISHOP: {
-                     // Long diagonal bonus
-                     if (std::abs(destRow - destCol) == 0 || std::abs(destRow - (7 - destCol)) == 0) {
-                         score += 30;
-                     }
-                     break;
-                 }
-                     
-                 case ChessPieceType::ROOK: {
-                     // Open file bonus (simplified check)
-                     bool openFile = true;
-                     for (int row = 0; row < 8; row++) {
-                         if (row != destRow && board.squares[row * 8 + destCol].Piece.PieceType == ChessPieceType::PAWN) {
-                             openFile = false;
-                             break;
-                         }
-                     }
-                     if (openFile) score += 40;
-                     
-                     // 7th rank bonus
-                     if ((movingColor == ChessPieceColor::WHITE && destRow == 6) ||
-                         (movingColor == ChessPieceColor::BLACK && destRow == 1)) {
-                         score += 50;
-                     }
-                     break;
-                 }
-                     
-                 case ChessPieceType::QUEEN: {
-                     // Slight penalty for early queen development
-                     if ((movingColor == ChessPieceColor::WHITE && destRow > 2) ||
-                         (movingColor == ChessPieceColor::BLACK && destRow < 5)) {
-                         // Only penalize if other pieces aren't developed yet
-                         score -= 20;
-                     }
-                     break;
-                 }
-                     
-                 case ChessPieceType::KING: {
-                     // Safety-oriented moves (toward castling, away from center in middlegame)
-                     if (!isCastling(board, srcPos, destPos)) {
-                         // Penalty for king moves in opening/middlegama
-                         score -= 30;
-                         
-                         // But bonus if moving to safety
-                         if ((movingColor == ChessPieceColor::WHITE && destRow == 0 && (destCol <= 2 || destCol >= 6)) ||
-                             (movingColor == ChessPieceColor::BLACK && destRow == 7 && (destCol <= 2 || destCol >= 6))) {
-                             score += 20;
-                         }
-                     }
-                     break;
-                 }
-                     
-                 default:
-                     break;
-             }
+            switch (movingPiece) {
+                case ChessPieceType::PAWN: {
+                    // Forward progress
+                    if (movingColor == ChessPieceColor::WHITE && destRow > srcRow) {
+                        score += (destRow - srcRow) * 20;
+                    } else if (movingColor == ChessPieceColor::BLACK && destRow < srcRow) {
+                        score += (srcRow - destRow) * 20;
+                    }
+                    
+                    // Advanced pawn bonus
+                    if ((movingColor == ChessPieceColor::WHITE && destRow >= 5) ||
+                        (movingColor == ChessPieceColor::BLACK && destRow <= 2)) {
+                        score += 50;
+                    }
+                    break;
+                }
+                    
+                case ChessPieceType::KNIGHT: {
+                    // Knight centralization is especially important
+                    score += (7 - centerDistance) * 20;
+                    
+                    // Avoid edges
+                    if (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7) {
+                        score -= 50;
+                    }
+                    break;
+                }
+                    
+                case ChessPieceType::BISHOP: {
+                    // Long diagonal bonus
+                    if (std::abs(destRow - destCol) == 0 || std::abs(destRow - (7 - destCol)) == 0) {
+                        score += 30;
+                    }
+                    break;
+                }
+                    
+                case ChessPieceType::ROOK: {
+                    // Open file bonus (simplified check)
+                    bool openFile = true;
+                    for (int row = 0; row < 8; row++) {
+                        if (row != destRow && board.squares[row * 8 + destCol].Piece.PieceType == ChessPieceType::PAWN) {
+                            openFile = false;
+                            break;
+                        }
+                    }
+                    if (openFile) score += 40;
+                    
+                    // 7th rank bonus
+                    if ((movingColor == ChessPieceColor::WHITE && destRow == 6) ||
+                        (movingColor == ChessPieceColor::BLACK && destRow == 1)) {
+                        score += 50;
+                    }
+                    break;
+                }
+                    
+                case ChessPieceType::QUEEN: {
+                    // Slight penalty for early queen development
+                    if ((movingColor == ChessPieceColor::WHITE && destRow > 2) ||
+                        (movingColor == ChessPieceColor::BLACK && destRow < 5)) {
+                        // Only penalize if other pieces aren't developed yet
+                        score -= 20;
+                    }
+                    break;
+                }
+                    
+                case ChessPieceType::KING: {
+                    // Safety-oriented moves (toward castling, away from center in middlegame)
+                    if (!isCastling(board, srcPos, destPos)) {
+                        // Penalty for king moves in opening/middlegama
+                        score -= 30;
+                        
+                        // But bonus if moving to safety
+                        if ((movingColor == ChessPieceColor::WHITE && destRow == 0 && (destCol <= 2 || destCol >= 6)) ||
+                            (movingColor == ChessPieceColor::BLACK && destRow == 7 && (destCol <= 2 || destCol >= 6))) {
+                            score += 20;
+                        }
+                    }
+                    break;
+                }
+                    
+                default:
+                    break;
+            }
         }
         
         scoredMoves.push_back({move, score});
@@ -562,23 +586,29 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     
     uint64_t hash = ComputeZobrist(board);
     TTEntry entry;
+    std::pair<int, int> hashMove = {-1, -1}; // Store hash move for move ordering
+    
     if (context.transTable.find(hash, entry)) {
         if (entry.depth >= depth) {
             if (entry.flag == 0) return entry.value;
             if (entry.flag == -1 && entry.value <= alpha) return alpha;
             if (entry.flag == 1 && entry.value >= beta) return beta;
         }
+        // Extract hash move for move ordering even if we don't use the score
+        if (entry.bestMove.first != -1 && entry.bestMove.second != -1) {
+            hashMove = entry.bestMove;
+        }
     }
     if (depth == 0) {
         int eval = QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context);
-        context.transTable.insert(hash, {depth, eval, 0});
+        context.transTable.insert(hash, TTEntry(depth, eval, 0, {-1, -1}, hash));
         return eval;
     }
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK);
     if (moves.empty()) {
         int mateScore = maximizingPlayer ? -10000 : 10000;
-        context.transTable.insert(hash, {depth, mateScore, 0});
+        context.transTable.insert(hash, TTEntry(depth, mateScore, 0, {-1, -1}, hash));
         return mateScore;
     }
     if (depth >= 3 && !isInCheck(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK)) {
@@ -614,12 +644,13 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             }
         }
     }
-    std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(board, moves, historyTable, context.killerMoves, ply);
+    std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(board, moves, historyTable, context.killerMoves, ply, hashMove);
     std::sort(scoredMoves.begin(), scoredMoves.end());
     int origAlpha = alpha;
     int bestValue = maximizingPlayer ? -10000 : 10000;
     int flag = 0;
     bool foundPV = false; // Principal Variation found flag
+    std::pair<int, int> bestMoveFound = {-1, -1}; // Track best move for hash table
     
     if (maximizingPlayer) {
         int moveCount = 0;
@@ -671,7 +702,10 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             
             moveCount++;
             if (context.stopSearch.load()) return 0;
-            if (eval > bestValue) bestValue = eval;
+            if (eval > bestValue) {
+                bestValue = eval;
+                bestMoveFound = move; // Track best move
+            }
             if (eval > alpha) {
                 alpha = eval;
                 foundPV = true; // We found a move that improved alpha
@@ -736,7 +770,10 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             
             moveCount++;
             if (context.stopSearch.load()) return 0;
-            if (eval < bestValue) bestValue = eval;
+            if (eval < bestValue) {
+                bestValue = eval;
+                bestMoveFound = move; // Track best move
+            }
             if (eval < beta) {
                 beta = eval;
                 foundPV = true; // We found a move that improved beta
@@ -754,7 +791,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         else if (bestValue <= origAlpha) flag = -1;
         else flag = 0;
     }
-    context.transTable.insert(hash, {depth, bestValue, flag});
+    // Store result in transposition table with best move
+    context.transTable.insert(hash, TTEntry(depth, bestValue, flag, bestMoveFound, hash));
     return bestValue;
 }
 

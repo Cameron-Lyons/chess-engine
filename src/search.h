@@ -28,6 +28,12 @@ struct TTEntry {
     int depth;
     int value;
     int flag; // 0 = exact, -1 = alpha, 1 = beta
+    std::pair<int, int> bestMove; // Store best move from this position
+    uint64_t zobristKey; // For collision detection
+    
+    TTEntry() : depth(-1), value(0), flag(0), bestMove({-1, -1}), zobristKey(0) {}
+    TTEntry(int d, int v, int f, std::pair<int, int> move = {-1, -1}, uint64_t key = 0) 
+        : depth(d), value(v), flag(f), bestMove(move), zobristKey(key) {}
 };
 
 struct ThreadSafeTT {
@@ -119,6 +125,6 @@ bool isGoodCapture(const Board& board, int fromSquare, int toSquare);
 bool isDiscoveredCheck(const Board& board, int from, int to);
 bool isPromotion(const Board& board, int from, int to);
 bool isCastling(const Board& board, int from, int to);
-std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply);
+std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply, const std::pair<int, int>& hashMove = {-1, -1});
 
 #endif // SEARCH_H
