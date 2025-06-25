@@ -46,14 +46,28 @@ struct ThreadSafeHistory {
     int get(int srcPos, int destPos) const;
 };
 
+struct KillerMoves {
+    static const int MAX_KILLER_MOVES = 2;
+    static const int MAX_PLY = 64;
+    
+    std::pair<int, int> killers[MAX_PLY][MAX_KILLER_MOVES];
+    
+    KillerMoves();
+    void store(int ply, std::pair<int, int> move);
+    bool isKiller(int ply, std::pair<int, int> move) const;
+    int getKillerScore(int ply, std::pair<int, int> move) const;
+};
+
 struct ParallelSearchContext {
     std::atomic<bool> stopSearch;
     std::atomic<int> nodeCount;
     ThreadSafeTT transTable;
     ThreadSafeHistory historyTable;
+    KillerMoves killerMoves;
     std::chrono::steady_clock::time_point startTime;
     int timeLimitMs;
     int numThreads;
+    int ply;
     ParallelSearchContext(int threads = 0);
 };
 
@@ -90,10 +104,11 @@ std::vector<ScoredMove> scoreMovesParallel(const Board& board, const std::vector
 void updateHistoryTable(ThreadSafeHistory& historyTable, int srcPos, int destPos, int depth);
 bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLimitMs);
 bool SearchForMate(ChessPieceColor movingSide, Board& board, bool& BlackMate, bool& WhiteMate, bool& StaleMate);
-int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context);
+int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, int ply, ThreadSafeHistory& historyTable, ParallelSearchContext& context);
 int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context);
 std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color);
 std::vector<std::pair<int, int>> GetQuietMoves(Board& board, ChessPieceColor color);
+std::vector<ScoredMove> scoreMovesWithKillers(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply, int numThreads);
 std::string getBookMove(const std::string& fen);
 SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs, int numThreads = 0);
 std::pair<int, int> findBestMove(Board& board, int depth);
