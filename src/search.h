@@ -116,5 +116,9 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
 
 int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare);
 bool isGoodCapture(const Board& board, int fromSquare, int toSquare);
+bool isDiscoveredCheck(const Board& board, int from, int to);
+bool isPromotion(const Board& board, int from, int to);
+bool isCastling(const Board& board, int from, int to);
+std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply);
 
 #endif // SEARCH_H
