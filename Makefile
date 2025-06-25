@@ -16,7 +16,7 @@ $(TARGET): $(SOURCES) $(HEADERS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCES) $(LDFLAGS)
 
 clean:
-	rm -f $(BINDIR)/chess_engine $(BINDIR)/test_parallel $(BINDIR)/test_bitboard_moves $(BINDIR)/test_comprehensive $(BINDIR)/test_fen $(BINDIR)/test_crash $(BINDIR)/test_pawn $(BINDIR)/test_quiescence
+	rm -f $(BINDIR)/chess_engine $(BINDIR)/test_parallel $(BINDIR)/test_bitboard_moves $(BINDIR)/test_comprehensive $(BINDIR)/test_fen $(BINDIR)/test_crash $(BINDIR)/test_pawn $(BINDIR)/test_quiescence $(BINDIR)/test_king_safety
 
 run: $(TARGET)
 	./$(TARGET)
@@ -61,10 +61,19 @@ $(BINDIR)/test_quiescence: $(TESTDIR)/test_quiescence.cpp $(SRCDIR)/engine_globa
 	@mkdir -p $(BINDIR)
 	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_quiescence $(TESTDIR)/test_quiescence.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
 
-tests: $(BINDIR)/test_parallel $(BINDIR)/test_bitboard_moves $(BINDIR)/test_comprehensive $(BINDIR)/test_fen $(BINDIR)/test_crash $(BINDIR)/test_pawn $(BINDIR)/test_quiescence
+$(BINDIR)/test_king_safety: $(TESTDIR)/test_king_safety.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp
+	@mkdir -p $(BINDIR)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_king_safety $(TESTDIR)/test_king_safety.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+
+$(BINDIR)/test_engine_improvements: $(TESTDIR)/test_engine_improvements.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp
+	@mkdir -p $(BINDIR)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_engine_improvements $(TESTDIR)/test_engine_improvements.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+
+tests: $(BINDIR)/test_parallel $(BINDIR)/test_bitboard_moves $(BINDIR)/test_comprehensive $(BINDIR)/test_fen $(BINDIR)/test_crash $(BINDIR)/test_pawn $(BINDIR)/test_quiescence $(BINDIR)/test_king_safety
 
 test: tests
-	@echo "Running parallel search test..."
+	@echo "Running all tests..."
+	@echo "\nRunning parallel test..."
 	./$(BINDIR)/test_parallel
 	@echo "\nRunning bitboard moves test..."
 	./$(BINDIR)/test_bitboard_moves
@@ -78,5 +87,9 @@ test: tests
 	./$(BINDIR)/test_pawn
 	@echo "\nRunning quiescence test..."
 	./$(BINDIR)/test_quiescence
+	@echo "\nRunning king safety test..."
+	./$(BINDIR)/test_king_safety
+	@echo "\nRunning combined improvements test..."
+	./$(BINDIR)/test_engine_improvements
 
-.PHONY: all clean run debug release install uninstall test tests 
+.PHONY: all clean run debug release install uninstall test tests performance_tests 

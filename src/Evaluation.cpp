@@ -115,6 +115,167 @@ int evaluateCenterControl(const Board& board) {
     return score;
 }
 
+int evaluateKingSafety(const Board& board, ChessPieceColor color) {
+    int safety = 0;
+    
+    int kingSquare = -1;
+    for (int i = 0; i < 64; i++) {
+        if (board.squares[i].Piece.PieceType == ChessPieceType::KING && 
+            board.squares[i].Piece.PieceColor == color) {
+            kingSquare = i;
+            break;
+        }
+    }
+    
+    if (kingSquare == -1) return 0; // Should never happen
+    
+    int kingFile = kingSquare % 8;
+    int kingRank = kingSquare / 8;
+    
+    if (color == ChessPieceColor::WHITE) {
+        for (int file = std::max(0, kingFile - 1); file <= std::min(7, kingFile + 1); file++) {
+            int sq2 = 8 + file;
+            if (board.squares[sq2].Piece.PieceType == ChessPieceType::PAWN && 
+                board.squares[sq2].Piece.PieceColor == ChessPieceColor::WHITE) {
+                safety += KING_SAFETY_PAWN_SHIELD_BONUS;
+            }
+            
+            int sq3 = 16 + file;
+            if (board.squares[sq3].Piece.PieceType == ChessPieceType::PAWN && 
+                board.squares[sq3].Piece.PieceColor == ChessPieceColor::WHITE) {
+                safety += KING_SAFETY_PAWN_SHIELD_BONUS / 2;
+            }
+        }
+    } else {
+        for (int file = std::max(0, kingFile - 1); file <= std::min(7, kingFile + 1); file++) {
+            int sq7 = 48 + file;
+            if (board.squares[sq7].Piece.PieceType == ChessPieceType::PAWN && 
+                board.squares[sq7].Piece.PieceColor == ChessPieceColor::BLACK) {
+                safety += KING_SAFETY_PAWN_SHIELD_BONUS;
+            }
+            
+            int sq6 = 40 + file;
+            if (board.squares[sq6].Piece.PieceType == ChessPieceType::PAWN && 
+                board.squares[sq6].Piece.PieceColor == ChessPieceColor::BLACK) {
+                safety += KING_SAFETY_PAWN_SHIELD_BONUS / 2;
+            }
+        }
+    }
+    
+    for (int file = std::max(0, kingFile - 1); file <= std::min(7, kingFile + 1); file++) {
+        bool hasOwnPawn = false;
+        bool hasEnemyPawn = false;
+        
+        for (int rank = 0; rank < 8; rank++) {
+            int sq = rank * 8 + file;
+            if (board.squares[sq].Piece.PieceType == ChessPieceType::PAWN) {
+                if (board.squares[sq].Piece.PieceColor == color) {
+                    hasOwnPawn = true;
+                } else {
+                    hasEnemyPawn = true;
+                }
+            }
+        }
+        
+        if (!hasOwnPawn && !hasEnemyPawn) {
+            safety -= KING_SAFETY_OPEN_FILE_PENALTY;
+        } else if (!hasOwnPawn && hasEnemyPawn) {
+            safety -= KING_SAFETY_SEMI_OPEN_FILE_PENALTY;
+        }
+    }
+    
+    ChessPieceColor enemyColor = (color == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+    int attackUnits = 0;
+    int attackingPieces = 0;
+    
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = board.squares[i].Piece;
+        if (piece.PieceType == ChessPieceType::NONE || piece.PieceColor != enemyColor) {
+            continue;
+        }
+        
+        bool attacksKingZone = false;
+        int pieceFile = i % 8;
+        int pieceRank = i / 8;
+        
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int df = -1; df <= 1; df++) {
+                int targetRank = kingRank + dr;
+                int targetFile = kingFile + df;
+                if (targetRank >= 0 && targetRank < 8 && targetFile >= 0 && targetFile < 8) {
+                    int targetSquare = targetRank * 8 + targetFile;
+                    
+                    switch (piece.PieceType) {
+                        case ChessPieceType::PAWN: {
+                            if (enemyColor == ChessPieceColor::WHITE) {
+                                if (pieceRank + 1 == targetRank && abs(pieceFile - targetFile) == 1) {
+                                    attacksKingZone = true;
+                                }
+                            } else {
+                                if (pieceRank - 1 == targetRank && abs(pieceFile - targetFile) == 1) {
+                                    attacksKingZone = true;
+                                }
+                            }
+                            break;
+                        }
+                        case ChessPieceType::KNIGHT: {
+                            int dr = abs(pieceRank - targetRank);
+                            int df = abs(pieceFile - targetFile);
+                            if ((dr == 2 && df == 1) || (dr == 1 && df == 2)) {
+                                attacksKingZone = true;
+                            }
+                            break;
+                        }
+                        case ChessPieceType::BISHOP:
+                        case ChessPieceType::QUEEN: {
+                            if (abs(pieceRank - targetRank) == abs(pieceFile - targetFile)) {
+                                attacksKingZone = true;
+                            }
+                            if (piece.PieceType == ChessPieceType::QUEEN) {
+                                if (pieceRank == targetRank || pieceFile == targetFile) {
+                                    attacksKingZone = true;
+                                }
+                            }
+                            break;
+                        }
+                        case ChessPieceType::ROOK: {
+                            if (pieceRank == targetRank || pieceFile == targetFile) {
+                                attacksKingZone = true;
+                            }
+                            break;
+                        }
+                        case ChessPieceType::KING: {
+                            if (abs(pieceRank - targetRank) <= 1 && abs(pieceFile - targetFile) <= 1) {
+                                attacksKingZone = true;
+                            }
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+                if (attacksKingZone) break;
+            }
+            if (attacksKingZone) break;
+        }
+        
+        if (attacksKingZone) {
+            attackingPieces++;
+            int pieceTypeIndex = static_cast<int>(piece.PieceType);
+            if (pieceTypeIndex >= 0 && pieceTypeIndex < 7) {
+                attackUnits += KING_SAFETY_ATTACK_WEIGHT[pieceTypeIndex];
+            }
+        }
+    }
+    
+    if (attackingPieces >= 2) {
+        attackUnits = std::min(attackUnits, KING_SAFETY_ATTACK_UNITS_MAX);
+        safety -= (attackUnits * attackUnits) / 256;
+    }
+    
+    return safety;
+}
+
 int evaluatePosition(const Board& board) {
     int score = 0;
     for (int i = 0; i < 64; i++) {
@@ -132,12 +293,10 @@ int evaluatePosition(const Board& board) {
     score += evaluatePawnStructure(board);
     score += evaluateMobility(board);
     score += evaluateCenterControl(board);
+    
+    score += evaluateKingSafety(board, ChessPieceColor::WHITE);
+    score -= evaluateKingSafety(board, ChessPieceColor::BLACK);
+    
     return score;
 }
 
-// Add the actual definitions for:
-// int evaluateCenterControl(const Board& board);
-// int evaluateMobility(const Board& board);
-// int evaluatePawnStructure(const Board& board);
-// int evaluatePosition(const Board& board);
-// (Move their full code bodies here from wherever they are currently defined.) 

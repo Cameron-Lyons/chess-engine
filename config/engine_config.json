@@ -1,14 +1,25 @@
 {
   "engine": {
     "name": "ModernChess",
-    "version": "1.0.0",
-    "author": "Chess Engine Team"
+    "version": "1.1.0",
+    "author": "Chess Engine Team",
+    "features": [
+      "Quiescence Search",
+      "King Safety Evaluation", 
+      "Alpha-Beta Pruning",
+      "Null Move Pruning",
+      "Late Move Reductions",
+      "Transposition Table",
+      "Iterative Deepening",
+      "Parallel Search"
+    ]
   },
   "search": {
     "default_depth": 6,
     "max_depth": 12,
     "time_limit_ms": 5000,
     "use_parallel_search": true,
+    "use_quiescence_search": true,
     "thread_count": "auto",
     "transposition_table_size_mb": 128
   },
@@ -22,7 +33,14 @@
       "king": 10000
     },
     "positional_weight": 0.1,
-    "endgame_threshold": 1300
+    "endgame_threshold": 1300,
+    "king_safety": {
+      "enabled": true,
+      "pawn_shield_bonus": 10,
+      "open_file_penalty": 20,
+      "semi_open_file_penalty": 10,
+      "attack_weight_max": 100
+    }
   },
   "ui": {
     "board_style": "unicode",

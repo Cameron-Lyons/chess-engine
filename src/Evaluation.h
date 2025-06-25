@@ -4,6 +4,12 @@
 #include "ChessBoard.h"
 #include "ChessPiece.h"
 
+const int KING_SAFETY_PAWN_SHIELD_BONUS = 10;
+const int KING_SAFETY_OPEN_FILE_PENALTY = 20;
+const int KING_SAFETY_SEMI_OPEN_FILE_PENALTY = 10;
+const int KING_SAFETY_ATTACK_WEIGHT[7] = {0, 1, 2, 3, 5, 8, 12}; // Indexed by piece type
+const int KING_SAFETY_ATTACK_UNITS_MAX = 100;
+
 const int PAWN_TABLE[64] = {
     0,  0,  0,  0,  0,  0,  0,  0,
     50, 50, 50, 50, 50, 50, 50, 50,
@@ -74,6 +80,7 @@ int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor 
 int evaluatePawnStructure(const Board& board);
 int evaluateMobility(const Board& board);
 int evaluateCenterControl(const Board& board);
+int evaluateKingSafety(const Board& board, ChessPieceColor color);
 int evaluatePosition(const Board& board);
 
 #endif
