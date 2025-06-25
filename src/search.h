@@ -21,7 +21,6 @@
 #include <condition_variable>
 #include <queue>
 
-// Forward declarations
 std::string getFEN(const Board& board);
 bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& srcRow, int& destCol, int& destRow);
 
@@ -31,7 +30,6 @@ struct TTEntry {
     int flag; // 0 = exact, -1 = alpha, 1 = beta
 };
 
-// Thread-safe transposition table
 struct ThreadSafeTT {
     std::unordered_map<uint64_t, TTEntry> table;
     mutable std::mutex mutex;
@@ -40,7 +38,6 @@ struct ThreadSafeTT {
     void clear();
 };
 
-// Thread-safe history table
 struct ThreadSafeHistory {
     std::vector<std::vector<int>> table;
     mutable std::mutex mutex;
@@ -49,7 +46,6 @@ struct ThreadSafeHistory {
     int get(int srcPos, int destPos) const;
 };
 
-// Parallel search context
 struct ParallelSearchContext {
     std::atomic<bool> stopSearch;
     std::atomic<int> nodeCount;
@@ -95,7 +91,9 @@ void updateHistoryTable(ThreadSafeHistory& historyTable, int srcPos, int destPos
 bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLimitMs);
 bool SearchForMate(ChessPieceColor movingSide, Board& board, bool& BlackMate, bool& WhiteMate, bool& StaleMate);
 int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context);
+int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context);
 std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color);
+std::vector<std::pair<int, int>> GetQuietMoves(Board& board, ChessPieceColor color);
 std::string getBookMove(const std::string& fen);
 SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs, int numThreads = 0);
 std::pair<int, int> findBestMove(Board& board, int depth);

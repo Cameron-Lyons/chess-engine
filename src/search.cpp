@@ -209,6 +209,125 @@ bool SearchForMate(ChessPieceColor movingSide, Board& board, bool& BlackMate, bo
     return false;
 }
 
+std::vector<std::pair<int, int>> GetQuietMoves(Board& board, ChessPieceColor color) {
+    std::vector<std::pair<int, int>> allMoves = generateBitboardMoves(board, color);
+    std::vector<std::pair<int, int>> noisyMoves;
+    
+    for (const auto& move : allMoves) {
+        int srcPos = move.first;
+        int destPos = move.second;
+        
+        if (isCapture(board, srcPos, destPos)) {
+            noisyMoves.push_back(move);
+            continue;
+        }
+        
+        if (givesCheck(board, srcPos, destPos)) {
+            noisyMoves.push_back(move);
+            continue;
+        }
+        
+        const Piece& piece = board.squares[srcPos].Piece;
+        if (piece.PieceType == ChessPieceType::PAWN) {
+            int destRow = destPos / 8;
+            if ((piece.PieceColor == ChessPieceColor::WHITE && destRow == 7) ||
+                (piece.PieceColor == ChessPieceColor::BLACK && destRow == 0)) {
+                noisyMoves.push_back(move);
+                continue;
+            }
+        }
+    }
+    
+    return noisyMoves;
+}
+
+int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context) {
+    if (context.stopSearch.load() || isTimeUp(context.startTime, context.timeLimitMs)) {
+        context.stopSearch.store(true);
+        return 0;
+    }
+    
+    context.nodeCount.fetch_add(1);
+    
+    int standPat = evaluatePosition(board);
+    
+    if (maximizingPlayer) {
+        if (standPat >= beta) {
+            return beta;
+        }
+        if (alpha < standPat) {
+            alpha = standPat;
+        }
+    } else {
+        if (standPat <= alpha) {
+            return alpha;
+        }
+        if (beta > standPat) {
+            beta = standPat;
+        }
+    }
+    
+    GenValidMoves(board);
+    std::vector<std::pair<int, int>> noisyMoves = GetQuietMoves(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK);
+    
+    if (noisyMoves.empty()) {
+        return standPat;
+    }
+    
+    std::vector<ScoredMove> scoredMoves = scoreMovesParallel(board, noisyMoves, historyTable, 1);
+    std::sort(scoredMoves.begin(), scoredMoves.end());
+    
+    int bestValue = standPat;
+    
+    if (maximizingPlayer) {
+        for (const auto& scoredMove : scoredMoves) {
+            if (context.stopSearch.load()) return 0;
+            
+            const auto& move = scoredMove.move;
+            Board newBoard = board;
+            newBoard.movePiece(move.first, move.second);
+            
+            int eval = QuiescenceSearch(newBoard, alpha, beta, false, historyTable, context);
+            
+            if (context.stopSearch.load()) return 0;
+            
+            if (eval > bestValue) {
+                bestValue = eval;
+            }
+            if (eval > alpha) {
+                alpha = eval;
+            }
+            if (beta <= alpha) {
+                break; // Beta cutoff
+            }
+        }
+    } else {
+        for (const auto& scoredMove : scoredMoves) {
+            if (context.stopSearch.load()) return 0;
+            
+            const auto& move = scoredMove.move;
+            Board newBoard = board;
+            newBoard.movePiece(move.first, move.second);
+            
+            int eval = QuiescenceSearch(newBoard, alpha, beta, true, historyTable, context);
+            
+            if (context.stopSearch.load()) return 0;
+            
+            if (eval < bestValue) {
+                bestValue = eval;
+            }
+            if (eval < beta) {
+                beta = eval;
+            }
+            if (beta <= alpha) {
+                break; // Alpha cutoff
+            }
+        }
+    }
+    
+    return bestValue;
+}
+
 int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context) {
     if (context.stopSearch.load() || isTimeUp(context.startTime, context.timeLimitMs)) {
         context.stopSearch.store(true);
@@ -225,7 +344,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         }
     }
     if (depth == 0) {
-        int eval = evaluatePosition(board);
+        // Instead of directly evaluating, enter quiescence search
+        int eval = QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context);
         context.transTable.insert(hash, {depth, eval, 0});
         return eval;
     }
