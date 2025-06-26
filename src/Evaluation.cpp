@@ -770,10 +770,103 @@ int evaluateHangingPieces(const Board& board) {
                 // Extra penalty for hanging queen
                 if (piece.PieceType == ChessPieceType::QUEEN) {
                     if (piece.PieceColor == ChessPieceColor::WHITE) {
-                        score -= 200; // Extra penalty for hanging queen
+                        score -= 500; // Massive penalty for hanging queen
+                    } else {
+                        score += 500;
+                    }
+                }
+            }
+        }
+        
+        // ADDITIONAL CHECK: Penalize queens in dangerous territory
+        if (piece.PieceType == ChessPieceType::QUEEN) {
+            int row = i / 8;
+            int col = i % 8;
+            
+            // Queen in enemy territory (beyond 4th/5th rank) without support
+            bool inEnemyTerritory = false;
+            if (piece.PieceColor == ChessPieceColor::WHITE && row >= 5) {
+                inEnemyTerritory = true;
+            } else if (piece.PieceColor == ChessPieceColor::BLACK && row <= 2) {
+                inEnemyTerritory = true;
+            }
+            
+            if (inEnemyTerritory) {
+                // Count friendly pieces that can support the queen
+                int supportCount = 0;
+                for (int j = 0; j < 64; j++) {
+                    const Piece& friendlyPiece = board.squares[j].Piece;
+                    if (friendlyPiece.PieceType == ChessPieceType::NONE || 
+                        friendlyPiece.PieceColor != piece.PieceColor || 
+                        j == i || 
+                        friendlyPiece.PieceType == ChessPieceType::PAWN) continue;
+                    
+                    // Check if friendly piece can support this square
+                    if (canPieceAttackSquare(board, j, i)) {
+                        supportCount++;
+                    }
+                }
+                
+                // Heavy penalty for unsupported queen in enemy territory
+                if (supportCount == 0) {
+                    if (piece.PieceColor == ChessPieceColor::WHITE) {
+                        score -= 300; // Penalty for unsupported queen in enemy territory
+                    } else {
+                        score += 300;
+                    }
+                }
+                
+                // Extra penalty if near enemy pieces
+                int nearbyEnemies = 0;
+                for (int dr = -2; dr <= 2; dr++) {
+                    for (int dc = -2; dc <= 2; dc++) {
+                        int checkRow = row + dr;
+                        int checkCol = col + dc;
+                        if (checkRow >= 0 && checkRow < 8 && checkCol >= 0 && checkCol < 8) {
+                            int checkPos = checkRow * 8 + checkCol;
+                            if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE &&
+                                board.squares[checkPos].Piece.PieceColor == enemyColor) {
+                                nearbyEnemies++;
+                            }
+                        }
+                    }
+                }
+                
+                if (nearbyEnemies >= 2) {
+                    if (piece.PieceColor == ChessPieceColor::WHITE) {
+                        score -= 200; // Extra penalty for queen surrounded by enemies
                     } else {
                         score += 200;
                     }
+                }
+            }
+        }
+        
+        // ADDITIONAL CHECK: Penalize pieces on edge/corner squares that are easily trapped
+        if (piece.PieceType == ChessPieceType::QUEEN || 
+            piece.PieceType == ChessPieceType::ROOK || 
+            piece.PieceType == ChessPieceType::BISHOP) {
+            
+            int row = i / 8;
+            int col = i % 8;
+            
+            // Check if piece is on edge or corner
+            bool isOnEdge = (row == 0 || row == 7 || col == 0 || col == 7);
+            bool isInCorner = ((row == 0 || row == 7) && (col == 0 || col == 7));
+            
+            if (isInCorner && piece.PieceType == ChessPieceType::QUEEN) {
+                // Huge penalty for queen in corner - very likely to be trapped
+                if (piece.PieceColor == ChessPieceColor::WHITE) {
+                    score -= 400;
+                } else {
+                    score += 400;
+                }
+            } else if (isOnEdge && piece.PieceType == ChessPieceType::QUEEN) {
+                // Moderate penalty for queen on edge
+                if (piece.PieceColor == ChessPieceColor::WHITE) {
+                    score -= 150;
+                } else {
+                    score += 150;
                 }
             }
         }

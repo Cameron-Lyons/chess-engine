@@ -399,6 +399,80 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
                         // Only penalize if other pieces aren't developed yet
                         score -= 20;
                     }
+                    
+                    // CRITICAL: Heavy penalties for dangerous queen moves
+                    // Check if queen is moving to enemy territory without support
+                    bool movingToEnemyTerritory = false;
+                    if (movingColor == ChessPieceColor::WHITE && destRow >= 5) {
+                        movingToEnemyTerritory = true;
+                    } else if (movingColor == ChessPieceColor::BLACK && destRow <= 2) {
+                        movingToEnemyTerritory = true;
+                    }
+                    
+                    if (movingToEnemyTerritory) {
+                        // Count supporting pieces
+                        int supportCount = 0;
+                        for (int i = 0; i < 64; i++) {
+                            const Piece& friendlyPiece = board.squares[i].Piece;
+                            if (friendlyPiece.PieceType == ChessPieceType::NONE || 
+                                friendlyPiece.PieceColor != movingColor || 
+                                i == srcPos || 
+                                friendlyPiece.PieceType == ChessPieceType::PAWN) continue;
+                            
+                            if (canPieceAttackSquare(board, i, destPos)) {
+                                supportCount++;
+                            }
+                        }
+                        
+                        if (supportCount == 0) {
+                            score -= 1000; // Heavy penalty for unsupported queen moves to enemy territory
+                        }
+                        
+                        // Extra penalties for corners and edges
+                        bool isCorner = ((destRow == 0 || destRow == 7) && (destCol == 0 || destCol == 7));
+                        bool isEdge = (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7);
+                        
+                        if (isCorner) {
+                            score -= 2000; // Massive penalty for queen moving to corner
+                        } else if (isEdge) {
+                            score -= 800; // Large penalty for queen moving to edge
+                        }
+                    }
+                    
+                    // Additional penalty for queen captures that lead to trapping
+                    if (targetPiece == ChessPieceType::PAWN) {
+                        // Check if capturing this pawn puts queen in danger
+                        bool isCorner = ((destRow == 0 || destRow == 7) && (destCol == 0 || destCol == 7));
+                        bool isEdge = (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7);
+                        
+                        if (isCorner) {
+                            score -= 1500; // Huge penalty for queen capturing pawn in corner
+                        } else if (isEdge) {
+                            score -= 600; // Large penalty for queen capturing pawn on edge
+                        }
+                        
+                        // Count enemy pieces nearby that could trap the queen
+                        int nearbyEnemies = 0;
+                        for (int dr = -2; dr <= 2; dr++) {
+                            for (int dc = -2; dc <= 2; dc++) {
+                                int checkRow = destRow + dr;
+                                int checkCol = destCol + dc;
+                                if (checkRow >= 0 && checkRow < 8 && checkCol >= 0 && checkCol < 8) {
+                                    int checkPos = checkRow * 8 + checkCol;
+                                    ChessPieceColor enemyColor = (movingColor == ChessPieceColor::WHITE) ? 
+                                                                 ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+                                    if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE &&
+                                        board.squares[checkPos].Piece.PieceColor == enemyColor) {
+                                        nearbyEnemies++;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (nearbyEnemies >= 2) {
+                            score -= 500; // Penalty for queen capturing pawn near enemy pieces
+                        }
+                    }
                     break;
                 }
                     
@@ -439,6 +513,19 @@ bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLi
 }
 
 std::string getBookMove(const std::string& fen) {
+    // First check the new multi-option opening book
+    auto optionsIt = OpeningBookOptions.find(fen);
+    if (optionsIt != OpeningBookOptions.end()) {
+        const auto& options = optionsIt->second;
+        if (!options.empty()) {
+            static std::random_device rd;
+            static std::mt19937 gen(rd());
+            std::uniform_int_distribution<> dis(0, options.size() - 1);
+            return options[dis(gen)];
+        }
+    }
+    
+    // Fallback to legacy opening book
     auto it = OpeningBook.find(fen);
     if (it != OpeningBook.end()) return it->second;
     return "";

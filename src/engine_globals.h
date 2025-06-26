@@ -7,8 +7,10 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 #include <cstdint>
 
+extern std::unordered_map<std::string, std::vector<std::string>> OpeningBookOptions;
 extern std::unordered_map<std::string, std::string> OpeningBook;
 extern uint64_t ZobristTable[64][12];
 extern uint64_t ZobristBlackToMove;
