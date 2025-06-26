@@ -441,6 +441,25 @@ int evaluateKingSafety(const Board& board) {
     return safetyScore;
 }
 
+// Overloaded function for single color evaluation (used by tests)
+int evaluateKingSafety(const Board& board, ChessPieceColor color) {
+    // Find the king of the specified color
+    int kingPos = -1;
+    for (int i = 0; i < 64; i++) {
+        if (board.squares[i].Piece.PieceType == ChessPieceType::KING &&
+            board.squares[i].Piece.PieceColor == color) {
+            kingPos = i;
+            break;
+        }
+    }
+    
+    if (kingPos == -1) {
+        return 0; // King not found
+    }
+    
+    return evaluateKingSafetyForColor(board, kingPos, color);
+}
+
 int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor color) {
     int safety = 0;
     int kingRow = kingPos / 8;
@@ -690,6 +709,163 @@ int evaluatePosition(const Board& board) {
     score += evaluateEndgame(board);
     score += evaluateMobility(board); // New mobility evaluation
     score += evaluateKingSafety(board); // Enhanced king safety
+    score += evaluateHangingPieces(board); // NEW: Detect hanging pieces
     
     return score;
+}
+
+// NEW: Evaluate hanging pieces (pieces under attack and undefended)
+int evaluateHangingPieces(const Board& board) {
+    int score = 0;
+    
+    // Check each square for hanging pieces
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = board.squares[i].Piece;
+        if (piece.PieceType == ChessPieceType::NONE) continue;
+        
+        // Don't evaluate pawns or kings as "hanging" in the same way
+        if (piece.PieceType == ChessPieceType::PAWN || piece.PieceType == ChessPieceType::KING) continue;
+        
+        bool isUnderAttack = false;
+        bool isDefended = false;
+        
+        // Check if piece is under attack by enemy pieces
+        ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+        
+        // Simple attack detection - check if any enemy piece can move to this square
+        for (int j = 0; j < 64; j++) {
+            const Piece& enemyPiece = board.squares[j].Piece;
+            if (enemyPiece.PieceType == ChessPieceType::NONE || enemyPiece.PieceColor != enemyColor) continue;
+            
+            // Check if enemy piece can attack this square
+            if (canPieceAttackSquare(board, j, i)) {
+                isUnderAttack = true;
+                break;
+            }
+        }
+        
+        if (isUnderAttack) {
+            // Check if piece is defended by friendly pieces
+            for (int j = 0; j < 64; j++) {
+                const Piece& friendlyPiece = board.squares[j].Piece;
+                if (friendlyPiece.PieceType == ChessPieceType::NONE || friendlyPiece.PieceColor != piece.PieceColor || j == i) continue;
+                
+                // Check if friendly piece can defend this square
+                if (canPieceAttackSquare(board, j, i)) {
+                    isDefended = true;
+                    break;
+                }
+            }
+            
+            // If piece is under attack and not defended, it's hanging
+            if (!isDefended) {
+                int hangingPenalty = piece.PieceValue * 0.8; // 80% of piece value as penalty
+                
+                if (piece.PieceColor == ChessPieceColor::WHITE) {
+                    score -= hangingPenalty;
+                } else {
+                    score += hangingPenalty;
+                }
+                
+                // Extra penalty for hanging queen
+                if (piece.PieceType == ChessPieceType::QUEEN) {
+                    if (piece.PieceColor == ChessPieceColor::WHITE) {
+                        score -= 200; // Extra penalty for hanging queen
+                    } else {
+                        score += 200;
+                    }
+                }
+            }
+        }
+    }
+    
+    return score;
+}
+
+// Helper function to check if a piece can attack a square
+bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
+    const Piece& piece = board.squares[piecePos].Piece;
+    if (piece.PieceType == ChessPieceType::NONE) return false;
+    
+    int fromRow = piecePos / 8;
+    int fromCol = piecePos % 8;
+    int toRow = targetPos / 8;
+    int toCol = targetPos % 8;
+    
+    int rowDiff = toRow - fromRow;
+    int colDiff = toCol - fromCol;
+    
+    switch (piece.PieceType) {
+        case ChessPieceType::PAWN: {
+            int direction = (piece.PieceColor == ChessPieceColor::WHITE) ? 1 : -1;
+            // Pawn attacks diagonally
+            return (rowDiff == direction && (colDiff == 1 || colDiff == -1));
+        }
+        case ChessPieceType::KNIGHT: {
+            return (abs(rowDiff) == 2 && abs(colDiff) == 1) || 
+                   (abs(rowDiff) == 1 && abs(colDiff) == 2);
+        }
+        case ChessPieceType::BISHOP: {
+            if (abs(rowDiff) != abs(colDiff)) return false;
+            // Check if path is clear
+            int rowStep = (rowDiff > 0) ? 1 : -1;
+            int colStep = (colDiff > 0) ? 1 : -1;
+            for (int i = 1; i < abs(rowDiff); i++) {
+                int checkPos = (fromRow + i * rowStep) * 8 + (fromCol + i * colStep);
+                if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE) return false;
+            }
+            return true;
+        }
+        case ChessPieceType::ROOK: {
+            if (rowDiff != 0 && colDiff != 0) return false;
+            // Check if path is clear
+            if (rowDiff == 0) {
+                int colStep = (colDiff > 0) ? 1 : -1;
+                for (int i = 1; i < abs(colDiff); i++) {
+                    int checkPos = fromRow * 8 + (fromCol + i * colStep);
+                    if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE) return false;
+                }
+            } else {
+                int rowStep = (rowDiff > 0) ? 1 : -1;
+                for (int i = 1; i < abs(rowDiff); i++) {
+                    int checkPos = (fromRow + i * rowStep) * 8 + fromCol;
+                    if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE) return false;
+                }
+            }
+            return true;
+        }
+        case ChessPieceType::QUEEN: {
+            // Queen combines rook and bishop moves
+            if (rowDiff == 0 || colDiff == 0 || abs(rowDiff) == abs(colDiff)) {
+                // Check if path is clear (similar to rook/bishop logic)
+                if (rowDiff == 0) {
+                    int colStep = (colDiff > 0) ? 1 : -1;
+                    for (int i = 1; i < abs(colDiff); i++) {
+                        int checkPos = fromRow * 8 + (fromCol + i * colStep);
+                        if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE) return false;
+                    }
+                } else if (colDiff == 0) {
+                    int rowStep = (rowDiff > 0) ? 1 : -1;
+                    for (int i = 1; i < abs(rowDiff); i++) {
+                        int checkPos = (fromRow + i * rowStep) * 8 + fromCol;
+                        if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE) return false;
+                    }
+                } else {
+                    int rowStep = (rowDiff > 0) ? 1 : -1;
+                    int colStep = (colDiff > 0) ? 1 : -1;
+                    for (int i = 1; i < abs(rowDiff); i++) {
+                        int checkPos = (fromRow + i * rowStep) * 8 + (fromCol + i * colStep);
+                        if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE) return false;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+        case ChessPieceType::KING: {
+            return abs(rowDiff) <= 1 && abs(colDiff) <= 1;
+        }
+        default:
+            return false;
+    }
 }

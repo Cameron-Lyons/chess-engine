@@ -195,7 +195,7 @@ int getPieceValue(ChessPieceType pieceType) {
         case ChessPieceType::KNIGHT: return 300;
         case ChessPieceType::BISHOP: return 300;
         case ChessPieceType::ROOK: return 500;
-        case ChessPieceType::QUEEN: return 900;
+        case ChessPieceType::QUEEN: return 975;
         case ChessPieceType::KING: return 10000;
         case ChessPieceType::NONE: return 0;
         default: return 0;
@@ -282,6 +282,47 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
         // **PRIORITY 7: Quiet moves with detailed positional scoring**
         else {
             score = 1000; // Base quiet move score
+            
+            // CRITICAL: Huge bonus for moving pieces that are under attack!
+            // Check if the moving piece is under attack by the opponent
+            ChessPieceColor enemyColor = (movingColor == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+            
+            // Check if the piece being moved is currently under attack
+            bool pieceUnderAttack = false;
+            for (int i = 0; i < 64; i++) {
+                const Piece& enemyPiece = board.squares[i].Piece;
+                if (enemyPiece.PieceType == ChessPieceType::NONE || enemyPiece.PieceColor != enemyColor) continue;
+                
+                if (canPieceAttackSquare(board, i, srcPos)) {
+                    pieceUnderAttack = true;
+                    break;
+                }
+            }
+            
+            if (pieceUnderAttack) {
+                // HUGE priority for moving attacked pieces, especially the queen
+                score += 5000;
+                
+                if (movingPiece == ChessPieceType::QUEEN) {
+                    score += 2000; // Extra bonus for moving attacked queen
+                }
+                
+                // Bonus if moving to a safe square (not attacked)
+                bool destSquareSafe = true;
+                for (int i = 0; i < 64; i++) {
+                    const Piece& enemyPiece = board.squares[i].Piece;
+                    if (enemyPiece.PieceType == ChessPieceType::NONE || enemyPiece.PieceColor != enemyColor) continue;
+                    
+                    if (canPieceAttackSquare(board, i, destPos)) {
+                        destSquareSafe = false;
+                        break;
+                    }
+                }
+                
+                if (destSquareSafe) {
+                    score += 1000; // Extra bonus for moving to safety
+                }
+            }
             
             // History table bonus (moves that were good before)
             score += getHistoryScore(historyTable, srcPos, destPos);
@@ -477,7 +518,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
     }
     
     // Delta pruning - don't search moves that can't improve position significantly
-    const int DELTA_MARGIN = 900; // Queen value - if we can't improve by this much, prune
+            const int DELTA_MARGIN = 975; // Queen value - if we can't improve by this much, prune
     const int BIG_DELTA_MARGIN = 1200; // For very hopeless positions
     
     if (maximizingPlayer) {
@@ -897,7 +938,19 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - context.startTime).count();
         
-        if (elapsed > timeLimitMs * 0.6) { // Used 60% of allocated time
+        // More aggressive time management - allow more time for deeper search
+        double timeRatio = (double)elapsed / timeLimitMs;
+        bool timeToStop = false;
+        
+        if (depth >= 8 && timeRatio > 0.8) {
+            timeToStop = true; // Stop if depth 8+ and used 80% of time
+        } else if (depth >= 6 && timeRatio > 0.9) {
+            timeToStop = true; // Stop if depth 6+ and used 90% of time
+        } else if (timeRatio > 0.95) {
+            timeToStop = true; // Always stop if used 95% of time
+        }
+        
+        if (timeToStop) {
             break;
         }
         

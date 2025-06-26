@@ -121,6 +121,7 @@ std::pair<int, int> findBestMove(Board& board, int depth);
 int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, int ply, ThreadSafeHistory& historyTable, ParallelSearchContext& context, bool isPVNode = true);
 
 int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare);
+bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos);
 bool isGoodCapture(const Board& board, int fromSquare, int toSquare);
 bool isDiscoveredCheck(const Board& board, int from, int to);
 bool isPromotion(const Board& board, int from, int to);

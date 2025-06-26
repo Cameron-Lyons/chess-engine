@@ -81,6 +81,8 @@ int evaluatePawnStructure(const Board& board);
 int evaluateMobility(const Board& board);
 int evaluateCenterControl(const Board& board);
 int evaluateKingSafety(const Board& board, ChessPieceColor color);
+int evaluateHangingPieces(const Board& board);
+bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos);
 int evaluatePosition(const Board& board);
 int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor color);
 int evaluatePassedPawns(const Board& board);

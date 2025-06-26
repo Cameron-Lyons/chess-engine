@@ -1,20 +1,6 @@
-#include "ChessEngine.h"
-#include "ValidMoves.h"
-#include "MoveContent.h"
+#include "ChessBoard.h"
+#include "search.h"
 #include <iostream>
-
-Board ChessBoard;
-Board PrevBoard;
-std::stack<int> MoveHistory;
-
-bool BlackAttackBoard[64];
-bool WhiteAttackBoard[64];
-int BlackKingPosition;
-int WhiteKingPosition;
-
-PieceMoving MovingPiece(ChessPieceColor::WHITE, ChessPieceType::PAWN, false);
-PieceMoving MovingPieceSecondary(ChessPieceColor::WHITE, ChessPieceType::PAWN, false);
-bool PawnPromoted = false;
 
 int main() {
     std::cout << "Testing chess engine initialization...\n";
@@ -28,13 +14,22 @@ int main() {
         testBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         std::cout << "FEN initialization completed.\n";
         
-        std::cout << "Step 3: Testing Engine() function...\n";
-        Engine();
-        std::cout << "Engine() completed successfully.\n";
+        std::cout << "Step 3: Testing basic board operations...\n";
+        // Test that the board is set up correctly
+        if (testBoard.squares[0].Piece.PieceType == ChessPieceType::ROOK) {
+            std::cout << "Board setup correct - rook found at a1.\n";
+        } else {
+            std::cout << "Warning: Board setup may be incorrect.\n";
+        }
         
-        std::cout << "Step 4: Testing GenValidMoves...\n";
-        GenValidMoves(ChessBoard);
-        std::cout << "GenValidMoves completed successfully.\n";
+        std::cout << "Step 4: Testing move generation...\n";
+        std::vector<std::pair<int, int>> moves = GetAllMoves(testBoard, testBoard.turn);
+        std::cout << "Generated " << moves.size() << " moves.\n";
+        if (moves.size() >= 16) { // Should have at least 16 opening moves
+            std::cout << "Move generation working correctly.\n";
+        } else {
+            std::cout << "Warning: Fewer moves generated than expected.\n";
+        }
         
         std::cout << "All tests passed!\n";
         

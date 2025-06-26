@@ -1,5 +1,7 @@
-#include "ChessEngine.h"
+#include "ChessBoard.h"
+#include "search.h"
 #include <iostream>
+#include <string>
 
 std::string to_string(ChessPieceType type) {
     switch (type) {
@@ -18,40 +20,74 @@ std::string to_string(ChessPieceColor color) {
 }
 
 int main() {
-    Engine();
+    std::cout << "=== Pawn Move Generation Test ===\n\n";
     
-    std::cout << "Testing pawn move generation...\n";
+    Board testBoard;
+    testBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     
-    GenValidMoves(ChessBoard);
+    std::cout << "Testing pawn move generation on starting position...\n";
     
+    // Test pawn at e2 (position 12)
     int e2Pos = 12;
-    std::cout << "Position e2 (12): row=" << e2Pos/8 << ", col=" << e2Pos%8 << "\n";
+    std::cout << "Position e2 (" << e2Pos << "): row=" << e2Pos/8 << ", col=" << e2Pos%8 << "\n";
     
-    Piece& e2Pawn = ChessBoard.squares[e2Pos].Piece;
+    const Piece& e2Pawn = testBoard.squares[e2Pos].Piece;
     std::cout << "Piece at e2: Type=" << to_string(e2Pawn.PieceType) << ", Color=" << to_string(e2Pawn.PieceColor) << "\n";
-    std::cout << "Valid moves for e2 pawn: ";
-    for (int move : e2Pawn.ValidMoves) {
-        int moveRow = move / 8;
-        int moveCol = move % 8;
-        std::cout << "(" << moveCol << "," << moveRow << ") ";
-    }
-    std::cout << "\n";
     
-    std::cout << "\nAll White pawns:\n";
-    for (int i = 8; i <= 15; i++) {
-        Piece& pawn = ChessBoard.squares[i].Piece;
-        if (pawn.PieceType == ChessPieceType::PAWN && pawn.PieceColor == ChessPieceColor::WHITE) {
-            int row = i / 8;
-            int col = i % 8;
-            std::cout << "Pawn at (" << col << "," << row << "): ";
-            for (int move : pawn.ValidMoves) {
-                int moveRow = move / 8;
-                int moveCol = move % 8;
-                std::cout << "(" << moveCol << "," << moveRow << ") ";
-            }
-            std::cout << "\n";
+    // Generate moves for all white pawns
+    std::vector<std::pair<int, int>> allMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
+    
+    std::cout << "\nPawn moves found:\n";
+    int pawnMoveCount = 0;
+    for (const auto& move : allMoves) {
+        const Piece& piece = testBoard.squares[move.first].Piece;
+        if (piece.PieceType == ChessPieceType::PAWN) {
+            int fromRow = move.first / 8;
+            int fromCol = move.first % 8;
+            int toRow = move.second / 8;
+            int toCol = move.second % 8;
+            char fromFile = 'a' + fromCol;
+            char toFile = 'a' + toCol;
+            
+            std::cout << "  " << fromFile << (fromRow + 1) << " to " << toFile << (toRow + 1) << "\n";
+            pawnMoveCount++;
         }
     }
     
+    std::cout << "\nTest Results:\n";
+    std::cout << "✓ Total white pawn moves: " << pawnMoveCount << "\n";
+    std::cout << "✓ Expected: 16 pawn moves (8 pawns × 1-2 moves each)\n";
+    
+    if (pawnMoveCount == 16) {
+        std::cout << "✅ PASS: Correct number of pawn moves generated!\n";
+    } else {
+        std::cout << "❌ FAIL: Expected 16 pawn moves, got " << pawnMoveCount << "\n";
+    }
+    
+    // Test pawn promotion position
+    std::cout << "\n=== Testing Pawn Promotion ===\n";
+    testBoard.InitializeFromFEN("rnbqkb1r/ppppp2p/5n2/5Pp1/8/8/PPPPPP1P/RNBQKBNR w KQkq g6 0 4");
+    
+    // Move white pawn to 7th rank for promotion test
+    testBoard.squares[53].Piece = Piece(ChessPieceColor::WHITE, ChessPieceType::PAWN); // Put pawn on f7
+    testBoard.squares[61].Piece = Piece(); // Clear f8
+    
+    std::vector<std::pair<int, int>> promotionMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
+    
+    bool foundPromotionMove = false;
+    for (const auto& move : promotionMoves) {
+        if (move.first == 53 && move.second == 61) { // f7 to f8
+            foundPromotionMove = true;
+            break;
+        }
+    }
+    
+    if (foundPromotionMove) {
+        std::cout << "✅ PASS: Pawn promotion move detected!\n";
+    } else {
+        std::cout << "❌ FAIL: Pawn promotion move not found\n";
+    }
+    
+    std::cout << "\n=== Pawn Test Complete ===\n";
     return 0;
 } 
