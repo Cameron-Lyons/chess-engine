@@ -235,12 +235,31 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
             // Base capture score starts high
             score = 10000 + mvvLvaScore;
             
-            // Strong SEE integration
+            // Strong SEE integration - DRASTICALLY increased penalties for bad captures
             if (seeValue > 0) {
                 score += std::min(seeValue, 500); // Cap SEE bonus to avoid overflow
             } else if (seeValue < 0) {
-                // Heavy penalty for bad captures, but still try them if desperate
-                score += std::max(seeValue, -400);
+                // MASSIVE penalty for bad captures - this is critical for tactical strength
+                score += std::max(seeValue * 2, -2000); // Double the penalty, cap at -2000
+                
+                // Extra penalty if capturing with a valuable piece
+                if (attackerValue >= 900) { // Queen making bad capture
+                    score -= 1500; // Huge additional penalty
+                } else if (attackerValue >= 500) { // Rook making bad capture
+                    score -= 800; // Large additional penalty
+                } else if (attackerValue >= 300) { // Bishop/Knight making bad capture
+                    score -= 400; // Moderate additional penalty
+                }
+                
+                // Penalty scales with how bad the capture is
+                if (seeValue <= -300) { // Very bad capture (lose major piece)
+                    score -= 1000; // Extremely bad
+                } else if (seeValue <= -100) { // Bad capture (lose minor piece)
+                    score -= 500; // Very bad
+                }
+            } else {
+                // seeValue == 0: Equal exchange - slightly positive
+                score += 50;
             }
             
             // Additional tactical bonuses
@@ -642,7 +661,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
         return standPat;
     }
     
-    // Score and sort captures by MVV-LVA
+    // Score and sort captures by MVV-LVA with SEE filtering
     std::vector<ScoredMove> scoredMoves;
     for (const auto& move : tacticalMoves) {
         int score = 0;
@@ -650,6 +669,17 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
             int victimValue = getPieceValue(board.squares[move.second].Piece.PieceType);
             int attackerValue = getPieceValue(board.squares[move.first].Piece.PieceType);
             score = victimValue * 100 - attackerValue; // MVV-LVA
+            
+            // CRITICAL: Use SEE to filter out bad captures in quiescence search
+            int seeValue = staticExchangeEvaluation(board, move.first, move.second);
+            
+            // Skip obviously bad captures in quiescence search
+            if (seeValue < -50) {
+                continue; // Don't even consider bad captures
+            }
+            
+            // Add SEE bonus/penalty to scoring
+            score += seeValue;
             
             // Delta pruning for individual captures
             if (maximizingPlayer && standPat + victimValue + 200 < alpha) {
@@ -1249,55 +1279,143 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
         return 0; // No capture
     }
     
-    // Simple SEE - just check if capture is profitable
-    // int gain = getPieceValue(victim) - getPieceValue(attacker); // Currently unused
+    // PROPER SEE IMPLEMENTATION - Simulate the entire exchange sequence
     
-    // TODO: Full SEE would simulate the entire exchange sequence
-    // For now, use a simplified version that checks basic profitability
+    // Get piece values for calculations
+    int victimValue = getPieceValue(victim);
+    int attackerValue = getPieceValue(attacker);
     
-    // If we're capturing a more valuable piece, it's likely good
-    if (getPieceValue(victim) >= getPieceValue(attacker)) {
-        return getPieceValue(victim);
-    }
+    // Find all attackers and defenders of the target square
+    std::vector<int> attackers;
+    std::vector<int> defenders;
     
-    // If capturing a less valuable piece, be more careful
-    // Check if the piece is defended
     ChessPieceColor attackerColor = board.squares[fromSquare].Piece.PieceColor;
-    ChessPieceColor defenderColor = (attackerColor == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+    ChessPieceColor defenderColor = (attackerColor == ChessPieceColor::WHITE) ? 
+                                   ChessPieceColor::BLACK : ChessPieceColor::WHITE;
     
-    // Simple heuristic: if target square is defended by a pawn, the capture might be bad
-    // Check adjacent squares for defending pawns
-    int row = toSquare / 8;
-    int col = toSquare % 8;
-    
-    if (defenderColor == ChessPieceColor::BLACK) {
-        // Check if white pawn defends (black pawns attack diagonally down)
-        if (row < 7) {
-            if (col > 0 && board.squares[(row + 1) * 8 + (col - 1)].Piece.PieceType == ChessPieceType::PAWN &&
-                board.squares[(row + 1) * 8 + (col - 1)].Piece.PieceColor == ChessPieceColor::BLACK) {
-                return getPieceValue(victim) - getPieceValue(attacker);
-            }
-            if (col < 7 && board.squares[(row + 1) * 8 + (col + 1)].Piece.PieceType == ChessPieceType::PAWN &&
-                board.squares[(row + 1) * 8 + (col + 1)].Piece.PieceColor == ChessPieceColor::BLACK) {
-                return getPieceValue(victim) - getPieceValue(attacker);
-            }
-        }
-    } else {
-        // Check if black pawn defends (white pawns attack diagonally up)
-        if (row > 0) {
-            if (col > 0 && board.squares[(row - 1) * 8 + (col - 1)].Piece.PieceType == ChessPieceType::PAWN &&
-                board.squares[(row - 1) * 8 + (col - 1)].Piece.PieceColor == ChessPieceColor::WHITE) {
-                return getPieceValue(victim) - getPieceValue(attacker);
-            }
-            if (col < 7 && board.squares[(row - 1) * 8 + (col + 1)].Piece.PieceType == ChessPieceType::PAWN &&
-                board.squares[(row - 1) * 8 + (col + 1)].Piece.PieceColor == ChessPieceColor::WHITE) {
-                return getPieceValue(victim) - getPieceValue(attacker);
+    // Find all pieces that can attack the target square
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = board.squares[i].Piece;
+        if (piece.PieceType == ChessPieceType::NONE) continue;
+        
+        // Skip the initial attacker (we'll handle it separately)
+        if (i == fromSquare) continue;
+        
+        // Check if this piece can attack the target square
+        if (canPieceAttackSquare(board, i, toSquare)) {
+            if (piece.PieceColor == attackerColor) {
+                attackers.push_back(i);
+            } else {
+                defenders.push_back(i);
             }
         }
     }
     
-    // If no obvious defense, assume capture is good
-    return getPieceValue(victim);
+    // Add the initial attacker at the front
+    attackers.insert(attackers.begin(), fromSquare);
+    
+    // Sort attackers and defenders by piece value (least valuable first)
+    auto sortByValue = [&board](int a, int b) {
+        int valueA = getPieceValue(board.squares[a].Piece.PieceType);
+        int valueB = getPieceValue(board.squares[b].Piece.PieceType);
+        return valueA < valueB;
+    };
+    
+    std::sort(attackers.begin(), attackers.end(), sortByValue);
+    std::sort(defenders.begin(), defenders.end(), sortByValue);
+    
+    // Simulate the exchange sequence
+    std::vector<int> gains;
+    gains.push_back(victimValue); // First capture gains the victim
+    
+    int currentVictimValue = attackerValue; // Next victim is the attacker
+    bool attackerTurn = false; // Next move is defender's turn
+    
+    size_t attackerIdx = 1; // Skip first attacker (already used)
+    size_t defenderIdx = 0;
+    
+    // Continue the exchange sequence
+    while (true) {
+        int nextAttackerPos = -1;
+        
+        if (attackerTurn) {
+            // Attacker's turn - find next available attacker
+            while (attackerIdx < attackers.size()) {
+                int pos = attackers[attackerIdx];
+                // Check if this piece hasn't been captured yet
+                bool stillExists = true;
+                for (size_t i = 1; i < gains.size(); i += 2) {
+                    if (i <= attackerIdx) {
+                        stillExists = false;
+                        break;
+                    }
+                }
+                if (stillExists) {
+                    nextAttackerPos = pos;
+                    break;
+                }
+                attackerIdx++;
+            }
+        } else {
+            // Defender's turn - find next available defender
+            while (defenderIdx < defenders.size()) {
+                int pos = defenders[defenderIdx];
+                // Check if this piece hasn't been captured yet
+                bool stillExists = true;
+                for (size_t i = 2; i < gains.size(); i += 2) {
+                    if (i / 2 <= defenderIdx) {
+                        stillExists = false;
+                        break;
+                    }
+                }
+                if (stillExists) {
+                    nextAttackerPos = pos;
+                    break;
+                }
+                defenderIdx++;
+            }
+        }
+        
+        // If no more pieces can capture, exchange is over
+        if (nextAttackerPos == -1) {
+            break;
+        }
+        
+        // Add the gain from this capture
+        gains.push_back(currentVictimValue);
+        
+        // The capturing piece becomes the new victim
+        currentVictimValue = getPieceValue(board.squares[nextAttackerPos].Piece.PieceType);
+        
+        // Switch turns
+        attackerTurn = !attackerTurn;
+        
+        // Move to next piece
+        if (attackerTurn) {
+            defenderIdx++;
+        } else {
+            attackerIdx++;
+        }
+    }
+    
+    // Calculate the final result using minimax
+    // Work backwards through the gains
+    int result = 0;
+    if (!gains.empty()) {
+        result = gains.back();
+        
+        for (int i = static_cast<int>(gains.size()) - 2; i >= 0; i--) {
+            if (i % 2 == 0) {
+                // Maximizing player (attacker)
+                result = std::max(gains[i] - result, 0);
+            } else {
+                // Minimizing player (defender)
+                result = gains[i] - result;
+            }
+        }
+    }
+    
+    return result;
 }
 
 // Forward declarations and helper functions
