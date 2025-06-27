@@ -221,34 +221,57 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
             score = 15000; // Highest priority
         }
         
-        // **PRIORITY 2: Captures with MVV-LVA + SEE evaluation**
+        // **PRIORITY 2: Captures with Enhanced MVV-LVA + SEE evaluation**
         else if (targetPiece != ChessPieceType::NONE) {
             int victimValue = getPieceValue(targetPiece);
             int attackerValue = getPieceValue(movingPiece);
             
-            // Use Static Exchange Evaluation for better capture assessment
+            // Enhanced MVV-LVA scoring with bigger value differences
+            int mvvLvaScore = (victimValue * 1000) - attackerValue;
+            
+            // Use Static Exchange Evaluation for tactical accuracy
             int seeValue = staticExchangeEvaluation(board, srcPos, destPos);
             
-            // Base MVV-LVA score
-            score = 10000 + (victimValue * 100) - attackerValue;
+            // Base capture score starts high
+            score = 10000 + mvvLvaScore;
             
-            // Adjust based on SEE
+            // Strong SEE integration
             if (seeValue > 0) {
-                score += 500; // Good capture bonus
+                score += std::min(seeValue, 500); // Cap SEE bonus to avoid overflow
             } else if (seeValue < 0) {
-                score -= 300; // Bad capture penalty
+                // Heavy penalty for bad captures, but still try them if desperate
+                score += std::max(seeValue, -400);
             }
             
-            // Bonus for winning material
-            if (victimValue > attackerValue) {
-                score += 200;
-            } else if (victimValue < attackerValue) {
-                score -= 100; // Penalty for losing material in capture
-            }
-            
-            // Special bonus for capturing queens and rooks
-            if (victimValue >= 500) {
+            // Additional tactical bonuses
+            if (victimValue >= 900) { // Queen captures
+                score += 500;
+            } else if (victimValue >= 500) { // Rook captures  
                 score += 300;
+            } else if (victimValue >= 300) { // Bishop/Knight captures
+                score += 200;
+            }
+            
+            // Promote equal captures (QxQ, RxR, etc.)
+            if (std::abs(victimValue - attackerValue) <= 50) {
+                score += 150;
+            }
+            
+            // Bonus for capturing defended pieces (often tactical)
+            bool targetIsDefended = false;
+            ChessPieceColor enemyColor = (movingColor == ChessPieceColor::WHITE) ? 
+                                        ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+            for (int i = 0; i < 64; i++) {
+                const Piece& defenderPiece = board.squares[i].Piece;
+                if (defenderPiece.PieceColor == enemyColor && 
+                    canPieceAttackSquare(board, i, destPos)) {
+                    targetIsDefended = true;
+                    break;
+                }
+            }
+            
+            if (targetIsDefended && seeValue >= 0) {
+                score += 100; // Bonus for winning defended piece exchanges
             }
         }
         
@@ -274,9 +297,19 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
             score = 7000;
         }
         
-        // **PRIORITY 6: Killer moves**
+        // **PRIORITY 6: Enhanced Killer moves with multiple slots**
         else if (killerMoves.isKiller(ply, move)) {
             score = 6000;
+            
+            // Give higher bonus for primary killer (first killer move stored)
+            int killerScore = killerMoves.getKillerScore(ply, move);
+            score += killerScore; // This adds extra bonus for primary killer
+            
+            // Bonus for killer moves that are also historically good
+            int historyScore = getHistoryScore(historyTable, srcPos, destPos);
+            if (historyScore > 30) {
+                score += 200; // Extra bonus for killer + history combination
+            }
         }
         
         // **PRIORITY 7: Quiet moves with detailed positional scoring**
@@ -324,175 +357,143 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
                 }
             }
             
-            // History table bonus (moves that were good before)
-            score += getHistoryScore(historyTable, srcPos, destPos);
+            // Enhanced History table bonus with scaling
+            int historyScore = getHistoryScore(historyTable, srcPos, destPos);
+            score += historyScore * 2; // Double the history influence
             
-            // Piece-specific positional bonuses
-            int srcRow = srcPos / 8;
-            // int srcCol = srcPos % 8; // Currently unused
+            // Counter-move heuristic: if this move responds well to opponent's last move
+            // (This is a simplified version - in full engines this would track last moves)
+            if (historyScore > 50) {
+                score += 100; // Bonus for historically good moves
+            }
+            
+            // Bonus for moves that improve piece activity
+            int srcMobility = 0, destMobility = 0;
+            
+            // Count how many squares the piece can reach from src vs dest
+            // (Simplified mobility calculation)
+            for (int testSquare = 0; testSquare < 64; testSquare++) {
+                if (canPieceAttackSquare(board, srcPos, testSquare)) {
+                    srcMobility++;
+                }
+            }
+            
+            // Simulate piece on destination and count mobility
+            Board testBoard = board;
+            testBoard.squares[destPos].Piece = testBoard.squares[srcPos].Piece;
+            testBoard.squares[srcPos].Piece.PieceType = ChessPieceType::NONE;
+            
+            for (int testSquare = 0; testSquare < 64; testSquare++) {
+                if (canPieceAttackSquare(testBoard, destPos, testSquare)) {
+                    destMobility++;
+                }
+            }
+            
+            // Bonus for moves that increase piece mobility
+            if (destMobility > srcMobility) {
+                score += (destMobility - srcMobility) * 5;
+            }
+            
+            // CRITICAL: Advanced piece-specific move ordering
             int destRow = destPos / 8;
             int destCol = destPos % 8;
             
-            // Centralization bonus for pieces moving toward center
-            int centerDistance = std::abs(destRow - 3.5) + std::abs(destCol - 3.5);
-            score += (7 - centerDistance) * 10;
+            // Special handling for queen moves (prevent blunders)
+            if (movingPiece == ChessPieceType::QUEEN) {
+                // Massive penalty for queen moves to dangerous squares
+                bool isCorner = ((destRow == 0 || destRow == 7) && (destCol == 0 || destCol == 7));
+                bool isEdge = (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7);
+                
+                if (isCorner) {
+                    score -= 3000; // Huge penalty for corner
+                } else if (isEdge) {
+                    score -= 1500; // Large penalty for edge
+                }
+                
+                // Check if queen would be in enemy territory without support
+                bool inEnemyTerritory = false;
+                if (movingColor == ChessPieceColor::WHITE && destRow >= 5) {
+                    inEnemyTerritory = true;
+                } else if (movingColor == ChessPieceColor::BLACK && destRow <= 2) {
+                    inEnemyTerritory = true;
+                }
+                
+                if (inEnemyTerritory) {
+                    // Count supporting pieces
+                    int supportCount = 0;
+                    for (int i = 0; i < 64; i++) {
+                        const Piece& friendlyPiece = board.squares[i].Piece;
+                        if (friendlyPiece.PieceType == ChessPieceType::NONE || 
+                            friendlyPiece.PieceColor != movingColor || 
+                            i == srcPos || 
+                            friendlyPiece.PieceType == ChessPieceType::PAWN) continue;
+                        
+                        if (canPieceAttackSquare(board, i, destPos)) {
+                            supportCount++;
+                        }
+                    }
+                    
+                    if (supportCount == 0) {
+                        score -= 2000; // Heavy penalty for unsupported queen in enemy territory
+                    } else if (supportCount == 1) {
+                        score -= 800; // Moderate penalty for barely supported queen
+                    }
+                }
+                
+                // Penalize early queen development (encourage piece development first)
+                if ((movingColor == ChessPieceColor::WHITE && destRow > 3) ||
+                    (movingColor == ChessPieceColor::BLACK && destRow < 4)) {
+                    // Count developed pieces (not on starting squares)
+                    int developedPieces = 0;
+                    for (int i = 0; i < 64; i++) {
+                        const Piece& piece = board.squares[i].Piece;
+                        if (piece.PieceColor == movingColor && 
+                            (piece.PieceType == ChessPieceType::KNIGHT || 
+                             piece.PieceType == ChessPieceType::BISHOP)) {
+                            int row = i / 8;
+                            int startRow = (movingColor == ChessPieceColor::WHITE) ? 0 : 7;
+                            if (row != startRow) {
+                                developedPieces++;
+                            }
+                        }
+                    }
+                    
+                    if (developedPieces < 2) {
+                        score -= 400; // Penalty for early queen moves before piece development
+                    }
+                }
+            }
             
-            switch (movingPiece) {
-                case ChessPieceType::PAWN: {
-                    // Forward progress
-                    if (movingColor == ChessPieceColor::WHITE && destRow > srcRow) {
-                        score += (destRow - srcRow) * 20;
-                    } else if (movingColor == ChessPieceColor::BLACK && destRow < srcRow) {
-                        score += (srcRow - destRow) * 20;
-                    }
-                    
-                    // Advanced pawn bonus
-                    if ((movingColor == ChessPieceColor::WHITE && destRow >= 5) ||
-                        (movingColor == ChessPieceColor::BLACK && destRow <= 2)) {
-                        score += 50;
-                    }
-                    break;
+            // Knight-specific bonuses
+            else if (movingPiece == ChessPieceType::KNIGHT) {
+                // Centralization bonus
+                int centerDistance = std::abs(destRow - 3.5) + std::abs(destCol - 3.5);
+                score += (7 - centerDistance) * 15;
+                
+                // Avoid rim
+                if (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7) {
+                    score -= 100;
                 }
-                    
-                case ChessPieceType::KNIGHT: {
-                    // Knight centralization is especially important
-                    score += (7 - centerDistance) * 20;
-                    
-                    // Avoid edges
-                    if (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7) {
-                        score -= 50;
+                
+                // Bonus for knight forks and attacks on multiple pieces
+                int attackedPieces = 0;
+                ChessPieceColor enemyColor = (movingColor == ChessPieceColor::WHITE) ? 
+                                            ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+                for (int i = 0; i < 64; i++) {
+                    const Piece& enemyPiece = board.squares[i].Piece;
+                    if (enemyPiece.PieceColor == enemyColor && 
+                        canPieceAttackSquare(testBoard, destPos, i)) {
+                        attackedPieces++;
+                        if (enemyPiece.PieceType == ChessPieceType::QUEEN || 
+                            enemyPiece.PieceType == ChessPieceType::ROOK) {
+                            score += 150; // Bonus for attacking valuable pieces
+                        }
                     }
-                    break;
                 }
-                    
-                case ChessPieceType::BISHOP: {
-                    // Long diagonal bonus
-                    if (std::abs(destRow - destCol) == 0 || std::abs(destRow - (7 - destCol)) == 0) {
-                        score += 30;
-                    }
-                    break;
+                
+                if (attackedPieces >= 2) {
+                    score += 300; // Bonus for potential forks
                 }
-                    
-                case ChessPieceType::ROOK: {
-                    // Open file bonus (simplified check)
-                    bool openFile = true;
-                    for (int row = 0; row < 8; row++) {
-                        if (row != destRow && board.squares[row * 8 + destCol].Piece.PieceType == ChessPieceType::PAWN) {
-                            openFile = false;
-                            break;
-                        }
-                    }
-                    if (openFile) score += 40;
-                    
-                    // 7th rank bonus
-                    if ((movingColor == ChessPieceColor::WHITE && destRow == 6) ||
-                        (movingColor == ChessPieceColor::BLACK && destRow == 1)) {
-                        score += 50;
-                    }
-                    break;
-                }
-                    
-                case ChessPieceType::QUEEN: {
-                    // Slight penalty for early queen development
-                    if ((movingColor == ChessPieceColor::WHITE && destRow > 2) ||
-                        (movingColor == ChessPieceColor::BLACK && destRow < 5)) {
-                        // Only penalize if other pieces aren't developed yet
-                        score -= 20;
-                    }
-                    
-                    // CRITICAL: Heavy penalties for dangerous queen moves
-                    // Check if queen is moving to enemy territory without support
-                    bool movingToEnemyTerritory = false;
-                    if (movingColor == ChessPieceColor::WHITE && destRow >= 5) {
-                        movingToEnemyTerritory = true;
-                    } else if (movingColor == ChessPieceColor::BLACK && destRow <= 2) {
-                        movingToEnemyTerritory = true;
-                    }
-                    
-                    if (movingToEnemyTerritory) {
-                        // Count supporting pieces
-                        int supportCount = 0;
-                        for (int i = 0; i < 64; i++) {
-                            const Piece& friendlyPiece = board.squares[i].Piece;
-                            if (friendlyPiece.PieceType == ChessPieceType::NONE || 
-                                friendlyPiece.PieceColor != movingColor || 
-                                i == srcPos || 
-                                friendlyPiece.PieceType == ChessPieceType::PAWN) continue;
-                            
-                            if (canPieceAttackSquare(board, i, destPos)) {
-                                supportCount++;
-                            }
-                        }
-                        
-                        if (supportCount == 0) {
-                            score -= 1000; // Heavy penalty for unsupported queen moves to enemy territory
-                        }
-                        
-                        // Extra penalties for corners and edges
-                        bool isCorner = ((destRow == 0 || destRow == 7) && (destCol == 0 || destCol == 7));
-                        bool isEdge = (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7);
-                        
-                        if (isCorner) {
-                            score -= 2000; // Massive penalty for queen moving to corner
-                        } else if (isEdge) {
-                            score -= 800; // Large penalty for queen moving to edge
-                        }
-                    }
-                    
-                    // Additional penalty for queen captures that lead to trapping
-                    if (targetPiece == ChessPieceType::PAWN) {
-                        // Check if capturing this pawn puts queen in danger
-                        bool isCorner = ((destRow == 0 || destRow == 7) && (destCol == 0 || destCol == 7));
-                        bool isEdge = (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7);
-                        
-                        if (isCorner) {
-                            score -= 1500; // Huge penalty for queen capturing pawn in corner
-                        } else if (isEdge) {
-                            score -= 600; // Large penalty for queen capturing pawn on edge
-                        }
-                        
-                        // Count enemy pieces nearby that could trap the queen
-                        int nearbyEnemies = 0;
-                        for (int dr = -2; dr <= 2; dr++) {
-                            for (int dc = -2; dc <= 2; dc++) {
-                                int checkRow = destRow + dr;
-                                int checkCol = destCol + dc;
-                                if (checkRow >= 0 && checkRow < 8 && checkCol >= 0 && checkCol < 8) {
-                                    int checkPos = checkRow * 8 + checkCol;
-                                    ChessPieceColor enemyColor = (movingColor == ChessPieceColor::WHITE) ? 
-                                                                 ChessPieceColor::BLACK : ChessPieceColor::WHITE;
-                                    if (board.squares[checkPos].Piece.PieceType != ChessPieceType::NONE &&
-                                        board.squares[checkPos].Piece.PieceColor == enemyColor) {
-                                        nearbyEnemies++;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        if (nearbyEnemies >= 2) {
-                            score -= 500; // Penalty for queen capturing pawn near enemy pieces
-                        }
-                    }
-                    break;
-                }
-                    
-                case ChessPieceType::KING: {
-                    // Safety-oriented moves (toward castling, away from center in middlegame)
-                    if (!isCastling(board, srcPos, destPos)) {
-                        // Penalty for king moves in opening/middlegama
-                        score -= 30;
-                        
-                        // But bonus if moving to safety
-                        if ((movingColor == ChessPieceColor::WHITE && destRow == 0 && (destCol <= 2 || destCol >= 6)) ||
-                            (movingColor == ChessPieceColor::BLACK && destRow == 7 && (destCol <= 2 || destCol >= 6))) {
-                            score += 20;
-                        }
-                    }
-                    break;
-                }
-                    
-                default:
-                    break;
             }
         }
         
@@ -708,6 +709,42 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     
     if (depth > 0 && isInCheck(board, currentColor)) {
         extension = 1; // Always extend when in check
+    }
+    
+    // NEW: Extend search for critical tactical positions
+    if (depth > 0 && depth <= 6) { // Only extend in middle game depth range
+        // Extend if there are hanging pieces (potential tactics)
+        bool hasHangingPieces = false;
+        for (int i = 0; i < 64; i++) {
+            const Piece& piece = board.squares[i].Piece;
+            if (piece.PieceType == ChessPieceType::NONE) continue;
+            if (piece.PieceType == ChessPieceType::PAWN || piece.PieceType == ChessPieceType::KING) continue;
+            
+            // Quick check if piece is under attack
+            ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? 
+                                        ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+            
+            bool isAttacked = false;
+            for (int j = 0; j < 64; j++) {
+                const Piece& enemyPiece = board.squares[j].Piece;
+                if (enemyPiece.PieceType == ChessPieceType::NONE || 
+                    enemyPiece.PieceColor != enemyColor) continue;
+                    
+                if (canPieceAttackSquare(board, j, i)) {
+                    isAttacked = true;
+                    break;
+                }
+            }
+            
+            if (isAttacked) {
+                hasHangingPieces = true;
+                break;
+            }
+        }
+        
+        if (hasHangingPieces) {
+            extension = 1; // Extend search when tactics are brewing
+        }
     }
     
     depth += extension;
@@ -952,8 +989,8 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
         }
     }
     
-    // Iterative deepening with aspiration windows
-    for (int depth = 1; depth <= maxDepth; depth++) {
+    // Iterative deepening with aspiration windows - increased max depth for tactics
+    for (int depth = 1; depth <= std::max(maxDepth, 10); depth++) {
         int alpha, beta;
         
         if (depth <= 3) {
@@ -1025,16 +1062,42 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - context.startTime).count();
         
-        // More aggressive time management - allow more time for deeper search
+        // Smart time management - spend more time on tactical positions
         double timeRatio = (double)elapsed / timeLimitMs;
         bool timeToStop = false;
         
-        if (depth >= 8 && timeRatio > 0.8) {
-            timeToStop = true; // Stop if depth 8+ and used 80% of time
-        } else if (depth >= 6 && timeRatio > 0.9) {
-            timeToStop = true; // Stop if depth 6+ and used 90% of time
-        } else if (timeRatio > 0.95) {
-            timeToStop = true; // Always stop if used 95% of time
+        // Check if position is tactical (has hanging pieces or checks)
+        bool isTactical = false;
+        if (isInCheck(board, board.turn)) {
+            isTactical = true;
+        } else {
+            // Quick check for hanging pieces
+            for (int i = 0; i < 64 && !isTactical; i++) {
+                const Piece& piece = board.squares[i].Piece;
+                if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::PAWN) {
+                    ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? 
+                                                ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+                    for (int j = 0; j < 64; j++) {
+                        const Piece& enemyPiece = board.squares[j].Piece;
+                        if (enemyPiece.PieceColor == enemyColor && canPieceAttackSquare(board, j, i)) {
+                            isTactical = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Allow more time for tactical positions
+        double threshold1 = isTactical ? 0.85 : 0.8;
+        double threshold2 = isTactical ? 0.95 : 0.9;
+        
+        if (depth >= 8 && timeRatio > threshold1) {
+            timeToStop = true;
+        } else if (depth >= 6 && timeRatio > threshold2) {
+            timeToStop = true;
+        } else if (timeRatio > 0.98) {
+            timeToStop = true; // Hard time limit
         }
         
         if (timeToStop) {

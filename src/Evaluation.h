@@ -82,6 +82,7 @@ int evaluateMobility(const Board& board);
 int evaluateCenterControl(const Board& board);
 int evaluateKingSafety(const Board& board, ChessPieceColor color);
 int evaluateHangingPieces(const Board& board);
+int evaluateQueenTrapDanger(const Board& board);
 bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos);
 int evaluatePosition(const Board& board);
 int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor color);

@@ -710,6 +710,7 @@ int evaluatePosition(const Board& board) {
     score += evaluateMobility(board); // New mobility evaluation
     score += evaluateKingSafety(board); // Enhanced king safety
     score += evaluateHangingPieces(board); // NEW: Detect hanging pieces
+    score += evaluateQueenTrapDanger(board); // NEW: Detect trapped queens
     
     return score;
 }
@@ -961,4 +962,115 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
         default:
             return false;
     }
+}
+
+// NEW: Check if a queen is in a "trappy" position where it can be easily trapped
+int evaluateQueenTrapDanger(const Board& board) {
+    int score = 0;
+    
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = board.squares[i].Piece;
+        if (piece.PieceType != ChessPieceType::QUEEN) continue;
+        
+        int row = i / 8;
+        int col = i % 8;
+        
+        // Count available escape squares for the queen
+        int escapeSquares = 0;
+        
+        // Check all 8 directions queen can move
+        int directions[8][2] = {{-1,-1}, {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,-1}, {1,0}, {1,1}};
+        
+        for (int dir = 0; dir < 8; dir++) {
+            int newRow = row + directions[dir][0];
+            int newCol = col + directions[dir][1];
+            
+            // Check squares in this direction
+            while (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                int newPos = newRow * 8 + newCol;
+                
+                // If square is occupied by friendly piece, can't go further
+                if (board.squares[newPos].Piece.PieceType != ChessPieceType::NONE &&
+                    board.squares[newPos].Piece.PieceColor == piece.PieceColor) {
+                    break;
+                }
+                
+                // Check if this square is safe (not attacked by enemy)
+                bool squareIsSafe = true;
+                ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? 
+                                            ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+                
+                for (int j = 0; j < 64; j++) {
+                    const Piece& enemyPiece = board.squares[j].Piece;
+                    if (enemyPiece.PieceType == ChessPieceType::NONE || 
+                        enemyPiece.PieceColor != enemyColor) continue;
+                    
+                    if (canPieceAttackSquare(board, j, newPos)) {
+                        squareIsSafe = false;
+                        break;
+                    }
+                }
+                
+                if (squareIsSafe) {
+                    escapeSquares++;
+                }
+                
+                // If square is occupied by enemy piece, queen can capture but can't go further
+                if (board.squares[newPos].Piece.PieceType != ChessPieceType::NONE &&
+                    board.squares[newPos].Piece.PieceColor != piece.PieceColor) {
+                    break;
+                }
+                
+                newRow += directions[dir][0];
+                newCol += directions[dir][1];
+                
+                // Only check first few squares for escape (queen trapped if can't move nearby)
+                if (abs(newRow - row) > 2 || abs(newCol - col) > 2) break;
+            }
+        }
+        
+        // Heavy penalties based on how trapped the queen is
+        if (escapeSquares == 0) {
+            // Queen is completely trapped!
+            if (piece.PieceColor == ChessPieceColor::WHITE) {
+                score -= 800; // Massive penalty for trapped queen
+            } else {
+                score += 800;
+            }
+        } else if (escapeSquares <= 2) {
+            // Queen has very few escape squares - likely to be trapped soon
+            if (piece.PieceColor == ChessPieceColor::WHITE) {
+                score -= 400; 
+            } else {
+                score += 400;
+            }
+        } else if (escapeSquares <= 4) {
+            // Queen has limited mobility - moderate penalty
+            if (piece.PieceColor == ChessPieceColor::WHITE) {
+                score -= 200;
+            } else {
+                score += 200;
+            }
+        }
+        
+        // Additional penalty if queen is on the edge/corner AND has few escape squares
+        bool isOnEdge = (row == 0 || row == 7 || col == 0 || col == 7);
+        bool isInCorner = ((row == 0 || row == 7) && (col == 0 || col == 7));
+        
+        if (isInCorner && escapeSquares <= 3) {
+            if (piece.PieceColor == ChessPieceColor::WHITE) {
+                score -= 600; // Corner trap penalty
+            } else {
+                score += 600;
+            }
+        } else if (isOnEdge && escapeSquares <= 5) {
+            if (piece.PieceColor == ChessPieceColor::WHITE) {
+                score -= 300; // Edge trap penalty
+            } else {
+                score += 300;
+            }
+        }
+    }
+    
+    return score;
 }
