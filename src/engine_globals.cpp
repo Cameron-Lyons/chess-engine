@@ -280,6 +280,107 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         return false;
     }
     
+    // ENHANCED: Handle pawn promotion notation like "e8=Q", "d1=N"
+    if (pieceType == ChessPieceType::PAWN && cleanMove.length() >= 4) {
+        size_t equalPos = cleanMove.find('=');
+        if (equalPos != std::string::npos && equalPos >= 2) {
+            // Extract destination from before the '='
+            destCol = cleanMove[equalPos - 2] - 'a';
+            destRow = cleanMove[equalPos - 1] - '1';
+            
+            if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8) {
+                return false;
+            }
+            
+            // Check if it's a promotion rank
+            bool isPromotionRank = (destRow == 7 && board.turn == ChessPieceColor::WHITE) ||
+                                   (destRow == 0 && board.turn == ChessPieceColor::BLACK);
+            
+            if (!isPromotionRank) {
+                return false;
+            }
+            
+            // Find the promoting pawn
+            if (board.turn == ChessPieceColor::WHITE) {
+                // Check one square back
+                if (destRow > 0) {
+                    int checkRow = destRow - 1;
+                    int pos = checkRow * 8 + destCol;
+                    const Piece& piece = board.squares[pos].Piece;
+                    if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == ChessPieceColor::WHITE) {
+                        int destPos = destRow * 8 + destCol;
+                        if (board.squares[destPos].Piece.PieceType == ChessPieceType::NONE) {
+                            srcCol = destCol;
+                            srcRow = checkRow;
+                            return true;
+                        }
+                    }
+                }
+            } else { // Black's turn
+                // Check one square forward
+                if (destRow < 7) {
+                    int checkRow = destRow + 1;
+                    int pos = checkRow * 8 + destCol;
+                    const Piece& piece = board.squares[pos].Piece;
+                    if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == ChessPieceColor::BLACK) {
+                        int destPos = destRow * 8 + destCol;
+                        if (board.squares[destPos].Piece.PieceType == ChessPieceType::NONE) {
+                            srcCol = destCol;
+                            srcRow = checkRow;
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        
+        // Handle promotion captures like "exd8=Q"
+        if (cleanMove.length() >= 6 && cleanMove[1] == 'x' && equalPos != std::string::npos) {
+            destCol = cleanMove[2] - 'a';
+            destRow = cleanMove[3] - '1';
+            srcCol = cleanMove[0] - 'a';
+            
+            if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8 || srcCol < 0 || srcCol >= 8) return false;
+            
+            // Check if it's a promotion rank
+            bool isPromotionRank = (destRow == 7 && board.turn == ChessPieceColor::WHITE) ||
+                                   (destRow == 0 && board.turn == ChessPieceColor::BLACK);
+            
+            if (!isPromotionRank) {
+                return false;
+            }
+            
+            // Find the capturing pawn
+            for (int row = 0; row < 8; row++) {
+                int pos = row * 8 + srcCol;
+                const Piece& piece = board.squares[pos].Piece;
+                if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == board.turn) {
+                    int from = pos;
+                    int to = destRow * 8 + destCol;
+                    if (board.turn == ChessPieceColor::WHITE) {
+                        if ((to == from + 7 && srcCol > 0) || (to == from + 9 && srcCol < 7)) {
+                            if (board.squares[to].Piece.PieceType != ChessPieceType::NONE &&
+                                board.squares[to].Piece.PieceColor == ChessPieceColor::BLACK) {
+                                srcRow = row;
+                                return true;
+                            }
+                        }
+                    } else {
+                        if ((to == from - 9 && srcCol > 0) || (to == from - 7 && srcCol < 7)) {
+                            if (board.squares[to].Piece.PieceType != ChessPieceType::NONE &&
+                                board.squares[to].Piece.PieceColor == ChessPieceColor::WHITE) {
+                                srcRow = row;
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+    }
+    
     // Handle other piece moves (Knight, Bishop, Rook, Queen, King)
     if (pieceType != ChessPieceType::PAWN) {
         if (cleanMove.length() < startPos + 2) return false;
@@ -447,4 +548,26 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
     }
     
     return false;
+}
+
+// ENHANCED: Extract promotion piece from algebraic notation like "e8=Q"
+ChessPieceType getPromotionPiece(std::string_view move) {
+    std::string cleanMove(move);
+    // Remove check/checkmate symbols
+    if (!cleanMove.empty() && (cleanMove.back() == '+' || cleanMove.back() == '#')) {
+        cleanMove.pop_back();
+    }
+    
+    size_t equalPos = cleanMove.find('=');
+    if (equalPos != std::string::npos && equalPos + 1 < cleanMove.length()) {
+        char promotionChar = cleanMove[equalPos + 1];
+        switch (promotionChar) {
+            case 'Q': case 'q': return ChessPieceType::QUEEN;
+            case 'R': case 'r': return ChessPieceType::ROOK;
+            case 'B': case 'b': return ChessPieceType::BISHOP;
+            case 'N': case 'n': return ChessPieceType::KNIGHT;
+            default: return ChessPieceType::QUEEN; // Default to Queen if invalid
+        }
+    }
+    return ChessPieceType::QUEEN; // Default to Queen if no promotion specified
 } 
