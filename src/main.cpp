@@ -72,8 +72,8 @@ void printBoard(const Board& board) {
 }
 
 int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
-    // More generous time allocation - assume 50 moves per game with extra buffer
-    int baseTime = totalTimeMs / std::max(1, 50 - movesPlayed);
+    // More generous time allocation - assume 40 moves per game with extra buffer
+    int baseTime = totalTimeMs / std::max(1, 40 - movesPlayed);
     
     // Count material to determine game phase
     int totalMaterial = 0;
@@ -83,31 +83,31 @@ int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
         }
     }
     
-    // Complexity factors
+    // Complexity factors - MORE GENEROUS TIME ALLOCATION
     float complexityMultiplier = 1.0f;
     
-    // Opening: Use less time (book moves)
+    // Opening: Use moderate time (some book moves, some calculation needed)
     if (movesPlayed < 10) {
-        complexityMultiplier = 0.5f;
+        complexityMultiplier = 0.8f;  // Increased from 0.5f
     }
     // Middlegame: Use significantly more time (complex positions)
     else if (totalMaterial > 3000) {
-        complexityMultiplier = 2.0f;  // Increased from 1.5f
+        complexityMultiplier = 3.0f;  // Increased from 2.0f
     }
     // Endgame: Use more time (precision needed)
     else if (totalMaterial < 1500) {
-        complexityMultiplier = 1.8f;  // Increased from 1.3f
+        complexityMultiplier = 2.5f;  // Increased from 1.8f
     }
     
     // Check if in check (need more time to find safe moves)
     if (IsKingInCheck(board, board.turn)) {
-        complexityMultiplier *= 1.2f;
+        complexityMultiplier *= 1.5f;  // Increased from 1.2f
     }
     
     return static_cast<int>(baseTime * complexityMultiplier);
 }
 
-std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 5000) {
+std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {  // Increased from 5000ms to 15000ms
     // Check opening book first
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
@@ -119,10 +119,10 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 5000) {
         }
     }
     
-    // Calculate adaptive time allocation
+    // Calculate adaptive time allocation with higher base
     static int movesPlayed = 0;
     movesPlayed++;
-    int adaptiveTime = calculateTimeForMove(board, timeLimitMs * 10, movesPlayed);
+    int adaptiveTime = calculateTimeForMove(board, timeLimitMs * 15, movesPlayed);  // Increased multiplier from 10 to 15
     adaptiveTime = std::min(adaptiveTime, timeLimitMs);
     
     std::cout << "Allocated " << adaptiveTime << "ms for this move\n";
@@ -131,12 +131,13 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 5000) {
     std::cout << "Using optimized single-threaded search...\n";
     
     // DRAMATICALLY increased adaptive depth for superior tactical vision
-    int searchDepth = 10; // Base depth significantly increased
-    if (adaptiveTime > 8000) searchDepth = 16;       // 8+ seconds: very deep search
-    else if (adaptiveTime > 5000) searchDepth = 14;  // 5+ seconds: deep search
-    else if (adaptiveTime > 3000) searchDepth = 12;  // 3+ seconds: deeper search
-    else if (adaptiveTime > 1500) searchDepth = 11;  // 1.5+ seconds: good depth
-    else if (adaptiveTime < 500) searchDepth = 9;    // Under 0.5s: still decent depth
+    int searchDepth = 12; // Base depth significantly increased from 10 to 12
+    if (adaptiveTime > 12000) searchDepth = 18;       // 12+ seconds: very deep search
+    else if (adaptiveTime > 8000) searchDepth = 16;   // 8+ seconds: deep search
+    else if (adaptiveTime > 5000) searchDepth = 14;   // 5+ seconds: deeper search
+    else if (adaptiveTime > 3000) searchDepth = 13;   // 3+ seconds: good depth
+    else if (adaptiveTime > 1500) searchDepth = 12;   // 1.5+ seconds: base depth
+    else if (adaptiveTime < 800) searchDepth = 10;    // Under 0.8s: still good depth
     
     // Complexity-based depth adjustment
     GenValidMoves(board);
@@ -144,7 +145,7 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 5000) {
     int numMoves = moves.size();
     
     // More moves = more complex position = need deeper search
-    if (numMoves > 35) searchDepth += 1;  // Very complex position
+    if (numMoves > 35) searchDepth += 2;  // Very complex position (increased bonus)
     else if (numMoves < 15) searchDepth -= 1; // Simple position
     
     // Check if in tactical position (many captures available)
@@ -374,7 +375,7 @@ int main() {
             std::cout << "\nComputer is thinking...\n";
             
             ChessTimePoint computerStartTime = ChessClock::now();
-            auto computerMove = getComputerMove(ChessBoard, 8000);
+            auto computerMove = getComputerMove(ChessBoard, 20000);  // Increased from 8000ms to 20000ms (20 seconds)
             auto computerTime = ChessClock::now() - computerStartTime;
             
             if (computerMove.first != -1 && computerMove.second != -1) {
