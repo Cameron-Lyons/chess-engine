@@ -302,6 +302,44 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
             if (isDiscoveredCheck(board, srcPos, destPos)) {
                 score += 200;
             }
+            
+            // CRITICAL: Apply queen safety penalties even to checking moves!
+            if (movingPiece == ChessPieceType::QUEEN) {
+                int destRow = destPos / 8;
+                int destCol = destPos % 8;
+                
+                bool isCorner = ((destRow == 0 || destRow == 7) && (destCol == 0 || destCol == 7));
+                bool isEdge = (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7);
+                
+                // Apply safety penalties to queen checks - safety is more important than check!
+                if (isCorner) {
+                    score -= 8000; // Check from corner is usually bad
+                } else if (isEdge) {
+                    score -= 5000; // Check from edge is often dangerous
+                }
+                
+                // Check if queen check move puts queen in danger
+                ChessPieceColor enemyColor = (movingColor == ChessPieceColor::WHITE) ? 
+                                            ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+                bool destSquareAttacked = false;
+                int attackerCount = 0;
+                
+                for (int i = 0; i < 64; i++) {
+                    const Piece& enemyPiece = board.squares[i].Piece;
+                    if (enemyPiece.PieceType == ChessPieceType::NONE || 
+                        enemyPiece.PieceColor != enemyColor) continue;
+                    
+                    if (canPieceAttackSquare(board, i, destPos)) {
+                        destSquareAttacked = true;
+                        attackerCount++;
+                    }
+                }
+                
+                if (destSquareAttacked) {
+                    // Even checking moves are bad if queen gets attacked
+                    score -= 6000 + (attackerCount * 1000);
+                }
+            }
         }
         
         // **PRIORITY 4: Promotions**
@@ -419,14 +457,14 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
             
             // Special handling for queen moves (prevent blunders)
             if (movingPiece == ChessPieceType::QUEEN) {
-                // Massive penalty for queen moves to dangerous squares
+                // MASSIVE penalties for queen moves to dangerous squares - MUCH higher than before
                 bool isCorner = ((destRow == 0 || destRow == 7) && (destCol == 0 || destCol == 7));
                 bool isEdge = (destRow == 0 || destRow == 7 || destCol == 0 || destCol == 7);
                 
                 if (isCorner) {
-                    score -= 3000; // Huge penalty for corner
+                    score -= 8000; // EXTREME penalty for corner - higher than check bonus!
                 } else if (isEdge) {
-                    score -= 1500; // Large penalty for edge
+                    score -= 5000; // MASSIVE penalty for edge - higher than check bonus!
                 }
                 
                 // Check if queen would be in enemy territory without support
@@ -453,10 +491,32 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
                     }
                     
                     if (supportCount == 0) {
-                        score -= 2000; // Heavy penalty for unsupported queen in enemy territory
+                        score -= 6000; // EXTREME penalty for unsupported queen in enemy territory
                     } else if (supportCount == 1) {
-                        score -= 800; // Moderate penalty for barely supported queen
+                        score -= 3000; // MASSIVE penalty for barely supported queen
                     }
+                }
+                
+                // Additional safety check: Is destination square attacked by enemy pieces?
+                ChessPieceColor enemyColor = (movingColor == ChessPieceColor::WHITE) ? 
+                                            ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+                bool destSquareAttacked = false;
+                int attackerCount = 0;
+                
+                for (int i = 0; i < 64; i++) {
+                    const Piece& enemyPiece = board.squares[i].Piece;
+                    if (enemyPiece.PieceType == ChessPieceType::NONE || 
+                        enemyPiece.PieceColor != enemyColor) continue;
+                    
+                    if (canPieceAttackSquare(board, i, destPos)) {
+                        destSquareAttacked = true;
+                        attackerCount++;
+                    }
+                }
+                
+                if (destSquareAttacked) {
+                    // MASSIVE penalty for moving queen to attacked square
+                    score -= 7000 + (attackerCount * 1000); // Penalty increases with number of attackers
                 }
                 
                 // Penalize early queen development (encourage piece development first)
@@ -478,7 +538,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
                     }
                     
                     if (developedPieces < 2) {
-                        score -= 400; // Penalty for early queen moves before piece development
+                        score -= 2000; // MUCH higher penalty for early queen moves before piece development
                     }
                 }
             }
