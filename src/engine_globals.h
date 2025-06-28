@@ -19,7 +19,6 @@ extern ThreadSafeTT TransTable;
 std::string getFEN(const Board& board);
 bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& srcRow, int& destCol, int& destRow);
 
-// ENHANCED: Extract promotion piece from algebraic notation like "e8=Q"
 ChessPieceType getPromotionPiece(std::string_view move);
 
 #endif // ENGINE_GLOBALS_H 

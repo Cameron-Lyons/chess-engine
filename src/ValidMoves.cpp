@@ -1,5 +1,6 @@
 #include "ValidMoves.h"
 #include "BitboardMoves.h"
+#include <iostream>
 
 bool BlackAttackBoard[64] = {false};
 bool WhiteAttackBoard[64] = {false};
@@ -81,7 +82,9 @@ bool IsMoveLegal(Board& board, int srcPos, int destPos) {
             break;
         }
     }
-    if (!found) return false;
+    if (!found) {
+        return false;
+    }
 
     Board tempBoard = board;
     tempBoard.movePiece(srcPos, destPos);

@@ -1,7 +1,5 @@
 #include "ChessBoard.h"
-#include "search.h"
 #include <iostream>
-#include <string>
 
 std::string to_string(ChessPieceType type) {
     switch (type) {
@@ -27,14 +25,12 @@ int main() {
     
     std::cout << "Testing pawn move generation on starting position...\n";
     
-    // Test pawn at e2 (position 12)
     int e2Pos = 12;
     std::cout << "Position e2 (" << e2Pos << "): row=" << e2Pos/8 << ", col=" << e2Pos%8 << "\n";
     
     const Piece& e2Pawn = testBoard.squares[e2Pos].Piece;
     std::cout << "Piece at e2: Type=" << to_string(e2Pawn.PieceType) << ", Color=" << to_string(e2Pawn.PieceColor) << "\n";
     
-    // Generate moves for all white pawns
     std::vector<std::pair<int, int>> allMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
     
     std::cout << "\nPawn moves found:\n";
@@ -64,19 +60,17 @@ int main() {
         std::cout << "❌ FAIL: Expected 16 pawn moves, got " << pawnMoveCount << "\n";
     }
     
-    // Test pawn promotion position
     std::cout << "\n=== Testing Pawn Promotion ===\n";
     testBoard.InitializeFromFEN("rnbqkb1r/ppppp2p/5n2/5Pp1/8/8/PPPPPP1P/RNBQKBNR w KQkq g6 0 4");
     
-    // Move white pawn to 7th rank for promotion test
-    testBoard.squares[53].Piece = Piece(ChessPieceColor::WHITE, ChessPieceType::PAWN); // Put pawn on f7
-    testBoard.squares[61].Piece = Piece(); // Clear f8
+    testBoard.squares[53].Piece = Piece(ChessPieceColor::WHITE, ChessPieceType::PAWN); 
+    testBoard.squares[61].Piece = Piece(); 
     
     std::vector<std::pair<int, int>> promotionMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
     
     bool foundPromotionMove = false;
     for (const auto& move : promotionMoves) {
-        if (move.first == 53 && move.second == 61) { // f7 to f8
+        if (move.first == 53 && move.second == 61) { 
             foundPromotionMove = true;
             break;
         }

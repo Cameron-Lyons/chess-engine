@@ -4,10 +4,8 @@
 #include <algorithm>
 #include <cmath>
 
-// Advanced Piece-Square Tables with game phase adaptation
 namespace PieceSquareTables {
     
-    // Pawn tables - encourage center control and advancement
     const int PAWN_MG[64] = {
          0,  0,  0,  0,  0,  0,  0,  0,
         50, 50, 50, 50, 50, 50, 50, 50,
@@ -30,7 +28,6 @@ namespace PieceSquareTables {
          0,  0,  0,  0,  0,  0,  0,  0
     };
     
-    // Knight tables - centralization is key
     const int KNIGHT_MG[64] = {
         -50,-40,-30,-30,-30,-30,-40,-50,
         -40,-20,  0,  0,  0,  0,-20,-40,
@@ -53,7 +50,6 @@ namespace PieceSquareTables {
         -50,-40,-30,-30,-30,-30,-40,-50
     };
     
-    // Bishop tables - long diagonals and center control
     const int BISHOP_MG[64] = {
         -20,-10,-10,-10,-10,-10,-10,-20,
         -10,  0,  0,  0,  0,  0,  0,-10,
@@ -76,7 +72,6 @@ namespace PieceSquareTables {
         -20,-10,-10,-10,-10,-10,-10,-20
     };
     
-    // Rook tables - 7th rank and open files
     const int ROOK_MG[64] = {
          0,  0,  0,  0,  0,  0,  0,  0,
          5, 10, 10, 10, 10, 10, 10,  5,
@@ -99,7 +94,6 @@ namespace PieceSquareTables {
          0,  0,  0,  5,  5,  0,  0,  0
     };
     
-    // Queen tables - avoid early development
     const int QUEEN_MG[64] = {
         -20,-10,-10, -5, -5,-10,-10,-20,
         -10,  0,  0,  0,  0,  0,  0,-10,
@@ -122,7 +116,6 @@ namespace PieceSquareTables {
         -20,-10,-10, -5, -5,-10,-10,-20
     };
     
-    // King tables - safety in middlegame, activity in endgame
     const int KING_MG[64] = {
         -30,-40,-40,-50,-50,-40,-40,-30,
         -30,-40,-40,-50,-50,-40,-40,-30,
@@ -145,12 +138,9 @@ namespace PieceSquareTables {
         -50,-30,-30,-30,-30,-30,-30,-50
     };
     
-    // Get piece-square table value based on game phase
     int getPieceSquareValue(ChessPieceType piece, int square, ChessPieceColor color, int gamePhase) {
-        // Flip square for black pieces (they see the board from opposite perspective)
         int adjustedSquare = (color == ChessPieceColor::WHITE) ? square : (63 - square);
         
-        // gamePhase: 0 = opening/middlegame, 256 = pure endgame
         int mgValue = 0, egValue = 0;
         
         switch (piece) {
@@ -182,11 +172,9 @@ namespace PieceSquareTables {
                 return 0;
         }
         
-        // Interpolate between middlegame and endgame values
         return ((mgValue * (256 - gamePhase)) + (egValue * gamePhase)) / 256;
     }
     
-    // Calculate game phase (0 = opening, 256 = endgame)
     int calculateGamePhase(const Board& board) {
         int totalMaterial = 0;
         for (int i = 0; i < 64; i++) {
@@ -202,8 +190,6 @@ namespace PieceSquareTables {
             }
         }
         
-        // Opening material: ~3900 (2Q + 4R + 4B + 4N)
-        // Scale from 0 (opening) to 256 (endgame)
         int phase = 256 - (totalMaterial * 256) / 3900;
         return std::max(0, std::min(256, phase));
     }
@@ -287,11 +273,9 @@ int evaluatePawnStructure(const Board& board) {
     return score;
 }
 
-// High Complexity Win #3: Mobility Evaluation (+20-40 Elo)
 int evaluateMobility(const Board& board) {
     int mobilityScore = 0;
     
-    // Count mobility for each piece type
     for (int i = 0; i < 64; i++) {
         const Piece& piece = board.squares[i].Piece;
         if (piece.PieceType == ChessPieceType::NONE) continue;
@@ -302,7 +286,6 @@ int evaluateMobility(const Board& board) {
         
         switch (piece.PieceType) {
             case ChessPieceType::KNIGHT: {
-                // Knight mobility - L-shaped moves
                 int knightMoves[][2] = {{-2,-1}, {-2,1}, {-1,-2}, {-1,2}, {1,-2}, {1,2}, {2,-1}, {2,1}};
                 for (auto& move : knightMoves) {
                     int newRow = row + move[0];
@@ -315,13 +298,11 @@ int evaluateMobility(const Board& board) {
                         }
                     }
                 }
-                // Scale knight mobility
                 mobilityScore += piece.PieceColor == ChessPieceColor::WHITE ? mobility * 4 : -mobility * 4;
                 break;
             }
             
             case ChessPieceType::BISHOP: {
-                // Bishop mobility - diagonal moves
                 int directions[][2] = {{-1,-1}, {-1,1}, {1,-1}, {1,1}};
                 for (auto& dir : directions) {
                     for (int dist = 1; dist < 8; dist++) {
@@ -334,9 +315,9 @@ int evaluateMobility(const Board& board) {
                             mobility++;
                         } else {
                             if (board.squares[pos].Piece.PieceColor != piece.PieceColor) {
-                                mobility++; // Can capture
+                                mobility++; 
                             }
-                            break; // Blocked
+                            break; 
                         }
                     }
                 }
@@ -345,7 +326,6 @@ int evaluateMobility(const Board& board) {
             }
             
             case ChessPieceType::ROOK: {
-                // Rook mobility - rank and file moves
                 int directions[][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}};
                 for (auto& dir : directions) {
                     for (int dist = 1; dist < 8; dist++) {
@@ -358,9 +338,9 @@ int evaluateMobility(const Board& board) {
                             mobility++;
                         } else {
                             if (board.squares[pos].Piece.PieceColor != piece.PieceColor) {
-                                mobility++; // Can capture
+                                mobility++; 
                             }
-                            break; // Blocked
+                            break; 
                         }
                     }
                 }
@@ -369,7 +349,6 @@ int evaluateMobility(const Board& board) {
             }
             
             case ChessPieceType::QUEEN: {
-                // Queen mobility - combination of rook and bishop
                 int directions[][2] = {{-1,-1}, {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,-1}, {1,0}, {1,1}};
                 for (auto& dir : directions) {
                     for (int dist = 1; dist < 8; dist++) {
@@ -382,9 +361,9 @@ int evaluateMobility(const Board& board) {
                             mobility++;
                         } else {
                             if (board.squares[pos].Piece.PieceColor != piece.PieceColor) {
-                                mobility++; // Can capture
+                                mobility++; 
                             }
-                            break; // Blocked
+                            break; 
                         }
                     }
                 }
@@ -415,11 +394,9 @@ int evaluateCenterControl(const Board& board) {
     return score;
 }
 
-// High Complexity Win #4: Enhanced King Safety (+30-50 Elo)
 int evaluateKingSafety(const Board& board) {
     int safetyScore = 0;
     
-    // Find kings
     int whiteKingPos = -1, blackKingPos = -1;
     for (int i = 0; i < 64; i++) {
         if (board.squares[i].Piece.PieceType == ChessPieceType::KING) {
@@ -441,9 +418,7 @@ int evaluateKingSafety(const Board& board) {
     return safetyScore;
 }
 
-// Overloaded function for single color evaluation (used by tests)
 int evaluateKingSafety(const Board& board, ChessPieceColor color) {
-    // Find the king of the specified color
     int kingPos = -1;
     for (int i = 0; i < 64; i++) {
         if (board.squares[i].Piece.PieceType == ChessPieceType::KING &&
@@ -454,7 +429,7 @@ int evaluateKingSafety(const Board& board, ChessPieceColor color) {
     }
     
     if (kingPos == -1) {
-        return 0; // King not found
+        return 0; 
     }
     
     return evaluateKingSafetyForColor(board, kingPos, color);
@@ -465,10 +440,8 @@ int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor 
     int kingRow = kingPos / 8;
     int kingCol = kingPos % 8;
     
-    // Pawn shield evaluation
     int pawnShieldBonus = 0;
     if (color == ChessPieceColor::WHITE) {
-        // Check pawns in front of white king
         for (int col = std::max(0, kingCol - 1); col <= std::min(7, kingCol + 1); col++) {
             for (int row = kingRow + 1; row < 8; row++) {
                 int pos = row * 8 + col;
@@ -480,7 +453,6 @@ int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor 
             }
         }
     } else {
-        // Check pawns in front of black king
         for (int col = std::max(0, kingCol - 1); col <= std::min(7, kingCol + 1); col++) {
             for (int row = kingRow - 1; row >= 0; row--) {
                 int pos = row * 8 + col;
@@ -494,7 +466,6 @@ int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor 
     }
     safety += pawnShieldBonus;
     
-    // Open file penalty near king
     for (int col = std::max(0, kingCol - 1); col <= std::min(7, kingCol + 1); col++) {
         bool hasOwnPawn = false;
         for (int row = 0; row < 8; row++) {
@@ -506,11 +477,10 @@ int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor 
             }
         }
         if (!hasOwnPawn) {
-            safety -= 20; // Penalty for open files near king
+            safety -= 20; 
         }
     }
     
-    // Enemy piece proximity penalty
     int enemyAttacks = 0;
     for (int i = 0; i < 64; i++) {
         const Piece& piece = board.squares[i].Piece;
@@ -529,10 +499,9 @@ int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor 
     }
     safety -= enemyAttacks;
     
-    // Castling rights bonus (if king hasn't moved)
     if ((color == ChessPieceColor::WHITE && kingPos == 4) ||
         (color == ChessPieceColor::BLACK && kingPos == 60)) {
-        safety += 50; // Bonus for keeping castling rights
+        safety += 50; 
     }
     
     return safety;
@@ -550,7 +519,6 @@ int evaluatePassedPawns(const Board& board) {
                 bool isPassed = true;
                 
                 if (piece.PieceColor == ChessPieceColor::WHITE) {
-                    // Check if any black pawn can stop this white pawn
                     for (int checkCol = std::max(0, col - 1); checkCol <= std::min(7, col + 1); checkCol++) {
                         for (int checkRow = row + 1; checkRow < 8; checkRow++) {
                             int checkPos = checkRow * 8 + checkCol;
@@ -563,11 +531,10 @@ int evaluatePassedPawns(const Board& board) {
                         if (!isPassed) break;
                     }
                     if (isPassed) {
-                        int passedBonus = (row - 1) * 20 + 10; // More valuable closer to promotion
+                        int passedBonus = (row - 1) * 20 + 10; 
                         score += passedBonus;
                     }
                 } else {
-                    // Check if any white pawn can stop this black pawn
                     for (int checkCol = std::max(0, col - 1); checkCol <= std::min(7, col + 1); checkCol++) {
                         for (int checkRow = row - 1; checkRow >= 0; checkRow--) {
                             int checkPos = checkRow * 8 + checkCol;
@@ -580,7 +547,7 @@ int evaluatePassedPawns(const Board& board) {
                         if (!isPassed) break;
                     }
                     if (isPassed) {
-                        int passedBonus = (6 - row) * 20 + 10; // More valuable closer to promotion
+                        int passedBonus = (6 - row) * 20 + 10; 
                         score -= passedBonus;
                     }
                 }
@@ -605,7 +572,7 @@ int evaluateBishopPair(const Board& board) {
     }
     
     int score = 0;
-    if (whiteBishops >= 2) score += 50; // Bishop pair bonus
+    if (whiteBishops >= 2) score += 50; 
     if (blackBishops >= 2) score -= 50;
     
     return score;
@@ -620,7 +587,6 @@ int evaluateRooksOnOpenFiles(const Board& board) {
             bool isOpenFile = true;
             bool isSemiOpen = true;
             
-            // Check if file has pawns
             for (int row = 0; row < 8; row++) {
                 int pos = row * 8 + col;
                 if (board.squares[pos].Piece.PieceType == ChessPieceType::PAWN) {
@@ -659,10 +625,8 @@ int evaluateEndgame(const Board& board) {
         }
     }
     
-    // Endgame bonus for active king
     int score = 0;
-    if (totalMaterial < 2000) { // Endgame threshold
-        // Find kings and evaluate their activity
+    if (totalMaterial < 2000) { 
         for (int i = 0; i < 64; i++) {
             if (board.squares[i].Piece.PieceType == ChessPieceType::KING) {
                 int file = i % 8;
@@ -670,7 +634,7 @@ int evaluateEndgame(const Board& board) {
                 int centerDistance = std::max(abs(file - 3.5), abs(rank - 3.5));
                 
                 if (board.squares[i].Piece.PieceColor == ChessPieceColor::WHITE) {
-                    score += (7 - centerDistance) * 5; // Reward centralized king
+                    score += (7 - centerDistance) * 5; 
                 } else {
                     score -= (7 - centerDistance) * 5;
                 }
@@ -684,10 +648,8 @@ int evaluateEndgame(const Board& board) {
 int evaluatePosition(const Board& board) {
     int score = 0;
     
-    // Calculate game phase for piece-square table interpolation
     int gamePhase = PieceSquareTables::calculateGamePhase(board);
     
-    // Material evaluation with piece-square tables
     for (int i = 0; i < 64; i++) {
         const Piece& piece = board.squares[i].Piece;
         if (piece.PieceType != ChessPieceType::NONE) {
@@ -702,43 +664,37 @@ int evaluatePosition(const Board& board) {
         }
     }
     
-    // Enhanced evaluation components
     score += evaluatePassedPawns(board);
     score += evaluateBishopPair(board);
     score += evaluateRooksOnOpenFiles(board);
     score += evaluateEndgame(board);
-    score += evaluateMobility(board); // New mobility evaluation
-    score += evaluateKingSafety(board); // Enhanced king safety
-    score += evaluateHangingPieces(board); // NEW: Detect hanging pieces
-    score += evaluateQueenTrapDanger(board); // NEW: Detect trapped queens
+    score += evaluateMobility(board); 
+    score += evaluateKingSafety(board); 
+    score += evaluateHangingPieces(board); 
+    score += evaluateQueenTrapDanger(board); 
+    score += evaluateTacticalSafety(board); 
     
     return score;
 }
 
-// NEW: Evaluate hanging pieces (pieces under attack and undefended)
 int evaluateHangingPieces(const Board& board) {
     int score = 0;
     
-    // Check each square for hanging pieces
     for (int i = 0; i < 64; i++) {
         const Piece& piece = board.squares[i].Piece;
         if (piece.PieceType == ChessPieceType::NONE) continue;
         
-        // Don't evaluate pawns or kings as "hanging" in the same way
         if (piece.PieceType == ChessPieceType::PAWN || piece.PieceType == ChessPieceType::KING) continue;
         
         bool isUnderAttack = false;
         bool isDefended = false;
         
-        // Check if piece is under attack by enemy pieces
         ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
         
-        // Simple attack detection - check if any enemy piece can move to this square
         for (int j = 0; j < 64; j++) {
             const Piece& enemyPiece = board.squares[j].Piece;
             if (enemyPiece.PieceType == ChessPieceType::NONE || enemyPiece.PieceColor != enemyColor) continue;
             
-            // Check if enemy piece can attack this square
             if (canPieceAttackSquare(board, j, i)) {
                 isUnderAttack = true;
                 break;
@@ -746,21 +702,18 @@ int evaluateHangingPieces(const Board& board) {
         }
         
         if (isUnderAttack) {
-            // Check if piece is defended by friendly pieces
             for (int j = 0; j < 64; j++) {
                 const Piece& friendlyPiece = board.squares[j].Piece;
                 if (friendlyPiece.PieceType == ChessPieceType::NONE || friendlyPiece.PieceColor != piece.PieceColor || j == i) continue;
                 
-                // Check if friendly piece can defend this square
                 if (canPieceAttackSquare(board, j, i)) {
                     isDefended = true;
                     break;
                 }
             }
             
-            // If piece is under attack and not defended, it's hanging
             if (!isDefended) {
-                int hangingPenalty = piece.PieceValue * 0.8; // 80% of piece value as penalty
+                int hangingPenalty = piece.PieceValue * 0.8; 
                 
                 if (piece.PieceColor == ChessPieceColor::WHITE) {
                     score -= hangingPenalty;
@@ -768,10 +721,9 @@ int evaluateHangingPieces(const Board& board) {
                     score += hangingPenalty;
                 }
                 
-                // Extra penalty for hanging queen
                 if (piece.PieceType == ChessPieceType::QUEEN) {
                     if (piece.PieceColor == ChessPieceColor::WHITE) {
-                        score -= 500; // Massive penalty for hanging queen
+                        score -= 500; 
                     } else {
                         score += 500;
                     }
@@ -779,12 +731,10 @@ int evaluateHangingPieces(const Board& board) {
             }
         }
         
-        // ADDITIONAL CHECK: Penalize queens in dangerous territory
         if (piece.PieceType == ChessPieceType::QUEEN) {
             int row = i / 8;
             int col = i % 8;
             
-            // Queen in enemy territory (beyond 4th/5th rank) without support
             bool inEnemyTerritory = false;
             if (piece.PieceColor == ChessPieceColor::WHITE && row >= 5) {
                 inEnemyTerritory = true;
@@ -793,7 +743,6 @@ int evaluateHangingPieces(const Board& board) {
             }
             
             if (inEnemyTerritory) {
-                // Count friendly pieces that can support the queen
                 int supportCount = 0;
                 for (int j = 0; j < 64; j++) {
                     const Piece& friendlyPiece = board.squares[j].Piece;
@@ -802,22 +751,19 @@ int evaluateHangingPieces(const Board& board) {
                         j == i || 
                         friendlyPiece.PieceType == ChessPieceType::PAWN) continue;
                     
-                    // Check if friendly piece can support this square
                     if (canPieceAttackSquare(board, j, i)) {
                         supportCount++;
                     }
                 }
                 
-                // Heavy penalty for unsupported queen in enemy territory
                 if (supportCount == 0) {
                     if (piece.PieceColor == ChessPieceColor::WHITE) {
-                        score -= 300; // Penalty for unsupported queen in enemy territory
+                        score -= 300; 
                     } else {
                         score += 300;
                     }
                 }
                 
-                // Extra penalty if near enemy pieces
                 int nearbyEnemies = 0;
                 for (int dr = -2; dr <= 2; dr++) {
                     for (int dc = -2; dc <= 2; dc++) {
@@ -835,7 +781,7 @@ int evaluateHangingPieces(const Board& board) {
                 
                 if (nearbyEnemies >= 2) {
                     if (piece.PieceColor == ChessPieceColor::WHITE) {
-                        score -= 200; // Extra penalty for queen surrounded by enemies
+                        score -= 200; 
                     } else {
                         score += 200;
                     }
@@ -843,7 +789,6 @@ int evaluateHangingPieces(const Board& board) {
             }
         }
         
-        // ADDITIONAL CHECK: Penalize pieces on edge/corner squares that are easily trapped
         if (piece.PieceType == ChessPieceType::QUEEN || 
             piece.PieceType == ChessPieceType::ROOK || 
             piece.PieceType == ChessPieceType::BISHOP) {
@@ -851,19 +796,16 @@ int evaluateHangingPieces(const Board& board) {
             int row = i / 8;
             int col = i % 8;
             
-            // Check if piece is on edge or corner
             bool isOnEdge = (row == 0 || row == 7 || col == 0 || col == 7);
             bool isInCorner = ((row == 0 || row == 7) && (col == 0 || col == 7));
             
             if (isInCorner && piece.PieceType == ChessPieceType::QUEEN) {
-                // Huge penalty for queen in corner - very likely to be trapped
                 if (piece.PieceColor == ChessPieceColor::WHITE) {
                     score -= 400;
                 } else {
                     score += 400;
                 }
             } else if (isOnEdge && piece.PieceType == ChessPieceType::QUEEN) {
-                // Moderate penalty for queen on edge
                 if (piece.PieceColor == ChessPieceColor::WHITE) {
                     score -= 150;
                 } else {
@@ -876,7 +818,6 @@ int evaluateHangingPieces(const Board& board) {
     return score;
 }
 
-// Helper function to check if a piece can attack a square
 bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
     const Piece& piece = board.squares[piecePos].Piece;
     if (piece.PieceType == ChessPieceType::NONE) return false;
@@ -892,7 +833,6 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
     switch (piece.PieceType) {
         case ChessPieceType::PAWN: {
             int direction = (piece.PieceColor == ChessPieceColor::WHITE) ? 1 : -1;
-            // Pawn attacks diagonally
             return (rowDiff == direction && (colDiff == 1 || colDiff == -1));
         }
         case ChessPieceType::KNIGHT: {
@@ -901,7 +841,6 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
         }
         case ChessPieceType::BISHOP: {
             if (abs(rowDiff) != abs(colDiff)) return false;
-            // Check if path is clear
             int rowStep = (rowDiff > 0) ? 1 : -1;
             int colStep = (colDiff > 0) ? 1 : -1;
             for (int i = 1; i < abs(rowDiff); i++) {
@@ -912,7 +851,6 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
         }
         case ChessPieceType::ROOK: {
             if (rowDiff != 0 && colDiff != 0) return false;
-            // Check if path is clear
             if (rowDiff == 0) {
                 int colStep = (colDiff > 0) ? 1 : -1;
                 for (int i = 1; i < abs(colDiff); i++) {
@@ -929,9 +867,7 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
             return true;
         }
         case ChessPieceType::QUEEN: {
-            // Queen combines rook and bishop moves
             if (rowDiff == 0 || colDiff == 0 || abs(rowDiff) == abs(colDiff)) {
-                // Check if path is clear (similar to rook/bishop logic)
                 if (rowDiff == 0) {
                     int colStep = (colDiff > 0) ? 1 : -1;
                     for (int i = 1; i < abs(colDiff); i++) {
@@ -964,7 +900,6 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
     }
 }
 
-// NEW: Check if a queen is in a "trappy" position where it can be easily trapped
 int evaluateQueenTrapDanger(const Board& board) {
     int score = 0;
     
@@ -975,27 +910,22 @@ int evaluateQueenTrapDanger(const Board& board) {
         int row = i / 8;
         int col = i % 8;
         
-        // Count available escape squares for the queen
         int escapeSquares = 0;
         
-        // Check all 8 directions queen can move
         int directions[8][2] = {{-1,-1}, {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,-1}, {1,0}, {1,1}};
         
         for (int dir = 0; dir < 8; dir++) {
             int newRow = row + directions[dir][0];
             int newCol = col + directions[dir][1];
             
-            // Check squares in this direction
             while (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
                 int newPos = newRow * 8 + newCol;
                 
-                // If square is occupied by friendly piece, can't go further
                 if (board.squares[newPos].Piece.PieceType != ChessPieceType::NONE &&
                     board.squares[newPos].Piece.PieceColor == piece.PieceColor) {
                     break;
                 }
                 
-                // Check if this square is safe (not attacked by enemy)
                 bool squareIsSafe = true;
                 ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? 
                                             ChessPieceColor::BLACK : ChessPieceColor::WHITE;
@@ -1015,7 +945,6 @@ int evaluateQueenTrapDanger(const Board& board) {
                     escapeSquares++;
                 }
                 
-                // If square is occupied by enemy piece, queen can capture but can't go further
                 if (board.squares[newPos].Piece.PieceType != ChessPieceType::NONE &&
                     board.squares[newPos].Piece.PieceColor != piece.PieceColor) {
                     break;
@@ -1024,28 +953,23 @@ int evaluateQueenTrapDanger(const Board& board) {
                 newRow += directions[dir][0];
                 newCol += directions[dir][1];
                 
-                // Only check first few squares for escape (queen trapped if can't move nearby)
                 if (abs(newRow - row) > 2 || abs(newCol - col) > 2) break;
             }
         }
         
-        // Heavy penalties based on how trapped the queen is
         if (escapeSquares == 0) {
-            // Queen is completely trapped!
             if (piece.PieceColor == ChessPieceColor::WHITE) {
-                score -= 800; // Massive penalty for trapped queen
+                score -= 800; 
             } else {
                 score += 800;
             }
         } else if (escapeSquares <= 2) {
-            // Queen has very few escape squares - likely to be trapped soon
             if (piece.PieceColor == ChessPieceColor::WHITE) {
                 score -= 400; 
             } else {
                 score += 400;
             }
         } else if (escapeSquares <= 4) {
-            // Queen has limited mobility - moderate penalty
             if (piece.PieceColor == ChessPieceColor::WHITE) {
                 score -= 200;
             } else {
@@ -1053,21 +977,137 @@ int evaluateQueenTrapDanger(const Board& board) {
             }
         }
         
-        // Additional penalty if queen is on the edge/corner AND has few escape squares
         bool isOnEdge = (row == 0 || row == 7 || col == 0 || col == 7);
         bool isInCorner = ((row == 0 || row == 7) && (col == 0 || col == 7));
         
         if (isInCorner && escapeSquares <= 3) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
-                score -= 600; // Corner trap penalty
+                score -= 600; 
             } else {
                 score += 600;
             }
         } else if (isOnEdge && escapeSquares <= 5) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
-                score -= 300; // Edge trap penalty
+                score -= 300; 
             } else {
                 score += 300;
+            }
+        }
+    }
+    
+    return score;
+}
+
+int evaluateTacticalSafety(const Board& board) {
+    int score = 0;
+    
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = board.squares[i].Piece;
+        if (piece.PieceType == ChessPieceType::NONE) continue;
+        
+        if (piece.PieceType == ChessPieceType::QUEEN) {
+            int row = i / 8;
+            int col = i % 8;
+            
+            int attackers = 0;
+            int defenders = 0;
+            
+            ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? 
+                                        ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+            
+            for (int j = 0; j < 64; j++) {
+                const Piece& otherPiece = board.squares[j].Piece;
+                if (otherPiece.PieceType == ChessPieceType::NONE || j == i) continue;
+                
+                if (canPieceAttackSquare(board, j, i)) {
+                    if (otherPiece.PieceColor == enemyColor) {
+                        attackers++;
+                    } else {
+                        defenders++;
+                    }
+                }
+            }
+            
+            if (attackers > defenders) {
+                int dangerLevel = (attackers - defenders) * 300;
+                if (piece.PieceColor == ChessPieceColor::WHITE) {
+                    score -= dangerLevel;
+                } else {
+                    score += dangerLevel;
+                }
+                
+                if (attackers > 0) {
+                                         int weakestAttacker = 10000;
+                     for (int j = 0; j < 64; j++) {
+                         const Piece& attacker = board.squares[j].Piece;
+                         if (attacker.PieceColor == enemyColor && 
+                             canPieceAttackSquare(board, j, i)) {
+                             if (attacker.PieceValue < weakestAttacker) {
+                                 weakestAttacker = attacker.PieceValue;
+                             }
+                         }
+                     }
+                    
+                    if (weakestAttacker < piece.PieceValue) {
+                        if (piece.PieceColor == ChessPieceColor::WHITE) {
+                            score -= 800; 
+                        } else {
+                            score += 800;
+                        }
+                    }
+                }
+            }
+            
+            bool nearEnemyKing = false;
+            for (int j = 0; j < 64; j++) {
+                if (board.squares[j].Piece.PieceType == ChessPieceType::KING &&
+                    board.squares[j].Piece.PieceColor == enemyColor) {
+                    int kingRow = j / 8;
+                    int kingCol = j % 8;
+                                         int distance = (abs(row - kingRow) > abs(col - kingCol)) ? 
+                                   abs(row - kingRow) : abs(col - kingCol);
+                    if (distance <= 2) {
+                        nearEnemyKing = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (nearEnemyKing && defenders < 2) {
+                if (piece.PieceColor == ChessPieceColor::WHITE) {
+                    score -= 250;
+                } else {
+                    score += 250;
+                }
+            }
+        }
+        
+        else if (piece.PieceValue >= 300) { 
+            int attackers = 0;
+            int defenders = 0;
+            ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? 
+                                        ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+            
+            for (int j = 0; j < 64; j++) {
+                const Piece& otherPiece = board.squares[j].Piece;
+                if (otherPiece.PieceType == ChessPieceType::NONE || j == i) continue;
+                
+                if (canPieceAttackSquare(board, j, i)) {
+                    if (otherPiece.PieceColor == enemyColor) {
+                        attackers++;
+                    } else {
+                        defenders++;
+                    }
+                }
+            }
+            
+            if (attackers > defenders) {
+                int penalty = (attackers - defenders) * piece.PieceValue / 4;
+                if (piece.PieceColor == ChessPieceColor::WHITE) {
+                    score -= penalty;
+                } else {
+                    score += penalty;
+                }
             }
         }
     }

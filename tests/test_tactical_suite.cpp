@@ -1,27 +1,24 @@
 #include "ChessBoard.h"
-#include "search.h"
 #include "engine_globals.h"
 #include <iostream>
 #include <vector>
 #include <chrono>
-#include <string>
 
 using namespace std::chrono;
 
 struct TacticalPuzzle {
     std::string name;
     std::string fen;
-    std::string bestMove; // In algebraic notation like "Qh5+" or from-to like "f6h8"
+    std::string bestMove; 
     std::string description;
-    int difficulty; // 1-5, where 5 is hardest
-    int maxTimeMs; // Maximum time to solve
+    int difficulty; 
+    int maxTimeMs; 
 };
 
 class TacticalTestSuite {
 public:
     static std::vector<TacticalPuzzle> getPuzzles() {
         return {
-            // Mate in 1 puzzles
             {
                 "Mate in 1 - Back Rank",
                 "6k1/5ppp/8/8/8/8/8/R7 w - - 0 1",
@@ -44,7 +41,6 @@ public:
                 1, 1000
             },
             
-            // Tactical motifs
             {
                 "Fork - Knight",
                 "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R b KQkq - 0 4",
@@ -67,7 +63,6 @@ public:
                 3, 3000
             },
             
-            // Material winning combinations
             {
                 "Win Queen - Discovered Attack",
                 "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4",
@@ -83,7 +78,6 @@ public:
                 3, 3000
             },
             
-            // Mate in 2 puzzles
             {
                 "Mate in 2 - Queen Sacrifice",
                 "6k1/5ppp/8/8/8/8/5PPP/R6K w - - 0 1",
@@ -99,7 +93,6 @@ public:
                 4, 5000
             },
             
-            // Advanced tactical themes
             {
                 "Deflection",
                 "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
@@ -115,7 +108,6 @@ public:
                 3, 3000
             },
             
-            // Defensive tactics
             {
                 "Counter-attack",
                 "r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/3P1N2/PPP2PPP/RNBQKB1R b KQkq - 0 4",
@@ -164,7 +156,7 @@ public:
         std::cout << "🎯 TACTICAL TEST SUITE\n";
         std::cout << "======================\n\n";
         
-        InitZobrist(); // Initialize hash tables
+        InitZobrist(); 
         
         auto puzzles = getPuzzles();
         int solved = 0;
@@ -183,17 +175,14 @@ public:
             Board testBoard;
             testBoard.InitializeFromFEN(puzzle.fen);
             
-            // Parse expected move
             int expectedFrom, expectedTo;
             if (!parseMove(puzzle.bestMove, expectedFrom, expectedTo)) {
                 std::cout << "❌ INVALID expected move format: " << puzzle.bestMove << "\n\n";
                 continue;
             }
             
-            // Search for best move with time limit
             auto start = high_resolution_clock::now();
             
-            // Use increasing depth until time limit
             std::pair<int, int> bestMove = {-1, -1};
             for (int depth = 4; depth <= 10; depth++) {
                 auto current = high_resolution_clock::now();
@@ -203,7 +192,6 @@ public:
                 
                 bestMove = findBestMove(testBoard, depth);
                 
-                // Check if we found the solution
                 if (bestMove.first == expectedFrom && bestMove.second == expectedTo) {
                     break;
                 }

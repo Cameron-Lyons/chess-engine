@@ -1,5 +1,4 @@
 #include "ChessBoard.h"
-#include "search.h"
 #include <iostream>
 
 int main() {
@@ -15,7 +14,6 @@ int main() {
         std::cout << "FEN initialization completed.\n";
         
         std::cout << "Step 3: Testing basic board operations...\n";
-        // Test that the board is set up correctly
         if (testBoard.squares[0].Piece.PieceType == ChessPieceType::ROOK) {
             std::cout << "Board setup correct - rook found at a1.\n";
         } else {
@@ -25,7 +23,7 @@ int main() {
         std::cout << "Step 4: Testing move generation...\n";
         std::vector<std::pair<int, int>> moves = GetAllMoves(testBoard, testBoard.turn);
         std::cout << "Generated " << moves.size() << " moves.\n";
-        if (moves.size() >= 16) { // Should have at least 16 opening moves
+        if (moves.size() >= 16) { 
             std::cout << "Move generation working correctly.\n";
         } else {
             std::cout << "Warning: Fewer moves generated than expected.\n";

@@ -1,14 +1,12 @@
 #include "ChessEngine.h"
 #include "MoveContent.h"
 #include "search.h"
+#include "Evaluation.h"
+#include "BitboardMoves.h"
 #include <iostream>
 #include <string>
 #include <string_view>
 #include <chrono>
-#include <unordered_map>
-#include <cstdint>
-#include <map>
-#include <thread>
 #include "engine_globals.h"
         
 using ChessClock = std::chrono::steady_clock;
@@ -72,10 +70,8 @@ void printBoard(const Board& board) {
 }
 
 int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
-    // More generous time allocation - assume 40 moves per game with extra buffer
     int baseTime = totalTimeMs / std::max(1, 40 - movesPlayed);
     
-    // Count material to determine game phase
     int totalMaterial = 0;
     for (int i = 0; i < 64; i++) {
         if (board.squares[i].Piece.PieceType != ChessPieceType::NONE) {
@@ -83,82 +79,91 @@ int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
         }
     }
     
-    // Complexity factors - MORE GENEROUS TIME ALLOCATION
     float complexityMultiplier = 1.0f;
     
-    // Opening: Use moderate time (some book moves, some calculation needed)
     if (movesPlayed < 10) {
-        complexityMultiplier = 0.8f;  // Increased from 0.5f
+        complexityMultiplier = 0.8f;  
     }
-    // Middlegame: Use significantly more time (complex positions)
     else if (totalMaterial > 3000) {
-        complexityMultiplier = 3.0f;  // Increased from 2.0f
+        complexityMultiplier = 3.0f;  
     }
-    // Endgame: Use more time (precision needed)
     else if (totalMaterial < 1500) {
-        complexityMultiplier = 2.5f;  // Increased from 1.8f
+        complexityMultiplier = 2.5f;  
     }
     
-    // Check if in check (need more time to find safe moves)
     if (IsKingInCheck(board, board.turn)) {
-        complexityMultiplier *= 1.5f;  // Increased from 1.2f
+        complexityMultiplier *= 1.5f;  
     }
     
     return static_cast<int>(baseTime * complexityMultiplier);
 }
 
-std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {  // Increased from 5000ms to 15000ms
-    // Check opening book first
+std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {  
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {
         std::cout << "Using opening book move: " << bookMove << "\n";
         int srcCol, srcRow, destCol, destRow;
         if (parseAlgebraicMove(bookMove, board, srcCol, srcRow, destCol, destRow)) {
-            return {srcRow * 8 + srcCol, destRow * 8 + destCol};
+            return {srcCol + srcRow * 8, destCol + destRow * 8};
         }
     }
     
-    // Calculate adaptive time allocation with higher base
     static int movesPlayed = 0;
     movesPlayed++;
-    int adaptiveTime = calculateTimeForMove(board, timeLimitMs * 15, movesPlayed);  // Increased multiplier from 10 to 15
+    int adaptiveTime = calculateTimeForMove(board, timeLimitMs * 15, movesPlayed);  
     adaptiveTime = std::min(adaptiveTime, timeLimitMs);
     
     std::cout << "Allocated " << adaptiveTime << "ms for this move\n";
     
-    // Use optimized single-threaded search for stability and strength
     std::cout << "Using optimized single-threaded search...\n";
     
-    // DRAMATICALLY increased adaptive depth for superior tactical vision
-    int searchDepth = 12; // Base depth significantly increased from 10 to 12
-    if (adaptiveTime > 12000) searchDepth = 18;       // 12+ seconds: very deep search
-    else if (adaptiveTime > 8000) searchDepth = 16;   // 8+ seconds: deep search
-    else if (adaptiveTime > 5000) searchDepth = 14;   // 5+ seconds: deeper search
-    else if (adaptiveTime > 3000) searchDepth = 13;   // 3+ seconds: good depth
-    else if (adaptiveTime > 1500) searchDepth = 12;   // 1.5+ seconds: base depth
-    else if (adaptiveTime < 800) searchDepth = 10;    // Under 0.8s: still good depth
+    int searchDepth = 15; 
+    if (adaptiveTime > 12000) searchDepth = 22;       
+    else if (adaptiveTime > 8000) searchDepth = 20;   
+    else if (adaptiveTime > 5000) searchDepth = 18;   
+    else if (adaptiveTime > 3000) searchDepth = 16;   
+    else if (adaptiveTime > 1500) searchDepth = 15;   
+    else if (adaptiveTime < 800) searchDepth = 13;    
     
-    // Complexity-based depth adjustment
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
     int numMoves = moves.size();
     
-    // More moves = more complex position = need deeper search
-    if (numMoves > 35) searchDepth += 2;  // Very complex position (increased bonus)
-    else if (numMoves < 15) searchDepth -= 1; // Simple position
+    if (numMoves > 35) searchDepth += 3;  
+    else if (numMoves < 15) searchDepth -= 1;
     
-    // Check if in tactical position (many captures available)
     int numCaptures = 0;
     for (const auto& move : moves) {
         if (isCapture(board, move.first, move.second)) {
             numCaptures++;
         }
     }
-    if (numCaptures > 5) searchDepth += 1; // Tactical position needs deeper search
+    if (numCaptures > 5) searchDepth += 2; 
+    if (numCaptures > 8) searchDepth += 1; 
     
-    // Ensure minimum and maximum bounds - significantly increased
-    searchDepth = std::max(9, std::min(searchDepth, 20));
+    bool hasHangingPieces = false;
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = board.squares[i].Piece;
+        if (piece.PieceType == ChessPieceType::NONE || piece.PieceType == ChessPieceType::PAWN) continue;
+        
+        ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? 
+                                    ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+        for (int j = 0; j < 64; j++) {
+            const Piece& enemy = board.squares[j].Piece;
+            if (enemy.PieceColor == enemyColor && canPieceAttackSquare(board, j, i)) {
+                hasHangingPieces = true;
+                break;
+            }
+        }
+        if (hasHangingPieces) break;
+    }
+    
+    if (hasHangingPieces) {
+            searchDepth += 2; 
+    }
+    
+    searchDepth = std::max(12, std::min(searchDepth, 25));
     
     std::cout << "Search depth: " << searchDepth << " (moves: " << numMoves 
               << ", captures: " << numCaptures << ")\n";
@@ -189,7 +194,6 @@ std::string to_string(ChessPieceColor color) {
     return color == ChessPieceColor::WHITE ? "White" : "Black";
 }
 
-// Enhanced game state detection with appropriate announcements
 enum class GameState {
     ONGOING,
     CHECKMATE_WHITE_WINS,
@@ -201,16 +205,13 @@ enum class GameState {
 GameState checkGameState(Board& board) {
     ChessPieceColor currentPlayer = board.turn;
     
-    // Generate all valid moves for current player
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, currentPlayer);
     
-    // Filter moves to only include legal moves (not leaving king in check)
     std::vector<std::pair<int, int>> legalMoves;
     for (const auto& move : moves) {
         Board testBoard = board;
         if (testBoard.movePiece(move.first, move.second)) {
-            // Check if this move leaves our king in check (illegal)
             if (!IsKingInCheck(testBoard, currentPlayer)) {
                 legalMoves.push_back(move);
             }
@@ -219,22 +220,18 @@ GameState checkGameState(Board& board) {
     
     bool isInCheck = IsKingInCheck(board, currentPlayer);
     
-    // No legal moves available
     if (legalMoves.empty()) {
         if (isInCheck) {
-            // Checkmate!
             if (currentPlayer == ChessPieceColor::WHITE) {
                 return GameState::CHECKMATE_BLACK_WINS;
             } else {
                 return GameState::CHECKMATE_WHITE_WINS;
             }
         } else {
-            // Stalemate!
             return GameState::STALEMATE;
         }
     }
     
-    // Check for insufficient material draw
     std::vector<ChessPieceType> whitePieces, blackPieces;
     for (int i = 0; i < 64; i++) {
         const Piece& piece = board.squares[i].Piece;
@@ -247,25 +244,20 @@ GameState checkGameState(Board& board) {
         }
     }
     
-    // Check for insufficient material patterns
     bool insufficientMaterial = false;
     
-    // King vs King
     if (whitePieces.empty() && blackPieces.empty()) {
         insufficientMaterial = true;
     }
-    // King and Bishop vs King, King and Knight vs King
     else if ((whitePieces.size() == 1 && blackPieces.empty() && 
               (whitePieces[0] == ChessPieceType::BISHOP || whitePieces[0] == ChessPieceType::KNIGHT)) ||
              (blackPieces.size() == 1 && whitePieces.empty() && 
               (blackPieces[0] == ChessPieceType::BISHOP || blackPieces[0] == ChessPieceType::KNIGHT))) {
         insufficientMaterial = true;
     }
-    // King and Bishop vs King and Bishop (same color squares)
     else if (whitePieces.size() == 1 && blackPieces.size() == 1 &&
              whitePieces[0] == ChessPieceType::BISHOP && blackPieces[0] == ChessPieceType::BISHOP) {
-        // Check if bishops are on same color squares (simplified check)
-        insufficientMaterial = true; // Assume same color for simplicity
+        insufficientMaterial = true; 
     }
     
     if (insufficientMaterial) {
@@ -319,6 +311,10 @@ void announceGameResult(GameState state) {
 int main() {
     ChessTimePoint startTime = ChessClock::now();
     
+    // Initialize attack tables for bitboard move generation
+    initKnightAttacks();
+    initKingAttacks();
+    
     std::cout << "Chess Engine\n";
     std::cout << "========================\n\n";
     
@@ -329,7 +325,6 @@ int main() {
     while (true) {
         printBoard(ChessBoard);
         
-        // Check for game-ending conditions
         GameState gameState = checkGameState(ChessBoard);
         if (gameState != GameState::ONGOING) {
             announceGameResult(gameState);
@@ -338,7 +333,6 @@ int main() {
             break;
         }
         
-        // Add check indicator to the prompt
         std::string checkIndicator = "";
         if (IsKingInCheck(ChessBoard, ChessBoard.turn)) {
             checkIndicator = " [CHECK!] ";
@@ -355,8 +349,7 @@ int main() {
         
         int srcCol, srcRow, destCol, destRow;
         if (parseAlgebraicMove(input, ChessBoard, srcCol, srcRow, destCol, destRow)) {
-            // ENHANCED: Handle pawn promotion with piece selection
-            ChessPieceType promotionPiece = ChessPieceType::QUEEN; // Default
+            ChessPieceType promotionPiece = ChessPieceType::QUEEN; 
             if (input.find('=') != std::string::npos) {
                 promotionPiece = getPromotionPiece(input);
             }
@@ -370,12 +363,11 @@ int main() {
             std::cout << "❌ Could not parse move. Use algebraic notation (e.g., e4, Nf3, O-O, e8=Q).\n";
         }
         
-        // Add computer move logic after player move
         if (ChessBoard.turn == ChessPieceColor::BLACK) {
             std::cout << "\nComputer is thinking...\n";
             
             ChessTimePoint computerStartTime = ChessClock::now();
-            auto computerMove = getComputerMove(ChessBoard, 20000);  // Increased from 8000ms to 20000ms (20 seconds)
+            auto computerMove = getComputerMove(ChessBoard, 20000);  
             auto computerTime = ChessClock::now() - computerStartTime;
             
             if (computerMove.first != -1 && computerMove.second != -1) {
@@ -386,11 +378,9 @@ int main() {
                 int destCol = to % 8;
                 int destRow = to / 8;
                 
-                // ENHANCED: Handle computer promotion intelligently
                 ChessPieceType computerPromotionPiece = ChessPieceType::QUEEN;
                 const Piece& movingPiece = ChessBoard.squares[from].Piece;
                 if (movingPiece.PieceType == ChessPieceType::PAWN && (destRow == 0 || destRow == 7)) {
-                    // Computer promotes to Queen by default (could be enhanced with tactical analysis)
                     computerPromotionPiece = ChessPieceType::QUEEN;
                 }
                 
@@ -401,21 +391,19 @@ int main() {
                               << positionToNotation(computerMove.second)
                               << " (took " << std::chrono::duration_cast<ChessDuration>(computerTime).count() << "ms)\n";
                     
-                    // Check if computer's move resulted in mate/stalemate
                     GameState postMoveState = checkGameState(ChessBoard);
                     if (postMoveState != GameState::ONGOING) {
                         printBoard(ChessBoard);
                         announceGameResult(postMoveState);
                         std::string dummy;
                         std::getline(std::cin, dummy);
-                        return 0; // Exit the game
+                        return 0; 
                     }
                 } else {
                     std::cout << "Computer move failed!\n";
                 }
             } else {
                 std::cout << "Computer couldn't find a valid move!\n";
-                // This might indicate mate or stalemate
                 GameState state = checkGameState(ChessBoard);
                 if (state != GameState::ONGOING) {
                     announceGameResult(state);

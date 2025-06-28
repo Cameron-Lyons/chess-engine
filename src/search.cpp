@@ -1350,8 +1350,6 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
     std::vector<int> defenders;
     
     ChessPieceColor attackerColor = board.squares[fromSquare].Piece.PieceColor;
-    ChessPieceColor defenderColor = (attackerColor == ChessPieceColor::WHITE) ? 
-                                   ChessPieceColor::BLACK : ChessPieceColor::WHITE;
     
     // Find all pieces that can attack the target square
     for (int i = 0; i < 64; i++) {

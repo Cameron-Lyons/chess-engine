@@ -79,7 +79,6 @@ std::unordered_map<std::string, std::vector<std::string>> OpeningBookOptions = {
     {"rnbqk2r/pppp1ppp/4pn2/8/1bPP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4", {"e3"}}
 };
 
-// Legacy opening book for backward compatibility
 std::unordered_map<std::string, std::string> OpeningBook;
 
 uint64_t ZobristTable[64][12];
@@ -129,7 +128,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         cleanMove.pop_back();
     }
     
-    // Handle castling
     if (cleanMove == "O-O" || cleanMove == "0-0") {
         if (board.turn == ChessPieceColor::WHITE) {
             srcCol = 4; srcRow = 0; destCol = 6; destRow = 0;
@@ -147,7 +145,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         return true;
     }
     
-    // Determine piece type
     ChessPieceType pieceType = ChessPieceType::PAWN;
     size_t startPos = 0;
     bool isCapture = false;
@@ -190,13 +187,11 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                 }
             }
             
-            // Check two squares back (for initial pawn moves)
-            if (destRow == 3) { // Moving to 4th rank
-                int checkRow = 1; // From 2nd rank
+            if (destRow == 3) { 
+                int checkRow = 1; 
                 int pos = checkRow * 8 + destCol;
                 const Piece& piece = board.squares[pos].Piece;
                 if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == ChessPieceColor::WHITE) {
-                    // Check if both destination and intermediate square are empty
                     int destPos = destRow * 8 + destCol;
                     int intermediatPos = 2 * 8 + destCol;
                     if (board.squares[destPos].Piece.PieceType == ChessPieceType::NONE && 
@@ -207,14 +202,12 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                     }
                 }
             }
-        } else { // Black's turn
-            // Check one square forward
+        } else { 
             if (destRow < 7) {
                 int checkRow = destRow + 1;
                 int pos = checkRow * 8 + destCol;
                 const Piece& piece = board.squares[pos].Piece;
                 if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == ChessPieceColor::BLACK) {
-                    // Check if destination is empty
                     int destPos = destRow * 8 + destCol;
                     if (board.squares[destPos].Piece.PieceType == ChessPieceType::NONE) {
                         srcCol = destCol;
@@ -224,13 +217,11 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                 }
             }
             
-            // Check two squares forward (for initial pawn moves)
-            if (destRow == 4) { // Moving to 5th rank
-                int checkRow = 6; // From 7th rank
+            if (destRow == 4) { 
+                int checkRow = 6; 
                 int pos = checkRow * 8 + destCol;
                 const Piece& piece = board.squares[pos].Piece;
                 if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == ChessPieceColor::BLACK) {
-                    // Check if both destination and intermediate square are empty
                     int destPos = destRow * 8 + destCol;
                     int intermediatPos = 5 * 8 + destCol;
                     if (board.squares[destPos].Piece.PieceType == ChessPieceType::NONE && 
@@ -245,7 +236,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         return false;
     }
     
-    // Handle pawn captures like "exd4"
     if (pieceType == ChessPieceType::PAWN && cleanMove.length() >= 4 && cleanMove[1] == 'x') {
         destCol = cleanMove[2] - 'a';
         destRow = cleanMove[3] - '1';
@@ -280,7 +270,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         return false;
     }
     
-    // ENHANCED: Handle pawn promotion notation like "e8=Q", "d1=N"
     if (pieceType == ChessPieceType::PAWN && cleanMove.length() >= 4) {
         size_t equalPos = cleanMove.find('=');
         if (equalPos != std::string::npos && equalPos >= 2) {
@@ -292,7 +281,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                 return false;
             }
             
-            // Check if it's a promotion rank
             bool isPromotionRank = (destRow == 7 && board.turn == ChessPieceColor::WHITE) ||
                                    (destRow == 0 && board.turn == ChessPieceColor::BLACK);
             
@@ -300,9 +288,7 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                 return false;
             }
             
-            // Find the promoting pawn
             if (board.turn == ChessPieceColor::WHITE) {
-                // Check one square back
                 if (destRow > 0) {
                     int checkRow = destRow - 1;
                     int pos = checkRow * 8 + destCol;
@@ -316,8 +302,7 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                         }
                     }
                 }
-            } else { // Black's turn
-                // Check one square forward
+            } else { 
                 if (destRow < 7) {
                     int checkRow = destRow + 1;
                     int pos = checkRow * 8 + destCol;
@@ -335,7 +320,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             return false;
         }
         
-        // Handle promotion captures like "exd8=Q"
         if (cleanMove.length() >= 6 && cleanMove[1] == 'x' && equalPos != std::string::npos) {
             destCol = cleanMove[2] - 'a';
             destRow = cleanMove[3] - '1';
@@ -343,7 +327,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             
             if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8 || srcCol < 0 || srcCol >= 8) return false;
             
-            // Check if it's a promotion rank
             bool isPromotionRank = (destRow == 7 && board.turn == ChessPieceColor::WHITE) ||
                                    (destRow == 0 && board.turn == ChessPieceColor::BLACK);
             
@@ -351,7 +334,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                 return false;
             }
             
-            // Find the capturing pawn
             for (int row = 0; row < 8; row++) {
                 int pos = row * 8 + srcCol;
                 const Piece& piece = board.squares[pos].Piece;
@@ -381,11 +363,9 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         }
     }
     
-    // Handle other piece moves (Knight, Bishop, Rook, Queen, King)
     if (pieceType != ChessPieceType::PAWN) {
         if (cleanMove.length() < startPos + 2) return false;
         
-        // Parse destination square
         if (isCapture) {
             size_t destStart = xPos + 1;
             if (destStart + 1 >= cleanMove.length()) return false;
@@ -401,18 +381,16 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         int destPos = destRow * 8 + destCol;
         const Piece& destPiece = board.squares[destPos].Piece;
         
-        // Check if destination is valid
         if (isCapture) {
             if (destPiece.PieceType == ChessPieceType::NONE || destPiece.PieceColor == board.turn) {
-                return false; // Can't capture empty square or own piece
+                return false; 
             }
         } else {
             if (destPiece.PieceType != ChessPieceType::NONE) {
-                return false; // Can't move to occupied square without capture notation
+                return false; 
             }
         }
         
-        // Find pieces of the right type that can reach the destination
         std::vector<std::pair<int, int>> candidates;
         
         for (int row = 0; row < 8; row++) {
@@ -478,12 +456,10 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                             int rowDiff = abs(destRow - row);
                             int colDiff = abs(destCol - col);
                             
-                            // Queen moves like rook or bishop
                             if (row == destRow || col == destCol || rowDiff == colDiff) {
                                 canReach = true;
                                 
                                 if (row == destRow) {
-                                    // Horizontal movement
                                     int start = std::min(col, destCol) + 1;
                                     int end = std::max(col, destCol);
                                     for (int c = start; c < end; c++) {
@@ -493,7 +469,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                                         }
                                     }
                                 } else if (col == destCol) {
-                                    // Vertical movement
                                     int start = std::min(row, destRow) + 1;
                                     int end = std::max(row, destRow);
                                     for (int r = start; r < end; r++) {
@@ -503,7 +478,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                                         }
                                     }
                                 } else if (rowDiff == colDiff) {
-                                    // Diagonal movement
                                     int rowStep = (destRow > row) ? 1 : -1;
                                     int colStep = (destCol > col) ? 1 : -1;
                                     for (int i = 1; i < rowDiff; i++) {
@@ -539,8 +513,6 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             srcRow = candidates[0].second;
             return true;
         } else if (candidates.size() > 1) {
-            // TODO: Handle disambiguation (like Nbd2, R1e1, etc.)
-            // For now, just return the first candidate
             srcCol = candidates[0].first;
             srcRow = candidates[0].second;
             return true;
@@ -550,10 +522,8 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
     return false;
 }
 
-// ENHANCED: Extract promotion piece from algebraic notation like "e8=Q"
 ChessPieceType getPromotionPiece(std::string_view move) {
     std::string cleanMove(move);
-    // Remove check/checkmate symbols
     if (!cleanMove.empty() && (cleanMove.back() == '+' || cleanMove.back() == '#')) {
         cleanMove.pop_back();
     }
@@ -566,8 +536,8 @@ ChessPieceType getPromotionPiece(std::string_view move) {
             case 'R': case 'r': return ChessPieceType::ROOK;
             case 'B': case 'b': return ChessPieceType::BISHOP;
             case 'N': case 'n': return ChessPieceType::KNIGHT;
-            default: return ChessPieceType::QUEEN; // Default to Queen if invalid
+            default: return ChessPieceType::QUEEN; 
         }
     }
-    return ChessPieceType::QUEEN; // Default to Queen if no promotion specified
+    return ChessPieceType::QUEEN; 
 } 
