@@ -91,5 +91,6 @@ int evaluatePassedPawns(const Board& board);
 int evaluateBishopPair(const Board& board);
 int evaluateRooksOnOpenFiles(const Board& board);
 int evaluateEndgame(const Board& board);
+int evaluateEnhancedPawnStructure(const Board& board);
 
 #endif

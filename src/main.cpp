@@ -3,6 +3,7 @@
 #include "search.h"
 #include "Evaluation.h"
 #include "BitboardMoves.h"
+#include "uci.h"
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -308,15 +309,27 @@ void announceGameResult(GameState state) {
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    // Check for UCI mode
+    if (argc > 1 && std::string(argv[1]) == "uci") {
+        // Run in UCI mode
+        UCIEngine engine;
+        engine.run();
+        return 0;
+    }
+    
     ChessTimePoint startTime = ChessClock::now();
     
     // Initialize attack tables for bitboard move generation
     initKnightAttacks();
     initKingAttacks();
     
+    // Initialize Zobrist hashing for transposition table
+    InitZobrist();
+    
     std::cout << "Chess Engine\n";
-    std::cout << "========================\n\n";
+    std::cout << "========================\n";
+    std::cout << "Use './chess_engine uci' for UCI mode\n\n";
     
     ChessBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     

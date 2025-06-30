@@ -11,6 +11,7 @@ class UCIEngine {
 private:
     Board board;
     bool isRunning;
+    bool isSearching;
     int thinkingTime;
     int depth;
     

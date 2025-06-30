@@ -721,37 +721,55 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
         return standPat;
     }
     
-    // Score and sort captures by MVV-LVA with SEE filtering
+    // Enhanced capture filtering with improved SEE
     std::vector<ScoredMove> scoredMoves;
     for (const auto& move : tacticalMoves) {
         int score = 0;
-        if (isCapture(board, move.first, move.second)) {
+        bool isCapt = isCapture(board, move.first, move.second);
+        
+        if (isCapt) {
             int victimValue = getPieceValue(board.squares[move.second].Piece.PieceType);
             int attackerValue = getPieceValue(board.squares[move.first].Piece.PieceType);
-            score = victimValue * 100 - attackerValue; // MVV-LVA
             
-            // CRITICAL: Use SEE to filter out bad captures in quiescence search
+            // Basic MVV-LVA scoring
+            score = victimValue * 100 - attackerValue;
+            
+            // ENHANCED SEE FILTERING - Much more aggressive
             int seeValue = staticExchangeEvaluation(board, move.first, move.second);
             
-            // Skip obviously bad captures in quiescence search
-            if (seeValue < -50) {
-                continue; // Don't even consider bad captures
+            // Skip bad captures more aggressively in quiescence
+            if (seeValue < -25) {
+                continue; // Tighter threshold for bad captures
             }
             
-            // Add SEE bonus/penalty to scoring
+            // Delta pruning with SEE consideration
+            int expectedGain = std::max(seeValue, victimValue);
+            if (maximizingPlayer && standPat + expectedGain + 150 < alpha) {
+                continue; // Skip futile captures
+            }
+            if (!maximizingPlayer && standPat - expectedGain - 150 > beta) {
+                continue; // Skip futile captures
+            }
+            
+            // SEE-based scoring enhancement
             score += seeValue;
             
-            // Delta pruning for individual captures
-            if (maximizingPlayer && standPat + victimValue + 200 < alpha) {
-                continue; // Skip futile captures
+            // Bonus for definitely winning captures
+            if (seeValue > victimValue) {
+                score += 50; // Bonus for winning more than expected
             }
-            if (!maximizingPlayer && standPat - victimValue - 200 > beta) {
-                continue; // Skip futile captures
+            
+            // Priority for equal/winning captures
+            if (seeValue >= 0) {
+                score += 200; // Higher priority for non-losing captures
             }
         }
+        
+        // Check bonus (but not too high to avoid check spam)
         if (givesCheck(board, move.first, move.second)) {
-            score += 100; // Checks are important
+            score += 80; // Reduced from 100 to prioritize good captures
         }
+        
         scoredMoves.push_back({move, score});
     }
     
@@ -932,6 +950,40 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 }
             }
             
+            // SEE-based futility pruning for captures at shallow depths
+            if (depth <= 3 && isCaptureMove && !isCheckMove && !isInCheck(board, currentColor)) {
+                int seeValue = staticExchangeEvaluation(board, move.first, move.second);
+                
+                // Skip obviously bad captures at shallow depths
+                if (seeValue < -100 && depth <= 2) {
+                    moveCount++;
+                    continue; // Don't search losing captures at shallow depth
+                }
+                
+                // Reduce search depth for bad captures
+                if (seeValue < -50 && depth == 3) {
+                    eval = AlphaBetaSearch(newBoard, depth - 2, alpha, beta, false, ply + 1, historyTable, context);
+                    moveCount++;
+                    if (context.stopSearch.load()) return 0;
+                    if (eval > bestValue) {
+                        bestValue = eval;
+                        bestMoveFound = move;
+                    }
+                    if (eval > alpha) {
+                        alpha = eval;
+                        foundPV = true;
+                        updateHistoryTable(historyTable, move.first, move.second, depth);
+                    }
+                    if (beta <= alpha) {
+                        if (!isCaptureMove) {
+                            context.killerMoves.store(ply, move);
+                        }
+                        break;
+                    }
+                    continue;
+                }
+            }
+            
             // Late Move Reduction - only for non-PV moves
             if (!foundPV && depth >= 3 && moveCount > 0 && !isCaptureMove && !isCheckMove && 
                 !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor)) {
@@ -999,6 +1051,40 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 // If null window search suggests this move is good, re-search with full window
                 if (eval < beta && eval > alpha) {
                     eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1, historyTable, context);
+                }
+            }
+            
+            // SEE-based futility pruning for captures at shallow depths (minimizing player)
+            if (depth <= 3 && isCaptureMove && !isCheckMove && !isInCheck(board, currentColor)) {
+                int seeValue = staticExchangeEvaluation(board, move.first, move.second);
+                
+                // Skip obviously bad captures at shallow depths
+                if (seeValue < -100 && depth <= 2) {
+                    moveCount++;
+                    continue; // Don't search losing captures at shallow depth
+                }
+                
+                // Reduce search depth for bad captures
+                if (seeValue < -50 && depth == 3) {
+                    eval = AlphaBetaSearch(newBoard, depth - 2, alpha, beta, true, ply + 1, historyTable, context);
+                    moveCount++;
+                    if (context.stopSearch.load()) return 0;
+                    if (eval < bestValue) {
+                        bestValue = eval;
+                        bestMoveFound = move;
+                    }
+                    if (eval < beta) {
+                        beta = eval;
+                        foundPV = true;
+                        updateHistoryTable(historyTable, move.first, move.second, depth);
+                    }
+                    if (beta <= alpha) {
+                        if (!isCaptureMove) {
+                            context.killerMoves.store(ply, move);
+                        }
+                        break;
+                    }
+                    continue;
                 }
             }
             
@@ -1194,12 +1280,7 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             break;
         }
         
-        // Print progress for deeper searches
-        if (depth >= 5) {
-            std::cout << "Depth " << depth << ": score=" << searchScore 
-                      << ", move=" << result.bestMove.first/8 << "," << result.bestMove.first%8 
-                      << " to " << result.bestMove.second/8 << "," << result.bestMove.second%8 << std::endl;
-        }
+        // Debug output removed for UCI compatibility
     }
     
     auto endTime = std::chrono::steady_clock::now();
@@ -1319,161 +1400,175 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
         // Reset aspiration window for next iteration
         aspirationWindow = std::max(50, aspirationWindow / 2);
         
-        // Optional: Print search info
-        if (currentDepth >= 6) {
-            std::cout << "Depth " << currentDepth << ": score=" << bestEval 
-                      << ", move=" << (bestMove.first % 8) << "," << (bestMove.first / 8) 
-                      << " to " << (bestMove.second % 8) << "," << (bestMove.second / 8) << "\n";
-        }
+        // Debug output removed for UCI compatibility
     }
     
     return bestMove;
 }
 
-// Static Exchange Evaluation - evaluates capture sequences
+// ===================================================================
+// OPTIMIZED STATIC EXCHANGE EVALUATION (SEE)
+// ===================================================================
+// This is a much cleaner, more efficient implementation that uses
+// a direct simulation approach with proper piece value tracking.
+
 int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
-    ChessPieceType victim = board.squares[toSquare].Piece.PieceType;
-    ChessPieceType attacker = board.squares[fromSquare].Piece.PieceType;
+    const Piece& victim = board.squares[toSquare].Piece;
+    const Piece& attacker = board.squares[fromSquare].Piece;
     
-    if (victim == ChessPieceType::NONE) {
-        return 0; // No capture
+    // No capture = no gain
+    if (victim.PieceType == ChessPieceType::NONE) {
+        return 0;
     }
     
-    // PROPER SEE IMPLEMENTATION - Simulate the entire exchange sequence
+    // Simple case: undefended piece
+    ChessPieceColor attackerColor = attacker.PieceColor;
+    ChessPieceColor defenderColor = (attackerColor == ChessPieceColor::WHITE) ? 
+                                   ChessPieceColor::BLACK : ChessPieceColor::WHITE;
     
-    // Get piece values for calculations
-    int victimValue = getPieceValue(victim);
-    int attackerValue = getPieceValue(attacker);
-    
-    // Find all attackers and defenders of the target square
-    std::vector<int> attackers;
-    std::vector<int> defenders;
-    
-    ChessPieceColor attackerColor = board.squares[fromSquare].Piece.PieceColor;
-    
-    // Find all pieces that can attack the target square
+    // Check if target square is defended
+    bool isDefended = false;
     for (int i = 0; i < 64; i++) {
-        const Piece& piece = board.squares[i].Piece;
-        if (piece.PieceType == ChessPieceType::NONE) continue;
-        
-        // Skip the initial attacker (we'll handle it separately)
-        if (i == fromSquare) continue;
-        
-        // Check if this piece can attack the target square
-        if (canPieceAttackSquare(board, i, toSquare)) {
-            if (piece.PieceColor == attackerColor) {
-                attackers.push_back(i);
-            } else {
-                defenders.push_back(i);
-            }
-        }
-    }
-    
-    // Add the initial attacker at the front
-    attackers.insert(attackers.begin(), fromSquare);
-    
-    // Sort attackers and defenders by piece value (least valuable first)
-    auto sortByValue = [&board](int a, int b) {
-        int valueA = getPieceValue(board.squares[a].Piece.PieceType);
-        int valueB = getPieceValue(board.squares[b].Piece.PieceType);
-        return valueA < valueB;
-    };
-    
-    std::sort(attackers.begin(), attackers.end(), sortByValue);
-    std::sort(defenders.begin(), defenders.end(), sortByValue);
-    
-    // Simulate the exchange sequence
-    std::vector<int> gains;
-    gains.push_back(victimValue); // First capture gains the victim
-    
-    int currentVictimValue = attackerValue; // Next victim is the attacker
-    bool attackerTurn = false; // Next move is defender's turn
-    
-    size_t attackerIdx = 1; // Skip first attacker (already used)
-    size_t defenderIdx = 0;
-    
-    // Continue the exchange sequence
-    while (true) {
-        int nextAttackerPos = -1;
-        
-        if (attackerTurn) {
-            // Attacker's turn - find next available attacker
-            while (attackerIdx < attackers.size()) {
-                int pos = attackers[attackerIdx];
-                // Check if this piece hasn't been captured yet
-                bool stillExists = true;
-                for (size_t i = 1; i < gains.size(); i += 2) {
-                    if (i <= attackerIdx) {
-                        stillExists = false;
-                        break;
-                    }
-                }
-                if (stillExists) {
-                    nextAttackerPos = pos;
-                    break;
-                }
-                attackerIdx++;
-            }
-        } else {
-            // Defender's turn - find next available defender
-            while (defenderIdx < defenders.size()) {
-                int pos = defenders[defenderIdx];
-                // Check if this piece hasn't been captured yet
-                bool stillExists = true;
-                for (size_t i = 2; i < gains.size(); i += 2) {
-                    if (i / 2 <= defenderIdx) {
-                        stillExists = false;
-                        break;
-                    }
-                }
-                if (stillExists) {
-                    nextAttackerPos = pos;
-                    break;
-                }
-                defenderIdx++;
-            }
-        }
-        
-        // If no more pieces can capture, exchange is over
-        if (nextAttackerPos == -1) {
+        const Piece& defender = board.squares[i].Piece;
+        if (i != toSquare && // Don't count the victim as defending itself
+            defender.PieceColor == defenderColor && 
+            defender.PieceType != ChessPieceType::NONE &&
+            canPieceAttackSquare(board, i, toSquare)) {
+            isDefended = true;
             break;
         }
+    }
+    
+    // If undefended, we simply win the victim
+    if (!isDefended) {
+        return getPieceValue(victim.PieceType);
+    }
+    
+    // ===================================================================
+    // DEFENDED PIECE - Full SEE Calculation
+    // ===================================================================
+    
+    // Build ordered lists of attackers and defenders
+    std::vector<std::pair<int, int>> attackerList; // {square, pieceValue}
+    std::vector<std::pair<int, int>> defenderList;
+    
+    // Add initial attacker
+    attackerList.push_back({fromSquare, getPieceValue(attacker.PieceType)});
+    
+    // Find all other attackers and defenders
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = board.squares[i].Piece;
+        if (piece.PieceType == ChessPieceType::NONE || i == fromSquare) continue;
         
-        // Add the gain from this capture
-        gains.push_back(currentVictimValue);
-        
-        // The capturing piece becomes the new victim
-        currentVictimValue = getPieceValue(board.squares[nextAttackerPos].Piece.PieceType);
-        
-        // Switch turns
-        attackerTurn = !attackerTurn;
-        
-        // Move to next piece
-        if (attackerTurn) {
-            defenderIdx++;
-        } else {
-            attackerIdx++;
+        if (canPieceAttackSquare(board, i, toSquare)) {
+            int pieceValue = getPieceValue(piece.PieceType);
+            if (piece.PieceColor == attackerColor) {
+                attackerList.push_back({i, pieceValue});
+            } else if (i != toSquare) { // Don't count victim as defender
+                defenderList.push_back({i, pieceValue});
+            }
         }
     }
     
-    // Calculate the final result using minimax
-    // Work backwards through the gains
-    int result = 0;
-    if (!gains.empty()) {
-        result = gains.back();
+    // Sort by piece value (least valuable first - better to sacrifice pawns before queens)
+    auto comparePieceValue = [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+        return a.second < b.second;
+    };
+    std::sort(attackerList.begin(), attackerList.end(), comparePieceValue);
+    std::sort(defenderList.begin(), defenderList.end(), comparePieceValue);
+    
+    // ===================================================================
+    // SIMULATE EXCHANGE SEQUENCE
+    // ===================================================================
+    
+    std::vector<int> materialSwing;
+    materialSwing.push_back(getPieceValue(victim.PieceType)); // Initial capture
+    
+    size_t attackerIdx = 1; // Start from second attacker (first already used)
+    size_t defenderIdx = 0;
+    int currentVictimValue = getPieceValue(attacker.PieceType);
+    bool isAttackerTurn = false; // Next is defender's turn
+    
+    // Continue the exchange
+    while (true) {
+        if (isAttackerTurn) {
+            // Attacker's turn
+            if (attackerIdx >= attackerList.size()) break;
+            
+            materialSwing.push_back(currentVictimValue);
+            currentVictimValue = attackerList[attackerIdx].second;
+            attackerIdx++;
+        } else {
+            // Defender's turn  
+            if (defenderIdx >= defenderList.size()) break;
+            
+            materialSwing.push_back(currentVictimValue);
+            currentVictimValue = defenderList[defenderIdx].second;
+            defenderIdx++;
+        }
         
-        for (int i = static_cast<int>(gains.size()) - 2; i >= 0; i--) {
-            if (i % 2 == 0) {
-                // Maximizing player (attacker)
-                result = std::max(gains[i] - result, 0);
-            } else {
-                // Minimizing player (defender)
-                result = gains[i] - result;
-            }
+        isAttackerTurn = !isAttackerTurn;
+    }
+    
+    // ===================================================================
+    // MINIMAX EVALUATION - Work backwards to find best result
+    // ===================================================================
+    
+    if (materialSwing.empty()) return 0;
+    
+    // Work backwards through the material swings
+    int result = materialSwing.back();
+    
+    for (int i = static_cast<int>(materialSwing.size()) - 2; i >= 0; i--) {
+        // Each player chooses the best outcome for themselves
+        if (i % 2 == 0) {
+            // Attacker's turn - wants to maximize
+            result = std::max(materialSwing[i] - result, 0);
+        } else {
+            // Defender's turn - wants to minimize attacker's gain
+            result = materialSwing[i] - result;
         }
     }
     
     return result;
+}
+
+// ===================================================================
+// SEE HELPER FUNCTIONS
+// ===================================================================
+
+// Check if a capture is good (SEE >= 0)
+bool isGoodCapture(const Board& board, int fromSquare, int toSquare) {
+    return staticExchangeEvaluation(board, fromSquare, toSquare) >= 0;
+}
+
+// Check if a capture is profitable above a certain threshold
+bool isCaptureProfitable(const Board& board, int fromSquare, int toSquare, int threshold) {
+    return staticExchangeEvaluation(board, fromSquare, toSquare) >= threshold;
+}
+
+// Find the smallest attacker for a given square and color
+// Returns the square of the smallest attacker, or -1 if none
+int getSmallestAttacker(const Board& board, int targetSquare, ChessPieceColor color) {
+    int smallestAttacker = -1;
+    int smallestValue = 10000; // Higher than any piece value
+    
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = board.squares[i].Piece;
+        if (piece.PieceType == ChessPieceType::NONE || piece.PieceColor != color) {
+            continue;
+        }
+        
+        if (canPieceAttackSquare(board, i, targetSquare)) {
+            int pieceValue = getPieceValue(piece.PieceType);
+            if (pieceValue < smallestValue) {
+                smallestValue = pieceValue;
+                smallestAttacker = i;
+            }
+        }
+    }
+    
+    return smallestAttacker;
 }
 
 // Forward declarations and helper functions
