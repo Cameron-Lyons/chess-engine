@@ -40,6 +40,7 @@ public:
     
     // Main UCI loop
     void run();
+    void processCommand(const std::string& command);
     
     // UCI command handlers
     void handleUCI();
