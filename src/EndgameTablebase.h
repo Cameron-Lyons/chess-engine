@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include <optional>
+#include <memory>
 
 // Endgame tablebase interface for perfect endgame play
 class EndgameTablebase {
@@ -29,10 +30,10 @@ public:
     bool isInTablebase(const Board& board);
     
     // Get tablebase result for position
-    std::optional<TablebaseResult> probe(const Board& board);
+    bool probe(const Board& board, TablebaseResult& result);
     
     // Get best move from tablebase
-    std::optional<std::pair<int, int>> getBestMove(const Board& board);
+    bool getBestMove(const Board& board, std::pair<int, int>& bestMove);
     
     // Check if position is winning/losing/draw
     bool isWinning(const Board& board);
