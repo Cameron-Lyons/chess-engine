@@ -14,20 +14,41 @@
       "Killer moves heuristic",
       "History heuristic",
       "Opening book",
-      "Zobrist hashing"
+      "Zobrist hashing",
+      "Neural network evaluation",
+      "Endgame tablebases",
+      "Advanced search techniques",
+      "UCI protocol support",
+      "Enhanced evaluation",
+      "Performance optimizations",
+      "Time management",
+      "Futility pruning",
+      "Static null move pruning",
+      "Singular extensions",
+      "SIMD optimizations"
     ]
   },
   "search": {
-    "default_depth": 6,
-    "max_depth": 12,
+    "default_depth": 8,
+    "max_depth": 20,
     "time_management": true,
     "null_move_pruning": true,
     "late_move_reduction": true,
     "quiescence_search": true,
+    "futility_pruning": true,
+    "static_null_move_pruning": true,
+    "singular_extensions": true,
+    "multi_cut_pruning": true,
+    "internal_iterative_deepening": true,
     "killer_moves": {
       "enabled": true,
       "max_killers_per_ply": 2,
       "max_ply": 64
+    },
+    "parallel_search": {
+      "enabled": true,
+      "max_threads": 16,
+      "work_stealing": true
     }
   },
   "evaluation": {
@@ -43,6 +64,11 @@
       "center_control": true,
       "mobility": true,
       "pawn_structure": true,
+      "piece_coordination": true,
+      "space_control": true,
+      "tactical_safety": true,
+      "development": true,
+      "tempo": true,
       "king_safety": {
         "enabled": true,
         "pawn_shield_bonus": 10,
@@ -50,6 +76,19 @@
         "semi_open_file_penalty": 10,
         "attack_units_max": 100
       }
+    },
+    "neural_network": {
+      "enabled": true,
+      "model_path": "models/chess_nn.bin",
+      "weight": 0.7,
+      "input_size": 768,
+      "hidden_size": 256
+    },
+    "endgame_tablebases": {
+      "enabled": true,
+      "path": "tablebases/",
+      "type": "syzygy",
+      "max_pieces": 7
     }
   },
   "ui": {
