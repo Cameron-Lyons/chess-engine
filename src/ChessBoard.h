@@ -30,7 +30,7 @@ enum class ChessError {
 };
 
 struct Square {
-    Piece Piece;
+    Piece piece;
     int loc;
     std::vector<int> ValidMoves;
     
@@ -38,12 +38,12 @@ struct Square {
     Square(int location) : loc(location) {}
     
     std::string toString() const {
-        if (Piece.PieceType == ChessPieceType::NONE) {
+        if (piece.PieceType == ChessPieceType::NONE) {
             return ".";
         }
         std::string result;
-        result += (Piece.PieceColor == ChessPieceColor::WHITE ? "W" : "B");
-        result += std::to_string(static_cast<int>(Piece.PieceType));
+        result += (piece.PieceColor == ChessPieceColor::WHITE ? "W" : "B");
+        result += std::to_string(static_cast<int>(piece.PieceType));
         return result;
     }
 };
@@ -79,19 +79,19 @@ struct Board {
     template<typename T>
     ChessPieceColor getPieceColor(T pos) const {
         if (!isValidIndex(pos)) return ChessPieceColor::WHITE;
-        return squares[pos].Piece.PieceColor;
+        return squares[pos].piece.PieceColor;
     }
     
     template<typename T>
     ChessPieceType getPieceType(T pos) const {
         if (!isValidIndex(pos)) return ChessPieceType::NONE;
-        return squares[pos].Piece.PieceType;
+        return squares[pos].piece.PieceType;
     }
     
     std::vector<int> getPiecesOfType(ChessPieceType type) const {
         std::vector<int> result;
         for (int i = 0; i < 64; ++i) {
-            if (squares[i].Piece.PieceType == type) {
+            if (squares[i].piece.PieceType == type) {
                 result.push_back(i);
             }
         }
@@ -101,7 +101,7 @@ struct Board {
     std::vector<int> getPiecesOfColor(ChessPieceColor color) const {
         std::vector<int> result;
         for (int i = 0; i < 64; ++i) {
-            if (squares[i].Piece.PieceColor == color) {
+            if (squares[i].piece.PieceColor == color) {
                 result.push_back(i);
             }
         }
@@ -156,8 +156,8 @@ struct Board {
     template<typename Func>
     void forEachPiece(Func&& func) const {
         for (int i = 0; i < 64; ++i) {
-            if (squares[i].Piece.PieceType != ChessPieceType::NONE) {
-                func(i, squares[i].Piece);
+            if (squares[i].piece.PieceType != ChessPieceType::NONE) {
+                func(i, squares[i].piece);
             }
         }
     }
@@ -166,7 +166,7 @@ struct Board {
     std::vector<int> filterPositions(Func&& predicate) const {
         std::vector<int> result;
         for (int i = 0; i < 64; ++i) {
-            if (predicate(i, squares[i].Piece)) {
+            if (predicate(i, squares[i].piece)) {
                 result.push_back(i);
             }
         }

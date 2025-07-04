@@ -22,7 +22,7 @@ void printBoard(const Board& board) {
         std::cout << rank + 1 << " ";
         for (int file = 0; file < 8; file++) {
             int idx = rank * 8 + file;
-            const Piece& piece = board.squares[idx].Piece;
+            const Piece& piece = board.squares[idx].piece;
             
             if (piece.PieceType == ChessPieceType::NONE) {
                 std::cout << ". ";

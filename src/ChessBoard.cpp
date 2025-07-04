@@ -10,7 +10,7 @@ void Board::clearBitboards() {
 void Board::updateBitboards() {
     clearBitboards();
     for (int i = 0; i < 64; i++) {
-        const Piece& piece = squares[i].Piece;
+        const Piece& piece = squares[i].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
                 switch (piece.PieceType) {
@@ -71,8 +71,8 @@ Bitboard Board::getPieceBitboard(ChessPieceType type, ChessPieceColor color) con
 bool Board::movePiece(int from, int to) {
     if (from < 0 || from >= 64 || to < 0 || to >= 64) return false;
     
-    Piece& fromPiece = squares[from].Piece;
-    Piece& toPiece = squares[to].Piece;
+    Piece& fromPiece = squares[from].piece;
+    Piece& toPiece = squares[to].piece;
     
     if (fromPiece.PieceType == ChessPieceType::NONE) return false;
     
@@ -157,7 +157,7 @@ ChessError Board::validateMove(int from, int to) const {
         return ChessError::InvalidPosition;
     }
     
-    const Piece& fromPiece = squares[from].Piece;
+    const Piece& fromPiece = squares[from].piece;
     if (fromPiece.PieceType == ChessPieceType::NONE) {
         return ChessError::NoPieceAtSource;
     }
@@ -181,7 +181,7 @@ std::string Board::toFEN() const {
         int emptyCount = 0;
         for (int col = 0; col < 8; ++col) {
             int pos = row * 8 + col;
-            const Piece& piece = squares[pos].Piece;
+            const Piece& piece = squares[pos].piece;
             
             if (piece.PieceType == ChessPieceType::NONE) {
                 emptyCount++;
@@ -242,7 +242,7 @@ bool Board::fromFEN(ChessString fen) {
 void Board::InitializeFromFEN(ChessString fen) {
     for(int i = 0; i < 64; i++){
         squares[i] = Square(i);
-        squares[i].Piece = Piece();
+        squares[i].piece = Piece();
     }
     
     size_t pos = 0;
@@ -276,7 +276,7 @@ void Board::InitializeFromFEN(ChessString fen) {
                 int boardRow = fenRank;
                 int idx = boardRow * 8 + file;
                 if (idx >= 0 && idx < 64) {
-                    squares[idx].Piece = Piece(color, type);
+                    squares[idx].piece = Piece(color, type);
                 }
             }
             file++;

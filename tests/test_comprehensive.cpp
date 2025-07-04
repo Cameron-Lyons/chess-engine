@@ -16,7 +16,7 @@ void printBoard(const Board& board) {
         std::cout << rank + 1 << " ";
         for (int file = 0; file < 8; file++) {
             int idx = rank * 8 + file;
-            const Piece& piece = board.squares[idx].Piece;
+            const Piece& piece = board.squares[idx].piece;
             
             if (piece.PieceType == ChessPieceType::NONE) {
                 std::cout << ". ";
@@ -46,7 +46,7 @@ void printBoard(const Board& board) {
 bool isKingInCheck(const Board& board, ChessPieceColor color) {
     int kingSq = -1;
     for (int i = 0; i < 64; i++) {
-        if (board.squares[i].Piece.PieceType == ChessPieceType::KING && board.squares[i].Piece.PieceColor == color) {
+        if (board.squares[i].piece.PieceType == ChessPieceType::KING && board.squares[i].piece.PieceColor == color) {
             kingSq = i;
             break;
         }
@@ -132,9 +132,9 @@ int main() {
     
     syncBoard.movePiece(12, 28); // e2e4
     
-    bool pawnOnE4 = syncBoard.squares[28].Piece.PieceType == ChessPieceType::PAWN;
+    bool pawnOnE4 = syncBoard.squares[28].piece.PieceType == ChessPieceType::PAWN;
     bool pawnBitboardOnE4 = syncBoard.whitePawns & (1ULL << 28);
-    bool noPawnOnE2 = syncBoard.squares[12].Piece.PieceType == ChessPieceType::NONE;
+    bool noPawnOnE2 = syncBoard.squares[12].piece.PieceType == ChessPieceType::NONE;
     bool noPawnBitboardOnE2 = !(syncBoard.whitePawns & (1ULL << 12));
     
     std::cout << "After e2e4:" << std::endl;

@@ -12,7 +12,7 @@ void printBoard(const Board& board) {
         std::cout << row + 1 << " ";
         for (int col = 0; col < 8; col++) {
             int pos = row * 8 + col;
-            Piece piece = board.squares[pos].Piece;
+            Piece piece = board.squares[pos].piece;
             char symbol = '.';
             if (piece.PieceType != ChessPieceType::NONE) {
                 switch (piece.PieceType) {

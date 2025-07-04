@@ -52,13 +52,13 @@ public:
 private:
     static bool isValidMove(const Board& board, int from, int to) {
         if (from == to) return false;
-        if (board.squares[from].Piece.PieceType == ChessPieceType::NONE) return false;
+        if (board.squares[from].piece.PieceType == ChessPieceType::NONE) return false;
         return true;
     }
     
     static void makeMove(Board& board, int from, int to) {
         board.squares[to] = board.squares[from];
-        board.squares[from].Piece = {ChessPieceType::NONE, ChessPieceColor::WHITE};
+        board.squares[from].piece = {ChessPieceType::NONE, ChessPieceColor::WHITE};
         board.turn = (board.turn == ChessPieceColor::WHITE) ? 
                      ChessPieceColor::BLACK : ChessPieceColor::WHITE;
     }

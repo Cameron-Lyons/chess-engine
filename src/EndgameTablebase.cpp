@@ -73,7 +73,7 @@ int EndgameTablebase::countPieces(const Board& board) {
     // Stub implementation - count all pieces
     int count = 0;
     for (int square = 0; square < 64; ++square) {
-        if (board.squares[square].Piece.PieceType != ChessPieceType::NONE) {
+        if (board.squares[square].piece.PieceType != ChessPieceType::NONE) {
             count++;
         }
     }

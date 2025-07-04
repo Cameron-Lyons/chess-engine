@@ -28,7 +28,7 @@ int main() {
     int e2Pos = 12;
     std::cout << "Position e2 (" << e2Pos << "): row=" << e2Pos/8 << ", col=" << e2Pos%8 << "\n";
     
-    const Piece& e2Pawn = testBoard.squares[e2Pos].Piece;
+    const Piece& e2Pawn = testBoard.squares[e2Pos].piece;
     std::cout << "Piece at e2: Type=" << to_string(e2Pawn.PieceType) << ", Color=" << to_string(e2Pawn.PieceColor) << "\n";
     
     std::vector<std::pair<int, int>> allMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
@@ -36,7 +36,7 @@ int main() {
     std::cout << "\nPawn moves found:\n";
     int pawnMoveCount = 0;
     for (const auto& move : allMoves) {
-        const Piece& piece = testBoard.squares[move.first].Piece;
+        const Piece& piece = testBoard.squares[move.first].piece;
         if (piece.PieceType == ChessPieceType::PAWN) {
             int fromRow = move.first / 8;
             int fromCol = move.first % 8;
@@ -63,8 +63,8 @@ int main() {
     std::cout << "\n=== Testing Pawn Promotion ===\n";
     testBoard.InitializeFromFEN("rnbqkb1r/ppppp2p/5n2/5Pp1/8/8/PPPPPP1P/RNBQKBNR w KQkq g6 0 4");
     
-    testBoard.squares[53].Piece = Piece(ChessPieceColor::WHITE, ChessPieceType::PAWN); 
-    testBoard.squares[61].Piece = Piece(); 
+    testBoard.squares[53].piece = Piece(ChessPieceColor::WHITE, ChessPieceType::PAWN); 
+    testBoard.squares[61].piece = Piece(); 
     
     std::vector<std::pair<int, int>> promotionMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
     

@@ -17,7 +17,7 @@ void Engine(){
 
 void RegisterPiece(int col, int row, Piece piece){
     int position = col + row*8;
-    ChessBoard.squares[position].Piece = piece;
+    ChessBoard.squares[position].piece = piece;
 }
 
 bool MovePiece(int srcCol, int srcRow,
@@ -29,7 +29,7 @@ bool MovePiece(int srcCol, int srcRow,
         return false;
     }
 
-    Piece piece = ChessBoard.squares[src].Piece;
+    Piece piece = ChessBoard.squares[src].piece;
     
     if (piece.PieceType == ChessPieceType::NONE) {
         return false;
@@ -50,7 +50,7 @@ bool MovePiece(int srcCol, int srcRow,
     ChessBoard.movePiece(src, dest);
     
     if (promotePawn) {
-        ChessBoard.squares[dest].Piece.PieceType = ChessPieceType::QUEEN;
+        ChessBoard.squares[dest].piece.PieceType = ChessPieceType::QUEEN;
         ChessBoard.updateBitboards();
     }
     
@@ -104,7 +104,7 @@ bool MovePiece(int srcCol, int srcRow, int destCol, int destRow, ChessPieceType 
         return false;
     }
 
-    Piece piece = ChessBoard.squares[src].Piece;
+    Piece piece = ChessBoard.squares[src].piece;
     
     if (piece.PieceType == ChessPieceType::NONE) {
         return false;
@@ -127,9 +127,9 @@ bool MovePiece(int srcCol, int srcRow, int destCol, int destRow, ChessPieceType 
     if (promotePawn) {
         if (promotionPiece == ChessPieceType::QUEEN || promotionPiece == ChessPieceType::ROOK ||
             promotionPiece == ChessPieceType::BISHOP || promotionPiece == ChessPieceType::KNIGHT) {
-            ChessBoard.squares[dest].Piece.PieceType = promotionPiece;
+            ChessBoard.squares[dest].piece.PieceType = promotionPiece;
         } else {
-            ChessBoard.squares[dest].Piece.PieceType = ChessPieceType::QUEEN;
+            ChessBoard.squares[dest].piece.PieceType = ChessPieceType::QUEEN;
         }
         ChessBoard.updateBitboards();
         

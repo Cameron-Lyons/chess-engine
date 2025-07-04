@@ -10,7 +10,7 @@ int WhiteKingPosition = 0;
 bool IsKingInCheck(const Board& board, ChessPieceColor color) {
     int kingSq = -1;
     for (int i = 0; i < 64; i++) {
-        if (board.squares[i].Piece.PieceType == ChessPieceType::KING && board.squares[i].Piece.PieceColor == color) {
+        if (board.squares[i].piece.PieceType == ChessPieceType::KING && board.squares[i].piece.PieceColor == color) {
             kingSq = i;
             break;
         }
@@ -45,8 +45,8 @@ bool IsKingInCheck(const Board& board, ChessPieceColor color) {
 }
 
 bool IsMoveLegal(Board& board, int srcPos, int destPos) {
-    Piece& piece = board.squares[srcPos].Piece;
-    Piece& destPiece = board.squares[destPos].Piece;
+    Piece& piece = board.squares[srcPos].piece;
+    Piece& destPiece = board.squares[destPos].piece;
 
     if (destPiece.PieceType != ChessPieceType::NONE && destPiece.PieceColor == piece.PieceColor) {
         return false;
@@ -97,7 +97,7 @@ bool IsMoveLegal(Board& board, int srcPos, int destPos) {
 
 void addCastlingMovesBitboard(Board& board, ChessPieceColor color) {
     int kingStart = (color == ChessPieceColor::WHITE) ? 4 : 60;
-    Piece& king = board.squares[kingStart].Piece;
+    Piece& king = board.squares[kingStart].piece;
     if (king.PieceType != ChessPieceType::KING || king.moved) return;
 
     Bitboard occ = board.allPieces;
@@ -358,13 +358,13 @@ void GenValidMoves(Board& board) {
     }
 
     for (int i = 0; i < 64; i++) {
-        board.squares[i].Piece.ValidMoves.clear();
+        board.squares[i].piece.ValidMoves.clear();
     }
 
     for (int i = 0; i < 64; i++) {
         Square& square = board.squares[i];
-        if (square.Piece.PieceType == ChessPieceType::KING) {
-            if (square.Piece.PieceColor == ChessPieceColor::WHITE) {
+        if (square.piece.PieceType == ChessPieceType::KING) {
+            if (square.piece.PieceColor == ChessPieceColor::WHITE) {
                 WhiteKingPosition = i;
             } else {
                 BlackKingPosition = i;
@@ -377,7 +377,7 @@ void GenValidMoves(Board& board) {
     for (const auto& move : moves) {
         int src = move.first;
         int dest = move.second;
-        board.squares[src].Piece.ValidMoves.push_back(dest);
+        board.squares[src].piece.ValidMoves.push_back(dest);
     }
 
     addCastlingMovesBitboard(board, board.turn);

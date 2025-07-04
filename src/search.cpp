@@ -155,7 +155,7 @@ int pieceToZobristIndex(const Piece& p) {
 uint64_t ComputeZobrist(const Board& board) {
     uint64_t h = 0;
     for (int sq = 0; sq < 64; ++sq) {
-        int idx = pieceToZobristIndex(board.squares[sq].Piece);
+        int idx = pieceToZobristIndex(board.squares[sq].piece);
         if (idx >= 0) h ^= ZobristTable[sq][idx];
     }
     if (board.turn == ChessPieceColor::BLACK) h ^= ZobristBlackToMove;
@@ -163,14 +163,14 @@ uint64_t ComputeZobrist(const Board& board) {
 }
 
 int getMVVLVA_Score(const Board& board, int srcPos, int destPos) {
-    const Piece& attacker = board.squares[srcPos].Piece;
-    const Piece& victim = board.squares[destPos].Piece;
+    const Piece& attacker = board.squares[srcPos].piece;
+    const Piece& victim = board.squares[destPos].piece;
     if (victim.PieceType == ChessPieceType::NONE) return 0;
     return victim.PieceValue * 10 - attacker.PieceValue;
 }
 
 bool isCapture(const Board& board, int /* srcPos */, int destPos) {
-    return board.squares[destPos].Piece.PieceType != ChessPieceType::NONE;
+    return board.squares[destPos].piece.PieceType != ChessPieceType::NONE;
 }
 
 bool givesCheck(const Board& board, int srcPos, int destPos) {
@@ -211,9 +211,9 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
         int srcPos = move.first;
         int destPos = move.second;
         
-        ChessPieceType movingPiece = board.squares[srcPos].Piece.PieceType;
-        ChessPieceType targetPiece = board.squares[destPos].Piece.PieceType;
-        ChessPieceColor movingColor = board.squares[srcPos].Piece.PieceColor;
+        ChessPieceType movingPiece = board.squares[srcPos].piece.PieceType;
+        ChessPieceType targetPiece = board.squares[destPos].piece.PieceType;
+        ChessPieceColor movingColor = board.squares[srcPos].piece.PieceColor;
         
         // **PRIORITY 1: Hash moves (best move from transposition table)**
         if (hashMove.first != -1 && hashMove.second != -1 && 
@@ -281,7 +281,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
             ChessPieceColor enemyColor = (movingColor == ChessPieceColor::WHITE) ? 
                                         ChessPieceColor::BLACK : ChessPieceColor::WHITE;
             for (int i = 0; i < 64; i++) {
-                const Piece& defenderPiece = board.squares[i].Piece;
+                const Piece& defenderPiece = board.squares[i].piece;
                 if (defenderPiece.PieceColor == enemyColor && 
                     canPieceAttackSquare(board, i, destPos)) {
                     targetIsDefended = true;
@@ -325,7 +325,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
                 int attackerCount = 0;
                 
                 for (int i = 0; i < 64; i++) {
-                    const Piece& enemyPiece = board.squares[i].Piece;
+                    const Piece& enemyPiece = board.squares[i].piece;
                     if (enemyPiece.PieceType == ChessPieceType::NONE || 
                         enemyPiece.PieceColor != enemyColor) continue;
                     
@@ -380,7 +380,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
             // Check if the piece being moved is currently under attack
             bool pieceUnderAttack = false;
             for (int i = 0; i < 64; i++) {
-                const Piece& enemyPiece = board.squares[i].Piece;
+                const Piece& enemyPiece = board.squares[i].piece;
                 if (enemyPiece.PieceType == ChessPieceType::NONE || enemyPiece.PieceColor != enemyColor) continue;
                 
                 if (canPieceAttackSquare(board, i, srcPos)) {
@@ -400,7 +400,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
                 // Bonus if moving to a safe square (not attacked)
                 bool destSquareSafe = true;
                 for (int i = 0; i < 64; i++) {
-                    const Piece& enemyPiece = board.squares[i].Piece;
+                    const Piece& enemyPiece = board.squares[i].piece;
                     if (enemyPiece.PieceType == ChessPieceType::NONE || enemyPiece.PieceColor != enemyColor) continue;
                     
                     if (canPieceAttackSquare(board, i, destPos)) {
@@ -437,8 +437,8 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
             
             // Simulate piece on destination and count mobility
             Board testBoard = board;
-            testBoard.squares[destPos].Piece = testBoard.squares[srcPos].Piece;
-            testBoard.squares[srcPos].Piece.PieceType = ChessPieceType::NONE;
+            testBoard.squares[destPos].piece = testBoard.squares[srcPos].piece;
+            testBoard.squares[srcPos].piece.PieceType = ChessPieceType::NONE;
             
             for (int testSquare = 0; testSquare < 64; testSquare++) {
                 if (canPieceAttackSquare(testBoard, destPos, testSquare)) {
@@ -479,7 +479,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
                     // Count supporting pieces
                     int supportCount = 0;
                     for (int i = 0; i < 64; i++) {
-                        const Piece& friendlyPiece = board.squares[i].Piece;
+                        const Piece& friendlyPiece = board.squares[i].piece;
                         if (friendlyPiece.PieceType == ChessPieceType::NONE || 
                             friendlyPiece.PieceColor != movingColor || 
                             i == srcPos || 
@@ -504,7 +504,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
                 int attackerCount = 0;
                 
                 for (int i = 0; i < 64; i++) {
-                    const Piece& enemyPiece = board.squares[i].Piece;
+                    const Piece& enemyPiece = board.squares[i].piece;
                     if (enemyPiece.PieceType == ChessPieceType::NONE || 
                         enemyPiece.PieceColor != enemyColor) continue;
                     
@@ -525,7 +525,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
                     // Count developed pieces (not on starting squares)
                     int developedPieces = 0;
                     for (int i = 0; i < 64; i++) {
-                        const Piece& piece = board.squares[i].Piece;
+                        const Piece& piece = board.squares[i].piece;
                         if (piece.PieceColor == movingColor && 
                             (piece.PieceType == ChessPieceType::KNIGHT || 
                              piece.PieceType == ChessPieceType::BISHOP)) {
@@ -559,7 +559,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vecto
                 ChessPieceColor enemyColor = (movingColor == ChessPieceColor::WHITE) ? 
                                             ChessPieceColor::BLACK : ChessPieceColor::WHITE;
                 for (int i = 0; i < 64; i++) {
-                    const Piece& enemyPiece = board.squares[i].Piece;
+                    const Piece& enemyPiece = board.squares[i].piece;
                     if (enemyPiece.PieceColor == enemyColor && 
                         canPieceAttackSquare(testBoard, destPos, i)) {
                         attackedPieces++;
@@ -655,7 +655,7 @@ std::vector<std::pair<int, int>> GetQuietMoves(Board& board, ChessPieceColor col
             continue;
         }
         
-        const Piece& piece = board.squares[srcPos].Piece;
+        const Piece& piece = board.squares[srcPos].piece;
         if (piece.PieceType == ChessPieceType::PAWN) {
             int destRow = destPos / 8;
             if ((piece.PieceColor == ChessPieceColor::WHITE && destRow == 7) ||
@@ -728,8 +728,8 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
         bool isCapt = isCapture(board, move.first, move.second);
         
         if (isCapt) {
-            int victimValue = getPieceValue(board.squares[move.second].Piece.PieceType);
-            int attackerValue = getPieceValue(board.squares[move.first].Piece.PieceType);
+            int victimValue = getPieceValue(board.squares[move.second].piece.PieceType);
+            int attackerValue = getPieceValue(board.squares[move.first].piece.PieceType);
             
             // Basic MVV-LVA scoring
             score = victimValue * 100 - attackerValue;
@@ -824,7 +824,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         // Extend if there are hanging pieces (potential tactics)
         bool hasHangingPieces = false;
         for (int i = 0; i < 64; i++) {
-            const Piece& piece = board.squares[i].Piece;
+            const Piece& piece = board.squares[i].piece;
             if (piece.PieceType == ChessPieceType::NONE) continue;
             if (piece.PieceType == ChessPieceType::PAWN || piece.PieceType == ChessPieceType::KING) continue;
             
@@ -834,7 +834,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             
             bool isAttacked = false;
             for (int j = 0; j < 64; j++) {
-                const Piece& enemyPiece = board.squares[j].Piece;
+                const Piece& enemyPiece = board.squares[j].piece;
                 if (enemyPiece.PieceType == ChessPieceType::NONE || 
                     enemyPiece.PieceColor != enemyColor) continue;
                     
@@ -1249,12 +1249,12 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
         } else {
             // Quick check for hanging pieces
             for (int i = 0; i < 64 && !isTactical; i++) {
-                const Piece& piece = board.squares[i].Piece;
+                const Piece& piece = board.squares[i].piece;
                 if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::PAWN) {
                     ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? 
                                                 ChessPieceColor::BLACK : ChessPieceColor::WHITE;
                     for (int j = 0; j < 64; j++) {
-                        const Piece& enemyPiece = board.squares[j].Piece;
+                        const Piece& enemyPiece = board.squares[j].piece;
                         if (enemyPiece.PieceColor == enemyColor && canPieceAttackSquare(board, j, i)) {
                             isTactical = true;
                             break;
@@ -1413,8 +1413,8 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
 // a direct simulation approach with proper piece value tracking.
 
 int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
-    const Piece& victim = board.squares[toSquare].Piece;
-    const Piece& attacker = board.squares[fromSquare].Piece;
+    const Piece& victim = board.squares[toSquare].piece;
+    const Piece& attacker = board.squares[fromSquare].piece;
     
     // No capture = no gain
     if (victim.PieceType == ChessPieceType::NONE) {
@@ -1429,7 +1429,7 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
     // Check if target square is defended
     bool isDefended = false;
     for (int i = 0; i < 64; i++) {
-        const Piece& defender = board.squares[i].Piece;
+        const Piece& defender = board.squares[i].piece;
         if (i != toSquare && // Don't count the victim as defending itself
             defender.PieceColor == defenderColor && 
             defender.PieceType != ChessPieceType::NONE &&
@@ -1457,7 +1457,7 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
     
     // Find all other attackers and defenders
     for (int i = 0; i < 64; i++) {
-        const Piece& piece = board.squares[i].Piece;
+        const Piece& piece = board.squares[i].piece;
         if (piece.PieceType == ChessPieceType::NONE || i == fromSquare) continue;
         
         if (canPieceAttackSquare(board, i, toSquare)) {
@@ -1554,7 +1554,7 @@ int getSmallestAttacker(const Board& board, int targetSquare, ChessPieceColor co
     int smallestValue = 10000; // Higher than any piece value
     
     for (int i = 0; i < 64; i++) {
-        const Piece& piece = board.squares[i].Piece;
+        const Piece& piece = board.squares[i].piece;
         if (piece.PieceType == ChessPieceType::NONE || piece.PieceColor != color) {
             continue;
         }
@@ -1580,15 +1580,15 @@ int staticExchangeEval(const Board& board, int fromSquare, int toSquare);
 // Helper function implementations
 bool isDiscoveredCheck(const Board& board, int from, int /* to */) {
     // Simplified check - assume any non-direct checking piece might be a discovered check
-    ChessPieceType movingPiece = board.squares[from].Piece.PieceType;
+    ChessPieceType movingPiece = board.squares[from].piece.PieceType;
     return (movingPiece != ChessPieceType::QUEEN && 
             movingPiece != ChessPieceType::ROOK && 
             movingPiece != ChessPieceType::BISHOP);
 }
 
 bool isPromotion(const Board& board, int from, int to) {
-    ChessPieceType piece = board.squares[from].Piece.PieceType;
-    ChessPieceColor color = board.squares[from].Piece.PieceColor;
+    ChessPieceType piece = board.squares[from].piece.PieceType;
+    ChessPieceColor color = board.squares[from].piece.PieceColor;
     
     if (piece != ChessPieceType::PAWN) return false;
     
@@ -1598,7 +1598,7 @@ bool isPromotion(const Board& board, int from, int to) {
 }
 
 bool isCastling(const Board& board, int from, int to) {
-    ChessPieceType piece = board.squares[from].Piece.PieceType;
+    ChessPieceType piece = board.squares[from].piece.PieceType;
     if (piece != ChessPieceType::KING) return false;
     
     return std::abs(to - from) == 2;

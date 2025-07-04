@@ -8,7 +8,7 @@ void printBoard(const Board& board) {
         std::cout << row + 1 << " ";
         for (int col = 0; col < 8; col++) {
             int pos = row * 8 + col;
-            Piece piece = board.squares[pos].Piece;
+            Piece piece = board.squares[pos].piece;
             char symbol = '.';
             if (piece.PieceType != ChessPieceType::NONE) {
                 switch (piece.PieceType) {
@@ -42,7 +42,7 @@ int main() {
     
     std::cout << "\nDebug: Checking piece placement...\n";
     for (int i = 0; i < 64; i++) {
-        const Piece& piece = testBoard.squares[i].Piece;
+        const Piece& piece = testBoard.squares[i].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
             int row = i / 8;
             int col = i % 8;

@@ -75,7 +75,7 @@ std::vector<EnhancedMoveOrdering::MoveScore> EnhancedMoveOrdering::scoreMoves(
             score = 10000;
         }
         // Captures get high priority
-        else if (board.squares[move.second].Piece.PieceType != ChessPieceType::NONE) {
+        else if (board.squares[move.second].piece.PieceType != ChessPieceType::NONE) {
             score = getSEEScore(board, move);
         }
         // Killer moves get medium priority
@@ -95,8 +95,8 @@ std::vector<EnhancedMoveOrdering::MoveScore> EnhancedMoveOrdering::scoreMoves(
 
 int EnhancedMoveOrdering::getSEEScore(const Board& board, const std::pair<int, int>& move) {
     // Stub implementation - return simple capture score
-    const Piece& attacker = board.squares[move.first].Piece;
-    const Piece& victim = board.squares[move.second].Piece;
+    const Piece& attacker = board.squares[move.first].piece;
+    const Piece& victim = board.squares[move.second].piece;
     
     if (victim.PieceType == ChessPieceType::NONE) return 0;
     

@@ -41,7 +41,7 @@ void printBoard(const Board& board) {
         std::cout << (row + 1) << " ";
         for (int col = 0; col < 8; ++col) {
             int pos = row * 8 + col;
-            const Piece& piece = board.squares[pos].Piece;
+            const Piece& piece = board.squares[pos].piece;
             if (piece.PieceType == ChessPieceType::NONE) {
                 std::cout << ". ";
             } else {
@@ -75,8 +75,8 @@ int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
     
     int totalMaterial = 0;
     for (int i = 0; i < 64; i++) {
-        if (board.squares[i].Piece.PieceType != ChessPieceType::NONE) {
-            totalMaterial += board.squares[i].Piece.PieceValue;
+        if (board.squares[i].piece.PieceType != ChessPieceType::NONE) {
+            totalMaterial += board.squares[i].piece.PieceValue;
         }
     }
     
@@ -145,13 +145,13 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
     
     bool hasHangingPieces = false;
     for (int i = 0; i < 64; i++) {
-        const Piece& piece = board.squares[i].Piece;
+        const Piece& piece = board.squares[i].piece;
         if (piece.PieceType == ChessPieceType::NONE || piece.PieceType == ChessPieceType::PAWN) continue;
         
         ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? 
                                     ChessPieceColor::BLACK : ChessPieceColor::WHITE;
         for (int j = 0; j < 64; j++) {
-            const Piece& enemy = board.squares[j].Piece;
+            const Piece& enemy = board.squares[j].piece;
             if (enemy.PieceColor == enemyColor && canPieceAttackSquare(board, j, i)) {
                 hasHangingPieces = true;
                 break;
@@ -235,7 +235,7 @@ GameState checkGameState(Board& board) {
     
     std::vector<ChessPieceType> whitePieces, blackPieces;
     for (int i = 0; i < 64; i++) {
-        const Piece& piece = board.squares[i].Piece;
+        const Piece& piece = board.squares[i].piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
                 whitePieces.push_back(piece.PieceType);
@@ -392,7 +392,7 @@ int main(int argc, char* argv[]) {
                 int destRow = to / 8;
                 
                 ChessPieceType computerPromotionPiece = ChessPieceType::QUEEN;
-                const Piece& movingPiece = ChessBoard.squares[from].Piece;
+                const Piece& movingPiece = ChessBoard.squares[from].piece;
                 if (movingPiece.PieceType == ChessPieceType::PAWN && (destRow == 0 || destRow == 7)) {
                     computerPromotionPiece = ChessPieceType::QUEEN;
                 }

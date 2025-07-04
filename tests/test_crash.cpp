@@ -14,7 +14,7 @@ int main() {
         std::cout << "FEN initialization completed.\n";
         
         std::cout << "Step 3: Testing basic board operations...\n";
-        if (testBoard.squares[0].Piece.PieceType == ChessPieceType::ROOK) {
+        if (testBoard.squares[0].piece.PieceType == ChessPieceType::ROOK) {
             std::cout << "Board setup correct - rook found at a1.\n";
         } else {
             std::cout << "Warning: Board setup may be incorrect.\n";

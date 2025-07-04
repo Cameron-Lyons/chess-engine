@@ -28,7 +28,7 @@ std::vector<float> NeuralNetworkEvaluator::encodePosition(const Board& board) {
     
     // Simple encoding: one-hot encoding for each piece on each square
     for (int square = 0; square < 64; ++square) {
-        const Piece& piece = board.squares[square].Piece;
+        const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
             int pieceIndex = static_cast<int>(piece.PieceType) - 1;
             if (piece.PieceColor == ChessPieceColor::BLACK) {
@@ -87,7 +87,7 @@ PositionFeatures FeatureExtractor::extractFeatures(const Board& board) {
     
     // Count pieces
     for (int square = 0; square < 64; ++square) {
-        const Piece& piece = board.squares[square].Piece;
+        const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
             int color = (piece.PieceColor == ChessPieceColor::WHITE) ? 0 : 1;
             int pieceType = static_cast<int>(piece.PieceType) - 1;
