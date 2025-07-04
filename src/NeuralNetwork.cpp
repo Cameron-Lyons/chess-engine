@@ -19,6 +19,7 @@ NeuralNetworkEvaluator::NeuralNetworkEvaluator(const NetworkConfig& config)
 NeuralNetworkEvaluator::~NeuralNetworkEvaluator() = default;
 
 float NeuralNetworkEvaluator::evaluatePosition(const Board& board) {
+    (void)board; // Suppress unused parameter warning
     // Stub implementation - return traditional evaluation for now
     return static_cast<float>(0); // Placeholder return value
 }
@@ -42,23 +43,28 @@ std::vector<float> NeuralNetworkEvaluator::encodePosition(const Board& board) {
 }
 
 void NeuralNetworkEvaluator::train(const std::vector<std::pair<Board, float>>& trainingData) {
+    (void)trainingData; // Suppress unused parameter warning
     // Stub implementation
 }
 
 void NeuralNetworkEvaluator::saveModel(const std::string& path) {
+    (void)path; // Suppress unused parameter warning
     // Stub implementation
 }
 
 void NeuralNetworkEvaluator::loadModel(const std::string& path) {
+    (void)path; // Suppress unused parameter warning
     // Stub implementation
 }
 
 float NeuralNetworkEvaluator::hybridEvaluate(const Board& board, float nnWeight) {
+    (void)nnWeight; // Suppress unused parameter warning
     // Stub implementation - return traditional evaluation
     return static_cast<float>(evaluatePosition(board));
 }
 
 std::vector<float> NeuralNetworkEvaluator::pieceToVector(const Piece& piece, int square) {
+    (void)square; // Suppress unused parameter warning
     std::vector<float> vec(12, 0.0f);
     if (piece.PieceType != ChessPieceType::NONE) {
         int index = static_cast<int>(piece.PieceType) - 1;
@@ -71,6 +77,7 @@ std::vector<float> NeuralNetworkEvaluator::pieceToVector(const Piece& piece, int
 }
 
 void NeuralNetworkEvaluator::updateWeights(const std::vector<float>& gradients) {
+    (void)gradients; // Suppress unused parameter warning
     // Stub implementation
 }
 
@@ -146,21 +153,28 @@ std::vector<float> FeatureExtractor::featuresToVector(const PositionFeatures& fe
 }
 
 int FeatureExtractor::calculateMobility(const Board& board, ChessPieceColor color) {
+    (void)board;  // Suppress unused parameter warning
+    (void)color;  // Suppress unused parameter warning
     // Stub implementation
     return 0;
 }
 
 int FeatureExtractor::calculateKingSafety(const Board& board, ChessPieceColor color) {
+    (void)board;  // Suppress unused parameter warning
+    (void)color;  // Suppress unused parameter warning
     // Stub implementation
     return 0;
 }
 
 int FeatureExtractor::calculatePawnStructure(const Board& board, ChessPieceColor color) {
+    (void)board;  // Suppress unused parameter warning
+    (void)color;  // Suppress unused parameter warning
     // Stub implementation
     return 0;
 }
 
 float FeatureExtractor::calculateGamePhase(const Board& board) {
+    (void)board;  // Suppress unused parameter warning
     // Stub implementation
     return 0.5f;
 } 

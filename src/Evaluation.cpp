@@ -676,7 +676,8 @@ int evaluatePosition(const Board& board) {
         int newPositionalValue = interpolatePhase(newMgPST, newEgPST, gamePhase);
         
         // Blend old and new (70% new, 30% old for gradual transition)
-        int blendedPositionalValue = (newPositionalValue * 7 + oldPositionalValue * 3) / 10;
+        // Note: blendedPositionalValue calculation kept for future use
+        (void)((newPositionalValue * 7 + oldPositionalValue * 3) / 10);
         
         if (piece.PieceColor == ChessPieceColor::WHITE) {
             mgScore += materialValue + newMgPST;

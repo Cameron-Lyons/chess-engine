@@ -322,16 +322,19 @@ void UCIEngine::handleQuit() {
 }
 
 void UCIEngine::handleDebug(const std::string& command) {
+    (void)command; // Suppress unused parameter warning
     // Handle debug command
     std::cout << "info string Debug mode: " << (options.debug ? "enabled" : "disabled") << std::endl;
 }
 
 void UCIEngine::handleRegister(const std::string& command) {
+    (void)command; // Suppress unused parameter warning
     // Handle register command
     std::cout << "info string Registration not required" << std::endl;
 }
 
 void UCIEngine::handleInfo(const std::string& command) {
+    (void)command; // Suppress unused parameter warning
     // Handle info command
     std::cout << "info string Info command received" << std::endl;
 }
@@ -414,6 +417,7 @@ std::pair<int, int> UCIEngine::uciToMove(const std::string& uciMove) {
 }
 
 std::string UCIEngine::boardToFEN(const Board& board) {
+    (void)board; // Suppress unused parameter warning
     // Simple FEN generation - this would need to be implemented properly
     return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 }
@@ -435,6 +439,8 @@ void UCIEngine::parseMoves(const std::string& moves, Board& board) {
 }
 
 std::vector<std::pair<int, int>> UCIEngine::getPrincipalVariation(const Board& board, int depth) {
+    (void)board; // Suppress unused parameter warning
+    (void)depth; // Suppress unused parameter warning
     // This would need to be implemented to return the principal variation
     return {};
 }
@@ -581,6 +587,8 @@ bool UCINotation::isValidUCIMove(const std::string& uciMove) {
 }
 
 std::string UCINotation::getMoveType(const Board& board, const std::pair<int, int>& move) {
+    (void)board; // Suppress unused parameter warning
+    (void)move;  // Suppress unused parameter warning
     // This would need to be implemented to determine move type
     return "normal";
 }
@@ -603,11 +611,13 @@ void UCIPosition::parseMoves(const std::string& moves, Board& board) {
 }
 
 std::string UCIPosition::generateFEN(const Board& board) {
+    (void)board; // Suppress unused parameter warning
     // This would need to be implemented properly
     return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 }
 
 bool UCIPosition::isValidFEN(const std::string& fen) {
+    (void)fen; // Suppress unused parameter warning
     // This would need to be implemented to validate FEN
     return true;
 }
@@ -632,6 +642,7 @@ std::string UCISearchInfo::formatInfo(int depth, int seldepth, int time, int nod
 }
 
 std::string UCISearchInfo::formatScore(int score, bool isMate) {
+    (void)isMate; // Suppress unused parameter warning
     std::ostringstream oss;
     oss << "score ";
     if (score > 30000) {

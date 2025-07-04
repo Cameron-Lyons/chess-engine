@@ -182,6 +182,8 @@ namespace EvaluationParams {
     }
     
     void logEvaluationComponents(const char* component, int value) {
+        (void)component; // Suppress unused parameter warning
+        (void)value;     // Suppress unused parameter warning
         #ifdef EVALUATION_DEBUG
         std::cout << component << ": " << value << std::endl;
         #endif

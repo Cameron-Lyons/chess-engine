@@ -2,57 +2,101 @@
 
 // Stub implementation of AdvancedSearch
 bool AdvancedSearch::futilityPruning(const Board& board, int depth, int alpha, int beta, int staticEval) {
-    // Stub implementation - return false for now
+    (void)board;      // Suppress unused parameter warning
+    (void)depth;      // Suppress unused parameter warning
+    (void)alpha;      // Suppress unused parameter warning
+    (void)beta;       // Suppress unused parameter warning
+    (void)staticEval; // Suppress unused parameter warning
+    // Stub implementation
     return false;
 }
 
 bool AdvancedSearch::staticNullMovePruning(const Board& board, int depth, int alpha, int beta, int staticEval) {
-    // Stub implementation - return false for now
+    (void)board;      // Suppress unused parameter warning
+    (void)depth;      // Suppress unused parameter warning
+    (void)alpha;      // Suppress unused parameter warning
+    (void)beta;       // Suppress unused parameter warning
+    (void)staticEval; // Suppress unused parameter warning
+    // Stub implementation
     return false;
 }
 
 bool AdvancedSearch::multiCutPruning(const Board& board, int depth, int alpha, int beta, int r) {
-    // Stub implementation - return false for now
+    (void)board;  // Suppress unused parameter warning
+    (void)depth;  // Suppress unused parameter warning
+    (void)alpha;  // Suppress unused parameter warning
+    (void)beta;   // Suppress unused parameter warning
+    (void)r;      // Suppress unused parameter warning
+    // Stub implementation
     return false;
 }
 
 std::pair<int, int> AdvancedSearch::internalIterativeDeepening(const Board& board, int depth, int alpha, int beta) {
-    // Stub implementation - return invalid move
+    (void)board;  // Suppress unused parameter warning
+    (void)depth;  // Suppress unused parameter warning
+    (void)alpha;  // Suppress unused parameter warning
+    (void)beta;   // Suppress unused parameter warning
+    // Stub implementation
     return {-1, -1};
 }
 
 bool AdvancedSearch::singularExtension(const Board& board, int depth, const std::pair<int, int>& move, int alpha, int beta) {
-    // Stub implementation - return false for now
+    (void)board;  // Suppress unused parameter warning
+    (void)depth;  // Suppress unused parameter warning
+    (void)move;   // Suppress unused parameter warning
+    (void)alpha;  // Suppress unused parameter warning
+    (void)beta;   // Suppress unused parameter warning
+    // Stub implementation
     return false;
 }
 
 bool AdvancedSearch::historyPruning(const Board& board, int depth, const std::pair<int, int>& move, const ThreadSafeHistory& history) {
-    // Stub implementation - return false for now
+    (void)board;   // Suppress unused parameter warning
+    (void)depth;   // Suppress unused parameter warning
+    (void)move;    // Suppress unused parameter warning
+    (void)history; // Suppress unused parameter warning
+    // Stub implementation
     return false;
 }
 
 bool AdvancedSearch::lateMovePruning(const Board& board, int depth, int moveNumber, bool inCheck) {
-    // Stub implementation - return false for now
+    (void)board;     // Suppress unused parameter warning
+    (void)depth;     // Suppress unused parameter warning
+    (void)moveNumber; // Suppress unused parameter warning
+    (void)inCheck;   // Suppress unused parameter warning
+    // Stub implementation
     return false;
 }
 
 bool AdvancedSearch::recaptureExtension(const Board& board, const std::pair<int, int>& move, int depth) {
-    // Stub implementation - return false for now
+    (void)board;  // Suppress unused parameter warning
+    (void)move;   // Suppress unused parameter warning
+    (void)depth;  // Suppress unused parameter warning
+    // Stub implementation
     return false;
 }
 
 bool AdvancedSearch::checkExtension(const Board& board, const std::pair<int, int>& move, int depth) {
-    // Stub implementation - return false for now
+    (void)board;  // Suppress unused parameter warning
+    (void)move;   // Suppress unused parameter warning
+    (void)depth;  // Suppress unused parameter warning
+    // Stub implementation
     return false;
 }
 
 bool AdvancedSearch::pawnPushExtension(const Board& board, const std::pair<int, int>& move, int depth) {
-    // Stub implementation - return false for now
+    (void)board;  // Suppress unused parameter warning
+    (void)move;   // Suppress unused parameter warning
+    (void)depth;  // Suppress unused parameter warning
+    // Stub implementation
     return false;
 }
 
 bool AdvancedSearch::passedPawnExtension(const Board& board, const std::pair<int, int>& move, int depth) {
-    // Stub implementation - return false for now
+    (void)board;  // Suppress unused parameter warning
+    (void)move;   // Suppress unused parameter warning
+    (void)depth;  // Suppress unused parameter warning
+    // Stub implementation
     return false;
 }
 
@@ -104,16 +148,22 @@ int EnhancedMoveOrdering::getSEEScore(const Board& board, const std::pair<int, i
 }
 
 int EnhancedMoveOrdering::getThreatScore(const Board& board, const std::pair<int, int>& move) {
+    (void)board; // Suppress unused parameter warning
+    (void)move;  // Suppress unused parameter warning
     // Stub implementation
     return 0;
 }
 
 int EnhancedMoveOrdering::getMobilityScore(const Board& board, const std::pair<int, int>& move) {
+    (void)board; // Suppress unused parameter warning
+    (void)move;  // Suppress unused parameter warning
     // Stub implementation
     return 0;
 }
 
 int EnhancedMoveOrdering::getPositionalScore(const Board& board, const std::pair<int, int>& move) {
+    (void)board; // Suppress unused parameter warning
+    (void)move;  // Suppress unused parameter warning
     // Stub implementation
     return 0;
 }
@@ -124,6 +174,8 @@ TimeManager::TimeManager(const TimeControl& tc)
 }
 
 int TimeManager::allocateTime(const Board& board, int depth, int nodes, bool isInCheck) {
+    (void)board;    // Suppress unused parameter warning
+    (void)isInCheck; // Suppress unused parameter warning
     // Simple time allocation
     int baseTime = calculateBaseTime();
     int increment = calculateIncrement();
@@ -140,6 +192,8 @@ int TimeManager::allocateTime(const Board& board, int depth, int nodes, bool isI
 }
 
 bool TimeManager::shouldStop(int elapsedTime, int allocatedTime, int depth, int nodes) {
+    (void)depth;  // Suppress unused parameter warning
+    (void)nodes;  // Suppress unused parameter warning
     // Simple stopping condition
     return elapsedTime >= allocatedTime;
 }
@@ -162,6 +216,7 @@ int TimeManager::calculateIncrement() {
 }
 
 double TimeManager::getTimeFactor(int depth, int nodes) {
+    (void)nodes; // Suppress unused parameter warning
     // Simple factor based on depth
     return 1.0 + depth * 0.1;
 }
@@ -172,37 +227,47 @@ EnhancedOpeningBook::EnhancedOpeningBook(const std::string& bookPath)
 }
 
 std::vector<EnhancedOpeningBook::BookEntry> EnhancedOpeningBook::getBookMoves(const Board& board) {
+    (void)board; // Suppress unused parameter warning
     // Stub implementation - return empty vector
     return {};
 }
 
 std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool randomize) {
+    (void)board;     // Suppress unused parameter warning
+    (void)randomize; // Suppress unused parameter warning
     // Stub implementation - return invalid move
     return {-1, -1};
 }
 
 bool EnhancedOpeningBook::isInBook(const Board& board) {
+    (void)board; // Suppress unused parameter warning
     // Stub implementation - return false
     return false;
 }
 
 void EnhancedOpeningBook::addMove(const Board& board, const BookEntry& entry) {
+    (void)board; // Suppress unused parameter warning
+    (void)entry; // Suppress unused parameter warning
     // Stub implementation
 }
 
 void EnhancedOpeningBook::saveBook(const std::string& path) {
+    (void)path; // Suppress unused parameter warning
     // Stub implementation
 }
 
 void EnhancedOpeningBook::loadBook(const std::string& path) {
+    (void)path; // Suppress unused parameter warning
     // Stub implementation
 }
 
 std::string EnhancedOpeningBook::boardToKey(const Board& board) {
+    (void)board; // Suppress unused parameter warning
     // Stub implementation - return empty string
     return "";
 }
 
 void EnhancedOpeningBook::normalizeWeights(std::vector<BookEntry>& entries) {
+    (void)entries; // Suppress unused parameter warning
     // Stub implementation
 } 
