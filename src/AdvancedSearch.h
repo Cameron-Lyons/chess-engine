@@ -15,6 +15,12 @@ public:
     // Static null move pruning - skip moves when static eval is already good
     static bool staticNullMovePruning(const Board& board, int depth, int alpha, int beta, int staticEval);
     
+    // Null move pruning - skip moves when null move fails high
+    static bool nullMovePruning(const Board& board, int depth, int alpha, int beta);
+    
+    // Late move reduction - reduce search depth for late moves
+    static bool lateMoveReduction(const Board& board, int depth, int moveNumber, int alpha, int beta);
+    
     // Multi-cut pruning - use multiple null moves to detect zugzwang
     static bool multiCutPruning(const Board& board, int depth, int alpha, int beta, int r);
     
@@ -44,8 +50,7 @@ public:
 };
 
 // Enhanced move ordering for better alpha-beta efficiency
-class EnhancedMoveOrdering {
-public:
+namespace EnhancedMoveOrdering {
     struct MoveScore {
         std::pair<int, int> move;
         int score;
@@ -54,25 +59,25 @@ public:
     };
     
     // Score moves with multiple heuristics
-    static std::vector<MoveScore> scoreMoves(const Board& board, 
-                                           const std::vector<std::pair<int, int>>& moves,
-                                           const ThreadSafeHistory& history,
-                                           const KillerMoves& killers,
-                                           int ply,
-                                           const std::pair<int, int>& hashMove = {-1, -1});
+    std::vector<MoveScore> scoreMoves(const Board& board, 
+                                     const std::vector<std::pair<int, int>>& moves,
+                                     const ThreadSafeHistory& history,
+                                     const KillerMoves& killers,
+                                     int ply,
+                                     const std::pair<int, int>& hashMove = {-1, -1});
     
     // SEE (Static Exchange Evaluation) based move ordering
-    static int getSEEScore(const Board& board, const std::pair<int, int>& move);
+    int getSEEScore(const Board& board, const std::pair<int, int>& move);
     
     // Threat detection for move ordering
-    static int getThreatScore(const Board& board, const std::pair<int, int>& move);
+    int getThreatScore(const Board& board, const std::pair<int, int>& move);
     
     // Mobility-based move scoring
-    static int getMobilityScore(const Board& board, const std::pair<int, int>& move);
+    int getMobilityScore(const Board& board, const std::pair<int, int>& move);
     
     // Position-based move scoring
-    static int getPositionalScore(const Board& board, const std::pair<int, int>& move);
-};
+    int getPositionalScore(const Board& board, const std::pair<int, int>& move);
+}
 
 // Time management for tournament play
 class TimeManager {

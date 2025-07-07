@@ -417,9 +417,63 @@ std::pair<int, int> UCIEngine::uciToMove(const std::string& uciMove) {
 }
 
 std::string UCIEngine::boardToFEN(const Board& board) {
-    (void)board; // Suppress unused parameter warning
-    // Simple FEN generation - this would need to be implemented properly
-    return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    std::string fen;
+    
+    // Piece placement
+    for (int rank = 7; rank >= 0; rank--) {
+        int emptyCount = 0;
+        for (int file = 0; file < 8; file++) {
+            int square = rank * 8 + file;
+            const Piece& piece = board.squares[square].piece;
+            
+            if (piece.PieceType == ChessPieceType::NONE) {
+                emptyCount++;
+            } else {
+                if (emptyCount > 0) {
+                    fen += std::to_string(emptyCount);
+                    emptyCount = 0;
+                }
+                
+                char pieceChar;
+                switch (piece.PieceType) {
+                    case ChessPieceType::PAWN:   pieceChar = 'p'; break;
+                    case ChessPieceType::KNIGHT: pieceChar = 'n'; break;
+                    case ChessPieceType::BISHOP: pieceChar = 'b'; break;
+                    case ChessPieceType::ROOK:   pieceChar = 'r'; break;
+                    case ChessPieceType::QUEEN:  pieceChar = 'q'; break;
+                    case ChessPieceType::KING:   pieceChar = 'k'; break;
+                    default: pieceChar = '?'; break;
+                }
+                
+                if (piece.PieceColor == ChessPieceColor::WHITE) {
+                    pieceChar = std::toupper(pieceChar);
+                }
+                fen += pieceChar;
+            }
+        }
+        
+        if (emptyCount > 0) {
+            fen += std::to_string(emptyCount);
+        }
+        
+        if (rank > 0) {
+            fen += '/';
+        }
+    }
+    
+    // Active color
+    fen += (board.turn == ChessPieceColor::WHITE) ? " w " : " b ";
+    
+    // Castling availability (simplified - would need to track castling rights)
+    fen += "KQkq ";
+    
+    // En passant target square (simplified)
+    fen += "- ";
+    
+    // Halfmove clock and fullmove number (simplified)
+    fen += "0 1";
+    
+    return fen;
 }
 
 void UCIEngine::parseFEN(const std::string& fen, Board& board) {
@@ -439,10 +493,26 @@ void UCIEngine::parseMoves(const std::string& moves, Board& board) {
 }
 
 std::vector<std::pair<int, int>> UCIEngine::getPrincipalVariation(const Board& board, int depth) {
-    (void)board; // Suppress unused parameter warning
-    (void)depth; // Suppress unused parameter warning
-    // This would need to be implemented to return the principal variation
-    return {};
+    std::vector<std::pair<int, int>> pv;
+    Board tempBoard = board;
+    
+    // Extract PV from transposition table
+    for (int i = 0; i < depth; i++) {
+        uint64_t hash = ComputeZobrist(tempBoard);
+        TTEntry entry;
+        
+        if (TransTable.find(hash, entry) && entry.bestMove.first != -1) {
+            pv.push_back(entry.bestMove);
+            
+            // Make the move to continue PV extraction
+            tempBoard.movePiece(entry.bestMove.first, entry.bestMove.second);
+            tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+        } else {
+            break; // No more moves in PV
+        }
+    }
+    
+    return pv;
 }
 
 void UCIEngine::startSearch() {
@@ -587,9 +657,39 @@ bool UCINotation::isValidUCIMove(const std::string& uciMove) {
 }
 
 std::string UCINotation::getMoveType(const Board& board, const std::pair<int, int>& move) {
-    (void)board; // Suppress unused parameter warning
-    (void)move;  // Suppress unused parameter warning
-    // This would need to be implemented to determine move type
+    const Piece& piece = board.squares[move.first].piece;
+    const Piece& target = board.squares[move.second].piece;
+    
+    // Check for capture
+    if (target.PieceType != ChessPieceType::NONE) {
+        return "capture";
+    }
+    
+    // Check for castling
+    if (piece.PieceType == ChessPieceType::KING) {
+        int fileDiff = abs((move.second % 8) - (move.first % 8));
+        if (fileDiff == 2) {
+            return "castling";
+        }
+    }
+    
+    // Check for promotion (simplified - would need to check if pawn reaches last rank)
+    if (piece.PieceType == ChessPieceType::PAWN) {
+        int rank = move.second / 8;
+        if ((piece.PieceColor == ChessPieceColor::WHITE && rank == 7) ||
+            (piece.PieceColor == ChessPieceColor::BLACK && rank == 0)) {
+            return "promotion";
+        }
+    }
+    
+    // Check for en passant (simplified)
+    if (piece.PieceType == ChessPieceType::PAWN) {
+        int fileDiff = abs((move.second % 8) - (move.first % 8));
+        if (fileDiff == 1 && target.PieceType == ChessPieceType::NONE) {
+            return "enpassant";
+        }
+    }
+    
     return "normal";
 }
 
@@ -617,8 +717,68 @@ std::string UCIPosition::generateFEN(const Board& board) {
 }
 
 bool UCIPosition::isValidFEN(const std::string& fen) {
-    (void)fen; // Suppress unused parameter warning
-    // This would need to be implemented to validate FEN
+    if (fen.empty()) return false;
+    
+    std::istringstream iss(fen);
+    std::string token;
+    
+    // Check piece placement
+    if (!(iss >> token)) return false;
+    
+    int rank = 7, file = 0;
+    for (char c : token) {
+        if (c == '/') {
+            if (file != 8) return false; // Incomplete rank
+            rank--;
+            file = 0;
+            if (rank < 0) return false; // Too many ranks
+        } else if (isdigit(c)) {
+            int count = c - '0';
+            if (count == 0 || file + count > 8) return false;
+            file += count;
+        } else if (isalpha(c)) {
+            if (file >= 8) return false; // Too many pieces in rank
+            char piece = tolower(c);
+            if (piece != 'p' && piece != 'n' && piece != 'b' && 
+                piece != 'r' && piece != 'q' && piece != 'k') {
+                return false; // Invalid piece
+            }
+            file++;
+        } else {
+            return false; // Invalid character
+        }
+    }
+    
+    if (rank != 0 || file != 8) return false; // Incomplete board
+    
+    // Check active color
+    if (!(iss >> token)) return false;
+    if (token != "w" && token != "b") return false;
+    
+    // Check castling availability (simplified)
+    if (!(iss >> token)) return false;
+    for (char c : token) {
+        if (c != 'K' && c != 'Q' && c != 'k' && c != 'q' && c != '-') {
+            return false;
+        }
+    }
+    
+    // Check en passant square (simplified)
+    if (!(iss >> token)) return false;
+    if (token != "-") {
+        if (token.length() != 2) return false;
+        if (token[0] < 'a' || token[0] > 'h') return false;
+        if (token[1] != '3' && token[1] != '6') return false;
+    }
+    
+    // Check halfmove clock and fullmove number (simplified)
+    if (!(iss >> token)) return false;
+    if (!isdigit(token[0])) return false;
+    
+    if (iss >> token) {
+        if (!isdigit(token[0])) return false;
+    }
+    
     return true;
 }
 

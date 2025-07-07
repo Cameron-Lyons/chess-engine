@@ -2,23 +2,88 @@
 
 // Stub implementation of AdvancedSearch
 bool AdvancedSearch::futilityPruning(const Board& board, int depth, int alpha, int beta, int staticEval) {
-    (void)board;      // Suppress unused parameter warning
-    (void)depth;      // Suppress unused parameter warning
-    (void)alpha;      // Suppress unused parameter warning
-    (void)beta;       // Suppress unused parameter warning
-    (void)staticEval; // Suppress unused parameter warning
-    // Stub implementation
+    // Don't prune if in check or at root
+    if (isInCheck(board, board.turn) || depth == 0) {
+        return false;
+    }
+    
+    // Futility margin based on depth
+    int futilityMargin = 150 * depth;
+    
+    // If static evaluation is so bad that even a good move won't help
+    if (staticEval - futilityMargin >= beta) {
+        return true;
+    }
+    
+    // Delta pruning for captures
+    if (depth <= 3) {
+        int deltaMargin = 975 + 50 * depth; // Queen value + margin
+        if (staticEval + deltaMargin < alpha) {
+            return true;
+        }
+    }
+    
     return false;
 }
 
 bool AdvancedSearch::staticNullMovePruning(const Board& board, int depth, int alpha, int beta, int staticEval) {
-    (void)board;      // Suppress unused parameter warning
-    (void)depth;      // Suppress unused parameter warning
-    (void)alpha;      // Suppress unused parameter warning
-    (void)beta;       // Suppress unused parameter warning
-    (void)staticEval; // Suppress unused parameter warning
-    // Stub implementation
+    (void)alpha; // Suppress unused parameter warning
+    (void)beta;  // Suppress unused parameter warning
+    
+    // Don't prune if in check
+    if (isInCheck(board, board.turn)) {
+        return false;
+    }
+    
+    // Static null move pruning - assume not PV node for now
+    if (depth <= 4) {
+        int eval = staticEval - 900; // Rook value
+        if (eval >= beta) {
+            return true;
+        }
+    }
+    
     return false;
+}
+
+bool AdvancedSearch::nullMovePruning(const Board& board, int depth, int alpha, int beta) {
+    (void)alpha; // Suppress unused parameter warning
+    (void)beta;  // Suppress unused parameter warning
+    
+    // Don't prune if in check or if we have very few pieces
+    if (isInCheck(board, board.turn) || depth < 3) {
+        return false;
+    }
+    
+    // Check if we have enough material to make null move reasonable
+    int materialCount = 0;
+    for (int i = 0; i < 64; i++) {
+        const Piece& piece = board.squares[i].piece;
+        if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
+            materialCount++;
+        }
+    }
+    
+    if (materialCount < 3) {
+        return false; // Too little material for null move
+    }
+    
+    return true;
+}
+
+bool AdvancedSearch::lateMoveReduction(const Board& board, int depth, int moveNumber, int alpha, int beta) {
+    (void)alpha; // Suppress unused parameter warning
+    (void)beta;  // Suppress unused parameter warning
+    
+    // Don't reduce if in check, at root, or if move number is too low
+    if (isInCheck(board, board.turn) || depth < 3 || moveNumber < 4) {
+        return false;
+    }
+    
+    // Don't reduce if move gives check or is a capture
+    // (This would need to be checked for the specific move)
+    
+    return true;
 }
 
 bool AdvancedSearch::multiCutPruning(const Board& board, int depth, int alpha, int beta, int r) {
@@ -128,7 +193,7 @@ std::vector<EnhancedMoveOrdering::MoveScore> EnhancedMoveOrdering::scoreMoves(
         }
         // History moves get low priority
         else {
-            score = getHistoryScore(history, move.first, move.second);
+            score = EnhancedMoveOrdering::getHistoryScore(history, move.first, move.second);
         }
         
         scoredMoves.emplace_back(move, score);

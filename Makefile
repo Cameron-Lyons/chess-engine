@@ -1,12 +1,12 @@
 CXX = g++
-CXXFLAGS = -std=c++23 -Wall -Wextra -O2 -pthread
+CXXFLAGS = -std=c++23 -Wall -Wextra -O2 -pthread -DUSE_ENHANCED_EVALUATION
 LDFLAGS = -pthread
 TARGET = bin/chess_engine
 SRCDIR = src
 TESTDIR = tests
 BINDIR = bin
 
-SOURCES = $(SRCDIR)/main.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/EvaluationTuning.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/uci.cpp $(SRCDIR)/NeuralNetwork.cpp $(SRCDIR)/EndgameTablebase.cpp $(SRCDIR)/AdvancedSearch.cpp
+SOURCES = $(SRCDIR)/main.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/EvaluationTuning.cpp $(SRCDIR)/EvaluationEnhanced.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/uci.cpp $(SRCDIR)/NeuralNetwork.cpp $(SRCDIR)/EndgameTablebase.cpp $(SRCDIR)/AdvancedSearch.cpp
 HEADERS = $(SRCDIR)/ChessPiece.h $(SRCDIR)/ChessBoard.h $(SRCDIR)/ChessEngine.h $(SRCDIR)/ValidMoves.h $(SRCDIR)/MoveContent.h $(SRCDIR)/search.h $(SRCDIR)/PieceMoves.h $(SRCDIR)/Evaluation.h $(SRCDIR)/EvaluationTuning.h $(SRCDIR)/PieceTables.h $(SRCDIR)/Bitboard.h $(SRCDIR)/BitboardMoves.h $(SRCDIR)/engine_globals.h $(SRCDIR)/uci.h $(SRCDIR)/NeuralNetwork.h $(SRCDIR)/EndgameTablebase.h $(SRCDIR)/AdvancedSearch.h $(SRCDIR)/EvaluationEnhanced.h $(SRCDIR)/PerformanceOptimizations.h
 
 all: $(TARGET)

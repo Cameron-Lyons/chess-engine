@@ -50,6 +50,8 @@ struct ThreadSafeHistory {
     ThreadSafeHistory();
     void update(int srcPos, int destPos, int depth);
     int get(int srcPos, int destPos) const;
+    int getScore(int srcPos, int destPos) const { return get(srcPos, destPos); }
+    void updateScore(int srcPos, int destPos, int score) { update(srcPos, destPos, score); }
 };
 
 struct KillerMoves {
@@ -80,8 +82,9 @@ struct ParallelSearchContext {
 struct ScoredMove {
     std::pair<int, int> move;
     int score;
-    ScoredMove(std::pair<int, int> m, int s);
-    bool operator<(const ScoredMove& other) const;
+    ScoredMove(std::pair<int, int> m, int s) : move(m), score(s) {}
+    bool operator<(const ScoredMove& other) const { return score < other.score; }
+    bool operator>(const ScoredMove& other) const { return score > other.score; }
 };
 
 struct SearchResult {
@@ -105,7 +108,7 @@ int getMVVLVA_Score(const Board& board, int srcPos, int destPos);
 bool isCapture(const Board& board, int /* srcPos */, int destPos);
 bool givesCheck(const Board& board, int srcPos, int destPos);
 bool isInCheck(const Board& board, ChessPieceColor color);
-int getHistoryScore(const ThreadSafeHistory& historyTable, int srcPos, int destPos);
+// getHistoryScore is now in EnhancedMoveOrdering namespace
 std::vector<ScoredMove> scoreMovesParallel(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, int numThreads);
 void updateHistoryTable(ThreadSafeHistory& historyTable, int srcPos, int destPos, int depth);
 bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLimitMs);
@@ -132,5 +135,46 @@ bool isDiscoveredCheck(const Board& board, int from, int to);
 bool isPromotion(const Board& board, int from, int to);
 bool isCastling(const Board& board, int from, int to);
 std::vector<ScoredMove> scoreMovesOptimized(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply, const std::pair<int, int>& hashMove = {-1, -1});
+
+// Enhanced search techniques
+struct SearchTechniques {
+    // Futility pruning thresholds
+    static const int FUTILITY_MARGIN_PAWN = 100;
+    static const int FUTILITY_MARGIN_KNIGHT = 300;
+    static const int FUTILITY_MARGIN_BISHOP = 300;
+    static const int FUTILITY_MARGIN_ROOK = 500;
+    static const int FUTILITY_MARGIN_QUEEN = 900;
+    
+    // Null move pruning
+    static const int NULL_MOVE_R = 3;
+    static const int NULL_MOVE_MARGIN = 300;
+    
+    // Late move reduction
+    static const int LMR_MIN_DEPTH = 3;
+    static const int LMR_MIN_MOVE = 4;
+    
+    // Static null move pruning
+    static const int STATIC_NULL_MARGIN = 900;
+    
+    // Internal iterative deepening
+    static const int IID_MIN_DEPTH = 4;
+};
+
+// Enhanced move ordering with multiple heuristics
+namespace EnhancedMoveOrdering {
+    static const int HASH_MOVE_SCORE = 1000000;
+    static const int CAPTURE_SCORE_BASE = 900000;
+    static const int KILLER_SCORE = 800000;
+    static const int HISTORY_SCORE_BASE = 0;
+    static const int QUIET_SCORE_BASE = -1000000;
+    
+    // MVV-LVA (Most Valuable Victim - Least Valuable Attacker) scores
+    extern const int MVV_LVA_SCORES[6][6];
+    
+    int getMVVLVA_Score(const Board& board, int fromSquare, int toSquare);
+    int getHistoryScore(const ThreadSafeHistory& history, int fromSquare, int toSquare);
+    int getKillerScore(const KillerMoves& killers, int ply, int fromSquare, int toSquare);
+    int getPositionalScore(const Board& board, int fromSquare, int toSquare);
+}
 
 #endif 
