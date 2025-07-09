@@ -88,6 +88,7 @@ bool IsMoveLegal(Board& board, int srcPos, int destPos) {
 
     Board tempBoard = board;
     tempBoard.movePiece(srcPos, destPos);
+    tempBoard.updateBitboards(); // Ensure bitboards are properly updated
 
     if (IsKingInCheck(tempBoard, piece.PieceColor)) {
         return false;
@@ -107,8 +108,10 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color) {
             if (!IsKingInCheck(board, color)) {
                 Board temp = board;
                 temp.movePiece(4, 5);
+                temp.updateBitboards(); // Ensure bitboards are properly updated
                 if (!IsKingInCheck(temp, color)) {
                     temp.movePiece(5, 6);
+                    temp.updateBitboards(); // Ensure bitboards are properly updated
                     if (!IsKingInCheck(temp, color)) {
                         canCastleKingside = true;
                     }
@@ -119,8 +122,10 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color) {
             if (!IsKingInCheck(board, color)) {
                 Board temp = board;
                 temp.movePiece(4, 3);
+                temp.updateBitboards(); // Ensure bitboards are properly updated
                 if (!IsKingInCheck(temp, color)) {
                     temp.movePiece(3, 2);
+                    temp.updateBitboards(); // Ensure bitboards are properly updated
                     if (!IsKingInCheck(temp, color)) {
                         canCastleQueenside = true;
                     }
@@ -132,8 +137,10 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color) {
             if (!IsKingInCheck(board, color)) {
                 Board temp = board;
                 temp.movePiece(60, 61);
+                temp.updateBitboards(); // Ensure bitboards are properly updated
                 if (!IsKingInCheck(temp, color)) {
                     temp.movePiece(61, 62);
+                    temp.updateBitboards(); // Ensure bitboards are properly updated
                     if (!IsKingInCheck(temp, color)) {
                         canCastleKingside = true;
                     }
@@ -144,8 +151,10 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color) {
             if (!IsKingInCheck(board, color)) {
                 Board temp = board;
                 temp.movePiece(60, 59);
+                temp.updateBitboards(); // Ensure bitboards are properly updated
                 if (!IsKingInCheck(temp, color)) {
                     temp.movePiece(59, 58);
+                    temp.updateBitboards(); // Ensure bitboards are properly updated
                     if (!IsKingInCheck(temp, color)) {
                         canCastleQueenside = true;
                     }

@@ -877,6 +877,11 @@ int evaluateHangingPieces(const Board& board) {
 // }
 
 bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
+    // Add bounds checking
+    if (piecePos < 0 || piecePos >= 64 || targetPos < 0 || targetPos >= 64) {
+        return false;
+    }
+    
     const Piece& piece = board.squares[piecePos].piece;
     if (piece.PieceType == ChessPieceType::NONE) return false;
     
@@ -903,6 +908,7 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
             int colStep = (colDiff > 0) ? 1 : -1;
             for (int i = 1; i < abs(rowDiff); i++) {
                 int checkPos = (fromRow + i * rowStep) * 8 + (fromCol + i * colStep);
+                if (checkPos < 0 || checkPos >= 64) return false; // Add bounds check
                 if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) return false;
             }
             return true;
@@ -913,12 +919,14 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
                 int colStep = (colDiff > 0) ? 1 : -1;
                 for (int i = 1; i < abs(colDiff); i++) {
                     int checkPos = fromRow * 8 + (fromCol + i * colStep);
+                    if (checkPos < 0 || checkPos >= 64) return false; // Add bounds check
                     if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) return false;
                 }
             } else {
                 int rowStep = (rowDiff > 0) ? 1 : -1;
                 for (int i = 1; i < abs(rowDiff); i++) {
                     int checkPos = (fromRow + i * rowStep) * 8 + fromCol;
+                    if (checkPos < 0 || checkPos >= 64) return false; // Add bounds check
                     if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) return false;
                 }
             }
@@ -930,12 +938,14 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
                     int colStep = (colDiff > 0) ? 1 : -1;
                     for (int i = 1; i < abs(colDiff); i++) {
                         int checkPos = fromRow * 8 + (fromCol + i * colStep);
+                        if (checkPos < 0 || checkPos >= 64) return false; // Add bounds check
                         if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) return false;
                     }
                 } else if (colDiff == 0) {
                     int rowStep = (rowDiff > 0) ? 1 : -1;
                     for (int i = 1; i < abs(rowDiff); i++) {
                         int checkPos = (fromRow + i * rowStep) * 8 + fromCol;
+                        if (checkPos < 0 || checkPos >= 64) return false; // Add bounds check
                         if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) return false;
                     }
                 } else {
@@ -943,6 +953,7 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
                     int colStep = (colDiff > 0) ? 1 : -1;
                     for (int i = 1; i < abs(rowDiff); i++) {
                         int checkPos = (fromRow + i * rowStep) * 8 + (fromCol + i * colStep);
+                        if (checkPos < 0 || checkPos >= 64) return false; // Add bounds check
                         if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) return false;
                     }
                 }
