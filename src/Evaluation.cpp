@@ -144,7 +144,17 @@ namespace PieceSquareTables {
     };
     
     int getPieceSquareValue(ChessPieceType piece, int square, ChessPieceColor color, int gamePhase) {
+        // Bounds checking to prevent segmentation fault
+        if (square < 0 || square >= 64) {
+            return 0;
+        }
+        
         int adjustedSquare = (color == ChessPieceColor::WHITE) ? square : (63 - square);
+        
+        // Additional bounds checking for adjusted square
+        if (adjustedSquare < 0 || adjustedSquare >= 64) {
+            return 0;
+        }
         
         int mgValue = 0, egValue = 0;
         
@@ -201,6 +211,11 @@ namespace PieceSquareTables {
 }
 
 int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor color) {
+    // Bounds checking to prevent segmentation fault
+    if (position < 0 || position >= 64) {
+        return 0;
+    }
+    
     int value = 0;
     switch (pieceType) {
         case ChessPieceType::PAWN:
@@ -706,8 +721,9 @@ int evaluatePosition(const Board& board) {
     
     // Add enhanced evaluation if available
     #ifdef USE_ENHANCED_EVALUATION
-    int enhancedScore = EnhancedEvaluation::evaluatePosition(board);
-    finalScore = (finalScore * 7 + enhancedScore * 3) / 10; // Blend 70% traditional, 30% enhanced
+    // Temporarily disabled to debug segmentation fault
+    // int enhancedScore = EnhancedEvaluation::evaluatePosition(board);
+    // finalScore = (finalScore * 7 + enhancedScore * 3) / 10; // Blend 70% traditional, 30% enhanced
     #endif
     
     logEvaluationComponents("Final Enhanced Score", finalScore);

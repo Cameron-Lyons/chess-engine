@@ -119,13 +119,13 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
     
     std::cout << "Using optimized single-threaded search...\n";
     
-    int searchDepth = 15; 
-    if (adaptiveTime > 12000) searchDepth = 22;       
-    else if (adaptiveTime > 8000) searchDepth = 20;   
-    else if (adaptiveTime > 5000) searchDepth = 18;   
-    else if (adaptiveTime > 3000) searchDepth = 16;   
-    else if (adaptiveTime > 1500) searchDepth = 15;   
-    else if (adaptiveTime < 800) searchDepth = 13;    
+    int searchDepth = 14; 
+    if (adaptiveTime > 12000) searchDepth = 18;       
+    else if (adaptiveTime > 8000) searchDepth = 17;   
+    else if (adaptiveTime > 5000) searchDepth = 16;   
+    else if (adaptiveTime > 3000) searchDepth = 15;   
+    else if (adaptiveTime > 1500) searchDepth = 14;   
+    else if (adaptiveTime < 800) searchDepth = 12;    
     
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
@@ -164,7 +164,7 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
             searchDepth += 2; 
     }
     
-    searchDepth = std::max(12, std::min(searchDepth, 25));
+    searchDepth = std::max(12, std::min(searchDepth, 20));
     
     std::cout << "Search depth: " << searchDepth << " (moves: " << numMoves 
               << ", captures: " << numCaptures << ")\n";
