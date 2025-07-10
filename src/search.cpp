@@ -328,9 +328,16 @@ std::vector<std::pair<int, int>> GetQuietMoves(Board& board, ChessPieceColor col
     return noisyMoves;
 }
 
-int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context) {
+int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context, int ply) {
     std::cout << "DEBUG: QuiescenceSearch called" << std::endl;
     if (context.stopSearch.load()) return 0;
+    
+    // Safety check to prevent infinite recursion
+    if (ply < 0 || ply >= 100) {
+        std::cout << "DEBUG: QuiescenceSearch ply limit reached (" << ply << "), returning stand pat" << std::endl;
+        return evaluatePosition(board);
+    }
+    
     context.nodeCount.fetch_add(1);
     
     // Stand pat evaluation
@@ -454,7 +461,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
         Board newBoard = board;
         newBoard.movePiece(move.first, move.second);
         
-        int eval = QuiescenceSearch(newBoard, alpha, beta, !maximizingPlayer, historyTable, context);
+        int eval = QuiescenceSearch(newBoard, alpha, beta, !maximizingPlayer, historyTable, context, ply + 1);
         if (context.stopSearch.load()) return 0;
         
         if (maximizingPlayer) {
@@ -489,7 +496,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     }
     
     if (depth == 0) {
-        return QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context);
+        return QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context, ply);
     }
     
     context.nodeCount++;
@@ -608,7 +615,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         return 0;
     }
     
-    if (ply < 0 || ply >= 50) {
+    if (ply < 0 || ply >= 100) {
         std::cout << "DEBUG: Invalid ply " << ply << ", returning 0" << std::endl;
         return 0;
     }
@@ -624,7 +631,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     ChessPieceColor currentColor = maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
     
     // Only extend if we're not at the maximum depth and ply limits
-    if (depth > 0 && depth < 50 && ply < 50) {
+    if (depth > 0 && depth < 50 && ply < 100) {
         // Extend when in check (most important)
         if (isInCheck(board, currentColor)) {
             extension = 1;
@@ -663,7 +670,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     depth += extension;
     
     // Additional safety check after extension
-    if (depth > 50 || ply >= 50) {
+    if (depth > 50 || ply >= 100) {
         std::cout << "DEBUG: Search too deep after extension (depth=" << depth << ", ply=" << ply << "), returning 0" << std::endl;
         return 0;
     }
@@ -684,7 +691,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         }
     }
     if (depth == 0) {
-        int eval = QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context);
+        int eval = QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context, ply);
         context.transTable.insert(hash, TTEntry(depth, eval, 0, {-1, -1}, hash));
         return eval;
     }
@@ -696,7 +703,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         return mateScore;
     }
     // Null move pruning - only at reasonable depths and ply
-    if (depth >= 3 && depth <= 20 && ply < 40 && !isInCheck(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK)) {
+    if (depth >= 3 && depth <= 20 && ply < 80 && !isInCheck(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK)) {
         Board nullBoard = board;
         nullBoard.turn = (nullBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
         int R = 3;
@@ -710,7 +717,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                         return beta;
                     }
                     // Only verify if we're not too deep
-                    if (depth - 1 <= 20 && ply + 1 < 40) {
+                    if (depth - 1 <= 20 && ply + 1 < 80) {
                         int verificationValue = AlphaBetaSearch(nullBoard, depth - 1, alpha, beta, !maximizingPlayer, ply + 1, historyTable, context);
                         if (context.stopSearch.load()) return 0;
                         if (verificationValue >= beta) {
@@ -724,7 +731,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                         return alpha;
                     }
                     // Only verify if we're not too deep
-                    if (depth - 1 <= 20 && ply + 1 < 40) {
+                    if (depth - 1 <= 20 && ply + 1 < 80) {
                         int verificationValue = AlphaBetaSearch(nullBoard, depth - 1, alpha, beta, !maximizingPlayer, ply + 1, historyTable, context);
                         if (context.stopSearch.load()) return 0;
                         if (verificationValue <= alpha) {
@@ -807,7 +814,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             
             // Late Move Reduction - only for non-PV moves and reasonable depths
             if (!foundPV && depth >= 3 && depth <= 20 && moveCount > 0 && !isCaptureMove && !isCheckMove && 
-                !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor) && ply < 40) {
+                !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor) && ply < 80) {
                 
                 // Reduce more for later moves
                 int reduction = 1;
@@ -921,7 +928,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             
             // Late Move Reduction for black - only for non-PV moves and reasonable depths
             if (!foundPV && depth >= 3 && depth <= 20 && moveCount > 0 && !isCaptureMove && !isCheckMove && 
-                !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor) && ply < 40) {
+                !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor) && ply < 80) {
                 
                 int reduction = 1;
                 if (moveCount > 3) reduction = 2;

@@ -114,7 +114,7 @@ void updateHistoryTable(ThreadSafeHistory& historyTable, int srcPos, int destPos
 bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLimitMs);
 bool SearchForMate(ChessPieceColor movingSide, Board& board, bool& BlackMate, bool& WhiteMate, bool& StaleMate);
 int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, int ply, ThreadSafeHistory& historyTable, ParallelSearchContext& context);
-int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context);
+int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context, int ply);
 std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color);
 std::vector<std::pair<int, int>> GetQuietMoves(Board& board, ChessPieceColor color);
 std::vector<ScoredMove> scoreMovesWithKillers(const Board& board, const std::vector<std::pair<int, int>>& moves, const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply, int numThreads);
