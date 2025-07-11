@@ -329,21 +329,17 @@ std::vector<std::pair<int, int>> GetQuietMoves(Board& board, ChessPieceColor col
 }
 
 int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, ThreadSafeHistory& historyTable, ParallelSearchContext& context, int ply) {
-    std::cout << "DEBUG: QuiescenceSearch called" << std::endl;
     if (context.stopSearch.load()) return 0;
     
     // Safety check to prevent infinite recursion - be more conservative
     if (ply < 0 || ply >= 50) {
-        std::cout << "DEBUG: QuiescenceSearch ply limit reached (" << ply << "), returning stand pat" << std::endl;
         return evaluatePosition(board);
     }
     
     context.nodeCount.fetch_add(1);
     
     // Stand pat evaluation
-    std::cout << "DEBUG: About to call evaluatePosition" << std::endl;
     int standPat = evaluatePosition(board);
-    std::cout << "DEBUG: evaluatePosition completed, standPat = " << standPat << std::endl;
     
     if (maximizingPlayer) {
         if (standPat >= beta) return beta;
@@ -375,14 +371,8 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
         }
     }
     
-    std::cout << "DEBUG: About to call GenValidMoves in QuiescenceSearch" << std::endl;
     GenValidMoves(board);
-    std::cout << "DEBUG: About to call GetAllMoves in QuiescenceSearch" << std::endl;
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK);
-    std::cout << "DEBUG: GetAllMoves completed in QuiescenceSearch, got " << moves.size() << " moves" << std::endl;
-    for (const auto& move : moves) {
-        std::cout << "DEBUG: Move from " << move.first << " to " << move.second << std::endl;
-    }
     // Filter to only captures and checks
     std::vector<std::pair<int, int>> tacticalMoves;
     for (const auto& move : moves) {
@@ -409,9 +399,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
             score = victimValue * 100 - attackerValue;
             
             // ENHANCED SEE FILTERING - Much more aggressive
-            std::cout << "DEBUG: About to call staticExchangeEvaluation for move " << move.first << " to " << move.second << std::endl;
             int seeValue = staticExchangeEvaluation(board, move.first, move.second);
-            std::cout << "DEBUG: staticExchangeEvaluation completed, seeValue = " << seeValue << std::endl;
             
             // Skip bad captures more aggressively in quiescence
             if (seeValue < -25) {
@@ -607,16 +595,13 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
 }
 
 int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, int ply, ThreadSafeHistory& historyTable, ParallelSearchContext& context) {
-    std::cout << "DEBUG: AlphaBetaSearch called with depth=" << depth << ", ply=" << ply << std::endl;
     
     // Safety checks to prevent segmentation fault - be more conservative
     if (depth < 0 || depth > 20) {
-        std::cout << "DEBUG: Invalid depth " << depth << ", returning 0" << std::endl;
         return 0;
     }
     
     if (ply < 0 || ply >= 50) {
-        std::cout << "DEBUG: Invalid ply " << ply << ", returning 0" << std::endl;
         return 0;
     }
     
@@ -678,7 +663,6 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     
     // Additional safety check after extension - be more conservative
     if (depth > 20 || ply >= 50) {
-        std::cout << "DEBUG: Search too deep after extension (depth=" << depth << ", ply=" << ply << "), returning 0" << std::endl;
         return 0;
     }
     
@@ -749,9 +733,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             }
         }
     }
-    std::cout << "DEBUG: About to call scoreMovesOptimized" << std::endl;
     std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(board, moves, historyTable, context.killerMoves, ply, hashMove);
-    std::cout << "DEBUG: scoreMovesOptimized completed" << std::endl;
     std::sort(scoredMoves.begin(), scoredMoves.end());
     int origAlpha = alpha;
     int bestValue = maximizingPlayer ? -10000 : 10000;
@@ -764,7 +746,6 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         for (const auto& scoredMove : scoredMoves) {
             if (context.stopSearch.load()) return 0;
             const auto& move = scoredMove.move;
-            std::cout << "DEBUG: About to call AlphaBetaSearch for move " << move.first << " to " << move.second << std::endl;
             Board newBoard = board;
             newBoard.movePiece(move.first, move.second);
             int eval;
@@ -878,7 +859,6 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         for (const auto& scoredMove : scoredMoves) {
             if (context.stopSearch.load()) return 0;
             const auto& move = scoredMove.move;
-            std::cout << "DEBUG: About to call AlphaBetaSearch for move " << move.first << " to " << move.second << std::endl;
             Board newBoard = board;
             newBoard.movePiece(move.first, move.second);
             int eval;
@@ -1142,18 +1122,11 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
 }
 
 std::pair<int, int> findBestMove(Board& board, int depth) {
-    std::cout << "DEBUG: Starting findBestMove with depth " << depth << std::endl;
-    
     ThreadSafeHistory historyTable;
     ParallelSearchContext context(1);
     
-    std::cout << "DEBUG: About to call GenValidMoves" << std::endl;
     GenValidMoves(board);
-    std::cout << "DEBUG: GenValidMoves completed" << std::endl;
-    
-    std::cout << "DEBUG: About to call GetAllMoves" << std::endl;
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
-    std::cout << "DEBUG: GetAllMoves completed, got " << moves.size() << " moves" << std::endl;
     
     if (moves.empty()) {
         return {-1, -1};
@@ -1164,20 +1137,14 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
     int aspirationWindow = 50;
     int maxAspirationWindow = 400;
     
-    std::cout << "DEBUG: About to call scoreMovesOptimized" << std::endl;
     std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(board, moves, historyTable, context.killerMoves, 0);
-    std::cout << "DEBUG: scoreMovesOptimized completed" << std::endl;
-    
-    std::cout << "DEBUG: About to sort moves" << std::endl;
     std::sort(scoredMoves.begin(), scoredMoves.end());
-    std::cout << "DEBUG: Sort completed" << std::endl;
     
     int bestEval = (board.turn == ChessPieceColor::WHITE) ? -10000 : 10000;
     std::pair<int, int> bestMove = {-1, -1};
     
     // Iterative deepening with aspiration windows
     for (int currentDepth = 1; currentDepth <= depth; currentDepth++) {
-        std::cout << "DEBUG: Starting search at depth " << currentDepth << std::endl;
         
         int alpha, beta;
         
@@ -1200,11 +1167,9 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
             Board newBoard = board;
             newBoard.movePiece(move.first, move.second);
             
-            std::cout << "DEBUG: About to call AlphaBetaSearch for move " << move.first << " to " << move.second << std::endl;
             int eval = AlphaBetaSearch(newBoard, currentDepth - 1, alpha, beta, 
                                      (board.turn == ChessPieceColor::BLACK), 0, 
                                      historyTable, context);
-            std::cout << "DEBUG: AlphaBetaSearch completed for move, eval = " << eval << std::endl;
             
             if (board.turn == ChessPieceColor::WHITE) {
                 if (eval > currentBestEval) {
