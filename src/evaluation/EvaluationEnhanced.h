@@ -1,7 +1,7 @@
 #ifndef EVALUATION_ENHANCED_H
 #define EVALUATION_ENHANCED_H
 
-#include "ChessBoard.h"
+#include "../core/ChessBoard.h"
 #include "Evaluation.h"
 #include <vector>
 #include <array>

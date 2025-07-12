@@ -1,6 +1,6 @@
-#include "ChessBoard.h"
-#include "search.h"
-#include "engine_globals.h"
+#include "../src/core/ChessBoard.h"
+#include "../src/search/search.h"
+#include "../src/utils/engine_globals.h"
 #include <iostream>
 #include <chrono>
 #include <thread>

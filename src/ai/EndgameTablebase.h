@@ -1,7 +1,7 @@
 #ifndef ENDGAME_TABLEBASE_H
 #define ENDGAME_TABLEBASE_H
 
-#include "ChessBoard.h"
+#include "../core/ChessBoard.h"
 #include <string>
 #include <unordered_map>
 #include <vector>

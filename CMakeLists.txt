@@ -27,15 +27,21 @@ include_directories(src)
 
 # Source files
 set(CORE_SOURCES
-    src/ChessBoard.cpp
-    src/ValidMoves.cpp
-    src/engine_globals.cpp
+    src/core/ChessBoard.cpp
+    src/core/BitboardMoves.cpp
+    src/search/ValidMoves.cpp
+    src/utils/engine_globals.cpp
 )
 
 set(ENGINE_SOURCES
-    src/search.cpp
-    src/Evaluation.cpp
-    src/BitboardMoves.cpp
+    src/search/search.cpp
+    src/search/AdvancedSearch.cpp
+    src/evaluation/Evaluation.cpp
+    src/evaluation/EvaluationEnhanced.cpp
+    src/evaluation/EvaluationTuning.cpp
+    src/protocol/uci.cpp
+    src/ai/NeuralNetwork.cpp
+    src/ai/EndgameTablebase.cpp
 )
 
 set(ALL_SOURCES ${CORE_SOURCES} ${ENGINE_SOURCES})

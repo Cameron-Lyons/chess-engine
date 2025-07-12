@@ -6,8 +6,8 @@ SRCDIR = src
 TESTDIR = tests
 BINDIR = bin
 
-SOURCES = $(SRCDIR)/main.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/EvaluationTuning.cpp $(SRCDIR)/EvaluationEnhanced.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/uci.cpp $(SRCDIR)/NeuralNetwork.cpp $(SRCDIR)/EndgameTablebase.cpp $(SRCDIR)/AdvancedSearch.cpp
-HEADERS = $(SRCDIR)/ChessPiece.h $(SRCDIR)/ChessBoard.h $(SRCDIR)/ChessEngine.h $(SRCDIR)/ValidMoves.h $(SRCDIR)/MoveContent.h $(SRCDIR)/search.h $(SRCDIR)/PieceMoves.h $(SRCDIR)/Evaluation.h $(SRCDIR)/EvaluationTuning.h $(SRCDIR)/PieceTables.h $(SRCDIR)/Bitboard.h $(SRCDIR)/BitboardMoves.h $(SRCDIR)/engine_globals.h $(SRCDIR)/uci.h $(SRCDIR)/NeuralNetwork.h $(SRCDIR)/EndgameTablebase.h $(SRCDIR)/AdvancedSearch.h $(SRCDIR)/EvaluationEnhanced.h $(SRCDIR)/PerformanceOptimizations.h
+SOURCES = $(SRCDIR)/main.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/evaluation/EvaluationTuning.cpp $(SRCDIR)/evaluation/EvaluationEnhanced.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/protocol/uci.cpp $(SRCDIR)/ai/NeuralNetwork.cpp $(SRCDIR)/ai/EndgameTablebase.cpp $(SRCDIR)/search/AdvancedSearch.cpp
+HEADERS = $(SRCDIR)/core/ChessPiece.h $(SRCDIR)/core/ChessBoard.h $(SRCDIR)/ChessEngine.h $(SRCDIR)/search/ValidMoves.h $(SRCDIR)/core/MoveContent.h $(SRCDIR)/search/search.h $(SRCDIR)/utils/PieceMoves.h $(SRCDIR)/evaluation/Evaluation.h $(SRCDIR)/evaluation/EvaluationTuning.h $(SRCDIR)/utils/PieceTables.h $(SRCDIR)/core/Bitboard.h $(SRCDIR)/core/BitboardMoves.h $(SRCDIR)/utils/engine_globals.h $(SRCDIR)/protocol/uci.h $(SRCDIR)/ai/NeuralNetwork.h $(SRCDIR)/ai/EndgameTablebase.h $(SRCDIR)/search/AdvancedSearch.h $(SRCDIR)/evaluation/EvaluationEnhanced.h $(SRCDIR)/utils/PerformanceOptimizations.h
 
 all: $(TARGET)
 
@@ -33,57 +33,57 @@ install: $(TARGET)
 uninstall:
 	sudo rm -f /usr/local/bin/chess_engine
 
-$(BINDIR)/test_parallel: $(TESTDIR)/test_parallel.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/EvaluationTuning.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_parallel: $(TESTDIR)/test_parallel.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/evaluation/EvaluationTuning.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_parallel $(TESTDIR)/test_parallel.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/EvaluationTuning.cpp $(SRCDIR)/uci.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_parallel $(TESTDIR)/test_parallel.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/evaluation/EvaluationTuning.cpp $(SRCDIR)/protocol/uci.cpp $(LDFLAGS)
 
-$(BINDIR)/test_bitboard_moves: $(TESTDIR)/test_bitboard_moves.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_bitboard_moves: $(TESTDIR)/test_bitboard_moves.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_bitboard_moves $(TESTDIR)/test_bitboard_moves.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_bitboard_moves $(TESTDIR)/test_bitboard_moves.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp $(LDFLAGS)
 
-$(BINDIR)/test_comprehensive: $(TESTDIR)/test_comprehensive.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_comprehensive: $(TESTDIR)/test_comprehensive.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_comprehensive $(TESTDIR)/test_comprehensive.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_comprehensive $(TESTDIR)/test_comprehensive.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
-$(BINDIR)/test_fen: $(TESTDIR)/test_fen.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_fen: $(TESTDIR)/test_fen.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_fen $(TESTDIR)/test_fen.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_fen $(TESTDIR)/test_fen.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
-$(BINDIR)/test_crash: $(TESTDIR)/test_crash.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_crash: $(TESTDIR)/test_crash.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_crash $(TESTDIR)/test_crash.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_crash $(TESTDIR)/test_crash.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
-$(BINDIR)/test_pawn: $(TESTDIR)/test_pawn.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_pawn: $(TESTDIR)/test_pawn.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_pawn $(TESTDIR)/test_pawn.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_pawn $(TESTDIR)/test_pawn.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
-$(BINDIR)/test_quiescence: $(TESTDIR)/test_quiescence.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_quiescence: $(TESTDIR)/test_quiescence.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_quiescence $(TESTDIR)/test_quiescence.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_quiescence $(TESTDIR)/test_quiescence.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
-$(BINDIR)/test_king_safety: $(TESTDIR)/test_king_safety.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_king_safety: $(TESTDIR)/test_king_safety.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_king_safety $(TESTDIR)/test_king_safety.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_king_safety $(TESTDIR)/test_king_safety.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
-$(BINDIR)/test_killer_moves: $(TESTDIR)/test_killer_moves.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_killer_moves: $(TESTDIR)/test_killer_moves.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_killer_moves $(TESTDIR)/test_killer_moves.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_killer_moves $(TESTDIR)/test_killer_moves.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
-$(BINDIR)/test_engine_improvements: $(TESTDIR)/test_engine_improvements.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_engine_improvements: $(TESTDIR)/test_engine_improvements.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_engine_improvements $(TESTDIR)/test_engine_improvements.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_engine_improvements $(TESTDIR)/test_engine_improvements.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
-$(BINDIR)/test_tactical_suite: $(TESTDIR)/test_tactical_suite.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_tactical_suite: $(TESTDIR)/test_tactical_suite.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_tactical_suite $(TESTDIR)/test_tactical_suite.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_tactical_suite $(TESTDIR)/test_tactical_suite.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
-$(BINDIR)/test_queen_blunder: $(TESTDIR)/test_queen_blunder.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_queen_blunder: $(TESTDIR)/test_queen_blunder.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_queen_blunder $(TESTDIR)/test_queen_blunder.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_queen_blunder $(TESTDIR)/test_queen_blunder.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
-$(BINDIR)/test_simple_queen_save: $(TESTDIR)/test_simple_queen_save.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(SRCDIR)/uci.cpp
+$(BINDIR)/test_simple_queen_save: $(TESTDIR)/test_simple_queen_save.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/protocol/uci.cpp
 	@mkdir -p $(BINDIR)
-	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_simple_queen_save $(TESTDIR)/test_simple_queen_save.cpp $(SRCDIR)/engine_globals.cpp $(SRCDIR)/BitboardMoves.cpp $(SRCDIR)/ValidMoves.cpp $(SRCDIR)/ChessBoard.cpp $(SRCDIR)/search.cpp $(SRCDIR)/Evaluation.cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -I$(SRCDIR) -o $(BINDIR)/test_simple_queen_save $(TESTDIR)/test_simple_queen_save.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(LDFLAGS)
 
 tests: $(BINDIR)/test_parallel $(BINDIR)/test_bitboard_moves $(BINDIR)/test_comprehensive $(BINDIR)/test_fen $(BINDIR)/test_crash $(BINDIR)/test_pawn $(BINDIR)/test_quiescence $(BINDIR)/test_king_safety $(BINDIR)/test_killer_moves $(BINDIR)/test_engine_improvements $(BINDIR)/test_tactical_suite
 

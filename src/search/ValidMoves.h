@@ -1,8 +1,8 @@
 #ifndef VALIDMOVES_H
 #define VALIDMOVES_H
 
-#include "ChessBoard.h"
-#include "BitboardMoves.h"
+#include "../core/ChessBoard.h"
+#include "../core/BitboardMoves.h"
 #include <vector>
 
 extern bool BlackAttackBoard[64];

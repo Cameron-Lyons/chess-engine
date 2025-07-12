@@ -1,11 +1,11 @@
 #ifndef UCI_H
 #define UCI_H
 
-#include "ChessBoard.h"
-#include "search.h"
-#include "AdvancedSearch.h"
-#include "NeuralNetwork.h"
-#include "EndgameTablebase.h"
+#include "../core/ChessBoard.h"
+#include "../search/search.h"
+#include "../search/AdvancedSearch.h"
+#include "../ai/NeuralNetwork.h"
+#include "../ai/EndgameTablebase.h"
 #include <string>
 #include <vector>
 #include <memory>

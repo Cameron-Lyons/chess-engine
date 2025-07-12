@@ -1,7 +1,7 @@
 #ifndef EVALUATION_TUNING_H
 #define EVALUATION_TUNING_H
 
-#include "ChessPiece.h"
+#include "../core/ChessPiece.h"
 
 // ===================================================================
 // TUNABLE EVALUATION PARAMETERS

@@ -1,7 +1,7 @@
 #ifndef NEURAL_NETWORK_H
 #define NEURAL_NETWORK_H
 
-#include "ChessBoard.h"
+#include "../core/ChessBoard.h"
 #include <vector>
 #include <memory>
 #include <string>

@@ -1,7 +1,7 @@
 #ifndef PIECE_MOVES_H
 #define PIECE_MOVES_H
 
-#include "ChessPiece.h"
+#include "../core/ChessPiece.h"
 #include <string>
 #include <vector>
 

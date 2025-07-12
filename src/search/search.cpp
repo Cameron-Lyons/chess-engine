@@ -1,6 +1,6 @@
 // Implementation of search functions
 #include "search.h"
-#include "engine_globals.h"
+#include "../utils/engine_globals.h"
 #include <algorithm>
 #include <chrono>
 #include <random>

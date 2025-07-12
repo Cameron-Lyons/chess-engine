@@ -1,9 +1,9 @@
 #ifndef SEARCH_H
 #define SEARCH_H
 
-#include "ChessBoard.h"
+#include "../core/ChessBoard.h"
 #include "ValidMoves.h"
-#include "Evaluation.h"
+#include "../evaluation/Evaluation.h"
 #include <vector>
 #include <algorithm>
 #include <chrono>

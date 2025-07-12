@@ -1,8 +1,8 @@
 #ifndef ENGINE_GLOBALS_H
 #define ENGINE_GLOBALS_H
 
-#include "ChessBoard.h"
-#include "search.h"
+#include "../core/ChessBoard.h"
+#include "../search/search.h"
 #include <map>
 #include <string>
 #include <string_view>

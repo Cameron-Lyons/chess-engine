@@ -1,9 +1,9 @@
 #include "uci.h"
-#include "search.h"
-#include "Evaluation.h"
-#include "ValidMoves.h"
-#include "BitboardMoves.h"
-#include "engine_globals.h"
+#include "../search/search.h"
+#include "../evaluation/Evaluation.h"
+#include "../search/ValidMoves.h"
+#include "../core/BitboardMoves.h"
+#include "../utils/engine_globals.h"
 #include <iostream>
 #include <sstream>
 #include <thread>

@@ -1,7 +1,7 @@
 #ifndef ADVANCED_SEARCH_H
 #define ADVANCED_SEARCH_H
 
-#include "ChessBoard.h"
+#include "../core/ChessBoard.h"
 #include "search.h"
 #include <vector>
 #include <unordered_map>

@@ -1,8 +1,8 @@
 #ifndef PERFORMANCE_OPTIMIZATIONS_H
 #define PERFORMANCE_OPTIMIZATIONS_H
 
-#include "ChessBoard.h"
-#include "search.h"
+#include "../core/ChessBoard.h"
+#include "../search/search.h"
 #include <vector>
 #include <array>
 #ifdef __x86_64__

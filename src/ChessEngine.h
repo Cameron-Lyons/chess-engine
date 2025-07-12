@@ -1,6 +1,6 @@
-#include "ChessBoard.h"
-#include "ChessPiece.h"
-#include "ValidMoves.h"
+#include "core/ChessBoard.h"
+#include "core/ChessPiece.h"
+#include "search/ValidMoves.h"
 #include <stack>
 #include <string>
 #include <iostream>

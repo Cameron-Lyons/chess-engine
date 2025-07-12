@@ -1,14 +1,14 @@
 #include "ChessEngine.h"
-#include "MoveContent.h"
-#include "search.h"
-#include "Evaluation.h"
-#include "BitboardMoves.h"
-#include "uci.h"
+#include "core/MoveContent.h"
+#include "search/search.h"
+#include "evaluation/Evaluation.h"
+#include "core/BitboardMoves.h"
+#include "protocol/uci.h"
 #include <iostream>
 #include <string>
 #include <string_view>
 #include <chrono>
-#include "engine_globals.h"
+#include "utils/engine_globals.h"
         
 using ChessClock = std::chrono::steady_clock;
 using ChessDuration = std::chrono::milliseconds;

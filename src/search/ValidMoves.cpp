@@ -1,5 +1,5 @@
 #include "ValidMoves.h"
-#include "BitboardMoves.h"
+#include "../core/BitboardMoves.h"
 #include <iostream>
 
 bool BlackAttackBoard[64] = {false};

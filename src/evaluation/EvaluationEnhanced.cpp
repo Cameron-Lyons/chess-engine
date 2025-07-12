@@ -1,8 +1,8 @@
 #include "EvaluationEnhanced.h"
 #include "Evaluation.h"
 #include "EvaluationTuning.h"
-#include "ChessBoard.h"
-#include "ChessPiece.h"
+#include "../core/ChessBoard.h"
+#include "../core/ChessPiece.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
