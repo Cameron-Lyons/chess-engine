@@ -455,10 +455,58 @@ int evaluateKingSafety(const Board& board, ChessPieceColor color) {
     return evaluateKingSafetyForColor(board, kingPos, color);
 }
 
-// This function is now implemented in EvaluationEnhanced.cpp
-// int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor color) {
-//     // Implementation moved to EvaluationEnhanced.cpp
-// }
+int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor color) {
+    int score = 0;
+    int kingRow = kingPos / 8;
+    int kingCol = kingPos % 8;
+    
+    // Pawn shield evaluation
+    int pawnShield = 0;
+    for (int dr = -1; dr <= 1; dr++) {
+        for (int dc = -1; dc <= 1; dc++) {
+            int checkRow = kingRow + dr;
+            int checkCol = kingCol + dc;
+            if (checkRow >= 0 && checkRow < 8 && checkCol >= 0 && checkCol < 8) {
+                int checkSquare = checkRow * 8 + checkCol;
+                const Piece& piece = board.squares[checkSquare].piece;
+                if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == color) {
+                    pawnShield++;
+                }
+            }
+        }
+    }
+    score += pawnShield * KING_SAFETY_PAWN_SHIELD_BONUS;
+    
+    // Open file penalty
+    bool isOnOpenFile = true;
+    for (int rank = 0; rank < 8; rank++) {
+        int square = rank * 8 + kingCol;
+        const Piece& piece = board.squares[square].piece;
+        if (piece.PieceType == ChessPieceType::PAWN) {
+            isOnOpenFile = false;
+            break;
+        }
+    }
+    if (isOnOpenFile) {
+        score -= KING_SAFETY_OPEN_FILE_PENALTY;
+    }
+    
+    // Semi-open file penalty
+    bool isOnSemiOpenFile = true;
+    for (int rank = 0; rank < 8; rank++) {
+        int square = rank * 8 + kingCol;
+        const Piece& piece = board.squares[square].piece;
+        if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == color) {
+            isOnSemiOpenFile = false;
+            break;
+        }
+    }
+    if (isOnSemiOpenFile) {
+        score -= KING_SAFETY_SEMI_OPEN_FILE_PENALTY;
+    }
+    
+    return score;
+}
 
 int evaluatePassedPawns(const Board& board) {
     int score = 0;

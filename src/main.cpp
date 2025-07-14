@@ -1,13 +1,17 @@
 #include "ChessEngine.h"
 #include "core/MoveContent.h"
 #include "search/search.h"
+#include "search/ValidMoves.h"
 #include "evaluation/Evaluation.h"
+#include "evaluation/EvaluationEnhanced.h"
+#include "ai/NeuralNetwork.h"
 #include "core/BitboardMoves.h"
 #include "protocol/uci.h"
 #include <iostream>
 #include <string>
 #include <string_view>
 #include <chrono>
+#include <vector>
 #include "utils/engine_globals.h"
         
 using ChessClock = std::chrono::steady_clock;
@@ -310,12 +314,133 @@ void announceGameResult(GameState state) {
 }
 
 int main(int argc, char* argv[]) {
-    // Check for UCI mode
-    if (argc > 1 && std::string(argv[1]) == "uci") {
-        // Run in UCI mode
-        UCIEngine engine;
-        engine.run();
-        return 0;
+    // Check for different modes
+    if (argc > 1) {
+        std::string mode = argv[1];
+        
+        if (mode == "uci") {
+            // Run in UCI mode
+            UCIEngine engine;
+            engine.run();
+            return 0;
+        } else if (mode == "train") {
+            // Neural network training mode
+            std::cout << "Neural Network Training Mode\n";
+            std::cout << "============================\n\n";
+            
+            // Initialize enhanced evaluator
+            EnhancedEvaluator::EvaluationConfig config;
+            config.useNeuralNetwork = true;
+            config.nnWeight = 0.7f;
+            config.useTraditionalEval = true;
+            config.traditionalWeight = 0.3f;
+            
+            initializeEnhancedEvaluator(config);
+            
+            // Create neural network trainer
+            NNTrainer::TrainingConfig trainConfig;
+            trainConfig.batchSize = 32;
+            trainConfig.epochs = 5;
+            trainConfig.validationSplit = 0.2f;
+            trainConfig.earlyStoppingPatience = 3;
+            trainConfig.modelPath = "models/chess_nn.bin";
+            trainConfig.trainingDataPath = "data/training_data.bin";
+            
+            NNTrainer trainer(*getEnhancedEvaluator()->getNeuralNetwork(), trainConfig);
+            
+            // Generate training data
+            int numGames = 100;
+            if (argc > 2) {
+                numGames = std::stoi(argv[2]);
+            }
+            
+            std::cout << "Generating " << numGames << " self-play games for training...\n";
+            trainer.trainOnSelfPlayData(numGames);
+            
+            // Generate training report
+            trainer.generateTrainingReport("training_report.txt");
+            
+            std::cout << "\nTraining completed! Model saved to: " << trainConfig.modelPath << std::endl;
+            return 0;
+        } else if (mode == "test") {
+            // Test neural network evaluation
+            std::cout << "Neural Network Test Mode\n";
+            std::cout << "========================\n\n";
+            
+            // Initialize enhanced evaluator
+            EnhancedEvaluator::EvaluationConfig config;
+            config.useNeuralNetwork = true;
+            config.nnWeight = 0.7f;
+            config.useTraditionalEval = true;
+            config.traditionalWeight = 0.3f;
+            
+            initializeEnhancedEvaluator(config);
+            
+            // Test positions
+            std::vector<std::string> testFens = {
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Starting position
+                "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2", // e4 e5
+                "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2", // e4 e5 Nf3
+                "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3", // e4 e5 Nf3 Nc6
+            };
+            
+            std::vector<std::string> positionNames = {
+                "Starting position",
+                "e4 e5",
+                "e4 e5 Nf3",
+                "e4 e5 Nf3 Nc6"
+            };
+            
+            for (size_t i = 0; i < testFens.size(); ++i) {
+                Board board;
+                board.InitializeFromFEN(testFens[i]);
+                
+                std::cout << "Position " << (i + 1) << ": " << positionNames[i] << std::endl;
+                std::cout << "FEN: " << testFens[i] << std::endl;
+                
+                // Traditional evaluation
+                int traditionalEval = evaluatePosition(board);
+                std::cout << "Traditional evaluation: " << traditionalEval << " centipawns" << std::endl;
+                
+                // Neural network evaluation
+                float nnEval = evaluateWithNeuralNetwork(board);
+                std::cout << "Neural network evaluation: " << nnEval << " centipawns" << std::endl;
+                
+                // Hybrid evaluation
+                float hybridEval = evaluateHybrid(board);
+                std::cout << "Hybrid evaluation: " << hybridEval << " centipawns" << std::endl;
+                
+                std::cout << std::endl;
+            }
+            
+            return 0;
+        } else if (mode == "generate") {
+            // Generate training data only
+            std::cout << "Training Data Generation Mode\n";
+            std::cout << "==============================\n\n";
+            
+            TrainingDataGenerator generator;
+            
+            int numGames = 50;
+            if (argc > 2) {
+                numGames = std::stoi(argv[2]);
+            }
+            
+            std::cout << "Generating " << numGames << " self-play games...\n";
+            auto trainingData = generator.generateSelfPlayData(numGames);
+            
+            std::string dataPath = "data/training_data.bin";
+            if (argc > 3) {
+                dataPath = argv[3];
+            }
+            
+            generator.saveTrainingData(trainingData, dataPath);
+            
+            std::cout << "Training data saved to: " << dataPath << std::endl;
+            std::cout << "Generated " << trainingData.size() << " training examples" << std::endl;
+            
+            return 0;
+        }
     }
     
     ChessTimePoint startTime = ChessClock::now();
