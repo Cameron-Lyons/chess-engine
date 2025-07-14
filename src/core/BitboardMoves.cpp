@@ -1,4 +1,5 @@
 #include "BitboardMoves.h"
+#include <iostream>
 
 std::array<Bitboard, 64> KnightAttacks;
 std::array<Bitboard, 64> KingAttacks;
@@ -38,6 +39,10 @@ void initKingAttacks() {
         }
         KingAttacks[sq] = attacks;
     }
+    
+    // Initialize magic bitboards
+    MagicBitboards::initialize();
+    std::cout << "Magic bitboards initialized successfully" << std::endl;
 }
 
 Bitboard pawnAttacks(ChessPieceColor color, int sq) {
@@ -115,6 +120,19 @@ Bitboard queenAttacks(int sq, Bitboard occupancy) {
     return rookAttacks(sq, occupancy) | bishopAttacks(sq, occupancy);
 }
 
+// Fast magic bitboard implementations
+Bitboard fastRookAttacks(int sq, Bitboard occupancy) {
+    return MagicBitboards::getRookAttacks(sq, occupancy);
+}
+
+Bitboard fastBishopAttacks(int sq, Bitboard occupancy) {
+    return MagicBitboards::getBishopAttacks(sq, occupancy);
+}
+
+Bitboard fastQueenAttacks(int sq, Bitboard occupancy) {
+    return MagicBitboards::getQueenAttacks(sq, occupancy);
+}
+
 Bitboard knightMoves(Bitboard knights, Bitboard ownPieces) {
     Bitboard moves = 0;
     while (knights) {
@@ -156,7 +174,7 @@ Bitboard rookMoves(Bitboard rooks, Bitboard ownPieces, Bitboard occupancy) {
     Bitboard moves = 0;
     while (rooks) {
         int sq = lsb(rooks);
-        moves |= rookAttacks(sq, occupancy);
+        moves |= fastRookAttacks(sq, occupancy);
         clear_bit(rooks, sq);
     }
     return moves & ~ownPieces;
@@ -166,7 +184,7 @@ Bitboard bishopMoves(Bitboard bishops, Bitboard ownPieces, Bitboard occupancy) {
     Bitboard moves = 0;
     while (bishops) {
         int sq = lsb(bishops);
-        moves |= bishopAttacks(sq, occupancy);
+        moves |= fastBishopAttacks(sq, occupancy);
         clear_bit(bishops, sq);
     }
     return moves & ~ownPieces;
@@ -176,7 +194,7 @@ Bitboard queenMoves(Bitboard queens, Bitboard ownPieces, Bitboard occupancy) {
     Bitboard moves = 0;
     while (queens) {
         int sq = lsb(queens);
-        moves |= queenAttacks(sq, occupancy);
+        moves |= fastQueenAttacks(sq, occupancy);
         clear_bit(queens, sq);
     }
     return moves & ~ownPieces;

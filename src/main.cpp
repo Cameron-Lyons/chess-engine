@@ -5,8 +5,11 @@
 #include "evaluation/Evaluation.h"
 #include "evaluation/EvaluationEnhanced.h"
 #include "ai/NeuralNetwork.h"
+#include "ai/OpeningBook.h"
 #include "core/BitboardMoves.h"
 #include "protocol/uci.h"
+#include "search/SearchImprovements.h"
+#include "evaluation/PatternRecognition.h"
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -445,15 +448,20 @@ int main(int argc, char* argv[]) {
     
     ChessTimePoint startTime = ChessClock::now();
     
-    // Initialize attack tables for bitboard move generation
+    // Initialize attack tables for bitboard move generation (includes magic bitboards)
     initKnightAttacks();
     initKingAttacks();
     
     // Initialize Zobrist hashing for transposition table
     InitZobrist();
     
-    std::cout << "Chess Engine\n";
-    std::cout << "========================\n";
+    // Initialize enhanced systems
+    initializeEnhancedEvaluator();
+    initializeOpeningBook();
+    
+    std::cout << "Chess Engine v2.0 - Advanced Features Edition\n";
+    std::cout << "=============================================\n";
+    std::cout << "Features: Magic bitboards, Neural network evaluation, Pattern recognition\n";
     std::cout << "Use './chess_engine uci' for UCI mode\n\n";
     
     ChessBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");

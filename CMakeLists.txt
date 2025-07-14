@@ -29,6 +29,7 @@ include_directories(src)
 set(CORE_SOURCES
     src/core/ChessBoard.cpp
     src/core/BitboardMoves.cpp
+    src/core/MagicBitboards.cpp
     src/search/ValidMoves.cpp
     src/utils/engine_globals.cpp
 )
@@ -36,12 +37,15 @@ set(CORE_SOURCES
 set(ENGINE_SOURCES
     src/search/search.cpp
     src/search/AdvancedSearch.cpp
+    src/search/SearchImprovements.cpp
     src/evaluation/Evaluation.cpp
     src/evaluation/EvaluationEnhanced.cpp
     src/evaluation/EvaluationTuning.cpp
+    src/evaluation/PatternRecognition.cpp
     src/protocol/uci.cpp
     src/ai/NeuralNetwork.cpp
     src/ai/EndgameTablebase.cpp
+    src/ai/OpeningBook.cpp
 )
 
 set(ALL_SOURCES ${CORE_SOURCES} ${ENGINE_SOURCES})

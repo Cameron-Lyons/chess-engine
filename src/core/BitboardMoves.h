@@ -3,6 +3,7 @@
 
 #include "Bitboard.h"
 #include "ChessPiece.h"
+#include "MagicBitboards.h"
 #include <array>
 
 extern std::array<Bitboard, 64> KnightAttacks;
@@ -13,9 +14,15 @@ void initKingAttacks();
 
 Bitboard pawnAttacks(ChessPieceColor color, int sq);
 
+// Legacy functions for backward compatibility
 Bitboard rookAttacks(int sq, Bitboard occupancy);
 Bitboard bishopAttacks(int sq, Bitboard occupancy);
 Bitboard queenAttacks(int sq, Bitboard occupancy);
+
+// Fast magic bitboard functions
+Bitboard fastRookAttacks(int sq, Bitboard occupancy);
+Bitboard fastBishopAttacks(int sq, Bitboard occupancy);
+Bitboard fastQueenAttacks(int sq, Bitboard occupancy);
 
 Bitboard knightMoves(Bitboard knights, Bitboard ownPieces);
 Bitboard kingMoves(Bitboard king, Bitboard ownPieces);

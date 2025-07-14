@@ -1,5 +1,6 @@
 // Implementation of search functions
 #include "search.h"
+#include "AdvancedSearch.h"
 #include "../utils/engine_globals.h"
 #include <algorithm>
 #include <chrono>
@@ -502,21 +503,34 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         }
     }
     
-    // Null move pruning
-    if (depth >= 3 && !isPVNode && !isInCheck(board, board.turn)) {
-        board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
-        int nullScore = -PrincipalVariationSearch(board, depth - 3, -beta, -beta + 1, !maximizingPlayer, ply + 1, historyTable, context, false);
-        board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
-        
-        if (nullScore >= beta) {
+    // Static evaluation for pruning decisions
+    int staticEval = evaluatePosition(board);
+    
+    // Advanced pruning techniques
+    if (!isPVNode) {
+        // Static null move pruning
+        if (AdvancedSearch::staticNullMovePruning(board, depth, alpha, beta, staticEval)) {
             return beta;
         }
-    }
-    
-    // Futility pruning
-    if (depth <= 3 && !isPVNode && !isInCheck(board, board.turn)) {
-        int staticEval = evaluatePosition(board);
-        if (staticEval - 300 * depth >= beta) {
+        
+        // Futility pruning
+        if (AdvancedSearch::futilityPruning(board, depth, alpha, beta, staticEval)) {
+            return beta;
+        }
+        
+        // Null move pruning
+        if (AdvancedSearch::nullMovePruning(board, depth, alpha, beta)) {
+            board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+            int nullScore = -PrincipalVariationSearch(board, depth - 3, -beta, -beta + 1, !maximizingPlayer, ply + 1, historyTable, context, false);
+            board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+            
+            if (nullScore >= beta) {
+                return beta;
+            }
+        }
+        
+        // Multi-cut pruning
+        if (AdvancedSearch::multiCutPruning(board, depth, alpha, beta, 3)) {
             return beta;
         }
     }
@@ -541,21 +555,57 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     for (size_t i = 0; i < scoredMoves.size(); ++i) {
         const auto& move = scoredMoves[i].move;
         
+        // Advanced pruning for individual moves
+        if (!isPVNode && i > 0) {
+            // History pruning
+            if (AdvancedSearch::historyPruning(board, depth, move, historyTable)) {
+                continue;
+            }
+            
+            // Late move pruning
+            if (AdvancedSearch::lateMovePruning(board, depth, i, isInCheck(board, board.turn))) {
+                continue;
+            }
+        }
+        
         // Make move
         Board tempBoard = board;
         tempBoard.movePiece(move.first, move.second);
         tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
         
+        // Check for extensions
+        int extension = 0;
+        if (AdvancedSearch::checkExtension(board, move, depth)) {
+            extension = 1;
+        } else if (AdvancedSearch::recaptureExtension(board, move, depth)) {
+            extension = 1;
+        } else if (AdvancedSearch::pawnPushExtension(board, move, depth)) {
+            extension = 1;
+        } else if (AdvancedSearch::passedPawnExtension(board, move, depth)) {
+            extension = 1;
+        } else if (AdvancedSearch::singularExtension(board, depth, move, alpha, beta)) {
+            extension = 1;
+        }
+        
+        int searchDepth = depth - 1 + extension;
+        
+        // Late move reduction
+        if (!isPVNode && i >= 4 && searchDepth >= 3) {
+            if (AdvancedSearch::lateMoveReduction(board, searchDepth, i, alpha, beta)) {
+                searchDepth = std::max(1, searchDepth - 1);
+            }
+        }
+        
         int score;
         if (i == 0 || isPVNode) {
             // Full window search for first move or PV nodes
-            score = -PrincipalVariationSearch(tempBoard, depth - 1, -beta, -alpha, !maximizingPlayer, ply + 1, historyTable, context, isPVNode);
+            score = -PrincipalVariationSearch(tempBoard, searchDepth, -beta, -alpha, !maximizingPlayer, ply + 1, historyTable, context, isPVNode);
         } else {
             // Null window search for non-PV moves
-            score = -PrincipalVariationSearch(tempBoard, depth - 1, -alpha - 1, -alpha, !maximizingPlayer, ply + 1, historyTable, context, false);
+            score = -PrincipalVariationSearch(tempBoard, searchDepth, -alpha - 1, -alpha, !maximizingPlayer, ply + 1, historyTable, context, false);
             if (score > alpha && score < beta) {
                 // Re-search with full window
-                score = -PrincipalVariationSearch(tempBoard, depth - 1, -beta, -alpha, !maximizingPlayer, ply + 1, historyTable, context, true);
+                score = -PrincipalVariationSearch(tempBoard, searchDepth, -beta, -alpha, !maximizingPlayer, ply + 1, historyTable, context, true);
             }
         }
         
