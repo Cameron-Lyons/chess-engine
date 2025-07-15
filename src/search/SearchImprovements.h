@@ -150,12 +150,7 @@ private:
 
 // Enhanced move ordering namespace
 namespace EnhancedMoveOrdering {
-    // Move scoring constants
-    constexpr int HASH_MOVE_SCORE = 1000000;
-    constexpr int CAPTURE_SCORE_BASE = 900000;
-    constexpr int KILLER_SCORE = 800000;
-    constexpr int HISTORY_SCORE_BASE = 700000;
-    constexpr int QUIET_SCORE_BASE = 600000;
+    // Move scoring constants (defined in search.h)
     
     // MVV-LVA scoring
     int getMVVLVA_Score(const Board& board, int fromSquare, int toSquare);

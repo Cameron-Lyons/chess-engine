@@ -22,13 +22,13 @@ public:
     static bool lateMoveReduction(const Board& board, int depth, int moveNumber, int alpha, int beta);
     
     // Multi-cut pruning - use multiple null moves to detect zugzwang
-    static bool multiCutPruning(const Board& board, int depth, int alpha, int beta, int r);
+    static bool multiCutPruning(Board& board, int depth, int alpha, int beta, int r);
     
     // Internal iterative deepening - when no hash move is available
-    static std::pair<int, int> internalIterativeDeepening(const Board& board, int depth, int alpha, int beta);
+    static std::pair<int, int> internalIterativeDeepening(Board& board, int depth, int alpha, int beta);
     
     // Singular extensions - extend search for moves that are clearly best
-    static bool singularExtension(const Board& board, int depth, const std::pair<int, int>& move, int alpha, int beta);
+    static bool singularExtension(Board& board, int depth, const std::pair<int, int>& move, int alpha, int beta);
     
     // History pruning - skip quiet moves that historically perform poorly
     static bool historyPruning(const Board& board, int depth, const std::pair<int, int>& move, const ThreadSafeHistory& history);
@@ -92,7 +92,7 @@ public:
     TimeManager(const TimeControl& tc);
     
     // Calculate time allocation for current move
-    int allocateTime(const Board& board, int depth, int nodes, bool isInCheck);
+    int allocateTime(Board& board, int depth, int nodes, bool isInCheck);
     
     // Check if we should stop searching
     bool shouldStop(int elapsedTime, int allocatedTime, int depth, int nodes);
@@ -153,6 +153,7 @@ private:
     // Helper functions
     std::string boardToKey(const Board& board);
     void normalizeWeights(std::vector<BookEntry>& entries);
+    std::pair<int, int> parseMove(const std::string& move);
 };
 
 #endif // ADVANCED_SEARCH_H 

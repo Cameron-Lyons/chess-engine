@@ -3,6 +3,9 @@
 #include "../core/BitboardMoves.h"
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
+#include <random>
+#include "../utils/engine_globals.h"
 
 // Enhanced futility pruning with dynamic margins
 bool AdvancedSearch::futilityPruning(const Board& board, int depth, int alpha, int beta, int staticEval) {
@@ -118,7 +121,7 @@ bool AdvancedSearch::lateMoveReduction(const Board& board, int depth, int moveNu
 }
 
 // Multi-cut pruning implementation
-bool AdvancedSearch::multiCutPruning(const Board& board, int depth, int alpha, int beta, int r) {
+bool AdvancedSearch::multiCutPruning(Board& board, int depth, int alpha, int beta, int r) {
     // Don't use multi-cut if in check or depth is too shallow
     if (isInCheck(board, board.turn) || depth < 4) {
         return false;
@@ -155,7 +158,7 @@ bool AdvancedSearch::multiCutPruning(const Board& board, int depth, int alpha, i
 }
 
 // Internal iterative deepening implementation
-std::pair<int, int> AdvancedSearch::internalIterativeDeepening(const Board& board, int depth, int alpha, int beta) {
+std::pair<int, int> AdvancedSearch::internalIterativeDeepening(Board& board, int depth, int alpha, int beta) {
     // Only use IID when we have no hash move and depth is significant
     if (depth < 4) {
         return {-1, -1};
@@ -175,7 +178,7 @@ std::pair<int, int> AdvancedSearch::internalIterativeDeepening(const Board& boar
 }
 
 // Singular extensions implementation
-bool AdvancedSearch::singularExtension(const Board& board, int depth, const std::pair<int, int>& move, int alpha, int beta) {
+bool AdvancedSearch::singularExtension(Board& board, int depth, const std::pair<int, int>& move, int alpha, int beta) {
     // Only extend if depth is significant
     if (depth < 6) {
         return false;
@@ -507,7 +510,7 @@ TimeManager::TimeManager(const TimeControl& tc)
     : timeControl(tc), moveNumber(0), totalMoves(30), timeFactor(1.0) {
 }
 
-int TimeManager::allocateTime(const Board& board, int depth, int nodes, bool isInCheck) {
+int TimeManager::allocateTime(Board& board, int depth, int nodes, bool isInCheck) {
     // Calculate base time
     int baseTime = calculateBaseTime();
     int increment = calculateIncrement();

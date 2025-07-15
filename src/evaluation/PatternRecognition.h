@@ -2,7 +2,7 @@
 #define PATTERN_RECOGNITION_H
 
 #include "../core/ChessBoard.h"
-#include "Bitboard.h"
+#include "../core/Bitboard.h"
 #include <vector>
 #include <unordered_map>
 #include <array>

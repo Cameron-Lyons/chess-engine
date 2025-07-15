@@ -6,7 +6,7 @@ SRCDIR = src
 TESTDIR = tests
 BINDIR = bin
 
-SOURCES = $(SRCDIR)/main.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/evaluation/EvaluationTuning.cpp $(SRCDIR)/evaluation/EvaluationEnhanced.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/protocol/uci.cpp $(SRCDIR)/ai/NeuralNetwork.cpp $(SRCDIR)/ai/EndgameTablebase.cpp $(SRCDIR)/search/AdvancedSearch.cpp
+SOURCES = $(SRCDIR)/main.cpp $(SRCDIR)/core/BitboardMoves.cpp $(SRCDIR)/core/MagicBitboards.cpp $(SRCDIR)/search/ValidMoves.cpp $(SRCDIR)/core/ChessBoard.cpp $(SRCDIR)/search/search.cpp $(SRCDIR)/evaluation/Evaluation.cpp $(SRCDIR)/evaluation/EvaluationTuning.cpp $(SRCDIR)/evaluation/EvaluationEnhanced.cpp $(SRCDIR)/utils/engine_globals.cpp $(SRCDIR)/protocol/uci.cpp $(SRCDIR)/ai/NeuralNetwork.cpp $(SRCDIR)/ai/EndgameTablebase.cpp $(SRCDIR)/search/AdvancedSearch.cpp $(SRCDIR)/ai/OpeningBook.cpp
 HEADERS = $(SRCDIR)/core/ChessPiece.h $(SRCDIR)/core/ChessBoard.h $(SRCDIR)/ChessEngine.h $(SRCDIR)/search/ValidMoves.h $(SRCDIR)/core/MoveContent.h $(SRCDIR)/search/search.h $(SRCDIR)/utils/PieceMoves.h $(SRCDIR)/evaluation/Evaluation.h $(SRCDIR)/evaluation/EvaluationTuning.h $(SRCDIR)/utils/PieceTables.h $(SRCDIR)/core/Bitboard.h $(SRCDIR)/core/BitboardMoves.h $(SRCDIR)/utils/engine_globals.h $(SRCDIR)/protocol/uci.h $(SRCDIR)/ai/NeuralNetwork.h $(SRCDIR)/ai/EndgameTablebase.h $(SRCDIR)/search/AdvancedSearch.h $(SRCDIR)/evaluation/EvaluationEnhanced.h $(SRCDIR)/utils/PerformanceOptimizations.h
 
 all: $(TARGET)
