@@ -49,21 +49,19 @@ A modern C++23 chess engine with a console-based interface that allows you to pl
 
 ### Prerequisites
 - C++23 compatible compiler (GCC 13+, Clang 16+, or recent MSVC)
-- Make
+- CMake 3.20+
+- Make (or a compatible build tool)
 
 ### Compilation
 ```bash
+# Create a build directory
+mkdir build && cd build
+
+# Configure the project
+cmake ..
+
 # Build the engine
-make
-
-# Clean build
-make clean
-
-# Build with debug information
-make debug
-
-# Build optimized release version
-make release
+make -j$(nproc)
 ```
 
 ## Running the Engine
@@ -147,18 +145,14 @@ The engine uses a hybrid approach:
 
 ## Testing
 
-The engine includes several test programs:
-- `test_bitboard_moves` - Tests bitboard move generation
-- `test_comprehensive` - Comprehensive move generation tests
-- `test_fen` - FEN parsing and board initialization tests
-- `test_pawn` - Pawn move generation tests
+The engine includes several test programs. To run the tests, first build the project using CMake, then run the test executables from the `build` directory.
 
 ```bash
-# Run tests
-make test_bitboard_moves
-make test_comprehensive
-make test_fen
-make test_pawn
+# Run a specific test (e.g., test_bitboard_moves)
+./test_bitboard_moves
+
+# Run all tests using CTest
+ctest
 ```
 
 ## Engine Strengths and Features

@@ -9,6 +9,14 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Enable clang-tidy
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    find_program(CLANG_TIDY clang-tidy)
+    if(CLANG_TIDY)
+        set(CMAKE_CXX_CLANG_TIDY clang-tidy)
+    endif()
+endif()
+
 # Compiler-specific options
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-Wall -Wextra -Wpedantic)
@@ -21,6 +29,9 @@ endif()
 
 # Find required packages
 find_package(Threads REQUIRED)
+
+# Find Google Test
+find_package(GTest REQUIRED)
 
 # Include directories
 include_directories(src)
@@ -60,12 +71,18 @@ target_link_libraries(chess_engine Threads::Threads)
 
 # Test executables
 set(TEST_NAMES
-    test_parallel
-    test_bitboard_moves
-    test_comprehensive
-    test_fen
-    test_crash
-    test_pawn
+    gtest_parallel
+    gtest_bitboard_moves
+    gtest_comprehensive
+    gtest_fen
+    gtest_crash
+    gtest_pawn
+    gtest_quiescence
+    gtest_king_safety
+    gtest_killer_moves
+    gtest_engine_improvements
+    gtest_tactical_suite
+    
 )
 
 foreach(test_name ${TEST_NAMES})
@@ -74,7 +91,7 @@ foreach(test_name ${TEST_NAMES})
             tests/${test_name}.cpp
             ${ALL_SOURCES}
         )
-        target_link_libraries(${test_name} Threads::Threads)
+        target_link_libraries(${test_name} Threads::Threads GTest::gtest GTest::gmock GTest::gtest_main)
     endif()
 endforeach()
 
