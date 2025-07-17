@@ -1,6 +1,6 @@
-#include "../src/core/ChessBoard.h"
-#include "../src/search/search.h"
-#include "../src/utils/engine_globals.h"
+#include "core/ChessBoard.h"
+#include "search/search.h"
+#include "utils/engine_globals.h"
 #include "gtest/gtest.h"
 #include <thread>
 

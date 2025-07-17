@@ -1,5 +1,5 @@
 #include "ChessBoard.h"
-#include "BitboardMoves.h"
+#include "core/BitboardMoves.h"
 #include "gtest/gtest.h"
 
 std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color);

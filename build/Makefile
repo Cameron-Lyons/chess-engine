@@ -417,6 +417,63 @@ src/NNUE.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.s
 .PHONY : src/NNUE.cpp.s
 
+src/NNUEOptimized.o: src/NNUEOptimized.cpp.o
+.PHONY : src/NNUEOptimized.o
+
+# target to build an object file
+src/NNUEOptimized.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/NNUEOptimized.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o
+.PHONY : src/NNUEOptimized.cpp.o
+
+src/NNUEOptimized.i: src/NNUEOptimized.cpp.i
+.PHONY : src/NNUEOptimized.i
+
+# target to preprocess a source file
+src/NNUEOptimized.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/NNUEOptimized.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.i
+.PHONY : src/NNUEOptimized.cpp.i
+
+src/NNUEOptimized.s: src/NNUEOptimized.cpp.s
+.PHONY : src/NNUEOptimized.s
+
+# target to generate assembly for a file
+src/NNUEOptimized.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/NNUEOptimized.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.s
+.PHONY : src/NNUEOptimized.cpp.s
+
 src/ai/EndgameTablebase.o: src/ai/EndgameTablebase.cpp.o
 .PHONY : src/ai/EndgameTablebase.o
 
@@ -701,6 +758,63 @@ src/core/BitboardMoves.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/core/BitboardMoves.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/core/BitboardMoves.cpp.s
 .PHONY : src/core/BitboardMoves.cpp.s
+
+src/core/BitboardOnly.o: src/core/BitboardOnly.cpp.o
+.PHONY : src/core/BitboardOnly.o
+
+# target to build an object file
+src/core/BitboardOnly.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/core/BitboardOnly.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/core/BitboardOnly.cpp.o
+.PHONY : src/core/BitboardOnly.cpp.o
+
+src/core/BitboardOnly.i: src/core/BitboardOnly.cpp.i
+.PHONY : src/core/BitboardOnly.i
+
+# target to preprocess a source file
+src/core/BitboardOnly.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/core/BitboardOnly.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/core/BitboardOnly.cpp.i
+.PHONY : src/core/BitboardOnly.cpp.i
+
+src/core/BitboardOnly.s: src/core/BitboardOnly.cpp.s
+.PHONY : src/core/BitboardOnly.s
+
+# target to generate assembly for a file
+src/core/BitboardOnly.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/core/BitboardOnly.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/core/BitboardOnly.cpp.s
+.PHONY : src/core/BitboardOnly.cpp.s
 
 src/core/ChessBoard.o: src/core/ChessBoard.cpp.o
 .PHONY : src/core/ChessBoard.o
@@ -1125,6 +1239,63 @@ src/search/AdvancedSearch.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/search/AdvancedSearch.cpp.s
 .PHONY : src/search/AdvancedSearch.cpp.s
 
+src/search/LMREnhanced.o: src/search/LMREnhanced.cpp.o
+.PHONY : src/search/LMREnhanced.o
+
+# target to build an object file
+src/search/LMREnhanced.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/search/LMREnhanced.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/search/LMREnhanced.cpp.o
+.PHONY : src/search/LMREnhanced.cpp.o
+
+src/search/LMREnhanced.i: src/search/LMREnhanced.cpp.i
+.PHONY : src/search/LMREnhanced.i
+
+# target to preprocess a source file
+src/search/LMREnhanced.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/search/LMREnhanced.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/search/LMREnhanced.cpp.i
+.PHONY : src/search/LMREnhanced.cpp.i
+
+src/search/LMREnhanced.s: src/search/LMREnhanced.cpp.s
+.PHONY : src/search/LMREnhanced.s
+
+# target to generate assembly for a file
+src/search/LMREnhanced.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/search/LMREnhanced.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/search/LMREnhanced.cpp.s
+.PHONY : src/search/LMREnhanced.cpp.s
+
 src/search/LazySMP.o: src/search/LazySMP.cpp.o
 .PHONY : src/search/LazySMP.o
 
@@ -1181,6 +1352,63 @@ src/search/LazySMP.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/search/LazySMP.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/search/LazySMP.cpp.s
 .PHONY : src/search/LazySMP.cpp.s
+
+src/search/TranspositionTableV2.o: src/search/TranspositionTableV2.cpp.o
+.PHONY : src/search/TranspositionTableV2.o
+
+# target to build an object file
+src/search/TranspositionTableV2.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/search/TranspositionTableV2.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/search/TranspositionTableV2.cpp.o
+.PHONY : src/search/TranspositionTableV2.cpp.o
+
+src/search/TranspositionTableV2.i: src/search/TranspositionTableV2.cpp.i
+.PHONY : src/search/TranspositionTableV2.i
+
+# target to preprocess a source file
+src/search/TranspositionTableV2.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/search/TranspositionTableV2.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/search/TranspositionTableV2.cpp.i
+.PHONY : src/search/TranspositionTableV2.cpp.i
+
+src/search/TranspositionTableV2.s: src/search/TranspositionTableV2.cpp.s
+.PHONY : src/search/TranspositionTableV2.s
+
+# target to generate assembly for a file
+src/search/TranspositionTableV2.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/search/TranspositionTableV2.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/search/TranspositionTableV2.cpp.s
+.PHONY : src/search/TranspositionTableV2.cpp.s
 
 src/search/ValidMoves.o: src/search/ValidMoves.cpp.o
 .PHONY : src/search/ValidMoves.o
@@ -1648,6 +1876,9 @@ help:
 	@echo "... src/NNUE.o"
 	@echo "... src/NNUE.i"
 	@echo "... src/NNUE.s"
+	@echo "... src/NNUEOptimized.o"
+	@echo "... src/NNUEOptimized.i"
+	@echo "... src/NNUEOptimized.s"
 	@echo "... src/ai/EndgameTablebase.o"
 	@echo "... src/ai/EndgameTablebase.i"
 	@echo "... src/ai/EndgameTablebase.s"
@@ -1663,6 +1894,9 @@ help:
 	@echo "... src/core/BitboardMoves.o"
 	@echo "... src/core/BitboardMoves.i"
 	@echo "... src/core/BitboardMoves.s"
+	@echo "... src/core/BitboardOnly.o"
+	@echo "... src/core/BitboardOnly.i"
+	@echo "... src/core/BitboardOnly.s"
 	@echo "... src/core/ChessBoard.o"
 	@echo "... src/core/ChessBoard.i"
 	@echo "... src/core/ChessBoard.s"
@@ -1687,9 +1921,15 @@ help:
 	@echo "... src/search/AdvancedSearch.o"
 	@echo "... src/search/AdvancedSearch.i"
 	@echo "... src/search/AdvancedSearch.s"
+	@echo "... src/search/LMREnhanced.o"
+	@echo "... src/search/LMREnhanced.i"
+	@echo "... src/search/LMREnhanced.s"
 	@echo "... src/search/LazySMP.o"
 	@echo "... src/search/LazySMP.i"
 	@echo "... src/search/LazySMP.s"
+	@echo "... src/search/TranspositionTableV2.o"
+	@echo "... src/search/TranspositionTableV2.i"
+	@echo "... src/search/TranspositionTableV2.s"
 	@echo "... src/search/ValidMoves.o"
 	@echo "... src/search/ValidMoves.i"
 	@echo "... src/search/ValidMoves.s"

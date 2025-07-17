@@ -100,10 +100,24 @@ CMakeFiles/chess_engine.dir/src/core/ChessBoard.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/core/ChessBoard.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/core/ChessBoard.cpp -o CMakeFiles/chess_engine.dir/src/core/ChessBoard.cpp.s
 
+CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.o: CMakeFiles/chess_engine.dir/flags.make
+CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.o: /home/cameron/chess-engine/src/core/BitboardOnly.cpp
+CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.o"
+	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/core/BitboardOnly.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.o -MF CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.o.d -o CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.o -c /home/cameron/chess-engine/src/core/BitboardOnly.cpp
+
+CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/core/BitboardOnly.cpp > CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.i
+
+CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/core/BitboardOnly.cpp -o CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.s
+
 CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.o: /home/cameron/chess-engine/src/core/BitboardMoves.cpp
 CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/core/BitboardMoves.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.o -MF CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.o.d -o CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.o -c /home/cameron/chess-engine/src/core/BitboardMoves.cpp
 
 CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.i: cmake_force
@@ -117,7 +131,7 @@ CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.o: /home/cameron/chess-engine/src/core/MagicBitboards.cpp
 CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/core/MagicBitboards.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.o -MF CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.o.d -o CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.o -c /home/cameron/chess-engine/src/core/MagicBitboards.cpp
 
 CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.i: cmake_force
@@ -131,7 +145,7 @@ CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.o: /home/cameron/chess-engine/src/search/ValidMoves.cpp
 CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/search/ValidMoves.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.o -MF CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.o.d -o CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.o -c /home/cameron/chess-engine/src/search/ValidMoves.cpp
 
 CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.i: cmake_force
@@ -142,10 +156,24 @@ CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/search/ValidMoves.cpp -o CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.s
 
+CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.o: CMakeFiles/chess_engine.dir/flags.make
+CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.o: /home/cameron/chess-engine/src/search/TranspositionTableV2.cpp
+CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.o"
+	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/search/TranspositionTableV2.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.o -MF CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.o.d -o CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.o -c /home/cameron/chess-engine/src/search/TranspositionTableV2.cpp
+
+CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/search/TranspositionTableV2.cpp > CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.i
+
+CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/search/TranspositionTableV2.cpp -o CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.s
+
 CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.o: /home/cameron/chess-engine/src/utils/engine_globals.cpp
 CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/utils/engine_globals.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.o -MF CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.o.d -o CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.o -c /home/cameron/chess-engine/src/utils/engine_globals.cpp
 
 CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.i: cmake_force
@@ -159,7 +187,7 @@ CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/search/search.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/search/search.cpp.o: /home/cameron/chess-engine/src/search/search.cpp
 CMakeFiles/chess_engine.dir/src/search/search.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/chess_engine.dir/src/search/search.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/chess_engine.dir/src/search/search.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/search/search.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/search/search.cpp.o -MF CMakeFiles/chess_engine.dir/src/search/search.cpp.o.d -o CMakeFiles/chess_engine.dir/src/search/search.cpp.o -c /home/cameron/chess-engine/src/search/search.cpp
 
 CMakeFiles/chess_engine.dir/src/search/search.cpp.i: cmake_force
@@ -173,7 +201,7 @@ CMakeFiles/chess_engine.dir/src/search/search.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o: /home/cameron/chess-engine/src/search/AdvancedSearch.cpp
 CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/search/AdvancedSearch.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o -MF CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o.d -o CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o -c /home/cameron/chess-engine/src/search/AdvancedSearch.cpp
 
 CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.i: cmake_force
@@ -187,7 +215,7 @@ CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.o: /home/cameron/chess-engine/src/search/LazySMP.cpp
 CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/search/LazySMP.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.o -MF CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.o.d -o CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.o -c /home/cameron/chess-engine/src/search/LazySMP.cpp
 
 CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.i: cmake_force
@@ -198,10 +226,24 @@ CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/search/LazySMP.cpp -o CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.s
 
+CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.o: CMakeFiles/chess_engine.dir/flags.make
+CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.o: /home/cameron/chess-engine/src/search/LMREnhanced.cpp
+CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.o"
+	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/search/LMREnhanced.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.o -MF CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.o.d -o CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.o -c /home/cameron/chess-engine/src/search/LMREnhanced.cpp
+
+CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/search/LMREnhanced.cpp > CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.i
+
+CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/search/LMREnhanced.cpp -o CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.s
+
 CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o: /home/cameron/chess-engine/src/evaluation/Evaluation.cpp
 CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/evaluation/Evaluation.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o -MF CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o.d -o CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o -c /home/cameron/chess-engine/src/evaluation/Evaluation.cpp
 
 CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.i: cmake_force
@@ -215,7 +257,7 @@ CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o: /home/cameron/chess-engine/src/evaluation/EvaluationEnhanced.cpp
 CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/evaluation/EvaluationEnhanced.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o -MF CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o.d -o CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o -c /home/cameron/chess-engine/src/evaluation/EvaluationEnhanced.cpp
 
 CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.i: cmake_force
@@ -229,7 +271,7 @@ CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o: /home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp
 CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o -MF CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o.d -o CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o -c /home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp
 
 CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.i: cmake_force
@@ -243,7 +285,7 @@ CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o: /home/cameron/chess-engine/src/protocol/uci.cpp
 CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/protocol/uci.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o -MF CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o.d -o CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o -c /home/cameron/chess-engine/src/protocol/uci.cpp
 
 CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.i: cmake_force
@@ -257,7 +299,7 @@ CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o: /home/cameron/chess-engine/src/ai/NeuralNetwork.cpp
 CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/ai/NeuralNetwork.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o -MF CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o.d -o CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o -c /home/cameron/chess-engine/src/ai/NeuralNetwork.cpp
 
 CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.i: cmake_force
@@ -271,7 +313,7 @@ CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o: /home/cameron/chess-engine/src/ai/EndgameTablebase.cpp
 CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/ai/EndgameTablebase.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o -MF CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o.d -o CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o -c /home/cameron/chess-engine/src/ai/EndgameTablebase.cpp
 
 CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.i: cmake_force
@@ -285,7 +327,7 @@ CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o: /home/cameron/chess-engine/src/ai/SyzygyTablebase.cpp
 CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building CXX object CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/ai/SyzygyTablebase.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o -MF CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o.d -o CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o -c /home/cameron/chess-engine/src/ai/SyzygyTablebase.cpp
 
 CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.i: cmake_force
@@ -299,7 +341,7 @@ CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o: /home/cameron/chess-engine/src/ai/OpeningBook.cpp
 CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building CXX object CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/ai/OpeningBook.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o -MF CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o.d -o CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o -c /home/cameron/chess-engine/src/ai/OpeningBook.cpp
 
 CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.i: cmake_force
@@ -313,7 +355,7 @@ CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.s: cmake_force
 CMakeFiles/chess_engine.dir/src/NNUE.cpp.o: CMakeFiles/chess_engine.dir/flags.make
 CMakeFiles/chess_engine.dir/src/NNUE.cpp.o: /home/cameron/chess-engine/src/NNUE.cpp
 CMakeFiles/chess_engine.dir/src/NNUE.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/chess_engine.dir/src/NNUE.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/chess_engine.dir/src/NNUE.cpp.o"
 	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/NNUE.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/NNUE.cpp.o -MF CMakeFiles/chess_engine.dir/src/NNUE.cpp.o.d -o CMakeFiles/chess_engine.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp
 
 CMakeFiles/chess_engine.dir/src/NNUE.cpp.i: cmake_force
@@ -324,17 +366,34 @@ CMakeFiles/chess_engine.dir/src/NNUE.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/NNUE.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/NNUE.cpp -o CMakeFiles/chess_engine.dir/src/NNUE.cpp.s
 
+CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o: CMakeFiles/chess_engine.dir/flags.make
+CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o: /home/cameron/chess-engine/src/NNUEOptimized.cpp
+CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building CXX object CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o"
+	$(CMAKE_COMMAND) -E __run_co_compile --tidy="clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/NNUEOptimized.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o -MF CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o.d -o CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp
+
+CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/NNUEOptimized.cpp > CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.i
+
+CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/NNUEOptimized.cpp -o CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.s
+
 # Object files for target chess_engine
 chess_engine_OBJECTS = \
 "CMakeFiles/chess_engine.dir/src/main.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/core/ChessBoard.cpp.o" \
+"CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.o" \
+"CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/search/search.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.o" \
+"CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o" \
@@ -343,20 +402,24 @@ chess_engine_OBJECTS = \
 "CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o" \
-"CMakeFiles/chess_engine.dir/src/NNUE.cpp.o"
+"CMakeFiles/chess_engine.dir/src/NNUE.cpp.o" \
+"CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o"
 
 # External object files for target chess_engine
 chess_engine_EXTERNAL_OBJECTS =
 
 chess_engine: CMakeFiles/chess_engine.dir/src/main.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/core/ChessBoard.cpp.o
+chess_engine: CMakeFiles/chess_engine.dir/src/core/BitboardOnly.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/core/BitboardMoves.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/core/MagicBitboards.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/search/ValidMoves.cpp.o
+chess_engine: CMakeFiles/chess_engine.dir/src/search/TranspositionTableV2.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/utils/engine_globals.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/search/search.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/search/LazySMP.cpp.o
+chess_engine: CMakeFiles/chess_engine.dir/src/search/LMREnhanced.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o
@@ -366,10 +429,11 @@ chess_engine: CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/NNUE.cpp.o
+chess_engine: CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/build.make
 chess_engine: CMakeFiles/chess_engine.dir/compiler_depend.ts
 chess_engine: CMakeFiles/chess_engine.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Linking CXX executable chess_engine"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_23) "Linking CXX executable chess_engine"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/chess_engine.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

@@ -1,6 +1,6 @@
-#include "../src/ChessBoard.h"
-#include "../src/search.h"
-#include "../src/BitboardMoves.h"
+#include "core/ChessBoard.h"
+#include "search/search.h"
+#include "core/BitboardMoves.h"
 #include "gtest/gtest.h"
 
 TEST(TacticalSuite, MateInOne) {

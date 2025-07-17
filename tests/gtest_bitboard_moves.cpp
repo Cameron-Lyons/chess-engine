@@ -1,5 +1,5 @@
-#include "ChessBoard.h"
-#include "BitboardMoves.h"
+#include "core/ChessBoard.h"
+#include "core/BitboardMoves.h"
 #include "gtest/gtest.h"
 
 TEST(BitboardMoves, InitialPosition) {

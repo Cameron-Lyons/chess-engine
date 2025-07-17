@@ -39,9 +39,11 @@ include_directories(src)
 # Source files
 set(CORE_SOURCES
     src/core/ChessBoard.cpp
+    src/core/BitboardOnly.cpp
     src/core/BitboardMoves.cpp
     src/core/MagicBitboards.cpp
     src/search/ValidMoves.cpp
+    src/search/TranspositionTableV2.cpp
     src/utils/engine_globals.cpp
 )
 
@@ -49,6 +51,7 @@ set(ENGINE_SOURCES
     src/search/search.cpp
     src/search/AdvancedSearch.cpp
     src/search/LazySMP.cpp
+    src/search/LMREnhanced.cpp
     src/evaluation/Evaluation.cpp
     src/evaluation/EvaluationEnhanced.cpp
     src/evaluation/EvaluationTuning.cpp
@@ -58,6 +61,7 @@ set(ENGINE_SOURCES
     src/ai/SyzygyTablebase.cpp
     src/ai/OpeningBook.cpp
     src/NNUE.cpp
+    src/NNUEOptimized.cpp
 )
 
 set(ALL_SOURCES ${CORE_SOURCES} ${ENGINE_SOURCES})
