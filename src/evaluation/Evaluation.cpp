@@ -3,11 +3,15 @@
 #include "EvaluationEnhanced.h"
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
+#include "../NNUE.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
 using namespace EvaluationParams;
+
+// NNUE evaluation control
+static bool useNNUE = false;
 
 namespace PieceSquareTables {
     
@@ -650,6 +654,11 @@ int evaluateEndgame(const Board& board) {
 // ENHANCED EVALUATION FUNCTION WITH TUNING PARAMETERS
 // ===================================================================
 int evaluatePosition(const Board& board) {
+    // Use NNUE evaluation if enabled and available
+    if (useNNUE && NNUE::globalEvaluator) {
+        return NNUE::evaluate(board);
+    }
+    
     // ===================================================================
     // MATERIAL AND PIECE-SQUARE TABLE EVALUATION
     // ===================================================================
@@ -1230,4 +1239,28 @@ int evaluateTacticalSafety(const Board& board) {
     }
     
     return score;
+}
+
+
+// NNUE evaluation control functions
+bool isNNUEEnabled() {
+    return useNNUE;
+}
+
+void setNNUEEnabled(bool enabled) {
+    useNNUE = enabled;
+}
+
+int evaluatePositionNNUE(const Board& board) {
+    if (!NNUE::globalEvaluator) {
+        // Fallback to regular evaluation if NNUE not initialized
+        return evaluatePosition(board);
+    }
+    
+    // Force NNUE evaluation
+    bool oldUseNNUE = useNNUE;
+    useNNUE = true;
+    int eval = evaluatePosition(board);
+    useNNUE = oldUseNNUE;
+    return eval;
 }

@@ -3,6 +3,7 @@
 
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
+#include "../NNUE.h"
 
 const int KING_SAFETY_PAWN_SHIELD_BONUS = 10;
 const int KING_SAFETY_OPEN_FILE_PENALTY = 20;
@@ -93,5 +94,10 @@ int evaluateRooksOnOpenFiles(const Board& board);
 int evaluateEndgame(const Board& board);
 // This function is now implemented in EvaluationEnhanced.cpp
 // int evaluateEnhancedPawnStructure(const Board& board);
+
+// NNUE evaluation
+bool isNNUEEnabled();
+void setNNUEEnabled(bool enabled);
+int evaluatePositionNNUE(const Board& board);
 
 #endif

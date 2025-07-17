@@ -123,6 +123,9 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
 std::pair<int, int> findBestMove(Board& board, int depth);
 int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, int ply, ThreadSafeHistory& historyTable, ParallelSearchContext& context, bool isPVNode = true);
 
+// Lazy SMP search - better parallel implementation
+SearchResult lazySMPSearch(Board& board, int maxDepth, int timeLimitMs, int numThreads = 0);
+
 // Static Exchange Evaluation functions
 int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare);
 bool isGoodCapture(const Board& board, int fromSquare, int toSquare);

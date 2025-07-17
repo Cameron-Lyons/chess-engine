@@ -21,7 +21,7 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-Wall -Wextra -Wpedantic)
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_compile_options(-O3 -DNDEBUG)
+        add_compile_options(-O3 -DNDEBUG -march=native -mavx2)
     elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
         add_compile_options(-g -DDEBUG)
     endif()
@@ -48,15 +48,16 @@ set(CORE_SOURCES
 set(ENGINE_SOURCES
     src/search/search.cpp
     src/search/AdvancedSearch.cpp
-    src/search/SearchImprovements.cpp
+    src/search/LazySMP.cpp
     src/evaluation/Evaluation.cpp
     src/evaluation/EvaluationEnhanced.cpp
     src/evaluation/EvaluationTuning.cpp
-    src/evaluation/PatternRecognition.cpp
     src/protocol/uci.cpp
     src/ai/NeuralNetwork.cpp
     src/ai/EndgameTablebase.cpp
+    src/ai/SyzygyTablebase.cpp
     src/ai/OpeningBook.cpp
+    src/NNUE.cpp
 )
 
 set(ALL_SOURCES ${CORE_SOURCES} ${ENGINE_SOURCES})

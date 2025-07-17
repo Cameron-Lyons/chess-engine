@@ -1467,3 +1467,10 @@ int EnhancedMoveOrdering::getPositionalScore(const Board& board, int fromSquare,
     int toSquareAdjusted = (piece.PieceColor == ChessPieceColor::WHITE) ? toSquare : 63 - toSquare;
     return getPieceSquareValue(piece.PieceType, toSquareAdjusted, piece.PieceColor) / 10;
 } 
+#include "LazySMP.h"
+
+// Lazy SMP search implementation
+SearchResult lazySMPSearch(Board& board, int maxDepth, int timeLimitMs, int numThreads) {
+    LazySMP smp(numThreads);
+    return smp.search(board, maxDepth, timeLimitMs);
+}
