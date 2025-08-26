@@ -113,7 +113,9 @@ bool init(const std::string& path) {
             std::string filename = entry.path().filename().string();
             
             // Check for Syzygy file extensions (.rtbw, .rtbz)
-            if (filename.ends_with(".rtbw") || filename.ends_with(".rtbz")) {
+            size_t len = filename.length();
+            if ((len >= 5 && filename.substr(len-5) == ".rtbw") || 
+                (len >= 5 && filename.substr(len-5) == ".rtbz")) {
                 // Parse filename to get piece configuration
                 TBEntry tb;
                 tb.name = filename.substr(0, filename.find('.'));

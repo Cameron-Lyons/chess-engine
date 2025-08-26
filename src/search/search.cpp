@@ -13,15 +13,25 @@
 void ThreadSafeTT::insert(uint64_t hash, const TTEntry& entry) {
     std::lock_guard<std::mutex> lock(mutex);
     
-    // Better replacement strategy - always replace if new entry is deeper or exact
+    // Improved replacement strategy with age and bound type consideration
     auto it = table.find(hash);
     if (it != table.end()) {
         const TTEntry& existing = it->second;
         
         // Check for hash collision
         if (existing.zobristKey != 0 && existing.zobristKey != entry.zobristKey) {
-            // Hash collision detected - only replace if significantly better
-            if (entry.depth >= existing.depth + 2) {
+            // Hash collision - use improved replacement criteria
+            int replaceScore = 0;
+            
+            // Depth is most important
+            replaceScore += (entry.depth - existing.depth) * 4;
+            
+            // Exact bounds are valuable
+            if (entry.flag == 0) replaceScore += 2;
+            if (existing.flag == 0) replaceScore -= 2;
+            
+            // Replace if new entry is clearly better
+            if (replaceScore > 0) {
                 TTEntry newEntry = entry;
                 newEntry.zobristKey = entry.zobristKey;
                 table[hash] = newEntry;
@@ -29,21 +39,45 @@ void ThreadSafeTT::insert(uint64_t hash, const TTEntry& entry) {
             return;
         }
         
-        // Replace if new entry is deeper, or same depth but exact bound, or much older
-        if (entry.depth >= existing.depth || 
-            (entry.depth >= existing.depth - 2 && entry.flag == 0)) {
+        // Same position - use intelligent replacement
+        bool shouldReplace = false;
+        
+        // Always replace if significantly deeper
+        if (entry.depth > existing.depth + 1) {
+            shouldReplace = true;
+        }
+        // Replace if same depth but exact bound (more valuable)
+        else if (entry.depth == existing.depth && entry.flag == 0 && existing.flag != 0) {
+            shouldReplace = true;
+        }
+        // Replace if deeper or equal depth
+        else if (entry.depth >= existing.depth) {
+            shouldReplace = true;
+        }
+        
+        if (shouldReplace) {
             TTEntry newEntry = entry;
             newEntry.zobristKey = entry.zobristKey;
             table[hash] = newEntry;
         }
     } else {
-        // Table size management - keep it reasonable
-        if (table.size() > 100000) { // Limit table size
-            // Simple cleanup - remove 10% of entries (should use LRU in production)
-            auto removeIt = table.begin();
-            for (size_t i = 0; i < table.size() / 10 && removeIt != table.end(); ++i) {
-                removeIt = table.erase(removeIt);
+        // Table size management - use better eviction strategy
+        const size_t MAX_TABLE_SIZE = 500000; // Increased size for better performance
+        if (table.size() >= MAX_TABLE_SIZE) {
+            // Remove entries with lowest depth (least valuable)
+            int minDepth = 100;
+            auto victimIt = table.begin();
+            
+            // Find shallowest entry in first 100 entries
+            auto checkIt = table.begin();
+            for (int i = 0; i < 100 && checkIt != table.end(); ++i, ++checkIt) {
+                if (checkIt->second.depth < minDepth) {
+                    minDepth = checkIt->second.depth;
+                    victimIt = checkIt;
+                }
             }
+            
+            table.erase(victimIt);
         }
         TTEntry newEntry = entry;
         newEntry.zobristKey = entry.zobristKey;
@@ -351,7 +385,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
     }
     
     // Delta pruning - don't search moves that can't improve position significantly
-            const int DELTA_MARGIN = 975; // Queen value - if we can't improve by this much, prune
+    const int DELTA_MARGIN = 975; // Queen value - if we can't improve by this much, prune
     const int BIG_DELTA_MARGIN = 1200; // For very hopeless positions
     
     if (maximizingPlayer) {
@@ -374,10 +408,10 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
     
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK);
-    // Filter to only captures and checks
+    // Filter to only captures (skip check detection for performance)
     std::vector<std::pair<int, int>> tacticalMoves;
     for (const auto& move : moves) {
-        if (isCapture(board, move.first, move.second) || givesCheck(board, move.first, move.second)) {
+        if (isCapture(board, move.first, move.second)) {
             tacticalMoves.push_back(move);
         }
     }
@@ -430,10 +464,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer, T
             }
         }
         
-        // Check bonus (but not too high to avoid check spam)
-        if (givesCheck(board, move.first, move.second)) {
-            score += 80; // Reduced from 100 to prioritize good captures
-        }
+        // Skip check detection for performance
         
         scoredMoves.push_back({move, score});
     }
@@ -655,56 +686,49 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         return 0;
     }
     
+    // Debug output for hang diagnosis  
+    static int callCount = 0;
+    callCount++;
+    if (callCount % 100000 == 0) {
+        std::cerr << "[DEBUG] AlphaBetaSearch calls: " << callCount 
+                  << " depth=" << depth << " ply=" << ply 
+                  << " max=" << maximizingPlayer << std::endl;
+    }
+    
     if (context.stopSearch.load() || isTimeUp(context.startTime, context.timeLimitMs)) {
         context.stopSearch.store(true);
         return 0;
     }
     context.nodeCount.fetch_add(1);
     
-    // Check extensions - extend search for important positions
+    // Check extensions and singular extensions
     int extension = 0;
     ChessPieceColor currentColor = maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
     
-    // Only extend if we're not at the maximum depth and ply limits
-    // Be much more conservative with extensions to prevent infinite recursion
-    if (depth > 1 && depth <= 3 && ply < 50) {
-        // Extend when in check (most important)
-        if (isInCheck(board, currentColor)) {
-            extension = 1;
-        }
-        // Only extend for very obvious tactical situations at shallow depths
-        else if (depth == 2 || depth == 3) {
-            // Only extend for queen captures or very obvious hanging pieces
-            bool hasObviousHangingPiece = false;
-            for (int i = 0; i < 64 && !hasObviousHangingPiece; i++) {
-                const Piece& piece = board.squares[i].piece;
-                if (piece.PieceType == ChessPieceType::NONE) continue;
-                if (piece.PieceType == ChessPieceType::PAWN || piece.PieceType == ChessPieceType::KING) continue;
-                
-                // Only check if piece is under attack by enemy pieces
-                ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE) ? 
-                                            ChessPieceColor::BLACK : ChessPieceColor::WHITE;
-                
-                // Only extend for queen captures or pieces under multiple attacks
-                int attackCount = 0;
-                for (int j = 0; j < 64; j++) {
-                    const Piece& enemyPiece = board.squares[j].piece;
-                    if (enemyPiece.PieceType == ChessPieceType::NONE || 
-                        enemyPiece.PieceColor != enemyColor) continue;
-                        
-                    if (canPieceAttackSquare(board, j, i)) {
-                        attackCount++;
-                        // Only extend for queen captures or pieces under multiple attacks
-                        if (piece.PieceType == ChessPieceType::QUEEN || attackCount >= 2) {
-                            hasObviousHangingPiece = true;
-                            break;
-                        }
+    // Check extension - only at shallow depths
+    if (depth == 1 && ply < 10 && isInCheck(board, currentColor)) {
+        extension = 1;
+    }
+    
+    // Singular extension - extend if one move is clearly better than all others
+    else if (depth >= 6 && ply < 10) {
+        TTEntry ttEntry;
+        uint64_t hash = ComputeZobrist(board);
+        if (context.transTable.find(hash, ttEntry) && ttEntry.depth >= depth - 3) {
+            if (ttEntry.bestMove.first != -1 && ttEntry.value > alpha && ttEntry.value < beta) {
+                // Verify this move is singular by searching other moves with reduced window
+                int singularBeta = ttEntry.value - 50;
+                if (singularBeta > alpha) {
+                    // Search with reduced depth to see if any other move is close
+                    Board testBoard = board;
+                    int singularValue = AlphaBetaSearch(testBoard, depth/2, singularBeta - 1, singularBeta, 
+                                                       maximizingPlayer, ply + 1, historyTable, context);
+                    
+                    if (singularValue < singularBeta) {
+                        // The TT move is singular - extend the search
+                        extension = 1;
                     }
                 }
-            }
-            
-            if (hasObviousHangingPiece) {
-                extension = 1;
             }
         }
     }
@@ -784,7 +808,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         }
     }
     std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(board, moves, historyTable, context.killerMoves, ply, hashMove);
-    std::sort(scoredMoves.begin(), scoredMoves.end());
+    std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
     int origAlpha = alpha;
     int bestValue = maximizingPlayer ? -10000 : 10000;
     int flag = 0;
@@ -802,21 +826,23 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             bool isCaptureMove = isCapture(board, move.first, move.second);
             bool isCheckMove = givesCheck(board, move.first, move.second);
             
-            // Principal Variation Search (PVS)
-            if (moveCount == 0 || foundPV) {
-                // First move or we're in PV - search with full window
-                eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1, historyTable, context);
-            } else {
-                // Non-PV moves - try null window search first
-                eval = AlphaBetaSearch(newBoard, depth - 1, alpha, alpha + 1, false, ply + 1, historyTable, context);
+            // Futility pruning for quiet moves in non-PV nodes
+            if (depth <= 3 && !foundPV && !isCaptureMove && !isCheckMove && !isInCheck(board, currentColor)) {
+                // Get static evaluation
+                int staticEval = evaluatePosition(board);
                 
-                // If null window search suggests this move is good, re-search with full window
-                if (eval > alpha && eval < beta) {
-                    eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1, historyTable, context);
+                // Futility margins based on depth
+                const int futilityMargins[4] = {0, 200, 400, 600};
+                int futilityValue = staticEval + futilityMargins[depth];
+                
+                // Skip moves that can't improve alpha enough
+                if (futilityValue <= alpha) {
+                    moveCount++;
+                    continue;
                 }
             }
             
-            // SEE-based futility pruning for captures at shallow depths
+            // SEE-based futility pruning for captures at shallow depths - do this BEFORE search
             if (depth <= 3 && isCaptureMove && !isCheckMove && !isInCheck(board, currentColor)) {
                 int seeValue = staticExchangeEvaluation(board, move.first, move.second);
                 
@@ -850,37 +876,49 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 }
             }
             
-            // Late Move Reduction - only for non-PV moves and reasonable depths, be more conservative
-            if (!foundPV && depth >= 3 && depth <= 10 && moveCount > 0 && !isCaptureMove && !isCheckMove && 
-                !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor) && ply < 30) {
-                
-                // Reduce more for later moves
-                int reduction = 1;
-                if (moveCount > 3) reduction = 2;
-                if (moveCount > 6) reduction = 3;
-                
-                // Don't reduce too much in PV nodes or important positions
-                if (scoredMove.score > 1000) reduction = std::max(1, reduction - 1);
-                
-                // Ensure we don't reduce below 0
-                int reducedDepth = depth - 1 - reduction;
-                if (reducedDepth >= 0 && reducedDepth <= 10) {
-                    // Try reduced search first
-                    int reducedEval = AlphaBetaSearch(newBoard, reducedDepth, alpha, alpha + 1, false, ply + 1, historyTable, context);
+            // Now handle the main search with PVS and LMR
+            if (moveCount == 0 || foundPV) {
+                // First move or we're in PV - search with full window
+                eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1, historyTable, context);
+            } else {
+                // Check if we should apply Late Move Reduction
+                if (depth >= 3 && depth <= 10 && moveCount > 0 && !isCaptureMove && !isCheckMove && 
+                    !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor) && ply < 30) {
                     
-                    // If reduced search fails high, do full search
-                    if (reducedEval > alpha) {
-                        eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1, historyTable, context);
+                    // Reduce more for later moves
+                    int reduction = 1;
+                    if (moveCount > 3) reduction = 2;
+                    if (moveCount > 6) reduction = 3;
+                    
+                    // Don't reduce too much in PV nodes or important positions
+                    if (scoredMove.score > 1000) reduction = std::max(1, reduction - 1);
+                    
+                    // Ensure we don't reduce below 0
+                    int reducedDepth = depth - 1 - reduction;
+                    if (reducedDepth >= 0 && reducedDepth <= 10) {
+                        // Try reduced search first with null window
+                        int reducedEval = AlphaBetaSearch(newBoard, reducedDepth, alpha, alpha + 1, false, ply + 1, historyTable, context);
+                        
+                        // If reduced search fails high, do full search
+                        if (reducedEval > alpha) {
+                            eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1, historyTable, context);
+                        } else {
+                            eval = reducedEval;
+                        }
                     } else {
-                        eval = reducedEval;
+                        // Fall back to normal search if reduction would be too aggressive
+                        eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1, historyTable, context);
                     }
                 } else {
-                    // Fall back to normal search if reduction would be too aggressive
-                    eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1, historyTable, context);
+                    // Non-PV moves without LMR - try null window search first
+                    eval = AlphaBetaSearch(newBoard, depth - 1, alpha, alpha + 1, false, ply + 1, historyTable, context);
+                    
+                    // If null window search suggests this move is good, re-search with full window
+                    if (eval > alpha && eval < beta) {
+                        eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1, historyTable, context);
+                    }
                 }
             }
-            
-
             
             moveCount++;
             if (context.stopSearch.load()) return 0;
@@ -914,20 +952,6 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             int eval;
             bool isCaptureMove = isCapture(board, move.first, move.second);
             bool isCheckMove = givesCheck(board, move.first, move.second);
-            
-            // Principal Variation Search (PVS) for black
-            if (moveCount == 0 || foundPV) {
-                // First move or we're in PV - search with full window
-                eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1, historyTable, context);
-            } else {
-                // Non-PV moves - try null window search first
-                eval = AlphaBetaSearch(newBoard, depth - 1, beta - 1, beta, true, ply + 1, historyTable, context);
-                
-                // If null window search suggests this move is good, re-search with full window
-                if (eval < beta && eval > alpha) {
-                    eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1, historyTable, context);
-                }
-            }
             
             // SEE-based futility pruning for captures at shallow depths (minimizing player)
             if (depth <= 3 && isCaptureMove && !isCheckMove && !isInCheck(board, currentColor)) {
@@ -963,31 +987,45 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 }
             }
             
-            // Late Move Reduction for black - only for non-PV moves and reasonable depths, be more conservative
-            if (!foundPV && depth >= 3 && depth <= 10 && moveCount > 0 && !isCaptureMove && !isCheckMove && 
-                !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor) && ply < 30) {
-                
-                int reduction = 1;
-                if (moveCount > 3) reduction = 2;
-                if (moveCount > 6) reduction = 3;
-                
-                if (scoredMove.score > 1000) reduction = std::max(1, reduction - 1);
-                
-                // Ensure we don't reduce below 0
-                int reducedDepth = depth - 1 - reduction;
-                if (reducedDepth >= 0 && reducedDepth <= 10) {
-                    // Try reduced search first
-                    int reducedEval = AlphaBetaSearch(newBoard, reducedDepth, beta - 1, beta, true, ply + 1, historyTable, context);
+            // Now handle the main search with PVS and LMR
+            if (moveCount == 0 || foundPV) {
+                // First move or we're in PV - search with full window
+                eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1, historyTable, context);
+            } else {
+                // Check if we should apply Late Move Reduction
+                if (depth >= 3 && depth <= 10 && moveCount > 0 && !isCaptureMove && !isCheckMove && 
+                    !context.killerMoves.isKiller(ply, move) && !isInCheck(board, currentColor) && ply < 30) {
                     
-                    // If reduced search fails low, do full search
-                    if (reducedEval < beta) {
-                        eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1, historyTable, context);
+                    int reduction = 1;
+                    if (moveCount > 3) reduction = 2;
+                    if (moveCount > 6) reduction = 3;
+                    
+                    if (scoredMove.score > 1000) reduction = std::max(1, reduction - 1);
+                    
+                    // Ensure we don't reduce below 0
+                    int reducedDepth = depth - 1 - reduction;
+                    if (reducedDepth >= 0 && reducedDepth <= 10) {
+                        // Try reduced search first with null window
+                        int reducedEval = AlphaBetaSearch(newBoard, reducedDepth, beta - 1, beta, true, ply + 1, historyTable, context);
+                        
+                        // If reduced search fails low, do full search
+                        if (reducedEval < beta) {
+                            eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1, historyTable, context);
+                        } else {
+                            eval = reducedEval;
+                        }
                     } else {
-                        eval = reducedEval;
+                        // Fall back to normal search if reduction would be too aggressive
+                        eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1, historyTable, context);
                     }
                 } else {
-                    // Fall back to normal search if reduction would be too aggressive
-                    eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1, historyTable, context);
+                    // Non-PV moves without LMR - try null window search first
+                    eval = AlphaBetaSearch(newBoard, depth - 1, beta - 1, beta, true, ply + 1, historyTable, context);
+                    
+                    // If null window search suggests this move is good, re-search with full window
+                    if (eval < beta && eval > alpha) {
+                        eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1, historyTable, context);
+                    }
                 }
             }
             
@@ -1112,7 +1150,7 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
         std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
         if (!moves.empty()) {
             std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(board, moves, context.historyTable, context.killerMoves, 0);
-            std::sort(scoredMoves.begin(), scoredMoves.end());
+            std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
             result.bestMove = scoredMoves[0].move;
         }
         
@@ -1174,6 +1212,8 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
 std::pair<int, int> findBestMove(Board& board, int depth) {
     ThreadSafeHistory historyTable;
     ParallelSearchContext context(1);
+    context.startTime = std::chrono::steady_clock::now();  // Initialize start time
+    context.timeLimitMs = 30000;  // Set a reasonable time limit (30 seconds)
     
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
@@ -1188,7 +1228,7 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
     int maxAspirationWindow = 400;
     
     std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(board, moves, historyTable, context.killerMoves, 0);
-    std::sort(scoredMoves.begin(), scoredMoves.end());
+    std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
     
     int bestEval = (board.turn == ChessPieceColor::WHITE) ? -10000 : 10000;
     std::pair<int, int> bestMove = {-1, -1};
