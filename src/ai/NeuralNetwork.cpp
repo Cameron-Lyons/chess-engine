@@ -1,47 +1,51 @@
 #include "NeuralNetwork.h"
-#include "../search/ValidMoves.h"
 #include "../evaluation/Evaluation.h"
-#include <random>
+#include "../search/ValidMoves.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <algorithm>
-#include <cmath>
 #include <numeric>
-#include <filesystem>
+#include <random>
+#include <ranges>
 
-// Neural network implementation using PIMPL pattern
 class NeuralNetworkEvaluator::Impl {
 public:
     struct Layer {
-        std::vector<std::vector<float>> weights;  // [output_size][input_size]
-        std::vector<float> biases;                 // [output_size]
-        std::vector<float> activations;            // [output_size]
-        std::vector<float> gradients;              // [output_size]
+        std::vector<std::vector<float>> weights;
+        std::vector<float> biases;
+        std::vector<float> activations;
+        std::vector<float> gradients;
     };
-    
+
     NetworkConfig config;
     std::vector<Layer> layers;
     std::mt19937 rng;
-    
+
     Impl(const NetworkConfig& config) : config(config), rng(42) {
         initializeNetwork();
     }
-    
+
     ~Impl() = default;
-    
+    Impl(const Impl&) = delete;
+    auto operator=(const Impl&) -> Impl& = delete;
+    Impl(Impl&&) = delete;
+    auto operator=(Impl&&) -> Impl& = delete;
+
     void initializeNetwork() {
-        // Create layers: input -> hidden -> output
+
         std::vector<int> layerSizes = {config.inputSize, config.hiddenSize, config.outputSize};
-        
+
         for (size_t i = 0; i < layerSizes.size() - 1; ++i) {
             Layer layer;
             int inputSize = layerSizes[i];
             int outputSize = layerSizes[i + 1];
-            
-            // Initialize weights with Xavier/Glorot initialization
-            float scale = std::sqrt(2.0f / (inputSize + outputSize));
+
+            float scale = std::sqrt(2.0f / static_cast<float>(inputSize + outputSize));
             std::normal_distribution<float> dist(0.0f, scale);
-            
+
             layer.weights.resize(outputSize);
             for (int j = 0; j < outputSize; ++j) {
                 layer.weights[j].resize(inputSize);
@@ -49,80 +53,73 @@ public:
                     layer.weights[j][k] = dist(rng);
                 }
             }
-            
-            // Initialize biases to zero
+
             layer.biases.resize(outputSize, 0.0f);
             layer.activations.resize(outputSize);
             layer.gradients.resize(outputSize);
-            
+
             layers.push_back(std::move(layer));
         }
     }
-    
-    float forwardPass(const std::vector<float>& input) {
+
+    auto forwardPass(const std::vector<float>& input) -> float {
         std::vector<float> currentInput = input;
-        
+
         for (size_t i = 0; i < layers.size(); ++i) {
             Layer& layer = layers[i];
-            
-            // Linear transformation: output = weights * input + bias
+
             for (int j = 0; j < layer.weights.size(); ++j) {
                 float sum = layer.biases[j];
                 for (int k = 0; k < layer.weights[j].size(); ++k) {
                     sum += layer.weights[j][k] * currentInput[k];
                 }
-                
-                // Apply activation function
+
                 if (i == layers.size() - 1) {
-                    // Output layer: tanh for evaluation scores
+
                     layer.activations[j] = std::tanh(sum);
                 } else {
-                    // Hidden layers: ReLU
+
                     layer.activations[j] = std::max(0.0f, sum);
                 }
             }
-            
+
             currentInput = layer.activations;
         }
-        
+
         return layers.back().activations[0];
     }
-    
+
     void backwardPass(const std::vector<float>& input, float target, float predicted) {
-        // Compute loss gradient
-        float lossGradient = predicted - target;  // MSE derivative
-        
-        // Backpropagate through layers
+
+        float lossGradient = predicted - target;
+
         std::vector<float> nextGradient = {lossGradient};
-        
-        for (int i = layers.size() - 1; i >= 0; --i) {
+
+        for (int i = static_cast<int>(layers.size()) - 1; i >= 0; --i) {
             Layer& layer = layers[i];
             std::vector<float> currentGradient(layer.weights.size());
-            
-            // Compute gradients for this layer
+
             for (int j = 0; j < layer.weights.size(); ++j) {
                 float activationGradient = nextGradient[j];
-                
-                // Apply activation derivative
+
                 if (i == layers.size() - 1) {
-                    // Output layer: tanh derivative
-                    activationGradient *= (1.0f - layer.activations[j] * layer.activations[j]);
+
+                    activationGradient *= (1.0f - (layer.activations[j] * layer.activations[j]));
                 } else {
-                    // Hidden layers: ReLU derivative
+
                     if (layer.activations[j] <= 0) {
                         activationGradient = 0.0f;
                     }
                 }
-                
+
                 layer.gradients[j] = activationGradient;
                 currentGradient[j] = activationGradient;
             }
-            
-            // Compute gradients for previous layer
+
             if (i > 0) {
-                std::vector<float> prevInput = (i == 0) ? input : layers[i-1].activations;
+                std::vector<float> prevInput = (i == 0) ? input : layers[i - 1].activations;
                 nextGradient.resize(prevInput.size(), 0.0f);
-                
+
                 for (int j = 0; j < layer.weights.size(); ++j) {
                     for (int k = 0; k < layer.weights[j].size(); ++k) {
                         nextGradient[k] += layer.weights[j][k] * currentGradient[j];
@@ -131,123 +128,111 @@ public:
             }
         }
     }
-    
+
     void updateWeights(const std::vector<float>& input, float learningRate) {
         std::vector<float> currentInput = input;
-        
+
         for (size_t i = 0; i < layers.size(); ++i) {
             Layer& layer = layers[i];
-            
-            // Update weights and biases
+
             for (int j = 0; j < layer.weights.size(); ++j) {
                 for (int k = 0; k < layer.weights[j].size(); ++k) {
                     layer.weights[j][k] -= learningRate * layer.gradients[j] * currentInput[k];
                 }
                 layer.biases[j] -= learningRate * layer.gradients[j];
             }
-            
+
             if (i < layers.size() - 1) {
                 currentInput = layer.activations;
             }
         }
     }
-    
+
     void saveModel(const std::string& path) {
         std::ofstream file(path, std::ios::binary);
         if (!file.is_open()) {
-            std::cerr << "Error: Could not open file for writing: " << path << std::endl;
+            std::cerr << "Error: Could not open file for writing: " << path << '\n';
             return;
         }
-        
-        // Write config
+
         file.write(reinterpret_cast<const char*>(&config.inputSize), sizeof(int));
         file.write(reinterpret_cast<const char*>(&config.hiddenSize), sizeof(int));
         file.write(reinterpret_cast<const char*>(&config.outputSize), sizeof(int));
         file.write(reinterpret_cast<const char*>(&config.learningRate), sizeof(float));
-        
-        // Write layers
+
         for (const auto& layer : layers) {
-            // Write weights
+
             for (const auto& weightRow : layer.weights) {
-                file.write(reinterpret_cast<const char*>(weightRow.data()), 
-                          weightRow.size() * sizeof(float));
+                file.write(reinterpret_cast<const char*>(weightRow.data()),
+                           static_cast<std::streamsize>(weightRow.size() * sizeof(float)));
             }
-            
-            // Write biases
-            file.write(reinterpret_cast<const char*>(layer.biases.data()), 
-                      layer.biases.size() * sizeof(float));
+
+            file.write(reinterpret_cast<const char*>(layer.biases.data()),
+                       static_cast<std::streamsize>(layer.biases.size() * sizeof(float)));
         }
-        
+
         file.close();
-        std::cout << "Model saved to: " << path << std::endl;
+        std::cout << "Model saved to: " << path << '\n';
     }
-    
+
     void loadModel(const std::string& path) {
         std::ifstream file(path, std::ios::binary);
         if (!file.is_open()) {
-            std::cerr << "Error: Could not open file for reading: " << path << std::endl;
+            std::cerr << "Error: Could not open file for reading: " << path << '\n';
             return;
         }
-        
-        // Read config
+
         file.read(reinterpret_cast<char*>(&config.inputSize), sizeof(int));
         file.read(reinterpret_cast<char*>(&config.hiddenSize), sizeof(int));
         file.read(reinterpret_cast<char*>(&config.outputSize), sizeof(int));
         file.read(reinterpret_cast<char*>(&config.learningRate), sizeof(float));
-        
-        // Clear existing layers
+
         layers.clear();
-        
-        // Read layers
+
         std::vector<int> layerSizes = {config.inputSize, config.hiddenSize, config.outputSize};
-        
+
         for (size_t i = 0; i < layerSizes.size() - 1; ++i) {
             Layer layer;
             int inputSize = layerSizes[i];
             int outputSize = layerSizes[i + 1];
-            
-            // Read weights
+
             layer.weights.resize(outputSize);
             for (int j = 0; j < outputSize; ++j) {
                 layer.weights[j].resize(inputSize);
-                file.read(reinterpret_cast<char*>(layer.weights[j].data()), 
-                         inputSize * sizeof(float));
+                file.read(reinterpret_cast<char*>(layer.weights[j].data()),
+                          static_cast<std::streamsize>(inputSize * sizeof(float)));
             }
-            
-            // Read biases
+
             layer.biases.resize(outputSize);
-            file.read(reinterpret_cast<char*>(layer.biases.data()), 
-                     outputSize * sizeof(float));
-            
+            file.read(reinterpret_cast<char*>(layer.biases.data()),
+                      static_cast<std::streamsize>(outputSize * sizeof(float)));
+
             layer.activations.resize(outputSize);
             layer.gradients.resize(outputSize);
-            
+
             layers.push_back(std::move(layer));
         }
-        
+
         file.close();
-        std::cout << "Model loaded from: " << path << std::endl;
+        std::cout << "Model loaded from: " << path << '\n';
     }
 };
 
-NeuralNetworkEvaluator::NeuralNetworkEvaluator(const NetworkConfig& config) 
-    : pImpl(std::make_unique<Impl>(config)) {
-}
+NeuralNetworkEvaluator::NeuralNetworkEvaluator(const NetworkConfig& config)
+    : m_pImpl(std::make_unique<Impl>(config)) {}
 
 NeuralNetworkEvaluator::~NeuralNetworkEvaluator() = default;
 
-float NeuralNetworkEvaluator::evaluatePosition(const Board& board) {
+auto NeuralNetworkEvaluator::evaluatePosition(const Board& board) -> float {
     std::vector<float> input = encodePosition(board);
-    float evaluation = pImpl->forwardPass(input);
-    
-    // Convert from [-1, 1] range to centipawns
+    float evaluation = m_pImpl->forwardPass(input);
+
     return evaluation * 1000.0f;
 }
 
-std::vector<float> NeuralNetworkEvaluator::encodePosition(const Board& board) {
+auto NeuralNetworkEvaluator::encodePosition(const Board& board) -> std::vector<float> {
     std::vector<float> encoding(768, 0.0f);
-    
-    // One-hot encoding: 64 squares * 12 piece types = 768 features
+
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
@@ -255,72 +240,69 @@ std::vector<float> NeuralNetworkEvaluator::encodePosition(const Board& board) {
             if (piece.PieceColor == ChessPieceColor::BLACK) {
                 pieceIndex += 6;
             }
-            encoding[square * 12 + pieceIndex] = 1.0f;
+            encoding[(square * 12) + pieceIndex] = 1.0f;
         }
     }
-    
+
     return encoding;
 }
 
 void NeuralNetworkEvaluator::train(const std::vector<std::pair<Board, float>>& trainingData) {
     if (trainingData.empty()) {
-        std::cerr << "Warning: No training data provided" << std::endl;
+        std::cerr << "Warning: No training data provided" << '\n';
         return;
     }
-    
-    std::cout << "Training neural network with " << trainingData.size() << " positions..." << std::endl;
-    
+
+    std::cout << "Training neural network with " << trainingData.size() << " positions..." << '\n';
+
     float totalLoss = 0.0f;
     int batchSize = std::min(32, static_cast<int>(trainingData.size()));
-    
+
     for (size_t i = 0; i < trainingData.size(); i += batchSize) {
         float batchLoss = 0.0f;
-        
+
         for (int j = 0; j < batchSize && i + j < trainingData.size(); ++j) {
             const auto& [board, target] = trainingData[i + j];
-            
-            // Encode position
+
             std::vector<float> input = encodePosition(board);
-            
-            // Forward pass
-            float predicted = pImpl->forwardPass(input);
-            
-            // Normalize target to [-1, 1] range
+
+            float predicted = m_pImpl->forwardPass(input);
+
             float normalizedTarget = std::tanh(target / 1000.0f);
-            
-            // Backward pass
-            pImpl->backwardPass(input, normalizedTarget, predicted);
-            
-            // Update weights
-            pImpl->updateWeights(input, pImpl->config.learningRate);
-            
+
+            m_pImpl->backwardPass(input, normalizedTarget, predicted);
+
+            m_pImpl->updateWeights(input, m_pImpl->config.learningRate);
+
             batchLoss += (predicted - normalizedTarget) * (predicted - normalizedTarget);
         }
-        
-        totalLoss += batchLoss / batchSize;
-        
+
+        totalLoss += batchLoss / static_cast<float>(batchSize);
+
         if ((i / batchSize) % 100 == 0) {
-            std::cout << "Batch " << (i / batchSize) << ", Loss: " << (batchLoss / batchSize) << std::endl;
+            std::cout << "Batch " << (i / batchSize)
+                      << ", Loss: " << (batchLoss / static_cast<float>(batchSize)) << '\n';
         }
     }
-    
-    std::cout << "Training completed. Average loss: " << (totalLoss / (trainingData.size() / batchSize)) << std::endl;
+
+    std::cout << "Training completed. Average loss: "
+              << (totalLoss /
+                  static_cast<float>(trainingData.size() / static_cast<size_t>(batchSize)))
+              << '\n';
 }
 
 void NeuralNetworkEvaluator::saveModel(const std::string& path) {
-    pImpl->saveModel(path);
+    m_pImpl->saveModel(path);
 }
 
 void NeuralNetworkEvaluator::loadModel(const std::string& path) {
-    pImpl->loadModel(path);
+    m_pImpl->loadModel(path);
 }
 
-float NeuralNetworkEvaluator::hybridEvaluate(const Board& board, float nnWeight) {
-    // Get neural network evaluation
+auto NeuralNetworkEvaluator::hybridEvaluate(const Board& board, float nnWeight) -> float {
+
     float nnEval = evaluatePosition(board);
-    
-    // Get traditional evaluation (you'll need to implement this)
-    // For now, we'll use a simple material count
+
     float traditionalEval = 0.0f;
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
@@ -332,13 +314,12 @@ float NeuralNetworkEvaluator::hybridEvaluate(const Board& board, float nnWeight)
             traditionalEval += value;
         }
     }
-    
-    // Combine evaluations
-    return nnWeight * nnEval + (1.0f - nnWeight) * traditionalEval;
+
+    return (nnWeight * nnEval) + ((1.0f - nnWeight) * traditionalEval);
 }
 
-std::vector<float> NeuralNetworkEvaluator::pieceToVector(const Piece& piece, int square) {
-    (void)square; // Suppress unused parameter warning
+auto NeuralNetworkEvaluator::pieceToVector(const Piece& piece, int square) -> std::vector<float> {
+    (void)square;
     std::vector<float> vec(12, 0.0f);
     if (piece.PieceType != ChessPieceType::NONE) {
         int index = static_cast<int>(piece.PieceType) - 1;
@@ -351,21 +332,18 @@ std::vector<float> NeuralNetworkEvaluator::pieceToVector(const Piece& piece, int
 }
 
 void NeuralNetworkEvaluator::updateWeights(const std::vector<float>& gradients) {
-    (void)gradients; // This is now handled internally in the Impl class
+    (void)gradients;
 }
 
-// Feature extraction implementation
-PositionFeatures FeatureExtractor::extractFeatures(const Board& board) {
+auto FeatureExtractor::extractFeatures(const Board& board) -> PositionFeatures {
     PositionFeatures features = {};
-    
-    // Initialize material counts
+
     for (int color = 0; color < 2; ++color) {
         for (int piece = 0; piece < 6; ++piece) {
             features.materialCount[color][piece] = 0;
         }
     }
-    
-    // Count pieces and calculate material balance
+
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
@@ -376,16 +354,16 @@ PositionFeatures FeatureExtractor::extractFeatures(const Board& board) {
             }
         }
     }
-    
-    // Calculate material balance
+
     int whiteMaterial = 0, blackMaterial = 0;
     for (int piece = 0; piece < 6; ++piece) {
-        whiteMaterial += features.materialCount[0][piece] * Piece::getPieceValue(static_cast<ChessPieceType>(piece + 1));
-        blackMaterial += features.materialCount[1][piece] * Piece::getPieceValue(static_cast<ChessPieceType>(piece + 1));
+        whiteMaterial += features.materialCount[0][piece] *
+                         Piece::getPieceValue(static_cast<ChessPieceType>(piece + 1));
+        blackMaterial += features.materialCount[1][piece] *
+                         Piece::getPieceValue(static_cast<ChessPieceType>(piece + 1));
     }
     features.materialBalance = static_cast<float>(whiteMaterial - blackMaterial);
-    
-    // Calculate positional features
+
     features.centerControl[0] = evaluateCenterControl(board);
     features.centerControl[1] = evaluateCenterControl(board);
     features.mobility[0] = calculateMobility(board, ChessPieceColor::WHITE);
@@ -394,35 +372,31 @@ PositionFeatures FeatureExtractor::extractFeatures(const Board& board) {
     features.kingSafety[1] = calculateKingSafety(board, ChessPieceColor::BLACK);
     features.pawnStructure[0] = calculatePawnStructure(board, ChessPieceColor::WHITE);
     features.pawnStructure[1] = calculatePawnStructure(board, ChessPieceColor::BLACK);
-    
-    // Calculate tactical features
+
     features.hangingPieces[0] = evaluateHangingPieces(board);
     features.hangingPieces[1] = evaluateHangingPieces(board);
-    features.pinnedPieces[0] = 0; // Simplified - would need complex pin detection
-    features.pinnedPieces[1] = 0; // Simplified - would need complex pin detection
-    features.discoveredAttacks[0] = 0; // Simplified - would need complex discovered attack detection
-    features.discoveredAttacks[1] = 0; // Simplified - would need complex discovered attack detection
-    
-    // Calculate endgame features
+    features.pinnedPieces[0] = 0;
+    features.pinnedPieces[1] = 0;
+    features.discoveredAttacks[0] = 0;
+    features.discoveredAttacks[1] = 0;
+
     features.gamePhase = calculateGamePhase(board);
     features.passedPawns[0] = evaluatePassedPawns(board);
     features.passedPawns[1] = evaluatePassedPawns(board);
-    features.kingDistance = 0; // Simplified - would need king distance calculation
-    
+    features.kingDistance = 0;
+
     return features;
 }
 
-std::vector<float> FeatureExtractor::featuresToVector(const PositionFeatures& features) {
+auto FeatureExtractor::featuresToVector(const PositionFeatures& features) -> std::vector<float> {
     std::vector<float> vec;
-    
-    // Add material features
+
     for (int color = 0; color < 2; ++color) {
         for (int piece = 0; piece < 6; ++piece) {
             vec.push_back(static_cast<float>(features.materialCount[color][piece]));
         }
     }
-    
-    // Add other features
+
     vec.push_back(features.materialBalance);
     vec.push_back(static_cast<float>(features.centerControl[0]));
     vec.push_back(static_cast<float>(features.centerControl[1]));
@@ -442,31 +416,27 @@ std::vector<float> FeatureExtractor::featuresToVector(const PositionFeatures& fe
     vec.push_back(static_cast<float>(features.passedPawns[0]));
     vec.push_back(static_cast<float>(features.passedPawns[1]));
     vec.push_back(static_cast<float>(features.kingDistance));
-    
+
     return vec;
 }
 
+auto FeatureExtractor::calculateMobility(const Board& board, ChessPieceColor color) -> int {
 
-
-int FeatureExtractor::calculateMobility(const Board& board, ChessPieceColor color) {
-    // This is a simplified mobility calculation
-    // In a full implementation, you'd generate all legal moves
     int mobility = 0;
-    
-    // Count pieces that can potentially move
+
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceColor == color) {
-            // Simple heuristic: more valuable pieces get more mobility weight
+
             mobility += piece.PieceValue / 100;
         }
     }
-    
+
     return mobility;
 }
 
-int FeatureExtractor::calculateKingSafety(const Board& board, ChessPieceColor color) {
-    // Find king position
+auto FeatureExtractor::calculateKingSafety(const Board& board, ChessPieceColor color) -> int {
+
     int kingSquare = -1;
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
@@ -475,27 +445,25 @@ int FeatureExtractor::calculateKingSafety(const Board& board, ChessPieceColor co
             break;
         }
     }
-    
-    if (kingSquare == -1) return 0;
-    
-    // Simple king safety: penalize king in center during middlegame
+
+    if (kingSquare == -1)
+        return 0;
+
     int row = kingSquare / 8;
     int col = kingSquare % 8;
-    
-    // Penalize king in center (files c-f, ranks 2-6)
+
     if (col >= 2 && col <= 5 && row >= 1 && row <= 5) {
         return -100;
     }
-    
+
     return 0;
 }
 
-int FeatureExtractor::calculatePawnStructure(const Board& board, ChessPieceColor color) {
+auto FeatureExtractor::calculatePawnStructure(const Board& board, ChessPieceColor color) -> int {
     int score = 0;
-    
-    // Count pawns and check for doubled pawns
+
     std::vector<int> pawnsInFile(8, 0);
-    
+
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == color) {
@@ -503,23 +471,20 @@ int FeatureExtractor::calculatePawnStructure(const Board& board, ChessPieceColor
             pawnsInFile[file]++;
         }
     }
-    
-    // Penalize doubled pawns
+
     for (int file = 0; file < 8; ++file) {
         if (pawnsInFile[file] > 1) {
             score -= 50 * (pawnsInFile[file] - 1);
         }
     }
-    
+
     return score;
 }
 
-
-
-float FeatureExtractor::calculateGamePhase(const Board& board) {
+auto FeatureExtractor::calculateGamePhase(const Board& board) -> float {
     int totalPieces = 0;
     int pawns = 0;
-    
+
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
@@ -529,56 +494,50 @@ float FeatureExtractor::calculateGamePhase(const Board& board) {
             }
         }
     }
-    
-    // Game phase: 0.0 = opening, 1.0 = endgame
-    // Based on piece count and pawn count
+
     float phase = 1.0f - (static_cast<float>(totalPieces) / 32.0f);
     phase = std::max(0.0f, std::min(1.0f, phase));
-    
+
     return phase;
 }
 
- 
+TrainingDataGenerator::TrainingDataGenerator() : m_rng(42) {}
 
-// Training data generator implementation
-TrainingDataGenerator::TrainingDataGenerator() : rng(42) {
-}
-
-std::vector<TrainingDataGenerator::TrainingExample> TrainingDataGenerator::generateSelfPlayData(int numGames, int maxMoves) {
+auto TrainingDataGenerator::generateSelfPlayData(int numGames, int maxMoves)
+    -> std::vector<TrainingDataGenerator::TrainingExample> {
     std::vector<TrainingExample> allExamples;
-    
-    std::cout << "Generating " << numGames << " self-play games..." << std::endl;
-    
+
+    std::cout << "Generating " << numGames << " self-play games..." << '\n';
+
     for (int game = 0; game < numGames; ++game) {
         if (game % 10 == 0) {
-            std::cout << "Playing game " << game + 1 << "/" << numGames << std::endl;
+            std::cout << "Playing game " << game + 1 << "/" << numGames << '\n';
         }
-        
+
         auto gameExamples = playGame(maxMoves);
         allExamples.insert(allExamples.end(), gameExamples.begin(), gameExamples.end());
     }
-    
-    std::cout << "Generated " << allExamples.size() << " training examples" << std::endl;
+
+    std::cout << "Generated " << allExamples.size() << " training examples" << '\n';
     return allExamples;
 }
 
-std::vector<TrainingDataGenerator::TrainingExample> TrainingDataGenerator::playGame(int maxMoves) {
+auto TrainingDataGenerator::playGame(int maxMoves)
+    -> std::vector<TrainingDataGenerator::TrainingExample> {
     std::vector<TrainingExample> examples;
-    
-    // Start with initial position
+
     Board board;
     board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    
+
     int moveCount = 0;
     std::vector<Board> gameHistory;
-    
+
     while (moveCount < maxMoves) {
-        // Store position for training
+
         TrainingExample example;
         example.position = board;
         example.gameLength = moveCount;
-        
-        // Generate legal moves
+
         std::vector<std::pair<int, int>> legalMoves;
         for (int src = 0; src < 64; ++src) {
             for (int dest = 0; dest < 64; ++dest) {
@@ -587,69 +546,63 @@ std::vector<TrainingDataGenerator::TrainingExample> TrainingDataGenerator::playG
                 }
             }
         }
-        
+
         if (legalMoves.empty()) {
-            // Game over
+
             example.targetScore = evaluateGameResult(board, moveCount);
             example.gameResult = example.targetScore;
             examples.push_back(example);
             break;
         }
-        
-        // Simple move selection: prefer captures and center moves
+
         std::pair<int, int> bestMove = legalMoves[0];
         float bestScore = -10000.0f;
-        
+
         for (const auto& move : legalMoves) {
             float score = 0.0f;
-            
-            // Prefer captures
+
             if (board.squares[move.second].piece.PieceType != ChessPieceType::NONE) {
-                score += board.squares[move.second].piece.PieceValue;
+                score += static_cast<float>(board.squares[move.second].piece.PieceValue);
             }
-            
-            // Prefer center moves
+
             int destRow = move.second / 8;
             int destCol = move.second % 8;
             if (destRow >= 2 && destRow <= 5 && destCol >= 2 && destCol <= 5) {
                 score += 50;
             }
-            
-            // Add some randomness
+
             std::uniform_real_distribution<float> noise(-100.0f, 100.0f);
-            score += noise(rng);
-            
+            score += noise(m_rng);
+
             if (score > bestScore) {
                 bestScore = score;
                 bestMove = move;
             }
         }
-        
-        // Make the move
+
         board.movePiece(bestMove.first, bestMove.second);
-        board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+        board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
+                                                            : ChessPieceColor::WHITE;
         board.updateBitboards();
-        
-        // Evaluate position for training
+
         example.targetScore = getMaterialScore(board) + getPositionalScore(board);
-        example.gameResult = 0.5f; // Will be updated at game end
+        example.gameResult = 0.5f;
         examples.push_back(example);
-        
+
         gameHistory.push_back(board);
         moveCount++;
     }
-    
-    // Update game results for all positions
+
     float finalResult = evaluateGameResult(board, moveCount);
     for (auto& example : examples) {
         example.gameResult = finalResult;
     }
-    
+
     return examples;
 }
 
-float TrainingDataGenerator::evaluateGameResult(const Board& board, int gameLength) {
-    // Check for checkmate
+auto TrainingDataGenerator::evaluateGameResult(const Board& board, int gameLength) -> float {
+
     bool whiteInCheck = false, blackInCheck = false;
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
@@ -661,30 +614,27 @@ float TrainingDataGenerator::evaluateGameResult(const Board& board, int gameLeng
             }
         }
     }
-    
+
     if (whiteInCheck && board.turn == ChessPieceColor::WHITE) {
-        return 0.0f; // Black wins
+        return 0.0f;
     } else if (blackInCheck && board.turn == ChessPieceColor::BLACK) {
-        return 1.0f; // White wins
+        return 1.0f;
     }
-    
-    // Check for stalemate or draw
+
     if (gameLength > 150) {
-        return 0.5f; // Draw by move count
+        return 0.5f;
     }
-    
-    // Evaluate material and position
+
     float materialScore = getMaterialScore(board);
     float positionalScore = getPositionalScore(board);
     float totalScore = materialScore + positionalScore;
-    
-    // Convert to win probability
+
     return 1.0f / (1.0f + std::exp(-totalScore / 1000.0f));
 }
 
-float TrainingDataGenerator::getMaterialScore(const Board& board) {
+auto TrainingDataGenerator::getMaterialScore(const Board& board) -> float {
     float score = 0.0f;
-    
+
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
@@ -695,273 +645,261 @@ float TrainingDataGenerator::getMaterialScore(const Board& board) {
             score += value;
         }
     }
-    
+
     return score;
 }
 
-float TrainingDataGenerator::getPositionalScore(const Board& board) {
+auto TrainingDataGenerator::getPositionalScore(const Board& board) -> float {
     float score = 0.0f;
-    
-    // Center control bonus
-    int centerSquares[] = {27, 28, 35, 36}; // d4, d5, e4, e5
+
+    constexpr std::array<int, 4> centerSquares = {27, 28, 35, 36};
     for (int square : centerSquares) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
-            float bonus = piece.PieceValue * 0.1f;
+            float bonus = static_cast<float>(piece.PieceValue) * 0.1f;
             if (piece.PieceColor == ChessPieceColor::BLACK) {
                 bonus = -bonus;
             }
             score += bonus;
         }
     }
-    
+
     return score;
 }
 
-std::vector<std::pair<Board, float>> TrainingDataGenerator::convertToNNFormat(const std::vector<TrainingExample>& examples) {
+auto TrainingDataGenerator::convertToNNFormat(const std::vector<TrainingExample>& examples)
+    -> std::vector<std::pair<Board, float>> {
     std::vector<std::pair<Board, float>> nnData;
-    
+
     for (const auto& example : examples) {
-        // Convert game result to centipawn score
-        float score = (example.gameResult - 0.5f) * 2000.0f; // Range: -1000 to +1000 centipawns
+
+        float score = (example.gameResult - 0.5f) * 2000.0f;
         nnData.emplace_back(example.position, score);
     }
-    
+
     return nnData;
 }
 
-void TrainingDataGenerator::saveTrainingData(const std::vector<TrainingExample>& data, const std::string& path) {
-    // Create directory if it doesn't exist
+void TrainingDataGenerator::saveTrainingData(const std::vector<TrainingExample>& data,
+                                             const std::string& path) {
+
     std::filesystem::path filePath(path);
     std::filesystem::create_directories(filePath.parent_path());
-    
+
     std::ofstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        std::cerr << "Error: Could not open file for writing: " << path << std::endl;
+        std::cerr << "Error: Could not open file for writing: " << path << '\n';
         return;
     }
-    
+
     size_t numExamples = data.size();
     file.write(reinterpret_cast<const char*>(&numExamples), sizeof(size_t));
-    
+
     for (const auto& example : data) {
-        // Save FEN string
+
         std::string fen = example.position.toFEN();
         size_t fenLength = fen.length();
         file.write(reinterpret_cast<const char*>(&fenLength), sizeof(size_t));
-        file.write(fen.c_str(), fenLength);
-        
-        // Save scores
+        file.write(fen.c_str(), static_cast<std::streamsize>(fenLength));
+
         file.write(reinterpret_cast<const char*>(&example.targetScore), sizeof(float));
         file.write(reinterpret_cast<const char*>(&example.gameResult), sizeof(float));
         file.write(reinterpret_cast<const char*>(&example.gameLength), sizeof(int));
     }
-    
+
     file.close();
-    std::cout << "Training data saved to: " << path << std::endl;
+    std::cout << "Training data saved to: " << path << '\n';
 }
 
-std::vector<TrainingDataGenerator::TrainingExample> TrainingDataGenerator::loadTrainingData(const std::string& path) {
+auto TrainingDataGenerator::loadTrainingData(const std::string& path)
+    -> std::vector<TrainingDataGenerator::TrainingExample> {
     std::vector<TrainingExample> data;
-    
+
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        std::cerr << "Error: Could not open file for reading: " << path << std::endl;
+        std::cerr << "Error: Could not open file for reading: " << path << '\n';
         return data;
     }
-    
-    size_t numExamples;
+
+    size_t numExamples = 0;
     file.read(reinterpret_cast<char*>(&numExamples), sizeof(size_t));
-    
+
     data.reserve(numExamples);
-    
+
     for (size_t i = 0; i < numExamples; ++i) {
         TrainingExample example;
-        
-        // Read FEN string
-        size_t fenLength;
+
+        size_t fenLength = 0;
         file.read(reinterpret_cast<char*>(&fenLength), sizeof(size_t));
-        
+
         std::string fen(fenLength, '\0');
-        file.read(&fen[0], fenLength);
-        
+        file.read(fen.data(), static_cast<std::streamsize>(fenLength));
+
         example.position.InitializeFromFEN(fen);
-        
-        // Read scores
+
         file.read(reinterpret_cast<char*>(&example.targetScore), sizeof(float));
         file.read(reinterpret_cast<char*>(&example.gameResult), sizeof(float));
         file.read(reinterpret_cast<char*>(&example.gameLength), sizeof(int));
-        
+
         data.push_back(example);
     }
-    
+
     file.close();
-    std::cout << "Training data loaded from: " << path << " (" << data.size() << " examples)" << std::endl;
-    
+    std::cout << "Training data loaded from: " << path << " (" << data.size() << " examples)"
+              << '\n';
+
     return data;
 }
 
-// Neural network trainer implementation
-NNTrainer::NNTrainer(NeuralNetworkEvaluator& nn, const TrainingConfig& config) 
-    : neuralNetwork(nn), config(config) {
-}
+NNTrainer::NNTrainer(NeuralNetworkEvaluator& nn, const TrainingConfig& config)
+    : m_neuralNetwork(nn), m_config(config) {}
 
 void NNTrainer::trainOnSelfPlayData(int numGames) {
-    std::cout << "Starting self-play training with " << numGames << " games..." << std::endl;
-    
-    // Generate training data
-    auto trainingExamples = dataGenerator.generateSelfPlayData(numGames);
-    auto nnData = dataGenerator.convertToNNFormat(trainingExamples);
-    
-    // Split into training and validation sets
-    auto trainingData = splitData(nnData, 1.0f - config.validationSplit, true);
-    auto validationData = splitData(nnData, config.validationSplit, false);
-    
-    std::cout << "Training set: " << trainingData.size() << " examples" << std::endl;
-    std::cout << "Validation set: " << validationData.size() << " examples" << std::endl;
-    
-    // Training loop
+    std::cout << "Starting self-play training with " << numGames << " games..." << '\n';
+
+    auto trainingExamples = m_dataGenerator.generateSelfPlayData(numGames);
+    auto nnData = m_dataGenerator.convertToNNFormat(trainingExamples);
+
+    auto trainingData = splitData(nnData, 1.0f - m_config.validationSplit, true);
+    auto validationData = splitData(nnData, m_config.validationSplit, false);
+
+    std::cout << "Training set: " << trainingData.size() << " examples" << '\n';
+    std::cout << "Validation set: " << validationData.size() << " examples" << '\n';
+
     float bestValidationLoss = std::numeric_limits<float>::max();
     int patienceCounter = 0;
-    
-    for (int epoch = 0; epoch < config.epochs; ++epoch) {
-        std::cout << "Epoch " << epoch + 1 << "/" << config.epochs << std::endl;
-        
-        // Train on training data
-        neuralNetwork.train(trainingData);
-        
-        // Calculate losses
+
+    for (int epoch = 0; epoch < m_config.epochs; ++epoch) {
+        std::cout << "Epoch " << epoch + 1 << "/" << m_config.epochs << '\n';
+
+        m_neuralNetwork.train(trainingData);
+
         float trainLoss = calculateLoss(trainingData);
         float valLoss = calculateLoss(validationData);
-        
-        trainingLosses.push_back(trainLoss);
-        validationLosses.push_back(valLoss);
-        
-        std::cout << "Training loss: " << trainLoss << ", Validation loss: " << valLoss << std::endl;
-        
-        // Early stopping
+
+        m_trainingLosses.push_back(trainLoss);
+        m_validationLosses.push_back(valLoss);
+
+        std::cout << "Training loss: " << trainLoss << ", Validation loss: " << valLoss << '\n';
+
         if (valLoss < bestValidationLoss) {
             bestValidationLoss = valLoss;
             patienceCounter = 0;
-            
-            // Save best model
-            neuralNetwork.saveModel(config.modelPath);
+
+            m_neuralNetwork.saveModel(m_config.modelPath);
         } else {
             patienceCounter++;
-            if (patienceCounter >= config.earlyStoppingPatience) {
-                std::cout << "Early stopping triggered after " << epoch + 1 << " epochs" << std::endl;
+            if (patienceCounter >= static_cast<int>(m_config.earlyStoppingPatience)) {
+                std::cout << "Early stopping triggered after " << epoch + 1 << " epochs" << '\n';
                 break;
             }
         }
     }
-    
-    std::cout << "Training completed. Best validation loss: " << bestValidationLoss << std::endl;
+
+    std::cout << "Training completed. Best validation loss: " << bestValidationLoss << '\n';
 }
 
 void NNTrainer::trainOnFile(const std::string& dataPath) {
-    std::cout << "Training on data from: " << dataPath << std::endl;
-    
-    // Load training data
-    auto trainingExamples = dataGenerator.loadTrainingData(dataPath);
-    auto nnData = dataGenerator.convertToNNFormat(trainingExamples);
-    
-    // Split into training and validation sets
-    auto trainingData = splitData(nnData, 1.0f - config.validationSplit, true);
-    auto validationData = splitData(nnData, config.validationSplit, false);
-    
-    std::cout << "Training set: " << trainingData.size() << " examples" << std::endl;
-    std::cout << "Validation set: " << validationData.size() << " examples" << std::endl;
-    
-    // Train the model
-    neuralNetwork.train(trainingData);
-    
-    // Validate
+    std::cout << "Training on data from: " << dataPath << '\n';
+
+    auto trainingExamples = m_dataGenerator.loadTrainingData(dataPath);
+    auto nnData = m_dataGenerator.convertToNNFormat(trainingExamples);
+
+    auto trainingData = splitData(nnData, 1.0f - m_config.validationSplit, true);
+    auto validationData = splitData(nnData, m_config.validationSplit, false);
+
+    std::cout << "Training set: " << trainingData.size() << " examples" << '\n';
+    std::cout << "Validation set: " << validationData.size() << " examples" << '\n';
+
+    m_neuralNetwork.train(trainingData);
+
     validateModel(validationData);
 }
 
 void NNTrainer::validateModel(const std::vector<std::pair<Board, float>>& validationData) {
     float loss = calculateLoss(validationData);
-    std::cout << "Validation loss: " << loss << std::endl;
+    std::cout << "Validation loss: " << loss << '\n';
 }
 
-float NNTrainer::evaluateModel(const std::vector<std::pair<Board, float>>& testData) {
+auto NNTrainer::evaluateModel(const std::vector<std::pair<Board, float>>& testData) -> float {
     float totalLoss = 0.0f;
     int correctPredictions = 0;
-    
+
     for (const auto& [board, target] : testData) {
-        float predicted = neuralNetwork.evaluatePosition(board);
+        float predicted = m_neuralNetwork.evaluatePosition(board);
         float error = predicted - target;
         totalLoss += error * error;
-        
-        // Count predictions with correct sign
+
         if ((predicted > 0 && target > 0) || (predicted < 0 && target < 0)) {
             correctPredictions++;
         }
     }
-    
-    float avgLoss = totalLoss / testData.size();
-    float accuracy = static_cast<float>(correctPredictions) / testData.size();
-    
-    std::cout << "Test loss: " << avgLoss << std::endl;
-    std::cout << "Prediction accuracy: " << (accuracy * 100.0f) << "%" << std::endl;
-    
+
+    float avgLoss = totalLoss / static_cast<float>(testData.size());
+    float accuracy = static_cast<float>(correctPredictions) / static_cast<float>(testData.size());
+
+    std::cout << "Test loss: " << avgLoss << '\n';
+    std::cout << "Prediction accuracy: " << (accuracy * 100.0f) << "%" << '\n';
+
     return avgLoss;
 }
 
 void NNTrainer::generateTrainingReport(const std::string& outputPath) {
     std::ofstream report(outputPath);
     if (!report.is_open()) {
-        std::cerr << "Error: Could not open report file: " << outputPath << std::endl;
+        std::cerr << "Error: Could not open report file: " << outputPath << '\n';
         return;
     }
-    
+
     report << "Neural Network Training Report\n";
     report << "==============================\n\n";
-    
+
     report << "Training Configuration:\n";
-    report << "- Batch size: " << config.batchSize << "\n";
-    report << "- Epochs: " << config.epochs << "\n";
-    report << "- Validation split: " << (config.validationSplit * 100.0f) << "%\n";
-    report << "- Early stopping patience: " << config.earlyStoppingPatience << "\n\n";
-    
+    report << "- Batch size: " << m_config.batchSize << "\n";
+    report << "- Epochs: " << m_config.epochs << "\n";
+    report << "- Validation split: " << (m_config.validationSplit * 100.0f) << "%\n";
+    report << "- Early stopping patience: " << m_config.earlyStoppingPatience << "\n\n";
+
     report << "Training History:\n";
     report << "Epoch\tTraining Loss\tValidation Loss\n";
-    for (size_t i = 0; i < trainingLosses.size(); ++i) {
-        report << (i + 1) << "\t" << trainingLosses[i] << "\t" << validationLosses[i] << "\n";
+    for (size_t i = 0; i < m_trainingLosses.size(); ++i) {
+        report << (i + 1) << "\t" << m_trainingLosses[i] << "\t" << m_validationLosses[i] << "\n";
     }
-    
-    if (!trainingLosses.empty()) {
+
+    if (!m_trainingLosses.empty()) {
         report << "\nFinal Results:\n";
-        report << "- Final training loss: " << trainingLosses.back() << "\n";
-        report << "- Final validation loss: " << validationLosses.back() << "\n";
-        
-        auto minValLoss = std::min_element(validationLosses.begin(), validationLosses.end());
+        report << "- Final training loss: " << m_trainingLosses.back() << "\n";
+        report << "- Final validation loss: " << m_validationLosses.back() << "\n";
+
+        auto minValLoss = std::ranges::min_element(m_validationLosses);
         report << "- Best validation loss: " << *minValLoss << "\n";
     }
-    
+
     report.close();
-    std::cout << "Training report saved to: " << outputPath << std::endl;
+    std::cout << "Training report saved to: " << outputPath << '\n';
 }
 
-std::vector<std::pair<Board, float>> NNTrainer::splitData(const std::vector<std::pair<Board, float>>& data, 
-                                                          float splitRatio, bool takeFirst) {
-    size_t splitIndex = static_cast<size_t>(data.size() * splitRatio);
-    
+auto NNTrainer::splitData(const std::vector<std::pair<Board, float>>& data, float splitRatio,
+                          bool takeFirst) -> std::vector<std::pair<Board, float>> {
+    size_t splitIndex = static_cast<size_t>(static_cast<float>(data.size()) * splitRatio);
+
     if (takeFirst) {
-        return std::vector<std::pair<Board, float>>(data.begin(), data.begin() + splitIndex);
+        return std::vector<std::pair<Board, float>>(
+            data.begin(), data.begin() + static_cast<std::ptrdiff_t>(splitIndex));
     } else {
-        return std::vector<std::pair<Board, float>>(data.begin() + splitIndex, data.end());
+        return std::vector<std::pair<Board, float>>(
+            data.begin() + static_cast<std::ptrdiff_t>(splitIndex), data.end());
     }
 }
 
-float NNTrainer::calculateLoss(const std::vector<std::pair<Board, float>>& data) {
+auto NNTrainer::calculateLoss(const std::vector<std::pair<Board, float>>& data) -> float {
     float totalLoss = 0.0f;
-    
+
     for (const auto& [board, target] : data) {
-        float predicted = neuralNetwork.evaluatePosition(board);
+        float predicted = m_neuralNetwork.evaluatePosition(board);
         float error = predicted - target;
         totalLoss += error * error;
     }
-    
-    return totalLoss / data.size();
-} 
+
+    return totalLoss / static_cast<float>(data.size());
+}

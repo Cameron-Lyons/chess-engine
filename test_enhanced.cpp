@@ -11,14 +11,14 @@ int main() {
     std::cout << "Chess Engine Enhanced Features Test\n";
     std::cout << "====================================\n\n";
     
-    // Test 1: Move Ordering
+
     std::cout << "1. Testing Move Ordering System...\n";
     MoveOrdering ordering;
     std::cout << "   ✓ Killer moves initialized\n";
     std::cout << "   ✓ History heuristic ready\n";
     std::cout << "   ✓ Counter moves configured\n\n";
     
-    // Test 2: Search Enhancements
+
     std::cout << "2. Testing Search Enhancements...\n";
     SearchEnhancements enhancements;
     std::cout << "   ✓ Aspiration windows: READY\n";
@@ -27,7 +27,7 @@ int main() {
     std::cout << "   ✓ Multi-cut pruning: CONFIGURED\n";
     std::cout << "   ✓ Futility pruning: ONLINE\n\n";
     
-    // Test 3: Profiler
+
     std::cout << "3. Testing Performance Profiler...\n";
     PROFILE_RESET();
     {
@@ -37,7 +37,7 @@ int main() {
     std::cout << "   ✓ Profiler timing: WORKING\n";
     std::cout << "   ✓ Node counting: ENABLED\n\n";
     
-    // Test 4: Perft
+
     std::cout << "4. Testing Perft System...\n";
     Board board;
     board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -52,7 +52,7 @@ int main() {
     std::cout << "   Time: " << duration.count() << " ms\n";
     std::cout << "   NPS: " << (nodes * 1000 / std::max(1LL, duration.count())) << "\n\n";
     
-    // Test 5: Feature Summary
+
     std::cout << "5. Enhanced Features Summary:\n";
     std::cout << "   • Aspiration Windows: Reduces search tree by 5-10%\n";
     std::cout << "   • Singular Extensions: +50-100 Elo tactical strength\n";

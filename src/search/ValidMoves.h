@@ -1,8 +1,8 @@
 #ifndef VALIDMOVES_H
 #define VALIDMOVES_H
 
-#include "../core/ChessBoard.h"
 #include "../core/BitboardMoves.h"
+#include "../core/ChessBoard.h"
 #include <vector>
 
 extern bool BlackAttackBoard[64];
@@ -11,7 +11,8 @@ extern int BlackKingPosition;
 extern int WhiteKingPosition;
 
 bool AnalyzeMove(Board& board, int dest, Piece& piece);
-void CheckValidMovesPawn(const std::vector<int>& moves, Piece& piece, int start, Board& board, int count);
+void CheckValidMovesPawn(const std::vector<int>& moves, Piece& piece, int start, Board& board,
+                         int count);
 void AnalyzeMovePawn(Board& board, int dest, Piece& piece);
 void GenValidMovesKingCastle(Board& board, Piece& king);
 void GenValidMoves(Board& board);

@@ -2,88 +2,71 @@
 #define ENDGAME_TABLEBASE_H
 
 #include "../core/ChessBoard.h"
-#include <string>
-#include <unordered_map>
-#include <vector>
-#include <optional>
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <vector>
 
-// Endgame tablebase interface for perfect endgame play
 class EndgameTablebase {
 public:
-    enum class TablebaseType {
-        SYZYGY,     // Syzygy tablebases (recommended)
-        NALIMOV,    // Nalimov tablebases (legacy)
-        CUSTOM      // Custom tablebase format
-    };
-    
+    enum class TablebaseType : std::uint8_t { SYZYGY, NALIMOV, CUSTOM };
+
     struct TablebaseResult {
-        int distanceToMate;  // Positive = winning, negative = losing, 0 = draw
-        std::vector<std::pair<int, int>> bestMoves;  // All best moves
-        bool isExact;        // True if exact result, false if lower bound
+        int distanceToMate;
+        std::vector<std::pair<int, int>> bestMoves;
+        bool isExact;
     };
-    
+
     EndgameTablebase(const std::string& tablebasePath = "tablebases/");
     ~EndgameTablebase();
-    
-    // Check if position is in tablebase
-    bool isInTablebase(const Board& board);
-    
-    // Get tablebase result for position
-    bool probe(const Board& board, TablebaseResult& result);
-    
-    // Get best move from tablebase
-    bool getBestMove(const Board& board, std::pair<int, int>& bestMove);
-    
-    // Check if position is winning/losing/draw
-    bool isWinning(const Board& board);
-    bool isLosing(const Board& board);
-    bool isDraw(const Board& board);
-    
-    // Load tablebases for specific piece combinations
+    EndgameTablebase(const EndgameTablebase&) = delete;
+    auto operator=(const EndgameTablebase&) -> EndgameTablebase& = delete;
+    EndgameTablebase(EndgameTablebase&&) = delete;
+    auto operator=(EndgameTablebase&&) -> EndgameTablebase& = delete;
+
+    auto isInTablebase(const Board& board) -> bool;
+
+    auto probe(const Board& board, TablebaseResult& result) -> bool;
+
+    auto getBestMove(const Board& board, std::pair<int, int>& bestMove) -> bool;
+
+    auto isWinning(const Board& board) -> bool;
+    auto isLosing(const Board& board) -> bool;
+    auto isDraw(const Board& board) -> bool;
+
     void loadTablebase(const std::string& pieceCombination);
-    
-    // Get available tablebases
-    std::vector<std::string> getAvailableTablebases();
-    
-    // Set tablebase type
+
+    auto getAvailableTablebases() -> std::vector<std::string>;
+
     void setTablebaseType(TablebaseType type);
 
 private:
     class Impl;
-    std::unique_ptr<Impl> pImpl;
-    
-    // Helper functions
-    std::string boardToTablebaseKey(const Board& board);
-    bool isValidEndgamePosition(const Board& board);
-    int countPieces(const Board& board);
+    std::unique_ptr<Impl> m_pImpl;
+
+    auto boardToTablebaseKey(const Board& board) -> std::string;
+    auto isValidEndgamePosition(const Board& board) -> bool;
+    auto countPieces(const Board& board) -> int;
 };
 
-// Endgame knowledge for positions not in tablebases
 class EndgameKnowledge {
 public:
-    // KPK (King and Pawn vs King) evaluation
-    static int evaluateKPK(const Board& board);
-    
-    // KRK (King and Rook vs King) evaluation
-    static int evaluateKRK(const Board& board);
-    
-    // KQK (King and Queen vs King) evaluation
-    static int evaluateKQK(const Board& board);
-    
-    // KBNK (King, Bishop, Knight vs King) evaluation
-    static int evaluateKBNK(const Board& board);
-    
-    // KBBK (King and two Bishops vs King) evaluation
-    static int evaluateKBBK(const Board& board);
-    
-    // General endgame evaluation
-    static int evaluateEndgame(const Board& board);
-    
+    static auto evaluateKPK(const Board& board) -> int;
+
+    static auto evaluateKRK(const Board& board) -> int;
+
+    static auto evaluateKQK(const Board& board) -> int;
+
+    static auto evaluateKBNK(const Board& board) -> int;
+
+    static auto evaluateKBBK(const Board& board) -> int;
+
+    static auto evaluateEndgame(const Board& board) -> int;
+
 private:
-    static int getKingDistance(int king1, int king2);
-    static bool isPawnPromoting(const Board& board, int pawnSquare);
-    static int getPawnAdvancement(const Board& board, int pawnSquare);
+    static auto getKingDistance(int king1, int king2) -> int;
+    static auto isPawnPromoting(const Board& board, int pawnSquare) -> bool;
+    static auto getPawnAdvancement(const Board& board, int pawnSquare) -> int;
 };
 
-#endif // ENDGAME_TABLEBASE_H 
+#endif

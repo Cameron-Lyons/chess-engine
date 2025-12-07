@@ -5,17 +5,14 @@
 #include <string>
 #include <vector>
 
-
 struct PieceMoveSet {
     std::vector<int> moves;
     std::vector<PieceMoveSet> moveset;
 };
 
-
-int Position(int rank, int file){
+int Position(int rank, int file) {
     return rank * 8 + file;
 };
-
 
 struct {
     PieceMoveSet blackPawnMoves;

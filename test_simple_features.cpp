@@ -10,7 +10,7 @@ int main() {
     std::cout << "║   Chess Engine Enhanced Features Test       ║\n";
     std::cout << "╚══════════════════════════════════════════════╝\n\n";
     
-    // Test 1: Move Ordering
+
     std::cout << "1. Testing Move Ordering System\n";
     std::cout << "   ├─ Killer moves initialized\n";
     std::cout << "   ├─ History heuristic ready\n";
@@ -21,7 +21,7 @@ int main() {
     ordering.clear();
     std::cout << "   ✓ Move ordering system: OPERATIONAL\n\n";
     
-    // Test 2: Search Enhancements
+
     std::cout << "2. Testing Search Enhancements\n";
     SearchEnhancements enhancements;
     
@@ -55,7 +55,7 @@ int main() {
     
     std::cout << "   ✓ All search enhancements: ACTIVE\n\n";
     
-    // Test 3: Performance Profiler
+
     std::cout << "3. Testing Performance Profiler\n";
     PROFILE_RESET();
     
@@ -80,7 +80,7 @@ int main() {
     
     std::cout << "   ✓ Profiler system: FUNCTIONAL\n\n";
     
-    // Performance Impact Summary
+
     std::cout << "4. Expected Performance Improvements\n";
     std::cout << "   ├─ Aspiration Windows: 5-10% speedup\n";
     std::cout << "   ├─ Singular Extensions: +50-100 Elo\n";
@@ -89,7 +89,7 @@ int main() {
     std::cout << "   ├─ Multi-Cut: 10-15% tree reduction\n";
     std::cout << "   └─ Combined: 2-3x faster search\n\n";
     
-    // System Info
+
     std::cout << "5. System Configuration\n";
     std::cout << "   ├─ CPU Cores: " << std::thread::hardware_concurrency() << "\n";
     std::cout << "   ├─ Optimization: -O2 -march=native\n";

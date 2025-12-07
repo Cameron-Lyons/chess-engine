@@ -12,14 +12,14 @@ void testPosition(const std::string& fen, const std::string& description, int de
     Board board;
     board.InitializeFromFEN(fen);
     
-    // Test search with standard time control
+
     auto start = std::chrono::high_resolution_clock::now();
     SearchResult result = iterativeDeepeningParallel(board, depth, 5000, 4);
     auto end = std::chrono::high_resolution_clock::now();
     
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     
-    // Convert move to algebraic notation
+
     int fromSquare = result.bestMove.first;
     int toSquare = result.bestMove.second;
     char fromFile = 'a' + (fromSquare % 8);
@@ -39,7 +39,7 @@ int main() {
     std::cout << "Chess Engine Performance Test - Search Improvements\n";
     std::cout << "====================================================\n";
     
-    // Test various positions
+
     testPosition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 
                 "Starting position", 10);
     
@@ -58,7 +58,7 @@ int main() {
     testPosition("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
                 "Position with promotion threat", 10);
     
-    // Benchmark mode - measure total improvement
+
     std::cout << "\n=== Benchmark Summary ===" << std::endl;
     std::vector<std::string> benchmarkFens = {
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",

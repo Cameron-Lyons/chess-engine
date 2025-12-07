@@ -1,7 +1,7 @@
-#include "core/ChessBoard.h"
-#include "search/search.h"
 #include "core/BitboardMoves.h"
+#include "core/ChessBoard.h"
 #include "gtest/gtest.h"
+#include "search/search.h"
 
 TEST(TacticalSuite, MateInOne) {
     initKnightAttacks();
@@ -25,7 +25,6 @@ TEST(TacticalSuite, Fork) {
     board.InitializeFromFEN("r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4");
 
     SearchResult result = iterativeDeepeningParallel(board, 4, 5000, 1);
-    // This test is more about ensuring the engine finds a reasonable move in a tactical position.
-    // The exact best move might vary, but it should not crash and return a valid move.
+
     ASSERT_NE(result.bestMove.first, result.bestMove.second);
 }
