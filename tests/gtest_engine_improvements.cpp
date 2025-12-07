@@ -1,7 +1,7 @@
-#include "core/ChessBoard.h"
-#include "search/search.h"
 #include "core/BitboardMoves.h"
+#include "core/ChessBoard.h"
 #include "gtest/gtest.h"
+#include "search/search.h"
 
 TEST(EngineImprovements, QuiescenceSearch) {
     initKnightAttacks();
@@ -9,7 +9,8 @@ TEST(EngineImprovements, QuiescenceSearch) {
     InitZobrist();
 
     Board tacticalBoard;
-    tacticalBoard.InitializeFromFEN("r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4");
+    tacticalBoard.InitializeFromFEN(
+        "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4");
 
     int staticEval = evaluatePosition(tacticalBoard);
 

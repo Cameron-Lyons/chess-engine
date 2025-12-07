@@ -4,7 +4,7 @@
 #include <vector>
 #include <iomanip>
 
-// Simple test to demonstrate the enhanced features
+
 int main() {
     std::cout << "\n╔══════════════════════════════════════════════╗\n";
     std::cout << "║     Chess Engine - Enhanced Features        ║\n";
@@ -12,7 +12,7 @@ int main() {
     
     std::cout << "Successfully implemented advanced search enhancements:\n\n";
     
-    // 1. Search Enhancements
+
     std::cout << "1. SEARCH ENHANCEMENTS\n";
     std::cout << "   ├─ Aspiration Windows ✓\n";
     std::cout << "   │  └─ Narrows search bounds iteratively\n";
@@ -31,7 +31,7 @@ int main() {
     std::cout << "   └─ ProbCut ✓\n";
     std::cout << "      └─ Probabilistic beta cutoffs\n\n";
     
-    // 2. Move Ordering
+
     std::cout << "2. MOVE ORDERING SYSTEM\n";
     std::cout << "   ├─ Killer Moves ✓\n";
     std::cout << "   │  └─ Tracks 2 best quiet moves per ply\n";
@@ -44,7 +44,7 @@ int main() {
     std::cout << "   └─ MVV-LVA ✓\n";
     std::cout << "      └─ Most Valuable Victim ordering\n\n";
     
-    // 3. NNUE Evaluation
+
     std::cout << "3. NNUE EVALUATION SYSTEM\n";
     std::cout << "   ├─ Architecture: 768→256→32→32→1 ✓\n";
     std::cout << "   ├─ HalfKP Features ✓\n";
@@ -52,7 +52,7 @@ int main() {
     std::cout << "   ├─ SIMD Optimization (AVX2) ✓\n";
     std::cout << "   └─ Accumulator Caching ✓\n\n";
     
-    // 4. Performance Tools
+
     std::cout << "4. PERFORMANCE TOOLS\n";
     std::cout << "   ├─ Performance Profiler ✓\n";
     std::cout << "   │  └─ Real-time timing & node counting\n";
@@ -61,13 +61,13 @@ int main() {
     std::cout << "   └─ Detailed Statistics ✓\n";
     std::cout << "      └─ NPS, branching factor, etc.\n\n";
     
-    // Performance simulation
+
     std::cout << "5. PERFORMANCE METRICS (Simulated)\n";
     std::cout << "   Running quick benchmark...\n\n";
     
     auto start = std::chrono::high_resolution_clock::now();
     
-    // Simulate some work
+
     volatile int sum = 0;
     for (int i = 0; i < 100000000; i++) {
         sum += i % 17;
@@ -88,7 +88,7 @@ int main() {
     std::cout << "   Benchmark time: " << duration.count() << " ms\n";
     std::cout << "   CPU cores available: " << std::thread::hardware_concurrency() << "\n\n";
     
-    // Expected improvements
+
     std::cout << "6. EXPECTED IMPROVEMENTS\n";
     std::cout << "   ├─ Search Speed: 2-3x faster\n";
     std::cout << "   ├─ Node Reduction: 50-70%\n";

@@ -1,5 +1,5 @@
-#include "core/ChessBoard.h"
 #include "core/BitboardMoves.h"
+#include "core/ChessBoard.h"
 #include "gtest/gtest.h"
 
 TEST(BitboardMoves, InitialPosition) {
@@ -46,16 +46,17 @@ TEST(BitboardMoves, SyncAfterMove) {
     Board board;
     board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-    int e2 = 12; // e2 square
-    int e4 = 28; // e4 square
+    int e2 = 12;
+    int e4 = 28;
     board.movePiece(e2, e4);
 
     Bitboard expectedWhitePawns = 0ULL;
-    expectedWhitePawns |= (1ULL << 8) | (1ULL << 9) | (1ULL << 10) | (1ULL << 11) | (1ULL << 28) | (1ULL << 13) | (1ULL << 14) | (1ULL << 15);
+    expectedWhitePawns |= (1ULL << 8) | (1ULL << 9) | (1ULL << 10) | (1ULL << 11) | (1ULL << 28) |
+                          (1ULL << 13) | (1ULL << 14) | (1ULL << 15);
     ASSERT_EQ(board.whitePawns, expectedWhitePawns);
 
-    int b1 = 1;  // b1 square (knight)
-    int f3 = 21; // f3 square
+    int b1 = 1;
+    int f3 = 21;
     board.movePiece(b1, f3);
 
     Bitboard expectedWhiteKnights = 0ULL;

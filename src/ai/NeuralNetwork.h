@@ -2,166 +2,149 @@
 #define NEURAL_NETWORK_H
 
 #include "../core/ChessBoard.h"
-#include <vector>
+#include <array>
 #include <memory>
-#include <string>
 #include <random>
+#include <string>
+#include <vector>
 
-// Neural network evaluator for chess positions
 class NeuralNetworkEvaluator {
 public:
     struct NetworkConfig {
-        int inputSize;
-        int hiddenSize;
-        int outputSize;
-        float learningRate;
-        std::string modelPath;
-        
-        NetworkConfig() : inputSize(768), hiddenSize(256), outputSize(1), 
-                         learningRate(0.001f), modelPath("models/chess_nn.bin") {}
+        int inputSize{768};
+        int hiddenSize{256};
+        int outputSize{1};
+        float learningRate{0.001f};
+        std::string modelPath{"models/chess_nn.bin"};
+
+        NetworkConfig() = default;
     };
 
     NeuralNetworkEvaluator(const NetworkConfig& config = NetworkConfig{});
     ~NeuralNetworkEvaluator();
+    NeuralNetworkEvaluator(const NeuralNetworkEvaluator&) = delete;
+    auto operator=(const NeuralNetworkEvaluator&) -> NeuralNetworkEvaluator& = delete;
+    NeuralNetworkEvaluator(NeuralNetworkEvaluator&&) = delete;
+    auto operator=(NeuralNetworkEvaluator&&) -> NeuralNetworkEvaluator& = delete;
 
-    // Main evaluation function
-    float evaluatePosition(const Board& board);
-    
-    // Position encoding for neural network input
-    std::vector<float> encodePosition(const Board& board);
-    
-    // Training functions
+    auto evaluatePosition(const Board& board) -> float;
+
+    auto encodePosition(const Board& board) -> std::vector<float>;
+
     void train(const std::vector<std::pair<Board, float>>& trainingData);
     void saveModel(const std::string& path);
     void loadModel(const std::string& path);
-    
-    // Hybrid evaluation (combine NN with traditional eval)
-    float hybridEvaluate(const Board& board, float nnWeight = 0.7f);
+
+    auto hybridEvaluate(const Board& board, float nnWeight = 0.7f) -> float;
 
 private:
     class Impl;
-    std::unique_ptr<Impl> pImpl;
-    
-    // Helper functions
-    std::vector<float> pieceToVector(const Piece& piece, int square);
+    std::unique_ptr<Impl> m_pImpl;
+
+    auto pieceToVector(const Piece& piece, int square) -> std::vector<float>;
     void updateWeights(const std::vector<float>& gradients);
 };
 
-// Training data generator for self-play
 class TrainingDataGenerator {
 public:
     struct TrainingExample {
         Board position;
-        float targetScore;
-        float gameResult;  // 1.0 = white win, 0.5 = draw, 0.0 = black win
-        int gameLength;
+        float targetScore{};
+        float gameResult{};
+        int gameLength{};
     };
-    
+
     TrainingDataGenerator();
     ~TrainingDataGenerator() = default;
-    
-    // Generate training data from self-play games
-    std::vector<TrainingExample> generateSelfPlayData(int numGames, int maxMoves = 200);
-    
-    // Generate training data from known positions
-    std::vector<TrainingExample> generateFromPositions(const std::vector<std::string>& fens, 
-                                                       const std::vector<float>& scores);
-    
-    // Convert training examples to neural network format
-    std::vector<std::pair<Board, float>> convertToNNFormat(const std::vector<TrainingExample>& examples);
-    
-    // Save/load training data
+    TrainingDataGenerator(const TrainingDataGenerator&) = delete;
+    auto operator=(const TrainingDataGenerator&) -> TrainingDataGenerator& = delete;
+    TrainingDataGenerator(TrainingDataGenerator&&) = delete;
+    auto operator=(TrainingDataGenerator&&) -> TrainingDataGenerator& = delete;
+
+    auto generateSelfPlayData(int numGames, int maxMoves = 200) -> std::vector<TrainingExample>;
+
+    auto generateFromPositions(const std::vector<std::string>& fens,
+                               const std::vector<float>& scores) -> std::vector<TrainingExample>;
+
+    auto convertToNNFormat(const std::vector<TrainingExample>& examples)
+        -> std::vector<std::pair<Board, float>>;
+
     void saveTrainingData(const std::vector<TrainingExample>& data, const std::string& path);
-    std::vector<TrainingExample> loadTrainingData(const std::string& path);
+    auto loadTrainingData(const std::string& path) -> std::vector<TrainingExample>;
 
 private:
-    std::mt19937 rng;
-    
-    // Self-play game generation
-    std::vector<TrainingExample> playGame(int maxMoves);
-    float evaluateGameResult(const Board& board, int gameLength);
-    
-    // Position evaluation helpers
-    float getMaterialScore(const Board& board);
-    float getPositionalScore(const Board& board);
+    std::mt19937 m_rng;
+
+    auto playGame(int maxMoves) -> std::vector<TrainingExample>;
+    auto evaluateGameResult(const Board& board, int gameLength) -> float;
+
+    auto getMaterialScore(const Board& board) -> float;
+    auto getPositionalScore(const Board& board) -> float;
 };
 
-// Position features for enhanced evaluation
 struct PositionFeatures {
-    // Material features
-    int materialCount[2][6];  // [color][piece_type]
-    float materialBalance;
-    
-    // Positional features
-    int centerControl[2];
-    int mobility[2];
-    int kingSafety[2];
-    int pawnStructure[2];
-    
-    // Tactical features
-    int hangingPieces[2];
-    int pinnedPieces[2];
-    int discoveredAttacks[2];
-    
-    // Endgame features
-    float gamePhase;  // 0.0 = opening, 1.0 = endgame
-    int passedPawns[2];
-    int kingDistance;
+    std::array<std::array<int, 6>, 2> materialCount{};
+    float materialBalance{};
+
+    std::array<int, 2> centerControl{};
+    std::array<int, 2> mobility{};
+    std::array<int, 2> kingSafety{};
+    std::array<int, 2> pawnStructure{};
+
+    std::array<int, 2> hangingPieces{};
+    std::array<int, 2> pinnedPieces{};
+    std::array<int, 2> discoveredAttacks{};
+
+    float gamePhase{};
+    std::array<int, 2> passedPawns{};
+    int kingDistance{};
 };
 
-// Feature extraction for neural network
 class FeatureExtractor {
 public:
-    static PositionFeatures extractFeatures(const Board& board);
-    static std::vector<float> featuresToVector(const PositionFeatures& features);
-    
+    static auto extractFeatures(const Board& board) -> PositionFeatures;
+    static auto featuresToVector(const PositionFeatures& features) -> std::vector<float>;
+
 private:
-    static int calculateMobility(const Board& board, ChessPieceColor color);
-    static int calculateKingSafety(const Board& board, ChessPieceColor color);
-    static int calculatePawnStructure(const Board& board, ChessPieceColor color);
-    static float calculateGamePhase(const Board& board);
+    static auto calculateMobility(const Board& board, ChessPieceColor color) -> int;
+    static auto calculateKingSafety(const Board& board, ChessPieceColor color) -> int;
+    static auto calculatePawnStructure(const Board& board, ChessPieceColor color) -> int;
+    static auto calculateGamePhase(const Board& board) -> float;
 };
 
-// Neural network training utilities
 class NNTrainer {
 public:
     struct TrainingConfig {
-        int batchSize;
-        int epochs;
-        float validationSplit;
-        float earlyStoppingPatience;
-        std::string modelPath;
-        std::string trainingDataPath;
-        
-        TrainingConfig() : batchSize(32), epochs(10), validationSplit(0.2f), 
-                          earlyStoppingPatience(5), modelPath("models/chess_nn.bin"),
-                          trainingDataPath("data/training_data.bin") {}
+        int batchSize{32};
+        int epochs{10};
+        float validationSplit{0.2f};
+        float earlyStoppingPatience{5};
+        std::string modelPath{"models/chess_nn.bin"};
+        std::string trainingDataPath{"data/training_data.bin"};
+
+        TrainingConfig() = default;
     };
-    
+
     NNTrainer(NeuralNetworkEvaluator& nn, const TrainingConfig& config = TrainingConfig{});
-    
-    // Training functions
+
     void trainOnSelfPlayData(int numGames);
     void trainOnFile(const std::string& dataPath);
     void validateModel(const std::vector<std::pair<Board, float>>& validationData);
-    
-    // Model evaluation
-    float evaluateModel(const std::vector<std::pair<Board, float>>& testData);
+
+    auto evaluateModel(const std::vector<std::pair<Board, float>>& testData) -> float;
     void generateTrainingReport(const std::string& outputPath);
 
 private:
-    NeuralNetworkEvaluator& neuralNetwork;
-    TrainingDataGenerator dataGenerator;
-    TrainingConfig config;
-    
-    // Training history
-    std::vector<float> trainingLosses;
-    std::vector<float> validationLosses;
-    
-    // Helper functions
-    std::vector<std::pair<Board, float>> splitData(const std::vector<std::pair<Board, float>>& data, 
-                                                   float splitRatio, bool takeFirst);
-    float calculateLoss(const std::vector<std::pair<Board, float>>& data);
+    NeuralNetworkEvaluator& m_neuralNetwork;
+    TrainingDataGenerator m_dataGenerator;
+    TrainingConfig m_config;
+
+    std::vector<float> m_trainingLosses;
+    std::vector<float> m_validationLosses;
+
+    auto splitData(const std::vector<std::pair<Board, float>>& data, float splitRatio,
+                   bool takeFirst) -> std::vector<std::pair<Board, float>>;
+    auto calculateLoss(const std::vector<std::pair<Board, float>>& data) -> float;
 };
 
-#endif // NEURAL_NETWORK_H 
+#endif

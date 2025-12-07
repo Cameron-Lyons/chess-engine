@@ -13,7 +13,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     find_program(CLANG_TIDY clang-tidy)
     if(CLANG_TIDY)
-        set(CMAKE_CXX_CLANG_TIDY clang-tidy)
+        # Use the .clang-tidy config file in the project root
+        set(CMAKE_CXX_CLANG_TIDY 
+            ${CLANG_TIDY}
+            --config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy
+        )
     endif()
 endif()
 

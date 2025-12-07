@@ -14,7 +14,8 @@ TEST(Fen, StartingPosition) {
 
 TEST(Fen, ComplexPosition) {
     Board testBoard;
-    testBoard.InitializeFromFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+    testBoard.InitializeFromFEN(
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
 
     ASSERT_EQ(testBoard.squares[4].piece.PieceType, ChessPieceType::KING);
     ASSERT_EQ(testBoard.squares[4].piece.PieceColor, ChessPieceColor::WHITE);

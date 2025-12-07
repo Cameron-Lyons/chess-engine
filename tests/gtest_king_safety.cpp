@@ -1,7 +1,7 @@
-#include "core/ChessBoard.h"
-#include "search/search.h"
 #include "core/BitboardMoves.h"
+#include "core/ChessBoard.h"
 #include "gtest/gtest.h"
+#include "search/search.h"
 
 TEST(KingSafety, StartingPosition) {
     initKnightAttacks();

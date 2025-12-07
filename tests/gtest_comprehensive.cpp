@@ -18,11 +18,11 @@ TEST(Comprehensive, BasicMoveGeneration) {
 TEST(Comprehensive, CheckDetection) {
     Board board;
     board.InitializeFromFEN("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
-    board.movePiece(1, 18); // Nb1c3
-    board.movePiece(52, 36); // e5e4
-    board.movePiece(18, 28); // Nc3e4
-    board.movePiece(60, 52); // Ke8e7
-    board.movePiece(28, 45); // Ne4d6 (check)
+    board.movePiece(1, 18);
+    board.movePiece(52, 36);
+    board.movePiece(18, 28);
+    board.movePiece(60, 52);
+    board.movePiece(28, 45);
 
     ASSERT_TRUE(isKingInCheck(board, ChessPieceColor::BLACK));
 }
@@ -31,7 +31,7 @@ TEST(Comprehensive, BitboardSync) {
     Board board;
     board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-    board.movePiece(12, 28); // e2e4
+    board.movePiece(12, 28);
 
     bool pawnOnE4 = board.squares[28].piece.PieceType == ChessPieceType::PAWN;
     bool pawnBitboardOnE4 = board.whitePawns & (1ULL << 28);

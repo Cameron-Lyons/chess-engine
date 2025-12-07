@@ -25,7 +25,8 @@ TEST(PawnMoves, Promotion) {
     testBoard.squares[53].piece = Piece(ChessPieceColor::WHITE, ChessPieceType::PAWN);
     testBoard.squares[61].piece = Piece();
 
-    std::vector<std::pair<int, int>> promotionMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
+    std::vector<std::pair<int, int>> promotionMoves =
+        GetAllMoves(testBoard, ChessPieceColor::WHITE);
 
     bool foundPromotionMove = false;
     for (const auto& move : promotionMoves) {
