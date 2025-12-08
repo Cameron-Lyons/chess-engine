@@ -74,6 +74,8 @@ void UCIEngine::processCommand(const std::string& command) {
         handleRegister(command);
     } else if (cmd == "info") {
         handleInfo(command);
+    } else if (cmd == "bookstats") {
+        handleBookStats();
     } else {
 
         std::cout << "info string Unknown command: " << cmd << std::endl;
@@ -333,6 +335,21 @@ void UCIEngine::handleInfo(const std::string& command) {
     std::cout << "info string Info command received" << std::endl;
 }
 
+void UCIEngine::handleBookStats() {
+    if (!openingBook) {
+        std::cout << "info string Opening book not available" << std::endl;
+        return;
+    }
+
+    EnhancedOpeningBook::BookStats stats = openingBook->getStats();
+    std::cout << "info string Book Statistics:" << std::endl;
+    std::cout << "info string   Positions: " << stats.totalPositions << std::endl;
+    std::cout << "info string   Moves: " << stats.totalMoves << std::endl;
+    std::cout << "info string   Total Games: " << stats.totalGames << std::endl;
+    std::cout << "info string   Average Win Rate: " << stats.averageWinRate << std::endl;
+    std::cout << "info string   Average Rating: " << stats.averageRating << std::endl;
+}
+
 void UCIEngine::reportBestMove(const std::pair<int, int>& move,
                                const std::pair<int, int>& ponderMove) {
     std::string moveStr = moveToUCI(move);
@@ -535,6 +552,35 @@ void UCIEngine::stopSearch() {
 
 SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLimit) {
     SearchResult result;
+
+    if (options.useTablebases && tablebase) {
+        EndgameTablebase::TablebaseResult tbResult;
+        if (tablebase->probe(board, tbResult)) {
+            if (!tbResult.bestMoves.empty()) {
+                result.bestMove = tbResult.bestMoves[0];
+                result.score =
+                    tbResult.isExact ? (tbResult.distanceToMate > 0 ? 30000 : -30000) : 0;
+                result.depth = 0;
+                result.nodes = 0;
+                result.timeMs = 0;
+                return result;
+            }
+        }
+    }
+
+    if (options.ownBook && openingBook) {
+        if (openingBook->isInBook(board)) {
+            std::pair<int, int> bookMove = openingBook->getBestMove(board, false);
+            if (bookMove.first != -1 && bookMove.second != -1) {
+                result.bestMove = bookMove;
+                result.score = 0;
+                result.depth = 0;
+                result.nodes = 0;
+                result.timeMs = 0;
+                return result;
+            }
+        }
+    }
 
     Board searchBoard = board;
 

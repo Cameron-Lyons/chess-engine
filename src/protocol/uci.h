@@ -48,6 +48,7 @@ public:
     void handleDebug(const std::string& command);
     void handleRegister(const std::string& command);
     void handleInfo(const std::string& command);
+    void handleBookStats();
 
     void reportBestMove(const std::pair<int, int>& move,
                         const std::pair<int, int>& ponderMove = {-1, -1});
