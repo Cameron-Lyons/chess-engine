@@ -35,6 +35,23 @@ public:
     void saveModel(const std::string& path);
     void loadModel(const std::string& path);
 
+    struct ModelVersion {
+        int major{1};
+        int minor{0};
+        int patch{0};
+        std::string timestamp;
+        float validationLoss{0.0f};
+
+        bool operator<(const ModelVersion& other) const;
+        bool operator==(const ModelVersion& other) const;
+        std::string toString() const;
+    };
+
+    ModelVersion getModelVersion() const;
+    void setModelVersion(const ModelVersion& version);
+    bool compareModels(const std::string& path1, const std::string& path2);
+    std::vector<std::string> listModelVersions(const std::string& directory);
+
     auto hybridEvaluate(const Board& board, float nnWeight = 0.7f) -> float;
 
 private:

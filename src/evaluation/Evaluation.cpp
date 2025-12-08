@@ -1,4 +1,5 @@
 #include "Evaluation.h"
+#include "../ai/EndgameTablebase.h"
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
 #include "EvaluationEnhanced.h"
@@ -707,6 +708,15 @@ int evaluatePosition(const Board& board) {
 
     int tacticalSafetyScore = evaluateTacticalSafety(board);
     mgScore += tacticalSafetyScore;
+
+    int endgameScore = 0;
+    if (gamePhase < 12) {
+        endgameScore = evaluateEndgame(board);
+        egScore += endgameScore;
+
+        int endgameKnowledgeScore = EndgameKnowledge::evaluateEndgame(board);
+        egScore += endgameKnowledgeScore;
+    }
     egScore += tacticalSafetyScore * 0.7;
 
     int hangingPiecesScore = evaluateHangingPieces(board);
