@@ -389,4 +389,4 @@ int evaluate(const BitboardPosition& pos) {
     return globalEvaluator->evaluate(pos);
 }
 
-} 
+} // namespace NNUEOptimized

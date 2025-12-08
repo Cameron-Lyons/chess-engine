@@ -40,11 +40,7 @@ struct PositionAnalysis {
     int discoveredAttacks;
 
     // Game phase
-    enum GamePhase {
-        OPENING,
-        MIDDLEGAME,
-        ENDGAME
-    } gamePhase;
+    enum GamePhase { OPENING, MIDDLEGAME, ENDGAME } gamePhase;
 
     // Evaluation breakdown
     int staticEvaluation;
@@ -90,4 +86,3 @@ private:
 };
 
 #endif
-

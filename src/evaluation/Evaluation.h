@@ -1,9 +1,9 @@
 #ifndef EVALUATION_H
 #define EVALUATION_H
 
-#include "NNUE.h"
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
+#include "NNUE.h"
 
 const int KING_SAFETY_PAWN_SHIELD_BONUS = 10;
 const int KING_SAFETY_OPEN_FILE_PENALTY = 20;

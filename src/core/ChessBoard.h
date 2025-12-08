@@ -229,6 +229,6 @@ inline std::string formatError(ChessError error) {
             return "Unknown error";
     }
 }
-} 
+} // namespace ChessUtils
 
 #endif

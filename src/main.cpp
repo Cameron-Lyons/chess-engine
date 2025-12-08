@@ -1,7 +1,7 @@
-#include "core/ChessEngine.h"
 #include "ai/NeuralNetwork.h"
 #include "ai/OpeningBook.h"
 #include "core/BitboardMoves.h"
+#include "core/ChessEngine.h"
 #include "core/MoveContent.h"
 #include "evaluation/Evaluation.h"
 #include "evaluation/EvaluationEnhanced.h"

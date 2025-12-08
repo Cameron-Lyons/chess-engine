@@ -124,4 +124,4 @@ void logEvaluationComponents(const char* component, int value) {
 #endif
 }
 
-} 
+} // namespace EvaluationParams

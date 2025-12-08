@@ -4,7 +4,9 @@
 #include "../utils/engine_globals.h"
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <random>
+#include <sstream>
 #include <unordered_map>
 
 bool AdvancedSearch::futilityPruning(const Board& board, int depth, int alpha, int beta,
@@ -339,7 +341,7 @@ std::vector<EnhancedMoveOrdering::MoveScore> EnhancedMoveOrdering::scoreMoves(
         }
 
         else {
-            score = EnhancedMoveOrdering::getHistoryScore(history, move.first, move.second);
+            score = history.get(move.first, move.second);
         }
 
         score += getPositionalScore(board, move);
@@ -469,7 +471,6 @@ int TimeManager::allocateTime(Board& board, int depth, int nodes, bool isInCheck
 
     double factor = getTimeFactor(depth, nodes);
 
-    // Apply game phase awareness
     GamePhase phase = getGamePhase(board);
     factor *= getPhaseTimeFactor(phase);
 
@@ -588,47 +589,81 @@ GamePhase TimeManager::getGamePhase(const Board& board) const {
         }
     }
 
-    // Opening: High material, queens present, many pieces
     if (totalMaterial > 6000 && queenCount >= 1 && pieceCount > 20) {
         return GamePhase::OPENING;
     }
 
-    // Endgame: Low material or few pieces
-    if (totalMaterial < 2000 || pieceCount <= 10 || (queenCount == 0 && rookCount <= 1 && minorPieceCount <= 2)) {
+    if (totalMaterial < 2000 || pieceCount <= 10 ||
+        (queenCount == 0 && rookCount <= 1 && minorPieceCount <= 2)) {
         return GamePhase::ENDGAME;
     }
 
-    // Middlegame: Everything else
     return GamePhase::MIDDLEGAME;
 }
 
 double TimeManager::getPhaseTimeFactor(GamePhase phase) const {
     switch (phase) {
         case GamePhase::OPENING:
-            // Opening: Spend less time, rely on opening book
             return 0.7;
         case GamePhase::MIDDLEGAME:
-            // Middlegame: Normal time allocation
             return 1.0;
         case GamePhase::ENDGAME:
-            // Endgame: Spend more time for precision
             return 1.3;
         default:
             return 1.0;
     }
 }
 
-EnhancedOpeningBook::EnhancedOpeningBook(const std::string& bookPath) : bookPath(bookPath) {}
+EnhancedOpeningBook::EnhancedOpeningBook(const std::string& bookPath) : book(), bookPath(bookPath) {
+    loadBook(bookPath);
+}
 
 std::vector<EnhancedOpeningBook::BookEntry> EnhancedOpeningBook::getBookMoves(const Board& board) {
-    (void)board;
-
+    std::string key = boardToKey(board);
+    auto it = book.find(key);
+    if (it != book.end()) {
+        return it->second;
+    }
     return {};
 }
 
 std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool randomize) {
-    std::string fen = getFEN(board);
+    std::string key = boardToKey(board);
+    auto it = book.find(key);
+    if (it != book.end() && !it->second.empty()) {
+        const auto& entries = it->second;
+        if (randomize) {
+            int totalWeight = 0;
+            for (const auto& entry : entries) {
+                totalWeight += entry.weight;
+            }
+            if (totalWeight > 0) {
+                static std::random_device rd;
+                static std::mt19937 gen(rd());
+                std::uniform_int_distribution<> dis(0, totalWeight - 1);
+                int random = dis(gen);
+                int cumulative = 0;
+                for (const auto& entry : entries) {
+                    cumulative += entry.weight;
+                    if (random < cumulative) {
+                        return entry.move;
+                    }
+                }
+            }
+            return entries[0].move;
+        } else {
+            auto bestIt = std::max_element(entries.begin(), entries.end(),
+                                           [](const BookEntry& a, const BookEntry& b) {
+                                               if (a.weight != b.weight) {
+                                                   return a.weight < b.weight;
+                                               }
+                                               return a.winRate < b.winRate;
+                                           });
+            return bestIt->move;
+        }
+    }
 
+    std::string fen = getFEN(board);
     auto optionsIt = OpeningBookOptions.find(fen);
     if (optionsIt != OpeningBookOptions.end()) {
         const auto& options = optionsIt->second;
@@ -640,15 +675,14 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
                 std::string move = options[dis(gen)];
                 return parseMove(move);
             } else {
-
                 return parseMove(options[0]);
             }
         }
     }
 
-    auto it = OpeningBook.find(fen);
-    if (it != OpeningBook.end()) {
-        return parseMove(it->second);
+    auto legacyIt = OpeningBook.find(fen);
+    if (legacyIt != OpeningBook.end()) {
+        return parseMove(legacyIt->second);
     }
 
     return {-1, -1};
@@ -669,34 +703,151 @@ std::pair<int, int> EnhancedOpeningBook::parseMove(const std::string& move) {
         return {-1, -1};
     }
 
-    return {srcRow * 8 + srcCol, destRow * 8 + destCol};
+    return {(srcRow * 8) + srcCol, (destRow * 8) + destCol};
 }
 
 bool EnhancedOpeningBook::isInBook(const Board& board) {
-    (void)board;
-
-    return false;
+    std::string key = boardToKey(board);
+    return book.find(key) != book.end();
 }
 
 void EnhancedOpeningBook::addMove(const Board& board, const BookEntry& entry) {
-    (void)board;
-    (void)entry;
+    std::string key = boardToKey(board);
+    auto it = book.find(key);
+    if (it != book.end()) {
+        bool found = false;
+        for (auto& existingEntry : it->second) {
+            if (existingEntry.move == entry.move) {
+                existingEntry.weight = std::max(existingEntry.weight, entry.weight);
+                existingEntry.games += entry.games;
+                existingEntry.winRate = ((existingEntry.winRate * existingEntry.games) +
+                                         (entry.winRate * entry.games)) /
+                                        (existingEntry.games + entry.games);
+                existingEntry.averageRating = ((existingEntry.averageRating * existingEntry.games) +
+                                               (entry.averageRating * entry.games)) /
+                                              (existingEntry.games + entry.games);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            it->second.push_back(entry);
+        }
+        normalizeWeights(it->second);
+    } else {
+        book[key] = {entry};
+    }
 }
 
 void EnhancedOpeningBook::saveBook(const std::string& path) {
-    (void)path;
+    std::ofstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        return;
+    }
+
+    size_t numPositions = book.size();
+    file.write(reinterpret_cast<const char*>(&numPositions), sizeof(numPositions));
+
+    for (const auto& [key, entries] : book) {
+        size_t keyLen = key.length();
+        file.write(reinterpret_cast<const char*>(&keyLen), sizeof(keyLen));
+        file.write(key.c_str(), keyLen);
+
+        size_t numMoves = entries.size();
+        file.write(reinterpret_cast<const char*>(&numMoves), sizeof(numMoves));
+
+        for (const auto& entry : entries) {
+            file.write(reinterpret_cast<const char*>(&entry.move.first), sizeof(entry.move.first));
+            file.write(reinterpret_cast<const char*>(&entry.move.second),
+                       sizeof(entry.move.second));
+            file.write(reinterpret_cast<const char*>(&entry.weight), sizeof(entry.weight));
+            file.write(reinterpret_cast<const char*>(&entry.games), sizeof(entry.games));
+            file.write(reinterpret_cast<const char*>(&entry.winRate), sizeof(entry.winRate));
+            file.write(reinterpret_cast<const char*>(&entry.averageRating),
+                       sizeof(entry.averageRating));
+        }
+    }
+
+    file.close();
 }
 
 void EnhancedOpeningBook::loadBook(const std::string& path) {
-    (void)path;
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        return;
+    }
+
+    book.clear();
+
+    size_t numPositions{0};
+    file.read(reinterpret_cast<char*>(&numPositions), sizeof(numPositions));
+
+    for (size_t i = 0; i < numPositions; ++i) {
+        size_t keyLen = 0;
+        file.read(reinterpret_cast<char*>(&keyLen), sizeof(keyLen));
+        std::string key(keyLen, '\0');
+        file.read(key.data(), static_cast<std::streamsize>(keyLen));
+
+        size_t numMoves = 0;
+        file.read(reinterpret_cast<char*>(&numMoves), sizeof(numMoves));
+
+        std::vector<BookEntry> entries;
+        entries.reserve(numMoves);
+
+        for (size_t j = 0; j < numMoves; ++j) {
+            BookEntry entry;
+            file.read(reinterpret_cast<char*>(&entry.move.first), sizeof(entry.move.first));
+            file.read(reinterpret_cast<char*>(&entry.move.second), sizeof(entry.move.second));
+            file.read(reinterpret_cast<char*>(&entry.weight), sizeof(entry.weight));
+            file.read(reinterpret_cast<char*>(&entry.games), sizeof(entry.games));
+            file.read(reinterpret_cast<char*>(&entry.winRate), sizeof(entry.winRate));
+            file.read(reinterpret_cast<char*>(&entry.averageRating), sizeof(entry.averageRating));
+            entries.push_back(entry);
+        }
+
+        book[key] = entries;
+    }
+
+    file.close();
+    bookPath = path;
 }
 
 std::string EnhancedOpeningBook::boardToKey(const Board& board) {
-    (void)board;
+    std::string fen = getFEN(board);
 
-    return "";
+    std::istringstream iss(fen);
+    std::string position, activeColor, castling, enPassant;
+    iss >> position >> activeColor >> castling >> enPassant;
+
+    std::ostringstream keyStream;
+    keyStream << position << " " << activeColor << " " << castling << " " << enPassant;
+    return keyStream.str();
 }
 
 void EnhancedOpeningBook::normalizeWeights(std::vector<BookEntry>& entries) {
-    (void)entries;
+    if (entries.empty()) {
+        return;
+    }
+
+    int totalWeight = 0;
+    for (const auto& entry : entries) {
+        totalWeight += entry.weight;
+    }
+
+    if (totalWeight == 0) {
+        for (auto& entry : entries) {
+            entry.weight = entry.games > 0 ? entry.games : 1;
+        }
+        totalWeight = 0;
+        for (const auto& entry : entries) {
+            totalWeight += entry.weight;
+        }
+    }
+
+    if (totalWeight > 0) {
+        const int TARGET_SUM = 1000;
+        for (auto& entry : entries) {
+            entry.weight = (entry.weight * TARGET_SUM) / totalWeight;
+        }
+    }
 }

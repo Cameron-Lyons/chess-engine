@@ -175,6 +175,6 @@ private:
 
 extern TranspositionTable TT;
 
-} 
+} // namespace TTv2
 
 #endif

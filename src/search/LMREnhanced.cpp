@@ -187,4 +187,4 @@ PositionContext evaluatePosition(const Board& board, int staticEval, int previou
     return context;
 }
 
-} 
+} // namespace LMREnhanced

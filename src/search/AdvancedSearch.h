@@ -62,13 +62,9 @@ int getThreatScore(const Board& board, const std::pair<int, int>& move);
 int getMobilityScore(const Board& board, const std::pair<int, int>& move);
 
 int getPositionalScore(const Board& board, const std::pair<int, int>& move);
-} 
+} // namespace EnhancedMoveOrdering
 
-enum class GamePhase : std::uint8_t {
-    OPENING,
-    MIDDLEGAME,
-    ENDGAME
-};
+enum class GamePhase : std::uint8_t { OPENING, MIDDLEGAME, ENDGAME };
 
 class TimeManager {
 public:

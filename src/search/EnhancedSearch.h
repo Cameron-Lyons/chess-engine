@@ -20,4 +20,4 @@ std::string moveToString(const MoveContent& move);
 int getPieceValue(ChessPieceType piece);
 
 ChessPieceColor oppositeColor(ChessPieceColor color);
-} 
+} // namespace EnhancedSearch

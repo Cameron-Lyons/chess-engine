@@ -254,6 +254,6 @@ std::string formatError(ChessError error) {
             return "Unknown error";
     }
 }
-} 
+} // namespace ModernChessUtils
 
 #endif
