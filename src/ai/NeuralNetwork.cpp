@@ -3,16 +3,22 @@
 #include "../search/ValidMoves.h"
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <numeric>
 #include <random>
 #include <ranges>
+#include <sstream>
 
 class NeuralNetworkEvaluator::Impl {
 public:
+    NeuralNetworkEvaluator::ModelVersion version{1, 0, 0, "", 0.0f};
+
     struct Layer {
         std::vector<std::vector<float>> weights;
         std::vector<float> biases;
@@ -155,6 +161,30 @@ public:
             return;
         }
 
+        version.patch++;
+        if (version.patch >= 100) {
+            version.patch = 0;
+            version.minor++;
+            if (version.minor >= 100) {
+                version.minor = 0;
+                version.major++;
+            }
+        }
+
+        auto now = std::chrono::system_clock::now();
+        auto time_t = std::chrono::system_clock::to_time_t(now);
+        std::stringstream ss;
+        ss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
+        version.timestamp = ss.str();
+
+        file.write(reinterpret_cast<const char*>(&version.major), sizeof(int));
+        file.write(reinterpret_cast<const char*>(&version.minor), sizeof(int));
+        file.write(reinterpret_cast<const char*>(&version.patch), sizeof(int));
+        size_t timestampLen = version.timestamp.length();
+        file.write(reinterpret_cast<const char*>(&timestampLen), sizeof(size_t));
+        file.write(version.timestamp.c_str(), static_cast<std::streamsize>(timestampLen));
+        file.write(reinterpret_cast<const char*>(&version.validationLoss), sizeof(float));
+
         file.write(reinterpret_cast<const char*>(&config.inputSize), sizeof(int));
         file.write(reinterpret_cast<const char*>(&config.hiddenSize), sizeof(int));
         file.write(reinterpret_cast<const char*>(&config.outputSize), sizeof(int));
@@ -181,6 +211,15 @@ public:
             std::cerr << "Error: Could not open file for reading: " << path << '\n';
             return;
         }
+
+        file.read(reinterpret_cast<char*>(&version.major), sizeof(int));
+        file.read(reinterpret_cast<char*>(&version.minor), sizeof(int));
+        file.read(reinterpret_cast<char*>(&version.patch), sizeof(int));
+        size_t timestampLen = 0;
+        file.read(reinterpret_cast<char*>(&timestampLen), sizeof(size_t));
+        version.timestamp.resize(timestampLen);
+        file.read(&version.timestamp[0], static_cast<std::streamsize>(timestampLen));
+        file.read(reinterpret_cast<char*>(&version.validationLoss), sizeof(float));
 
         file.read(reinterpret_cast<char*>(&config.inputSize), sizeof(int));
         file.read(reinterpret_cast<char*>(&config.hiddenSize), sizeof(int));
@@ -902,4 +941,82 @@ auto NNTrainer::calculateLoss(const std::vector<std::pair<Board, float>>& data) 
     }
 
     return totalLoss / static_cast<float>(data.size());
+}
+
+bool NeuralNetworkEvaluator::ModelVersion::operator<(const ModelVersion& other) const {
+    if (major != other.major)
+        return major < other.major;
+    if (minor != other.minor)
+        return minor < other.minor;
+    return patch < other.patch;
+}
+
+bool NeuralNetworkEvaluator::ModelVersion::operator==(const ModelVersion& other) const {
+    return major == other.major && minor == other.minor && patch == other.patch;
+}
+
+std::string NeuralNetworkEvaluator::ModelVersion::toString() const {
+    return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch) +
+           " (" + timestamp + ")";
+}
+
+NeuralNetworkEvaluator::ModelVersion NeuralNetworkEvaluator::getModelVersion() const {
+    return m_pImpl->version;
+}
+
+void NeuralNetworkEvaluator::setModelVersion(const ModelVersion& version) {
+    m_pImpl->version = version;
+}
+
+bool NeuralNetworkEvaluator::compareModels(const std::string& path1, const std::string& path2) {
+    ModelVersion v1, v2;
+
+    std::ifstream file1(path1, std::ios::binary);
+    if (file1.is_open()) {
+        file1.read(reinterpret_cast<char*>(&v1.major), sizeof(int));
+        file1.read(reinterpret_cast<char*>(&v1.minor), sizeof(int));
+        file1.read(reinterpret_cast<char*>(&v1.patch), sizeof(int));
+        file1.close();
+    }
+
+    std::ifstream file2(path2, std::ios::binary);
+    if (file2.is_open()) {
+        file2.read(reinterpret_cast<char*>(&v2.major), sizeof(int));
+        file2.read(reinterpret_cast<char*>(&v2.minor), sizeof(int));
+        file2.read(reinterpret_cast<char*>(&v2.patch), sizeof(int));
+        file2.close();
+    }
+
+    return v1 == v2;
+}
+
+std::vector<std::string> NeuralNetworkEvaluator::listModelVersions(const std::string& directory) {
+    std::vector<std::string> versions;
+
+    if (!std::filesystem::exists(directory)) {
+        return versions;
+    }
+
+    for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".bin") {
+            std::ifstream file(entry.path(), std::ios::binary);
+            if (file.is_open()) {
+                ModelVersion version;
+                file.read(reinterpret_cast<char*>(&version.major), sizeof(int));
+                file.read(reinterpret_cast<char*>(&version.minor), sizeof(int));
+                file.read(reinterpret_cast<char*>(&version.patch), sizeof(int));
+                size_t timestampLen = 0;
+                file.read(reinterpret_cast<char*>(&timestampLen), sizeof(size_t));
+                version.timestamp.resize(timestampLen);
+                file.read(&version.timestamp[0], static_cast<std::streamsize>(timestampLen));
+                file.read(reinterpret_cast<char*>(&version.validationLoss), sizeof(float));
+                file.close();
+
+                versions.push_back(entry.path().string() + " - " + version.toString() +
+                                   " (loss: " + std::to_string(version.validationLoss) + ")");
+            }
+        }
+    }
+
+    return versions;
 }
