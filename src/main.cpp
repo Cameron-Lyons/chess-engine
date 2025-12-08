@@ -1,4 +1,4 @@
-#include "ChessEngine.h"
+#include "core/ChessEngine.h"
 #include "ai/NeuralNetwork.h"
 #include "ai/OpeningBook.h"
 #include "core/BitboardMoves.h"

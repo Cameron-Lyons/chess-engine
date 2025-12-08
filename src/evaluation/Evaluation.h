@@ -1,7 +1,7 @@
 #ifndef EVALUATION_H
 #define EVALUATION_H
 
-#include "../NNUE.h"
+#include "NNUE.h"
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
 

@@ -64,8 +64,8 @@ set(ENGINE_SOURCES
     src/ai/EndgameTablebase.cpp
     src/ai/SyzygyTablebase.cpp
     src/ai/OpeningBook.cpp
-    src/NNUE.cpp
-    src/NNUEOptimized.cpp
+    src/evaluation/NNUE.cpp
+    src/evaluation/NNUEOptimized.cpp
 )
 
 set(ALL_SOURCES ${CORE_SOURCES} ${ENGINE_SOURCES})

@@ -79,6 +79,6 @@ constexpr bool ENABLE_PIECE_COORDINATION = true;
 constexpr bool ENABLE_ENDGAME_KNOWLEDGE = true;
 constexpr bool ENABLE_TACTICAL_BONUSES = true;
 
-} // namespace EvaluationParams
+} 
 
 #endif

@@ -1,5 +1,5 @@
 #include "Evaluation.h"
-#include "../NNUE.h"
+#include "NNUE.h"
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
 #include "EvaluationEnhanced.h"
@@ -154,7 +154,7 @@ int calculateGamePhase(const Board& board) {
     int phase = 256 - (totalMaterial * 256) / 3900;
     return std::max(0, std::min(256, phase));
 }
-} // namespace PieceSquareTables
+} 
 
 int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor color) {
 

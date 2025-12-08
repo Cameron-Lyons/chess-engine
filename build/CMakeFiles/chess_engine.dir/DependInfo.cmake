@@ -8,8 +8,6 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/cameron/chess-engine/src/NNUE.cpp" "CMakeFiles/chess_engine.dir/src/NNUE.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/NNUE.cpp.o.d"
-  "/home/cameron/chess-engine/src/NNUEOptimized.cpp" "CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o.d"
   "/home/cameron/chess-engine/src/ai/EndgameTablebase.cpp" "CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o.d"
   "/home/cameron/chess-engine/src/ai/NeuralNetwork.cpp" "CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o.d"
   "/home/cameron/chess-engine/src/ai/OpeningBook.cpp" "CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o.d"
@@ -21,6 +19,8 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/cameron/chess-engine/src/evaluation/Evaluation.cpp" "CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/evaluation/Evaluation.cpp.o.d"
   "/home/cameron/chess-engine/src/evaluation/EvaluationEnhanced.cpp" "CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/evaluation/EvaluationEnhanced.cpp.o.d"
   "/home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp" "CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o.d"
+  "/home/cameron/chess-engine/src/evaluation/NNUE.cpp" "CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o.d"
+  "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp" "CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o.d"
   "/home/cameron/chess-engine/src/main.cpp" "CMakeFiles/chess_engine.dir/src/main.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/main.cpp.o.d"
   "/home/cameron/chess-engine/src/protocol/uci.cpp" "CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o.d"
   "/home/cameron/chess-engine/src/search/AdvancedSearch.cpp" "CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o.d"

@@ -221,6 +221,6 @@ template <uint64_t FromBB, uint64_t ToBB>
 constexpr uint64_t generateMoves() {
     return FromBB & ToBB;
 }
-} // namespace CompileTimeOptimizations
+} 
 
 #endif

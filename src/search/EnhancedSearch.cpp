@@ -601,4 +601,4 @@ ChessPieceColor oppositeColor(ChessPieceColor color) {
     return color == ChessPieceColor::WHITE ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
 }
 
-} // namespace EnhancedSearch
+} 
