@@ -59,6 +59,7 @@ set(ENGINE_SOURCES
     src/evaluation/Evaluation.cpp
     src/evaluation/EvaluationEnhanced.cpp
     src/evaluation/EvaluationTuning.cpp
+    src/evaluation/PositionAnalysis.cpp
     src/protocol/uci.cpp
     src/ai/NeuralNetwork.cpp
     src/ai/EndgameTablebase.cpp

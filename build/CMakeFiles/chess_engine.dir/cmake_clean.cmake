@@ -26,6 +26,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o.d"
   "CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o"
   "CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o.d"
+  "CMakeFiles/chess_engine.dir/src/evaluation/PositionAnalysis.cpp.o"
+  "CMakeFiles/chess_engine.dir/src/evaluation/PositionAnalysis.cpp.o.d"
   "CMakeFiles/chess_engine.dir/src/main.cpp.o"
   "CMakeFiles/chess_engine.dir/src/main.cpp.o.d"
   "CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o"

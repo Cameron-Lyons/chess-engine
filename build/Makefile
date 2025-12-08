@@ -1101,6 +1101,63 @@ src/evaluation/NNUEOptimized.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.s
 .PHONY : src/evaluation/NNUEOptimized.cpp.s
 
+src/evaluation/PositionAnalysis.o: src/evaluation/PositionAnalysis.cpp.o
+.PHONY : src/evaluation/PositionAnalysis.o
+
+# target to build an object file
+src/evaluation/PositionAnalysis.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/evaluation/PositionAnalysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/evaluation/PositionAnalysis.cpp.o
+.PHONY : src/evaluation/PositionAnalysis.cpp.o
+
+src/evaluation/PositionAnalysis.i: src/evaluation/PositionAnalysis.cpp.i
+.PHONY : src/evaluation/PositionAnalysis.i
+
+# target to preprocess a source file
+src/evaluation/PositionAnalysis.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/evaluation/PositionAnalysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/evaluation/PositionAnalysis.cpp.i
+.PHONY : src/evaluation/PositionAnalysis.cpp.i
+
+src/evaluation/PositionAnalysis.s: src/evaluation/PositionAnalysis.cpp.s
+.PHONY : src/evaluation/PositionAnalysis.s
+
+# target to generate assembly for a file
+src/evaluation/PositionAnalysis.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chess_engine.dir/build.make CMakeFiles/chess_engine.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_parallel.dir/build.make CMakeFiles/gtest_parallel.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_bitboard_moves.dir/build.make CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_comprehensive.dir/build.make CMakeFiles/gtest_comprehensive.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_fen.dir/build.make CMakeFiles/gtest_fen.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_crash.dir/build.make CMakeFiles/gtest_crash.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_pawn.dir/build.make CMakeFiles/gtest_pawn.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_quiescence.dir/build.make CMakeFiles/gtest_quiescence.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_king_safety.dir/build.make CMakeFiles/gtest_king_safety.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_killer_moves.dir/build.make CMakeFiles/gtest_killer_moves.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_engine_improvements.dir/build.make CMakeFiles/gtest_engine_improvements.dir/src/evaluation/PositionAnalysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gtest_tactical_suite.dir/build.make CMakeFiles/gtest_tactical_suite.dir/src/evaluation/PositionAnalysis.cpp.s
+.PHONY : src/evaluation/PositionAnalysis.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -1912,6 +1969,9 @@ help:
 	@echo "... src/evaluation/NNUEOptimized.o"
 	@echo "... src/evaluation/NNUEOptimized.i"
 	@echo "... src/evaluation/NNUEOptimized.s"
+	@echo "... src/evaluation/PositionAnalysis.o"
+	@echo "... src/evaluation/PositionAnalysis.i"
+	@echo "... src/evaluation/PositionAnalysis.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

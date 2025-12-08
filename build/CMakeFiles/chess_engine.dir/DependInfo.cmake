@@ -21,6 +21,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp" "CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/evaluation/EvaluationTuning.cpp.o.d"
   "/home/cameron/chess-engine/src/evaluation/NNUE.cpp" "CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o.d"
   "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp" "CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o.d"
+  "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp" "CMakeFiles/chess_engine.dir/src/evaluation/PositionAnalysis.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/evaluation/PositionAnalysis.cpp.o.d"
   "/home/cameron/chess-engine/src/main.cpp" "CMakeFiles/chess_engine.dir/src/main.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/main.cpp.o.d"
   "/home/cameron/chess-engine/src/protocol/uci.cpp" "CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o.d"
   "/home/cameron/chess-engine/src/search/AdvancedSearch.cpp" "CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o" "gcc" "CMakeFiles/chess_engine.dir/src/search/AdvancedSearch.cpp.o.d"

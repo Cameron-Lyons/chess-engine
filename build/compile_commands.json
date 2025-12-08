@@ -91,6 +91,12 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++  -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/chess_engine.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/chess_engine.dir/src/evaluation/PositionAnalysis.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
   "command": "/usr/bin/c++  -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o -c /home/cameron/chess-engine/src/protocol/uci.cpp",
   "file": "/home/cameron/chess-engine/src/protocol/uci.cpp",
   "output": "CMakeFiles/chess_engine.dir/src/protocol/uci.cpp.o"
@@ -220,6 +226,12 @@
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_parallel.dir/src/evaluation/EvaluationTuning.cpp.o -c /home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "file": "/home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "output": "CMakeFiles/gtest_parallel.dir/src/evaluation/EvaluationTuning.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_parallel.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_parallel.dir/src/evaluation/PositionAnalysis.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -355,6 +367,12 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/PositionAnalysis.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_bitboard_moves.dir/src/protocol/uci.cpp.o -c /home/cameron/chess-engine/src/protocol/uci.cpp",
   "file": "/home/cameron/chess-engine/src/protocol/uci.cpp",
   "output": "CMakeFiles/gtest_bitboard_moves.dir/src/protocol/uci.cpp.o"
@@ -484,6 +502,12 @@
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_comprehensive.dir/src/evaluation/EvaluationTuning.cpp.o -c /home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "file": "/home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "output": "CMakeFiles/gtest_comprehensive.dir/src/evaluation/EvaluationTuning.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_comprehensive.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_comprehensive.dir/src/evaluation/PositionAnalysis.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -619,6 +643,12 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_fen.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_fen.dir/src/evaluation/PositionAnalysis.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_fen.dir/src/protocol/uci.cpp.o -c /home/cameron/chess-engine/src/protocol/uci.cpp",
   "file": "/home/cameron/chess-engine/src/protocol/uci.cpp",
   "output": "CMakeFiles/gtest_fen.dir/src/protocol/uci.cpp.o"
@@ -748,6 +778,12 @@
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_crash.dir/src/evaluation/EvaluationTuning.cpp.o -c /home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "file": "/home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "output": "CMakeFiles/gtest_crash.dir/src/evaluation/EvaluationTuning.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_crash.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_crash.dir/src/evaluation/PositionAnalysis.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -883,6 +919,12 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_pawn.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_pawn.dir/src/evaluation/PositionAnalysis.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_pawn.dir/src/protocol/uci.cpp.o -c /home/cameron/chess-engine/src/protocol/uci.cpp",
   "file": "/home/cameron/chess-engine/src/protocol/uci.cpp",
   "output": "CMakeFiles/gtest_pawn.dir/src/protocol/uci.cpp.o"
@@ -1012,6 +1054,12 @@
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_quiescence.dir/src/evaluation/EvaluationTuning.cpp.o -c /home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "file": "/home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "output": "CMakeFiles/gtest_quiescence.dir/src/evaluation/EvaluationTuning.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_quiescence.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_quiescence.dir/src/evaluation/PositionAnalysis.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -1147,6 +1195,12 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_king_safety.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_king_safety.dir/src/evaluation/PositionAnalysis.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_king_safety.dir/src/protocol/uci.cpp.o -c /home/cameron/chess-engine/src/protocol/uci.cpp",
   "file": "/home/cameron/chess-engine/src/protocol/uci.cpp",
   "output": "CMakeFiles/gtest_king_safety.dir/src/protocol/uci.cpp.o"
@@ -1276,6 +1330,12 @@
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_killer_moves.dir/src/evaluation/EvaluationTuning.cpp.o -c /home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "file": "/home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "output": "CMakeFiles/gtest_killer_moves.dir/src/evaluation/EvaluationTuning.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_killer_moves.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_killer_moves.dir/src/evaluation/PositionAnalysis.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -1411,6 +1471,12 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_engine_improvements.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_engine_improvements.dir/src/evaluation/PositionAnalysis.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_engine_improvements.dir/src/protocol/uci.cpp.o -c /home/cameron/chess-engine/src/protocol/uci.cpp",
   "file": "/home/cameron/chess-engine/src/protocol/uci.cpp",
   "output": "CMakeFiles/gtest_engine_improvements.dir/src/protocol/uci.cpp.o"
@@ -1540,6 +1606,12 @@
   "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_tactical_suite.dir/src/evaluation/EvaluationTuning.cpp.o -c /home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "file": "/home/cameron/chess-engine/src/evaluation/EvaluationTuning.cpp",
   "output": "CMakeFiles/gtest_tactical_suite.dir/src/evaluation/EvaluationTuning.cpp.o"
+},
+{
+  "directory": "/home/cameron/chess-engine/build",
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_tactical_suite.dir/src/evaluation/PositionAnalysis.cpp.o -c /home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/PositionAnalysis.cpp",
+  "output": "CMakeFiles/gtest_tactical_suite.dir/src/evaluation/PositionAnalysis.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",

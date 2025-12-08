@@ -469,6 +469,10 @@ int TimeManager::allocateTime(Board& board, int depth, int nodes, bool isInCheck
 
     double factor = getTimeFactor(depth, nodes);
 
+    // Apply game phase awareness
+    GamePhase phase = getGamePhase(board);
+    factor *= getPhaseTimeFactor(phase);
+
     if (isInCheck) {
         factor *= 1.5;
     }
@@ -548,6 +552,70 @@ double TimeManager::getTimeFactor(int depth, int nodes) {
     }
 
     return factor;
+}
+
+GamePhase TimeManager::getGamePhase(const Board& board) const {
+    int totalMaterial = 0;
+    int pieceCount = 0;
+    int queenCount = 0;
+    int rookCount = 0;
+    int minorPieceCount = 0;
+
+    for (int sq = 0; sq < 64; ++sq) {
+        const Piece& piece = board.squares[sq].piece;
+        if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
+            pieceCount++;
+            switch (piece.PieceType) {
+                case ChessPieceType::QUEEN:
+                    totalMaterial += 900;
+                    queenCount++;
+                    break;
+                case ChessPieceType::ROOK:
+                    totalMaterial += 500;
+                    rookCount++;
+                    break;
+                case ChessPieceType::BISHOP:
+                case ChessPieceType::KNIGHT:
+                    totalMaterial += 300;
+                    minorPieceCount++;
+                    break;
+                case ChessPieceType::PAWN:
+                    totalMaterial += 100;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    // Opening: High material, queens present, many pieces
+    if (totalMaterial > 6000 && queenCount >= 1 && pieceCount > 20) {
+        return GamePhase::OPENING;
+    }
+
+    // Endgame: Low material or few pieces
+    if (totalMaterial < 2000 || pieceCount <= 10 || (queenCount == 0 && rookCount <= 1 && minorPieceCount <= 2)) {
+        return GamePhase::ENDGAME;
+    }
+
+    // Middlegame: Everything else
+    return GamePhase::MIDDLEGAME;
+}
+
+double TimeManager::getPhaseTimeFactor(GamePhase phase) const {
+    switch (phase) {
+        case GamePhase::OPENING:
+            // Opening: Spend less time, rely on opening book
+            return 0.7;
+        case GamePhase::MIDDLEGAME:
+            // Middlegame: Normal time allocation
+            return 1.0;
+        case GamePhase::ENDGAME:
+            // Endgame: Spend more time for precision
+            return 1.3;
+        default:
+            return 1.0;
+    }
 }
 
 EnhancedOpeningBook::EnhancedOpeningBook(const std::string& bookPath) : bookPath(bookPath) {}

@@ -26,6 +26,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/NNUE.cpp.o.d"
   "CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/NNUEOptimized.cpp.o"
   "CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/NNUEOptimized.cpp.o.d"
+  "CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/PositionAnalysis.cpp.o"
+  "CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/PositionAnalysis.cpp.o.d"
   "CMakeFiles/gtest_bitboard_moves.dir/src/protocol/uci.cpp.o"
   "CMakeFiles/gtest_bitboard_moves.dir/src/protocol/uci.cpp.o.d"
   "CMakeFiles/gtest_bitboard_moves.dir/src/search/AdvancedSearch.cpp.o"

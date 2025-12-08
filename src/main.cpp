@@ -6,6 +6,7 @@
 #include "evaluation/Evaluation.h"
 #include "evaluation/EvaluationEnhanced.h"
 #include "evaluation/PatternRecognition.h"
+#include "evaluation/PositionAnalysis.h"
 #include "protocol/uci.h"
 #include "search/SearchImprovements.h"
 #include "search/ValidMoves.h"
@@ -459,6 +460,26 @@ int main(int argc, char* argv[]) {
 
             std::cout << "Training data saved to: " << dataPath << std::endl;
             std::cout << "Generated " << trainingData.size() << " training examples" << std::endl;
+
+            return 0;
+        } else if (mode == "analyze") {
+            std::cout << "Position Analysis Mode\n";
+            std::cout << "======================\n\n";
+
+            std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+            if (argc > 2) {
+                fen = argv[2];
+            }
+
+            Board board;
+            board.InitializeFromFEN(fen);
+
+            std::cout << "Analyzing position from FEN: " << fen << "\n\n";
+            printBoard(board);
+            std::cout << "\n";
+
+            PositionAnalysis analysis = PositionAnalyzer::analyzePosition(board);
+            PositionAnalyzer::printDetailedAnalysis(analysis);
 
             return 0;
         }

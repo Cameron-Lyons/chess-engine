@@ -3,6 +3,7 @@
 
 #include "../core/ChessBoard.h"
 #include "search.h"
+#include <cstdint>
 #include <unordered_map>
 #include <vector>
 
@@ -63,6 +64,12 @@ int getMobilityScore(const Board& board, const std::pair<int, int>& move);
 int getPositionalScore(const Board& board, const std::pair<int, int>& move);
 } 
 
+enum class GamePhase : std::uint8_t {
+    OPENING,
+    MIDDLEGAME,
+    ENDGAME
+};
+
 class TimeManager {
 public:
     struct TimeControl {
@@ -82,6 +89,8 @@ public:
 
     bool isEmergencyTime(int remainingTime, int allocatedTime);
 
+    GamePhase getGamePhase(const Board& board) const;
+
 private:
     TimeControl timeControl;
     int moveNumber;
@@ -91,6 +100,7 @@ private:
     int calculateBaseTime();
     int calculateIncrement();
     double getTimeFactor(int depth, int nodes);
+    double getPhaseTimeFactor(GamePhase phase) const;
 };
 
 class EnhancedOpeningBook {
