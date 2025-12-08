@@ -172,6 +172,6 @@ constexpr int KING_ATTACK_BONUS = 100;
 constexpr int BISHOP_PAIR_BONUS = 30;
 constexpr int ROOK_COORDINATION_BONUS = 20;
 constexpr int KNIGHT_COORDINATION_BONUS = 15;
-} 
+} // namespace PatternScores
 
 #endif

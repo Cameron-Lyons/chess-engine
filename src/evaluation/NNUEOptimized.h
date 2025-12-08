@@ -182,7 +182,7 @@ inline __m256i clip_epi32(__m256i v, int32_t max_val) {
     v = _mm256_min_epi32(v, max);
     return v;
 }
-} 
+} // namespace SIMDOps
 
 extern std::unique_ptr<NNUEEvaluator> globalEvaluator;
 
@@ -190,6 +190,6 @@ bool init(const std::string& networkPath);
 
 int evaluate(const BitboardPosition& pos);
 
-} 
+} // namespace NNUEOptimized
 
 #endif

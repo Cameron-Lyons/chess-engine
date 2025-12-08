@@ -165,4 +165,4 @@ int evaluate(const Board& board) {
     return globalEvaluator->evaluate(board, stm);
 }
 
-} 
+} // namespace NNUE

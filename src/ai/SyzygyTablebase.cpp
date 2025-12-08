@@ -258,4 +258,4 @@ const std::string& getPath() {
     return tbPath;
 }
 
-} 
+} // namespace Syzygy

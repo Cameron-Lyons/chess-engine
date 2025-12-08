@@ -1,10 +1,10 @@
 #include "PositionAnalysis.h"
-#include "Evaluation.h"
-#include "../search/ValidMoves.h"
 #include "../core/BitboardMoves.h"
+#include "../search/ValidMoves.h"
+#include "Evaluation.h"
+#include <algorithm>
 #include <iostream>
 #include <sstream>
-#include <algorithm>
 
 PositionAnalysis PositionAnalyzer::analyzePosition(const Board& board) {
     PositionAnalysis analysis;
@@ -122,7 +122,8 @@ std::string PositionAnalyzer::formatAnalysis(const PositionAnalysis& analysis) {
     oss << "Material:\n";
     oss << "  White: " << analysis.whiteMaterial << " (" << analysis.whitePieces << " pieces)\n";
     oss << "  Black: " << analysis.blackMaterial << " (" << analysis.blackPieces << " pieces)\n";
-    oss << "  Balance: " << (analysis.materialBalance > 0 ? "+" : "") << analysis.materialBalance << "\n\n";
+    oss << "  Balance: " << (analysis.materialBalance > 0 ? "+" : "") << analysis.materialBalance
+        << "\n\n";
 
     // Piece counts
     oss << "Piece Counts:\n";
@@ -296,9 +297,9 @@ int PositionAnalyzer::findPins(const Board& board) {
     for (int sq = 0; sq < 64; ++sq) {
         const Piece& piece = board.squares[sq].piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
-            ChessPieceColor enemyColor =
-                (piece.PieceColor == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                             : ChessPieceColor::WHITE;
+            ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE)
+                                             ? ChessPieceColor::BLACK
+                                             : ChessPieceColor::WHITE;
 
             for (int attackerSq = 0; attackerSq < 64; ++attackerSq) {
                 const Piece& attacker = board.squares[attackerSq].piece;
@@ -321,9 +322,9 @@ int PositionAnalyzer::findForks(const Board& board) {
         const Piece& piece = board.squares[sq].piece;
         if (piece.PieceType == ChessPieceType::KNIGHT || piece.PieceType == ChessPieceType::PAWN) {
             int attackCount = 0;
-            ChessPieceColor enemyColor =
-                (piece.PieceColor == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                             : ChessPieceColor::WHITE;
+            ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE)
+                                             ? ChessPieceColor::BLACK
+                                             : ChessPieceColor::WHITE;
 
             for (int targetSq = 0; targetSq < 64; ++targetSq) {
                 const Piece& target = board.squares[targetSq].piece;
@@ -350,9 +351,9 @@ int PositionAnalyzer::findDiscoveredAttacks(const Board& board) {
     for (int sq = 0; sq < 64; ++sq) {
         const Piece& piece = board.squares[sq].piece;
         if (piece.PieceType == ChessPieceType::PAWN || piece.PieceType == ChessPieceType::KNIGHT) {
-            ChessPieceColor enemyColor =
-                (piece.PieceColor == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                             : ChessPieceColor::WHITE;
+            ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE)
+                                             ? ChessPieceColor::BLACK
+                                             : ChessPieceColor::WHITE;
 
             for (int targetSq = 0; targetSq < 64; ++targetSq) {
                 const Piece& target = board.squares[targetSq].piece;
@@ -398,8 +399,7 @@ std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
             }
 
             const Piece& captured = board.squares[move.second].piece;
-            if (captured.PieceType != ChessPieceType::NONE &&
-                captured.PieceColor == currentColor) {
+            if (captured.PieceType != ChessPieceType::NONE && captured.PieceColor == currentColor) {
                 threats.push_back("Piece capture threat on square " + std::to_string(move.second));
             }
         }
@@ -419,7 +419,7 @@ std::vector<std::string> PositionAnalyzer::identifyOpportunities(const Board& bo
         if (target.PieceType != ChessPieceType::NONE &&
             target.PieceColor != board.squares[move.first].piece.PieceColor) {
             opportunities.push_back("Capture opportunity: " + std::to_string(move.first) + " to " +
-                                   std::to_string(move.second));
+                                    std::to_string(move.second));
         }
     }
 
@@ -441,4 +441,3 @@ std::vector<std::string> PositionAnalyzer::identifyWeaknesses(const Board& board
 
     return weaknesses;
 }
-

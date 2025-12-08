@@ -191,6 +191,6 @@ int getMVVLVA_Score(const Board& board, int fromSquare, int toSquare);
 int getHistoryScore(const ThreadSafeHistory& history, int fromSquare, int toSquare);
 int getKillerScore(const KillerMoves& killers, int ply, int fromSquare, int toSquare);
 int getPositionalScore(const Board& board, int fromSquare, int toSquare);
-} 
+} // namespace EnhancedMoveOrdering
 
 #endif

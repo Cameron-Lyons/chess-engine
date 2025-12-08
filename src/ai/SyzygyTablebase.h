@@ -57,6 +57,6 @@ struct Position {
     static Position fromBoard(const Board& board);
 };
 
-} 
+} // namespace Syzygy
 
 #endif

@@ -94,6 +94,6 @@ bool init(const std::string& networkPath);
 
 int evaluate(const Board& board);
 
-} 
+} // namespace NNUE
 
 #endif

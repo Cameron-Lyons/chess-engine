@@ -187,6 +187,6 @@ inline int adjustReduction(int baseReduction, int failCount, bool improving) {
     return baseReduction;
 }
 
-} 
+} // namespace LMREnhanced
 
 #endif
