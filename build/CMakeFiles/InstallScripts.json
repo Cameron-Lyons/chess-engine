@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/cameron/chess-engine/build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
