@@ -352,33 +352,33 @@ CMakeFiles/gtest_tactical_suite.dir/src/ai/OpeningBook.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gtest_tactical_suite.dir/src/ai/OpeningBook.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/ai/OpeningBook.cpp -o CMakeFiles/gtest_tactical_suite.dir/src/ai/OpeningBook.cpp.s
 
-CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o: CMakeFiles/gtest_tactical_suite.dir/flags.make
-CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o: /home/cameron/chess-engine/src/NNUE.cpp
-CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o: CMakeFiles/gtest_tactical_suite.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o"
-	$(CMAKE_COMMAND) -E __run_co_compile --tidy="/usr/bin/clang-tidy;--config-file=/home/cameron/chess-engine/.clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/NNUE.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o -MF CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o.d -o CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp
+CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o: CMakeFiles/gtest_tactical_suite.dir/flags.make
+CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o: /home/cameron/chess-engine/src/evaluation/NNUE.cpp
+CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o: CMakeFiles/gtest_tactical_suite.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o"
+	$(CMAKE_COMMAND) -E __run_co_compile --tidy="/usr/bin/clang-tidy;--config-file=/home/cameron/chess-engine/.clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/evaluation/NNUE.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o -MF CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o.d -o CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp
 
-CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/NNUE.cpp > CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.i
+CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/evaluation/NNUE.cpp > CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.i
 
-CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/NNUE.cpp -o CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.s
+CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/evaluation/NNUE.cpp -o CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.s
 
-CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o: CMakeFiles/gtest_tactical_suite.dir/flags.make
-CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o: /home/cameron/chess-engine/src/NNUEOptimized.cpp
-CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o: CMakeFiles/gtest_tactical_suite.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building CXX object CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o"
-	$(CMAKE_COMMAND) -E __run_co_compile --tidy="/usr/bin/clang-tidy;--config-file=/home/cameron/chess-engine/.clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/NNUEOptimized.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o -MF CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o.d -o CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp
+CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o: CMakeFiles/gtest_tactical_suite.dir/flags.make
+CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o: /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp
+CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o: CMakeFiles/gtest_tactical_suite.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building CXX object CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o"
+	$(CMAKE_COMMAND) -E __run_co_compile --tidy="/usr/bin/clang-tidy;--config-file=/home/cameron/chess-engine/.clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o -MF CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o.d -o CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp
 
-CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/NNUEOptimized.cpp > CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.i
+CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp > CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.i
 
-CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/NNUEOptimized.cpp -o CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.s
+CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp -o CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.s
 
 # Object files for target gtest_tactical_suite
 gtest_tactical_suite_OBJECTS = \
@@ -402,8 +402,8 @@ gtest_tactical_suite_OBJECTS = \
 "CMakeFiles/gtest_tactical_suite.dir/src/ai/EndgameTablebase.cpp.o" \
 "CMakeFiles/gtest_tactical_suite.dir/src/ai/SyzygyTablebase.cpp.o" \
 "CMakeFiles/gtest_tactical_suite.dir/src/ai/OpeningBook.cpp.o" \
-"CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o" \
-"CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o"
+"CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o" \
+"CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o"
 
 # External object files for target gtest_tactical_suite
 gtest_tactical_suite_EXTERNAL_OBJECTS =
@@ -428,8 +428,8 @@ gtest_tactical_suite: CMakeFiles/gtest_tactical_suite.dir/src/ai/NeuralNetwork.c
 gtest_tactical_suite: CMakeFiles/gtest_tactical_suite.dir/src/ai/EndgameTablebase.cpp.o
 gtest_tactical_suite: CMakeFiles/gtest_tactical_suite.dir/src/ai/SyzygyTablebase.cpp.o
 gtest_tactical_suite: CMakeFiles/gtest_tactical_suite.dir/src/ai/OpeningBook.cpp.o
-gtest_tactical_suite: CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o
-gtest_tactical_suite: CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o
+gtest_tactical_suite: CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o
+gtest_tactical_suite: CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o
 gtest_tactical_suite: CMakeFiles/gtest_tactical_suite.dir/build.make
 gtest_tactical_suite: CMakeFiles/gtest_tactical_suite.dir/compiler_depend.ts
 gtest_tactical_suite: /usr/lib/libgmock.so.1.17.0

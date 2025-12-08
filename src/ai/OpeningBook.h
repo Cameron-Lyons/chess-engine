@@ -176,6 +176,6 @@ enum Format { BIN, PGN, JSON, CSV };
 
 void saveBook(const std::string& filename, const OpeningBook& book, Format format);
 void loadBook(const std::string& filename, OpeningBook& book, Format format);
-} // namespace BookFormats
+} 
 
 #endif

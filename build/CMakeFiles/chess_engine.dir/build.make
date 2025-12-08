@@ -352,33 +352,33 @@ CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/ai/OpeningBook.cpp -o CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.s
 
-CMakeFiles/chess_engine.dir/src/NNUE.cpp.o: CMakeFiles/chess_engine.dir/flags.make
-CMakeFiles/chess_engine.dir/src/NNUE.cpp.o: /home/cameron/chess-engine/src/NNUE.cpp
-CMakeFiles/chess_engine.dir/src/NNUE.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/chess_engine.dir/src/NNUE.cpp.o"
-	$(CMAKE_COMMAND) -E __run_co_compile --tidy="/usr/bin/clang-tidy;--config-file=/home/cameron/chess-engine/.clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/NNUE.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/NNUE.cpp.o -MF CMakeFiles/chess_engine.dir/src/NNUE.cpp.o.d -o CMakeFiles/chess_engine.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp
+CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o: CMakeFiles/chess_engine.dir/flags.make
+CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o: /home/cameron/chess-engine/src/evaluation/NNUE.cpp
+CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o"
+	$(CMAKE_COMMAND) -E __run_co_compile --tidy="/usr/bin/clang-tidy;--config-file=/home/cameron/chess-engine/.clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/evaluation/NNUE.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o -MF CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o.d -o CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp
 
-CMakeFiles/chess_engine.dir/src/NNUE.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/chess_engine.dir/src/NNUE.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/NNUE.cpp > CMakeFiles/chess_engine.dir/src/NNUE.cpp.i
+CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/evaluation/NNUE.cpp > CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.i
 
-CMakeFiles/chess_engine.dir/src/NNUE.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/NNUE.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/NNUE.cpp -o CMakeFiles/chess_engine.dir/src/NNUE.cpp.s
+CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/evaluation/NNUE.cpp -o CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.s
 
-CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o: CMakeFiles/chess_engine.dir/flags.make
-CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o: /home/cameron/chess-engine/src/NNUEOptimized.cpp
-CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building CXX object CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o"
-	$(CMAKE_COMMAND) -E __run_co_compile --tidy="/usr/bin/clang-tidy;--config-file=/home/cameron/chess-engine/.clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/NNUEOptimized.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o -MF CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o.d -o CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp
+CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o: CMakeFiles/chess_engine.dir/flags.make
+CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o: /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp
+CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o: CMakeFiles/chess_engine.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cameron/chess-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building CXX object CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o"
+	$(CMAKE_COMMAND) -E __run_co_compile --tidy="/usr/bin/clang-tidy;--config-file=/home/cameron/chess-engine/.clang-tidy;--extra-arg-before=--driver-mode=g++" --source=/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp -- /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o -MF CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o.d -o CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp
 
-CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/NNUEOptimized.cpp > CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.i
+CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp > CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.i
 
-CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/NNUEOptimized.cpp -o CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.s
+CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp -o CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.s
 
 # Object files for target chess_engine
 chess_engine_OBJECTS = \
@@ -402,8 +402,8 @@ chess_engine_OBJECTS = \
 "CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o" \
 "CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o" \
-"CMakeFiles/chess_engine.dir/src/NNUE.cpp.o" \
-"CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o"
+"CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o" \
+"CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o"
 
 # External object files for target chess_engine
 chess_engine_EXTERNAL_OBJECTS =
@@ -428,8 +428,8 @@ chess_engine: CMakeFiles/chess_engine.dir/src/ai/NeuralNetwork.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/ai/EndgameTablebase.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/ai/SyzygyTablebase.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/src/ai/OpeningBook.cpp.o
-chess_engine: CMakeFiles/chess_engine.dir/src/NNUE.cpp.o
-chess_engine: CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o
+chess_engine: CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o
+chess_engine: CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o
 chess_engine: CMakeFiles/chess_engine.dir/build.make
 chess_engine: CMakeFiles/chess_engine.dir/compiler_depend.ts
 chess_engine: CMakeFiles/chess_engine.dir/link.txt

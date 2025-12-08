@@ -158,6 +158,6 @@ int getThreatScore(const Board& board, const std::pair<int, int>& move);
 int getCombinedScore(const Board& board, const std::pair<int, int>& move,
                      const ThreadSafeHistory& history, const KillerMoves& killers, int ply,
                      const std::pair<int, int>& hashMove);
-} // namespace EnhancedMoveOrdering
+} 
 
 #endif

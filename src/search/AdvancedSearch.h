@@ -61,7 +61,7 @@ int getThreatScore(const Board& board, const std::pair<int, int>& move);
 int getMobilityScore(const Board& board, const std::pair<int, int>& move);
 
 int getPositionalScore(const Board& board, const std::pair<int, int>& move);
-} // namespace EnhancedMoveOrdering
+} 
 
 class TimeManager {
 public:

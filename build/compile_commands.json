@@ -121,15 +121,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++  -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/chess_engine.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/chess_engine.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++  -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/chess_engine.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++  -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/chess_engine.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++  -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/chess_engine.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -253,15 +253,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_parallel.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_parallel.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_parallel.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_parallel.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_parallel.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_parallel.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_parallel.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_parallel.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -385,15 +385,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_bitboard_moves.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_bitboard_moves.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_bitboard_moves.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_bitboard_moves.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_bitboard_moves.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -517,15 +517,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_comprehensive.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_comprehensive.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_comprehensive.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_comprehensive.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_comprehensive.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_comprehensive.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_comprehensive.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_comprehensive.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -649,15 +649,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_fen.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_fen.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_fen.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_fen.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_fen.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_fen.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_fen.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_fen.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -781,15 +781,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_crash.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_crash.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_crash.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_crash.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_crash.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_crash.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_crash.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_crash.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -913,15 +913,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_pawn.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_pawn.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_pawn.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_pawn.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_pawn.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_pawn.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_pawn.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_pawn.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -1045,15 +1045,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_quiescence.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_quiescence.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_quiescence.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_quiescence.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_quiescence.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_quiescence.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_quiescence.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_quiescence.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -1177,15 +1177,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_king_safety.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_king_safety.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_king_safety.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_king_safety.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_king_safety.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_king_safety.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_king_safety.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_king_safety.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -1309,15 +1309,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_killer_moves.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_killer_moves.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_killer_moves.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_killer_moves.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_killer_moves.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_killer_moves.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_killer_moves.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_killer_moves.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -1441,15 +1441,15 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_engine_improvements.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_engine_improvements.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_engine_improvements.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_engine_improvements.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_engine_improvements.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_engine_improvements.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_engine_improvements.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_engine_improvements.dir/src/evaluation/NNUEOptimized.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
@@ -1573,14 +1573,14 @@
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o -c /home/cameron/chess-engine/src/NNUE.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUE.cpp",
-  "output": "CMakeFiles/gtest_tactical_suite.dir/src/NNUE.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUE.cpp",
+  "output": "CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUE.cpp.o"
 },
 {
   "directory": "/home/cameron/chess-engine/build",
-  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "file": "/home/cameron/chess-engine/src/NNUEOptimized.cpp",
-  "output": "CMakeFiles/gtest_tactical_suite.dir/src/NNUEOptimized.cpp.o"
+  "command": "/usr/bin/c++ -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -I/home/cameron/chess-engine/src -O3 -DNDEBUG -std=c++23 -Wall -Wextra -Wpedantic -O3 -DNDEBUG -march=native -mavx2 -o CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o -c /home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "file": "/home/cameron/chess-engine/src/evaluation/NNUEOptimized.cpp",
+  "output": "CMakeFiles/gtest_tactical_suite.dir/src/evaluation/NNUEOptimized.cpp.o"
 }
 ]
