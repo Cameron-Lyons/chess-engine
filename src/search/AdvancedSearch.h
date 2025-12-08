@@ -123,6 +123,18 @@ public:
 
     void loadBook(const std::string& path);
 
+    struct BookStats {
+        size_t totalPositions;
+        size_t totalMoves;
+        size_t totalGames;
+        float averageWinRate;
+        float averageRating;
+    };
+
+    BookStats getStats() const;
+
+    void analyzeBook();
+
 private:
     std::unordered_map<std::string, std::vector<BookEntry>> book;
     std::string bookPath;

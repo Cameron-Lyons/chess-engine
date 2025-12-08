@@ -851,3 +851,34 @@ void EnhancedOpeningBook::normalizeWeights(std::vector<BookEntry>& entries) {
         }
     }
 }
+
+EnhancedOpeningBook::BookStats EnhancedOpeningBook::getStats() const {
+    BookStats stats{};
+    stats.totalPositions = book.size();
+    stats.totalMoves = 0;
+    stats.totalGames = 0;
+    float totalWinRate = 0.0f;
+    float totalRating = 0.0f;
+    int moveCount = 0;
+
+    for (const auto& [key, entries] : book) {
+        stats.totalMoves += entries.size();
+        for (const auto& entry : entries) {
+            stats.totalGames += entry.games;
+            totalWinRate += entry.winRate;
+            totalRating += entry.averageRating;
+            moveCount++;
+        }
+    }
+
+    if (moveCount > 0) {
+        stats.averageWinRate = totalWinRate / moveCount;
+        stats.averageRating = totalRating / moveCount;
+    }
+
+    return stats;
+}
+
+void EnhancedOpeningBook::analyzeBook() {
+    BookStats stats = getStats();
+}
