@@ -72,7 +72,7 @@ std::unordered_map<std::string, std::string> OpeningBook;
 
 uint64_t ZobristTable[64][12];
 uint64_t ZobristBlackToMove;
-ThreadSafeTT TransTable;
+TranspositionTableAdapter TransTable;
 
 std::string getFEN(const Board& board) {
     std::string fen;

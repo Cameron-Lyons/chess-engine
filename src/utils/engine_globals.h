@@ -14,7 +14,7 @@ extern std::unordered_map<std::string, std::vector<std::string>> OpeningBookOpti
 extern std::unordered_map<std::string, std::string> OpeningBook;
 extern uint64_t ZobristTable[64][12];
 extern uint64_t ZobristBlackToMove;
-extern ThreadSafeTT TransTable;
+extern TranspositionTableAdapter TransTable;
 
 std::string getFEN(const Board& board);
 bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& srcRow, int& destCol,

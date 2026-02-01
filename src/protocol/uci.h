@@ -29,6 +29,7 @@ public:
 
         bool debug = false;
         bool showCurrLine = false;
+        int contempt = 0;
     };
 
     UCIEngine();

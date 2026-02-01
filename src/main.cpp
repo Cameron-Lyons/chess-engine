@@ -5,6 +5,7 @@
 #include "core/MoveContent.h"
 #include "evaluation/Evaluation.h"
 #include "evaluation/EvaluationEnhanced.h"
+#include "evaluation/EvaluationTuning.h"
 #include "evaluation/PatternRecognition.h"
 #include "evaluation/PositionAnalysis.h"
 #include "protocol/uci.h"
@@ -461,6 +462,29 @@ int main(int argc, char* argv[]) {
             std::cout << "Training data saved to: " << dataPath << std::endl;
             std::cout << "Generated " << trainingData.size() << " training examples" << std::endl;
 
+            return 0;
+        } else if (mode == "--tune" || mode == "tune") {
+            if (argc < 3) {
+                std::cout << "Usage: chess_engine --tune <positions_file> [iterations]\n";
+                return 1;
+            }
+            std::string posFile = argv[2];
+            int iterations = 100;
+            if (argc > 3) {
+                iterations = std::stoi(argv[3]);
+            }
+
+            InitZobrist();
+
+            TexelTuner tuner;
+            if (!tuner.loadPositions(posFile)) {
+                std::cout << "Failed to load positions from: " << posFile << "\n";
+                return 1;
+            }
+            std::cout << "Loaded positions, starting Texel tuning...\n";
+            tuner.optimize(iterations);
+            tuner.exportParams("tuned_params.txt");
+            std::cout << "Tuned parameters exported to tuned_params.txt\n";
             return 0;
         } else if (mode == "analyze") {
             std::cout << "Position Analysis Mode\n";

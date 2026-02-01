@@ -1,6 +1,7 @@
 #include "PositionAnalysis.h"
 #include "../core/BitboardMoves.h"
 #include "../search/ValidMoves.h"
+#include "../search/search.h"
 #include "Evaluation.h"
 #include <algorithm>
 #include <iostream>
@@ -278,9 +279,10 @@ int PositionAnalyzer::evaluatePawnStructure(const Board& board) {
 int PositionAnalyzer::evaluatePieceActivity(const Board& board) {
     int activity = 0;
 
-    GenValidMoves(board);
-    std::vector<std::pair<int, int>> whiteMoves = GetAllMoves(board, ChessPieceColor::WHITE);
-    std::vector<std::pair<int, int>> blackMoves = GetAllMoves(board, ChessPieceColor::BLACK);
+    Board mutableBoard = board;
+    GenValidMoves(mutableBoard);
+    std::vector<std::pair<int, int>> whiteMoves = GetAllMoves(mutableBoard, ChessPieceColor::WHITE);
+    std::vector<std::pair<int, int>> blackMoves = GetAllMoves(mutableBoard, ChessPieceColor::BLACK);
 
     activity = static_cast<int>(whiteMoves.size() - blackMoves.size());
 
@@ -387,8 +389,9 @@ std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
     ChessPieceColor enemyColor =
         (currentColor == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
 
-    GenValidMoves(board);
-    std::vector<std::pair<int, int>> enemyMoves = GetAllMoves(board, enemyColor);
+    Board mutableBoard = board;
+    GenValidMoves(mutableBoard);
+    std::vector<std::pair<int, int>> enemyMoves = GetAllMoves(mutableBoard, enemyColor);
 
     for (const auto& move : enemyMoves) {
         Board testBoard = board;
@@ -411,8 +414,9 @@ std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
 std::vector<std::string> PositionAnalyzer::identifyOpportunities(const Board& board) {
     std::vector<std::string> opportunities;
 
-    GenValidMoves(board);
-    std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
+    Board mutableBoard = board;
+    GenValidMoves(mutableBoard);
+    std::vector<std::pair<int, int>> moves = GetAllMoves(mutableBoard, board.turn);
 
     for (const auto& move : moves) {
         const Piece& target = board.squares[move.second].piece;

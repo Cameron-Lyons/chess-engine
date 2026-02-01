@@ -3,6 +3,7 @@
 
 #include "../core/ChessBoard.h"
 #include "../evaluation/Evaluation.h"
+#include "TranspositionTableV2.h"
 #include "ValidMoves.h"
 #include <algorithm>
 #include <atomic>
@@ -45,6 +46,71 @@ struct ThreadSafeTT {
     void clear();
 };
 
+class TranspositionTableAdapter {
+    TTv2::TranspositionTable tt;
+
+    static TTv2::Bound flagToBound(int flag) {
+        if (flag == 0) return TTv2::BOUND_EXACT;
+        if (flag == -1) return TTv2::BOUND_UPPER;
+        if (flag == 1) return TTv2::BOUND_LOWER;
+        return TTv2::BOUND_NONE;
+    }
+
+    static int boundToFlag(TTv2::Bound b) {
+        if (b == TTv2::BOUND_EXACT) return 0;
+        if (b == TTv2::BOUND_UPPER) return -1;
+        if (b == TTv2::BOUND_LOWER) return 1;
+        return 0;
+    }
+
+public:
+    TranspositionTableAdapter() { tt.resize(32); }
+
+    void insert(uint64_t hash, const TTEntry& entry) {
+        bool found;
+        TTv2::TTEntry* tte = tt.probe(hash, found);
+        TTv2::PackedMove pm = TTv2::packMove(
+            entry.bestMove.first >= 0 ? entry.bestMove.first : 0,
+            entry.bestMove.second >= 0 ? entry.bestMove.second : 0);
+        if (entry.bestMove.first < 0) pm = 0;
+        tte->save(hash,
+                  static_cast<int16_t>(entry.value),
+                  static_cast<int16_t>(entry.value),
+                  flagToBound(entry.flag),
+                  static_cast<int8_t>(std::clamp(entry.depth, -127, 127)),
+                  pm,
+                  tt.generation());
+    }
+
+    bool find(uint64_t hash, TTEntry& entry) const {
+        bool found;
+        TTv2::TTEntry* tte = const_cast<TTv2::TranspositionTable&>(tt).probe(hash, found);
+        if (!found) return false;
+        entry.depth = tte->depth;
+        entry.value = tte->value;
+        entry.flag = boundToFlag(tte->bound());
+        if (tte->move) {
+            int from, to, promo;
+            TTv2::unpackMove(tte->move, from, to, promo);
+            entry.bestMove = {from, to};
+        } else {
+            entry.bestMove = {-1, -1};
+        }
+        entry.zobristKey = hash;
+        return true;
+    }
+
+    void clear() { tt.clear(); }
+
+    void resize(size_t mbSize) { tt.resize(mbSize); }
+
+    void newSearch() { tt.newSearch(); }
+
+    void prefetch(uint64_t key) const { tt.prefetch(key); }
+
+    int hashfull() const { return tt.hashfull(); }
+};
+
 struct ThreadSafeHistory {
     std::vector<std::vector<int>> table;
     mutable std::mutex mutex;
@@ -74,13 +140,17 @@ struct KillerMoves {
 struct ParallelSearchContext {
     std::atomic<bool> stopSearch;
     std::atomic<int> nodeCount;
-    ThreadSafeTT transTable;
+    TranspositionTableAdapter transTable;
     ThreadSafeHistory historyTable;
     KillerMoves killerMoves;
     std::chrono::steady_clock::time_point startTime;
     int timeLimitMs;
     int numThreads;
     int ply;
+    std::pair<int, int> counterMoves[2][64];
+    int contempt = 0;
+    int multiPV = 1;
+    std::vector<std::pair<int, int>> excludedRootMoves;
     ParallelSearchContext(int threads = 0);
 };
 
@@ -107,7 +177,7 @@ struct SearchResult {
 
 extern uint64_t ZobristTable[64][12];
 extern uint64_t ZobristBlackToMove;
-extern ThreadSafeTT TransTable;
+extern TranspositionTableAdapter TransTable;
 
 void InitZobrist();
 int pieceToZobristIndex(const Piece& p);
@@ -137,7 +207,7 @@ std::vector<ScoredMove> scoreMovesWithKillers(const Board& board,
                                               int numThreads);
 std::string getBookMove(const std::string& fen);
 SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs,
-                                        int numThreads = 0);
+                                        int numThreads = 0, int contempt = 0, int multiPV = 1);
 std::pair<int, int> findBestMove(Board& board, int depth);
 int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer,
                              int ply, ThreadSafeHistory& historyTable,
@@ -158,7 +228,53 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
                                             const std::vector<std::pair<int, int>>& moves,
                                             const ThreadSafeHistory& historyTable,
                                             const KillerMoves& killerMoves, int ply,
-                                            const std::pair<int, int>& hashMove = {-1, -1});
+                                            const std::pair<int, int>& hashMove = {-1, -1},
+                                            const std::pair<int, int>& counterMove = {-1, -1});
+
+enum class MovePickerStage {
+    HASH_MOVE,
+    GEN_CAPTURES,
+    GOOD_CAPTURES,
+    KILLERS,
+    COUNTERMOVE,
+    GEN_QUIETS,
+    QUIETS,
+    BAD_CAPTURES,
+    DONE
+};
+
+class MovePicker {
+    Board& board;
+    std::pair<int, int> hashMove;
+    const KillerMoves& killerMoves;
+    int ply;
+    const ThreadSafeHistory& history;
+    ParallelSearchContext& context;
+
+    MovePickerStage stage;
+    std::vector<ScoredMove> goodCaptures;
+    std::vector<ScoredMove> badCaptures;
+    std::vector<ScoredMove> quietMoves;
+    size_t captureIdx = 0;
+    size_t quietIdx = 0;
+    size_t badCaptureIdx = 0;
+    bool movesGenerated = false;
+    std::vector<std::pair<int, int>> returned;
+
+    bool alreadyReturned(const std::pair<int, int>& m) const {
+        for (const auto& r : returned)
+            if (r == m) return true;
+        return false;
+    }
+
+    void generateAndPartitionMoves();
+
+public:
+    MovePicker(Board& b, std::pair<int, int> hm, const KillerMoves& km,
+               int p, const ThreadSafeHistory& h, ParallelSearchContext& ctx);
+
+    std::pair<int, int> next();
+};
 
 struct SearchTechniques {
     static const int FUTILITY_MARGIN_PAWN = 100;

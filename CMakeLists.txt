@@ -9,12 +9,12 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Enable clang-tidy
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+# Enable clang-tidy (disabled by default, enable with -DENABLE_CLANG_TIDY=ON)
+option(ENABLE_CLANG_TIDY "Enable clang-tidy static analysis" OFF)
+if(ENABLE_CLANG_TIDY AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     find_program(CLANG_TIDY clang-tidy)
     if(CLANG_TIDY)
-        # Use the .clang-tidy config file in the project root
-        set(CMAKE_CXX_CLANG_TIDY 
+        set(CMAKE_CXX_CLANG_TIDY
             ${CLANG_TIDY}
             --config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy
         )
@@ -27,7 +27,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_compile_options(-O3 -DNDEBUG -march=native -mavx2)
     elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        add_compile_options(-g -DDEBUG)
+        add_compile_options(-g -DDEBUG -march=native -mavx2)
     endif()
 endif()
 
@@ -101,6 +101,7 @@ foreach(test_name ${TEST_NAMES})
             tests/${test_name}.cpp
             ${ALL_SOURCES}
         )
+        target_include_directories(${test_name} PRIVATE src/core)
         target_link_libraries(${test_name} Threads::Threads GTest::gtest GTest::gmock GTest::gtest_main)
     endif()
 endforeach()

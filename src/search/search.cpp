@@ -143,11 +143,14 @@ int KillerMoves::getKillerScore(int ply, std::pair<int, int> move) const {
 }
 
 ParallelSearchContext::ParallelSearchContext(int threads)
-    : stopSearch(false), nodeCount(0), numThreads(threads), ply(0) {
+    : stopSearch(false), nodeCount(0), numThreads(threads), ply(0), contempt(0), multiPV(1) {
     if (numThreads == 0)
         numThreads = std::thread::hardware_concurrency();
     if (numThreads == 0)
         numThreads = 4;
+    for (int c = 0; c < 2; ++c)
+        for (int sq = 0; sq < 64; ++sq)
+            counterMoves[c][sq] = {-1, -1};
 }
 
 SearchResult::SearchResult() : bestMove({-1, -1}), score(0), depth(0), nodes(0), timeMs(0) {}
@@ -239,7 +242,8 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
                                             const std::vector<std::pair<int, int>>& moves,
                                             const ThreadSafeHistory& historyTable,
                                             const KillerMoves& killerMoves, int ply,
-                                            const std::pair<int, int>& ttMove) {
+                                            const std::pair<int, int>& ttMove,
+                                            const std::pair<int, int>& counterMove) {
     std::vector<ScoredMove> scoredMoves;
     scoredMoves.reserve(moves.size());
 
@@ -261,6 +265,10 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
                     EnhancedMoveOrdering::getKillerScore(killerMoves, ply, move.first, move.second);
         }
 
+        else if (counterMove.first >= 0 && move == counterMove) {
+            score = 850000;
+        }
+
         else {
             score = EnhancedMoveOrdering::HISTORY_SCORE_BASE +
                     EnhancedMoveOrdering::getHistoryScore(historyTable, move.first, move.second);
@@ -272,6 +280,142 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
     }
 
     return scoredMoves;
+}
+
+MovePicker::MovePicker(Board& b, std::pair<int, int> hm, const KillerMoves& km,
+                       int p, const ThreadSafeHistory& h, ParallelSearchContext& ctx)
+    : board(b), hashMove(hm), killerMoves(km), ply(p), history(h), context(ctx),
+      stage(MovePickerStage::HASH_MOVE) {}
+
+void MovePicker::generateAndPartitionMoves() {
+    if (movesGenerated) return;
+    movesGenerated = true;
+
+    GenValidMoves(board);
+    std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
+
+    for (const auto& move : moves) {
+        if (move == hashMove) continue;
+        if (killerMoves.isKiller(ply, move)) continue;
+
+        int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
+        int prevDest = board.LastMove;
+        std::pair<int, int> cm = {-1, -1};
+        if (prevDest >= 0 && prevDest < 64)
+            cm = context.counterMoves[colorIdx][prevDest];
+        if (cm.first >= 0 && move == cm) continue;
+
+        bool isCap = isCapture(board, move.first, move.second);
+        if (isCap) {
+            int mvvLva = EnhancedMoveOrdering::getMVVLVA_Score(board, move.first, move.second);
+            int see = staticExchangeEvaluation(board, move.first, move.second);
+            int score = mvvLva * 1000 + see;
+            if (see >= 0) {
+                goodCaptures.push_back({move, score});
+            } else {
+                badCaptures.push_back({move, score});
+            }
+        } else {
+            int score = EnhancedMoveOrdering::getHistoryScore(history, move.first, move.second);
+            score += EnhancedMoveOrdering::getPositionalScore(board, move.first, move.second);
+            quietMoves.push_back({move, score});
+        }
+    }
+
+    std::sort(goodCaptures.begin(), goodCaptures.end(), std::greater<ScoredMove>());
+    std::sort(quietMoves.begin(), quietMoves.end(), std::greater<ScoredMove>());
+    std::sort(badCaptures.begin(), badCaptures.end(), std::greater<ScoredMove>());
+}
+
+std::pair<int, int> MovePicker::next() {
+    while (true) {
+        switch (stage) {
+        case MovePickerStage::HASH_MOVE:
+            stage = MovePickerStage::GEN_CAPTURES;
+            if (hashMove.first >= 0 && hashMove.second >= 0) {
+                returned.push_back(hashMove);
+                return hashMove;
+            }
+            break;
+
+        case MovePickerStage::GEN_CAPTURES:
+            generateAndPartitionMoves();
+            captureIdx = 0;
+            stage = MovePickerStage::GOOD_CAPTURES;
+            break;
+
+        case MovePickerStage::GOOD_CAPTURES:
+            if (captureIdx < goodCaptures.size()) {
+                auto m = goodCaptures[captureIdx++].move;
+                if (!alreadyReturned(m)) {
+                    returned.push_back(m);
+                    return m;
+                }
+                break;
+            }
+            stage = MovePickerStage::KILLERS;
+            break;
+
+        case MovePickerStage::KILLERS:
+            stage = MovePickerStage::COUNTERMOVE;
+            for (int i = 0; i < KillerMoves::MAX_KILLER_MOVES; ++i) {
+                auto k = killerMoves.killers[ply][i];
+                if (k.first >= 0 && !alreadyReturned(k)) {
+                    returned.push_back(k);
+                    stage = MovePickerStage::KILLERS;
+                    return k;
+                }
+            }
+            break;
+
+        case MovePickerStage::COUNTERMOVE: {
+            stage = MovePickerStage::GEN_QUIETS;
+            int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
+            int prevDest = board.LastMove;
+            if (prevDest >= 0 && prevDest < 64) {
+                auto cm = context.counterMoves[colorIdx][prevDest];
+                if (cm.first >= 0 && !alreadyReturned(cm)) {
+                    returned.push_back(cm);
+                    return cm;
+                }
+            }
+            break;
+        }
+
+        case MovePickerStage::GEN_QUIETS:
+            quietIdx = 0;
+            stage = MovePickerStage::QUIETS;
+            break;
+
+        case MovePickerStage::QUIETS:
+            if (quietIdx < quietMoves.size()) {
+                auto m = quietMoves[quietIdx++].move;
+                if (!alreadyReturned(m)) {
+                    returned.push_back(m);
+                    return m;
+                }
+                break;
+            }
+            badCaptureIdx = 0;
+            stage = MovePickerStage::BAD_CAPTURES;
+            break;
+
+        case MovePickerStage::BAD_CAPTURES:
+            if (badCaptureIdx < badCaptures.size()) {
+                auto m = badCaptures[badCaptureIdx++].move;
+                if (!alreadyReturned(m)) {
+                    returned.push_back(m);
+                    return m;
+                }
+                break;
+            }
+            stage = MovePickerStage::DONE;
+            break;
+
+        case MovePickerStage::DONE:
+            return {-1, -1};
+        }
+    }
 }
 
 void updateHistoryTable(ThreadSafeHistory& historyTable, int fromSquare, int toSquare, int depth) {
@@ -439,7 +583,8 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
 
             int seeValue = staticExchangeEvaluation(board, move.first, move.second);
 
-            if (seeValue < -25) {
+            int seeThreshold = -25 - ply * 15;
+            if (seeValue < seeThreshold) {
                 continue;
             }
 
@@ -522,6 +667,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     context.nodeCount++;
 
     uint64_t zobristKey = ComputeZobrist(board);
+    context.transTable.prefetch(zobristKey);
     TTEntry ttEntry;
     if (context.transTable.find(zobristKey, ttEntry) && ttEntry.depth >= depth) {
         if (ttEntry.flag == 0) {
@@ -564,33 +710,42 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         }
     }
 
-    std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
-    if (moves.empty()) {
-        if (isInCheck(board, board.turn)) {
-            return maximizingPlayer ? -10000 + ply : 10000 - ply;
-        } else {
-            return 0;
-        }
-    }
+    GenValidMoves(board);
+    MovePicker picker(board, ttEntry.bestMove, context.killerMoves, ply, historyTable, context);
 
-    std::vector<ScoredMove> scoredMoves =
-        scoreMovesOptimized(board, moves, historyTable, context.killerMoves, ply, ttEntry.bestMove);
-    std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
+    int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
+    int prevDest = board.LastMove;
 
     int bestValue = maximizingPlayer ? -10000 : 10000;
     std::pair<int, int> bestMove = {-1, -1};
     int flag = -1;
+    size_t movesSearched = 0;
 
-    for (size_t i = 0; i < scoredMoves.size(); ++i) {
-        const auto& move = scoredMoves[i].move;
+    std::pair<int, int> move;
+    while ((move = picker.next()).first >= 0) {
+        if (ply == 0) {
+            bool excluded = false;
+            for (const auto& ex : context.excludedRootMoves) {
+                if (ex == move) { excluded = true; break; }
+            }
+            if (excluded) continue;
+        }
 
-        if (!isPVNode && i > 0) {
+        bool isCaptureMove = isCapture(board, move.first, move.second);
+
+        if (!isPVNode && movesSearched > 0) {
+            if (depth <= 6) {
+                int seeVal = staticExchangeEvaluation(board, move.first, move.second);
+                if (seeVal < -depth * 80) {
+                    continue;
+                }
+            }
 
             if (AdvancedSearch::historyPruning(board, depth, move, historyTable)) {
                 continue;
             }
 
-            if (AdvancedSearch::lateMovePruning(board, depth, i, isInCheck(board, board.turn))) {
+            if (AdvancedSearch::lateMovePruning(board, depth, movesSearched, isInCheck(board, board.turn))) {
                 continue;
             }
         }
@@ -615,30 +770,29 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
 
         int searchDepth = depth - 1 + extension;
 
-        if (!isPVNode && i >= 4 && searchDepth >= 3) {
-            if (AdvancedSearch::lateMoveReduction(board, searchDepth, i, alpha, beta)) {
+        if (!isPVNode && movesSearched >= 4 && searchDepth >= 3) {
+            if (AdvancedSearch::lateMoveReduction(board, searchDepth, movesSearched, alpha, beta)) {
                 searchDepth = std::max(1, searchDepth - 1);
             }
         }
 
         int score;
-        if (i == 0 || isPVNode) {
-
+        if (movesSearched == 0 || isPVNode) {
             score =
                 -PrincipalVariationSearch(tempBoard, searchDepth, -beta, -alpha, !maximizingPlayer,
                                           ply + 1, historyTable, context, isPVNode);
         } else {
-
             score =
                 -PrincipalVariationSearch(tempBoard, searchDepth, -alpha - 1, -alpha,
                                           !maximizingPlayer, ply + 1, historyTable, context, false);
             if (score > alpha && score < beta) {
-
                 score = -PrincipalVariationSearch(tempBoard, searchDepth, -beta, -alpha,
                                                   !maximizingPlayer, ply + 1, historyTable, context,
                                                   true);
             }
         }
+
+        movesSearched++;
 
         if (maximizingPlayer) {
             if (score > bestValue) {
@@ -661,11 +815,23 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         }
 
         if (alpha >= beta) {
-
             flag = 1;
-            context.killerMoves.store(ply, move);
+            if (!isCaptureMove) {
+                context.killerMoves.store(ply, move);
+                if (prevDest >= 0 && prevDest < 64) {
+                    context.counterMoves[colorIdx][prevDest] = move;
+                }
+            }
             updateHistoryTable(historyTable, move.first, move.second, depth);
             break;
+        }
+    }
+
+    if (movesSearched == 0) {
+        if (isInCheck(board, board.turn)) {
+            return maximizingPlayer ? -10000 + ply : 10000 - ply;
+        } else {
+            return -context.contempt;
         }
     }
 
@@ -729,6 +895,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     }
 
     uint64_t hash = ComputeZobrist(board);
+    context.transTable.prefetch(hash);
     TTEntry entry;
     std::pair<int, int> hashMove = {-1, -1};
 
@@ -756,13 +923,18 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     std::vector<std::pair<int, int>> moves =
         GetAllMoves(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK);
     if (moves.empty()) {
-        int mateScore = maximizingPlayer ? -10000 : 10000;
-        context.transTable.insert(hash, TTEntry(depth, mateScore, 0, {-1, -1}, hash));
-        return mateScore;
+        if (isInCheck(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK)) {
+            int mateScore = maximizingPlayer ? -10000 + ply : 10000 - ply;
+            context.transTable.insert(hash, TTEntry(depth, mateScore, 0, {-1, -1}, hash));
+            return mateScore;
+        }
+        int drawScore = -context.contempt;
+        context.transTable.insert(hash, TTEntry(depth, drawScore, 0, {-1, -1}, hash));
+        return drawScore;
     }
 
     if (depth >= 3 && depth <= 10 && ply < 30 &&
-        !isInCheck(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK)) {
+        !isInCheck(board, currentColor)) {
         Board nullBoard = board;
         nullBoard.turn = (nullBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                     : ChessPieceColor::WHITE;
@@ -810,8 +982,14 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             }
         }
     }
+    int abColorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
+    int abPrevDest = board.LastMove;
+    std::pair<int, int> abCounterMove = {-1, -1};
+    if (abPrevDest >= 0 && abPrevDest < 64) {
+        abCounterMove = context.counterMoves[abColorIdx][abPrevDest];
+    }
     std::vector<ScoredMove> scoredMoves =
-        scoreMovesOptimized(board, moves, historyTable, context.killerMoves, ply, hashMove);
+        scoreMovesOptimized(board, moves, historyTable, context.killerMoves, ply, hashMove, abCounterMove);
     std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
     int origAlpha = alpha;
     int bestValue = maximizingPlayer ? -10000 : 10000;
@@ -942,6 +1120,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 
                 if (!isCaptureMove) {
                     context.killerMoves.store(ply, move);
+                    if (abPrevDest >= 0 && abPrevDest < 64) {
+                        context.counterMoves[abColorIdx][abPrevDest] = move;
+                    }
                 }
                 break;
             }
@@ -1061,6 +1242,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 
                 if (!isCaptureMove) {
                     context.killerMoves.store(ply, move);
+                    if (abPrevDest >= 0 && abPrevDest < 64) {
+                        context.counterMoves[abColorIdx][abPrevDest] = move;
+                    }
                 }
                 break;
             }
@@ -1082,11 +1266,14 @@ std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color
 }
 
 SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs,
-                                        int numThreads) {
+                                        int numThreads, int contempt, int multiPV) {
     SearchResult result;
     ParallelSearchContext context(numThreads);
     context.startTime = std::chrono::steady_clock::now();
     context.timeLimitMs = timeLimitMs;
+    context.contempt = contempt;
+    context.multiPV = multiPV;
+    context.transTable.newSearch();
 
     int lastScore = 0;
     const int ASPIRATION_WINDOW = 50;
@@ -1104,6 +1291,15 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             return result;
         }
     }
+
+    std::pair<int, int> previousBestMove = {-1, -1};
+    int bestMoveStableCount = 0;
+    int bestMoveChangeCount = 0;
+
+    for (int pvIdx = 0; pvIdx < context.multiPV; ++pvIdx) {
+
+    lastScore = 0;
+    context.stopSearch = false;
 
     for (int depth = 1; depth <= std::max(maxDepth, 10); depth++) {
         int alpha, beta;
@@ -1177,12 +1373,43 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             result.bestMove = scoredMoves[0].move;
         }
 
+        if (pvIdx == 0) {
+            if (result.bestMove == previousBestMove) {
+                bestMoveStableCount++;
+            } else {
+                bestMoveChangeCount++;
+                bestMoveStableCount = 0;
+            }
+            previousBestMove = result.bestMove;
+        }
+
+        if (context.multiPV > 1) {
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now() - context.startTime)
+                               .count();
+            int nps = elapsed > 0 ? static_cast<int>(result.nodes * 1000 / elapsed) : 0;
+            std::cout << "info depth " << depth
+                      << " multipv " << (pvIdx + 1)
+                      << " score cp " << result.score
+                      << " nodes " << result.nodes
+                      << " nps " << nps
+                      << " hashfull " << context.transTable.hashfull()
+                      << std::endl;
+        }
+
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                            std::chrono::steady_clock::now() - context.startTime)
                            .count();
 
         double timeRatio = (double)elapsed / timeLimitMs;
         bool timeToStop = false;
+
+        double stabilityFactor = 1.0;
+        if (bestMoveChangeCount >= 2 && bestMoveStableCount < 2) {
+            stabilityFactor = 1.5;
+        } else if (bestMoveStableCount >= 4) {
+            stabilityFactor = 0.5;
+        }
 
         bool isTactical = false;
         if (isInCheck(board, board.turn)) {
@@ -1208,8 +1435,8 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             }
         }
 
-        double threshold1 = isTactical ? 0.85 : 0.8;
-        double threshold2 = isTactical ? 0.95 : 0.9;
+        double threshold1 = (isTactical ? 0.85 : 0.8) * stabilityFactor;
+        double threshold2 = (isTactical ? 0.95 : 0.9) * stabilityFactor;
 
         if (depth >= 8 && timeRatio > threshold1) {
             timeToStop = true;
@@ -1222,6 +1449,12 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
         if (timeToStop) {
             break;
         }
+    }
+
+    if (pvIdx < context.multiPV - 1 && result.bestMove.first >= 0) {
+        context.excludedRootMoves.push_back(result.bestMove);
+    }
+
     }
 
     auto endTime = std::chrono::steady_clock::now();

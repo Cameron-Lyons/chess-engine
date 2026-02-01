@@ -20,7 +20,8 @@ public:
         NetworkConfig() = default;
     };
 
-    NeuralNetworkEvaluator(const NetworkConfig& config = NetworkConfig{});
+    NeuralNetworkEvaluator();
+    NeuralNetworkEvaluator(const NetworkConfig& config);
     ~NeuralNetworkEvaluator();
     NeuralNetworkEvaluator(const NeuralNetworkEvaluator&) = delete;
     auto operator=(const NeuralNetworkEvaluator&) -> NeuralNetworkEvaluator& = delete;
@@ -142,7 +143,8 @@ public:
         TrainingConfig() = default;
     };
 
-    NNTrainer(NeuralNetworkEvaluator& nn, const TrainingConfig& config = TrainingConfig{});
+    NNTrainer(NeuralNetworkEvaluator& nn);
+    NNTrainer(NeuralNetworkEvaluator& nn, const TrainingConfig& config);
 
     void trainOnSelfPlayData(int numGames);
     void trainOnFile(const std::string& dataPath);

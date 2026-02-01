@@ -81,4 +81,32 @@ constexpr bool ENABLE_TACTICAL_BONUSES = true;
 
 } // namespace EvaluationParams
 
+#include "../core/ChessBoard.h"
+#include <string>
+#include <vector>
+
+struct TuningPosition {
+    std::string fen;
+    double result;
+};
+
+class TexelTuner {
+    std::vector<TuningPosition> positions;
+    std::vector<int> params;
+    double scalingK = 1.13;
+
+    double sigmoid(double eval) const;
+    double computeError(const std::vector<int>& p) const;
+    int evaluateWithParams(const Board& board, const std::vector<int>& p) const;
+    void findOptimalK();
+
+public:
+    bool loadPositions(const std::string& filename);
+    void optimize(int iterations);
+    void exportParams(const std::string& filename) const;
+
+    void initParams();
+    double getError() const { return computeError(params); }
+};
+
 #endif

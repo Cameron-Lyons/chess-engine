@@ -100,6 +100,7 @@ void UCIEngine::handleUCI() {
     std::cout << "option name Use Tablebases type check default true" << std::endl;
     std::cout << "option name Debug type check default false" << std::endl;
     std::cout << "option name Show Current Line type check default false" << std::endl;
+    std::cout << "option name Contempt type spin default 0 min -100 max 100" << std::endl;
 
     std::cout << "uciok" << std::endl;
 }
@@ -151,6 +152,8 @@ void UCIEngine::handleSetOption(const std::string& command) {
                 setDebug(value == "true");
             } else if (name == "Show Current Line") {
                 setShowCurrLine(value == "true");
+            } else if (name == "Contempt") {
+                options.contempt = std::stoi(value);
             }
         }
     }
@@ -294,8 +297,9 @@ void UCIEngine::handleGo(const std::string& command) {
 
             if (isSearching) {
                 reportBestMove(result.bestMove);
+                int nps = result.timeMs > 0 ? result.nodes * 1000 / result.timeMs : 0;
                 reportInfo(result.depth, result.depth, result.timeMs, result.nodes,
-                           result.nodes * 1000 / result.timeMs, {}, result.score, 0);
+                           nps, {}, result.score, 0);
             }
         } catch (const std::exception& e) {
             std::cout << "info string Search error: " << e.what() << std::endl;
@@ -584,15 +588,14 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
 
     Board searchBoard = board;
 
-    result = iterativeDeepeningParallel(searchBoard, depth, timeLimit, 1);
+    result = iterativeDeepeningParallel(searchBoard, depth, timeLimit, 1, options.contempt, options.multiPV);
 
     return result;
 }
 
 void UCIEngine::setHashSize(int size) {
     options.hashSize = size;
-
-    TransTable.clear();
+    TransTable.resize(size);
 }
 
 void UCIEngine::setThreads(int num) {

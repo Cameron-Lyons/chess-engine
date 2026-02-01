@@ -125,3 +125,206 @@ void logEvaluationComponents(const char* component, int value) {
 }
 
 } // namespace EvaluationParams
+
+#include "../evaluation/Evaluation.h"
+#include <cmath>
+#include <fstream>
+#include <sstream>
+
+double TexelTuner::sigmoid(double eval) const {
+    return 1.0 / (1.0 + std::pow(10.0, -scalingK * eval / 400.0));
+}
+
+int TexelTuner::evaluateWithParams(const Board& board, const std::vector<int>& p) const {
+    int score = 0;
+    int paramIdx = 0;
+
+    for (int sq = 0; sq < 64; ++sq) {
+        const Piece& piece = board.squares[sq].piece;
+        if (piece.PieceType == ChessPieceType::NONE) continue;
+
+        int matVal = 0;
+        int ptIdx = static_cast<int>(piece.PieceType) - 1;
+        if (ptIdx >= 0 && ptIdx < 5 && ptIdx < static_cast<int>(p.size())) {
+            matVal = p[ptIdx];
+        }
+
+        int pstVal = 0;
+        int pstBase = 5;
+        int pstIdx = pstBase + ptIdx * 64 + sq;
+        if (pstIdx < static_cast<int>(p.size())) {
+            pstVal = p[pstIdx];
+        }
+
+        int total = matVal + pstVal;
+        if (piece.PieceColor == ChessPieceColor::WHITE)
+            score += total;
+        else
+            score -= total;
+    }
+
+    (void)paramIdx;
+    return (board.turn == ChessPieceColor::WHITE) ? score : -score;
+}
+
+double TexelTuner::computeError(const std::vector<int>& p) const {
+    double totalError = 0.0;
+    for (const auto& pos : positions) {
+        Board board;
+        board.InitializeFromFEN(pos.fen);
+        int eval = evaluateWithParams(board, p);
+        double predicted = sigmoid(eval);
+        double diff = pos.result - predicted;
+        totalError += diff * diff;
+    }
+    return positions.empty() ? 0.0 : totalError / positions.size();
+}
+
+void TexelTuner::findOptimalK() {
+    double bestK = 1.0;
+    double bestError = 1e9;
+    for (double k = 0.5; k <= 2.0; k += 0.01) {
+        scalingK = k;
+        double err = computeError(params);
+        if (err < bestError) {
+            bestError = err;
+            bestK = k;
+        }
+    }
+    scalingK = bestK;
+
+    for (double delta = 0.005; delta >= 0.0001; delta /= 2.0) {
+        bool improved = true;
+        while (improved) {
+            improved = false;
+            scalingK += delta;
+            double err = computeError(params);
+            if (err < bestError) {
+                bestError = err;
+                improved = true;
+            } else {
+                scalingK -= 2 * delta;
+                err = computeError(params);
+                if (err < bestError) {
+                    bestError = err;
+                    improved = true;
+                } else {
+                    scalingK += delta;
+                }
+            }
+        }
+    }
+}
+
+bool TexelTuner::loadPositions(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file) return false;
+
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.empty()) continue;
+        auto sep = line.rfind(';');
+        if (sep == std::string::npos) sep = line.rfind(',');
+        if (sep == std::string::npos) continue;
+
+        TuningPosition pos;
+        pos.fen = line.substr(0, sep);
+        std::string resultStr = line.substr(sep + 1);
+
+        while (!resultStr.empty() && resultStr[0] == ' ')
+            resultStr.erase(resultStr.begin());
+
+        if (resultStr == "1-0" || resultStr == "1.0")
+            pos.result = 1.0;
+        else if (resultStr == "0-1" || resultStr == "0.0")
+            pos.result = 0.0;
+        else if (resultStr == "1/2-1/2" || resultStr == "0.5")
+            pos.result = 0.5;
+        else {
+            try { pos.result = std::stod(resultStr); }
+            catch (...) { continue; }
+        }
+
+        positions.push_back(pos);
+    }
+
+    return !positions.empty();
+}
+
+void TexelTuner::initParams() {
+    params.clear();
+    params.push_back(EvaluationParams::PAWN_VALUE);
+    params.push_back(EvaluationParams::KNIGHT_VALUE);
+    params.push_back(EvaluationParams::BISHOP_VALUE);
+    params.push_back(EvaluationParams::ROOK_VALUE);
+    params.push_back(EvaluationParams::QUEEN_VALUE);
+
+    for (int sq = 0; sq < 64; ++sq) params.push_back(EvaluationParams::TUNED_PAWN_MG[sq]);
+    for (int sq = 0; sq < 64; ++sq) params.push_back(EvaluationParams::TUNED_KNIGHT_MG[sq]);
+    for (int sq = 0; sq < 64; ++sq) params.push_back(EvaluationParams::TUNED_BISHOP_MG[sq]);
+    for (int sq = 0; sq < 64; ++sq) params.push_back(EvaluationParams::TUNED_ROOK_MG[sq]);
+    for (int sq = 0; sq < 64; ++sq) params.push_back(EvaluationParams::TUNED_QUEEN_MG[sq]);
+    for (int sq = 0; sq < 64; ++sq) params.push_back(EvaluationParams::TUNED_KING_MG[sq]);
+}
+
+void TexelTuner::optimize(int iterations) {
+    initParams();
+    findOptimalK();
+
+    std::cout << "Optimal K: " << scalingK << std::endl;
+    std::cout << "Initial error: " << computeError(params) << std::endl;
+
+    for (int iter = 0; iter < iterations; ++iter) {
+        bool anyImproved = false;
+        for (size_t i = 0; i < params.size(); ++i) {
+            double bestError = computeError(params);
+
+            params[i] += 1;
+            double errorUp = computeError(params);
+            if (errorUp < bestError) {
+                anyImproved = true;
+                continue;
+            }
+
+            params[i] -= 2;
+            double errorDown = computeError(params);
+            if (errorDown < bestError) {
+                anyImproved = true;
+                continue;
+            }
+
+            params[i] += 1;
+        }
+
+        double currentError = computeError(params);
+        std::cout << "Iteration " << (iter + 1) << " error: " << currentError << std::endl;
+
+        if (!anyImproved) {
+            std::cout << "Converged at iteration " << (iter + 1) << std::endl;
+            break;
+        }
+    }
+}
+
+void TexelTuner::exportParams(const std::string& filename) const {
+    std::ofstream file(filename);
+    if (!file) return;
+
+    file << "constexpr int PAWN_VALUE = " << params[0] << ";\n";
+    file << "constexpr int KNIGHT_VALUE = " << params[1] << ";\n";
+    file << "constexpr int BISHOP_VALUE = " << params[2] << ";\n";
+    file << "constexpr int ROOK_VALUE = " << params[3] << ";\n";
+    file << "constexpr int QUEEN_VALUE = " << params[4] << ";\n";
+
+    const char* names[] = {"PAWN", "KNIGHT", "BISHOP", "ROOK", "QUEEN", "KING"};
+    int base = 5;
+    for (int p = 0; p < 6; ++p) {
+        file << "\nconst int TUNED_" << names[p] << "_MG[64] = {\n    ";
+        for (int sq = 0; sq < 64; ++sq) {
+            file << params[base + p * 64 + sq];
+            if (sq < 63) file << ", ";
+            if ((sq + 1) % 8 == 0 && sq < 63) file << "\n    ";
+        }
+        file << "\n};\n";
+    }
+}

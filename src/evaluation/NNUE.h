@@ -28,6 +28,10 @@ struct Accumulator {
     alignas(32) std::array<int16_t, L1_SIZE> white;
     alignas(32) std::array<int16_t, L1_SIZE> black;
 
+    const int16_t* featureWeights = nullptr;
+    const int16_t* featureBiases = nullptr;
+
+    void init(const int16_t* weights, const int16_t* biases);
     void reset();
     void refresh(const Board& board);
     void addFeature(int feature);
@@ -70,6 +74,9 @@ private:
     std::unique_ptr<ClippedReLU> activation2;
     std::unique_ptr<LinearLayer> hidden2;
     std::unique_ptr<LinearLayer> outputLayer;
+
+    std::vector<int16_t> ftWeights;
+    std::vector<int16_t> ftBiases;
 
     mutable Accumulator accumulator[2];
 

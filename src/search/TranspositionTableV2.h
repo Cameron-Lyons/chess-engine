@@ -73,8 +73,8 @@ static_assert(sizeof(TTCluster) == 64, "TTCluster must be 64 bytes");
 
 class TranspositionTable {
 private:
-    size_t clusterCount;
-    uint8_t generation8;
+    size_t clusterCount = 0;
+    uint8_t generation8 = 0;
     std::unique_ptr<TTCluster[]> table;
 
 public:

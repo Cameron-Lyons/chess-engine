@@ -7,9 +7,19 @@ namespace NNUE {
 
 std::unique_ptr<NNUEEvaluator> globalEvaluator;
 
+void Accumulator::init(const int16_t* weights, const int16_t* biases) {
+    featureWeights = weights;
+    featureBiases = biases;
+}
+
 void Accumulator::reset() {
-    std::fill(white.begin(), white.end(), 0);
-    std::fill(black.begin(), black.end(), 0);
+    if (featureBiases) {
+        std::copy(featureBiases, featureBiases + L1_SIZE, white.begin());
+        std::copy(featureBiases, featureBiases + L1_SIZE, black.begin());
+    } else {
+        std::fill(white.begin(), white.end(), 0);
+        std::fill(black.begin(), black.end(), 0);
+    }
 }
 
 void Accumulator::refresh(const Board& board) {
@@ -24,9 +34,53 @@ void Accumulator::refresh(const Board& board) {
     }
 }
 
-void Accumulator::addFeature(int feature) {}
+void Accumulator::addFeature(int feature) {
+    if (!featureWeights) return;
+    if (feature < 0 || feature >= INPUT_DIMENSIONS) return;
 
-void Accumulator::removeFeature(int feature) {}
+    const int16_t* w = &featureWeights[feature * L1_SIZE];
+
+#ifdef __AVX2__
+    for (int i = 0; i < L1_SIZE; i += 16) {
+        __m256i acc_w = _mm256_load_si256((__m256i*)&white[i]);
+        __m256i acc_b = _mm256_load_si256((__m256i*)&black[i]);
+        __m256i wt = _mm256_load_si256((__m256i*)&w[i]);
+        acc_w = _mm256_add_epi16(acc_w, wt);
+        acc_b = _mm256_add_epi16(acc_b, wt);
+        _mm256_store_si256((__m256i*)&white[i], acc_w);
+        _mm256_store_si256((__m256i*)&black[i], acc_b);
+    }
+#else
+    for (int i = 0; i < L1_SIZE; ++i) {
+        white[i] += w[i];
+        black[i] += w[i];
+    }
+#endif
+}
+
+void Accumulator::removeFeature(int feature) {
+    if (!featureWeights) return;
+    if (feature < 0 || feature >= INPUT_DIMENSIONS) return;
+
+    const int16_t* w = &featureWeights[feature * L1_SIZE];
+
+#ifdef __AVX2__
+    for (int i = 0; i < L1_SIZE; i += 16) {
+        __m256i acc_w = _mm256_load_si256((__m256i*)&white[i]);
+        __m256i acc_b = _mm256_load_si256((__m256i*)&black[i]);
+        __m256i wt = _mm256_load_si256((__m256i*)&w[i]);
+        acc_w = _mm256_sub_epi16(acc_w, wt);
+        acc_b = _mm256_sub_epi16(acc_b, wt);
+        _mm256_store_si256((__m256i*)&white[i], acc_w);
+        _mm256_store_si256((__m256i*)&black[i], acc_b);
+    }
+#else
+    for (int i = 0; i < L1_SIZE; ++i) {
+        white[i] -= w[i];
+        black[i] -= w[i];
+    }
+#endif
+}
 
 LinearLayer::LinearLayer(int in, int out)
     : inputSize(in), outputSize(out), weights(in * out), biases(out) {}
@@ -95,6 +149,48 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
     if (magic != 0x4E4E5545 || version != 1) {
         return false;
     }
+
+    ftWeights.resize(INPUT_DIMENSIONS * L1_SIZE);
+    file.read(reinterpret_cast<char*>(ftWeights.data()),
+              ftWeights.size() * sizeof(int16_t));
+
+    std::vector<int32_t> ftBiases32(L1_SIZE);
+    file.read(reinterpret_cast<char*>(ftBiases32.data()),
+              ftBiases32.size() * sizeof(int32_t));
+    ftBiases.resize(L1_SIZE);
+    for (int i = 0; i < L1_SIZE; ++i)
+        ftBiases[i] = static_cast<int16_t>(std::clamp(ftBiases32[i], -32768, 32767));
+
+    {
+        std::vector<int16_t> w(2 * L1_SIZE * L2_SIZE);
+        std::vector<int32_t> b(L2_SIZE);
+        file.read(reinterpret_cast<char*>(w.data()), w.size() * sizeof(int16_t));
+        file.read(reinterpret_cast<char*>(b.data()), b.size() * sizeof(int32_t));
+        hidden1->loadWeights(w.data(), b.data());
+    }
+
+    {
+        std::vector<int16_t> w(L2_SIZE * L3_SIZE);
+        std::vector<int32_t> b(L3_SIZE);
+        file.read(reinterpret_cast<char*>(w.data()), w.size() * sizeof(int16_t));
+        file.read(reinterpret_cast<char*>(b.data()), b.size() * sizeof(int32_t));
+        hidden2->loadWeights(w.data(), b.data());
+    }
+
+    {
+        std::vector<int16_t> w(L3_SIZE * OUTPUT_SIZE);
+        std::vector<int32_t> b(OUTPUT_SIZE);
+        file.read(reinterpret_cast<char*>(w.data()), w.size() * sizeof(int16_t));
+        file.read(reinterpret_cast<char*>(b.data()), b.size() * sizeof(int32_t));
+        outputLayer->loadWeights(w.data(), b.data());
+    }
+
+    if (!file) {
+        return false;
+    }
+
+    accumulator[0].init(ftWeights.data(), ftBiases.data());
+    accumulator[1].init(ftWeights.data(), ftBiases.data());
 
     return true;
 }

@@ -41,7 +41,7 @@ public:
         std::pair<int, int> bestMove;
         std::mutex bestMoveMutex;
 
-        ThreadSafeTT* transTable;
+        TranspositionTableAdapter* transTable;
 
         SharedData()
             : globalStop(false), nodesSearched(0), bestDepth(0), bestScore(-999999),

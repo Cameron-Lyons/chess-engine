@@ -257,6 +257,9 @@ public:
     }
 };
 
+NeuralNetworkEvaluator::NeuralNetworkEvaluator()
+    : NeuralNetworkEvaluator(NetworkConfig()) {}
+
 NeuralNetworkEvaluator::NeuralNetworkEvaluator(const NetworkConfig& config)
     : m_pImpl(std::make_unique<Impl>(config)) {}
 
@@ -789,6 +792,9 @@ auto TrainingDataGenerator::loadTrainingData(const std::string& path)
 
     return data;
 }
+
+NNTrainer::NNTrainer(NeuralNetworkEvaluator& nn)
+    : NNTrainer(nn, TrainingConfig()) {}
 
 NNTrainer::NNTrainer(NeuralNetworkEvaluator& nn, const TrainingConfig& config)
     : m_neuralNetwork(nn), m_config(config) {}
