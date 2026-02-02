@@ -11,7 +11,7 @@ TEST(ParallelSearch, Speedup) {
     board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     auto start1 = std::chrono::steady_clock::now();
-    SearchResult result1 = iterativeDeepeningParallel(board, 4, 5000, 1);
+    (void)iterativeDeepeningParallel(board, 4, 5000, 1);
     auto end1 = std::chrono::steady_clock::now();
     auto time1 = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1);
 
@@ -20,7 +20,7 @@ TEST(ParallelSearch, Speedup) {
         numThreads = 4;
 
     auto start2 = std::chrono::steady_clock::now();
-    SearchResult result2 = iterativeDeepeningParallel(board, 4, 5000, numThreads);
+    (void)iterativeDeepeningParallel(board, 4, 5000, numThreads);
     auto end2 = std::chrono::steady_clock::now();
     auto time2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
 

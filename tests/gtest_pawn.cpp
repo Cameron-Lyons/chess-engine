@@ -1,5 +1,6 @@
 #include "ChessBoard.h"
 #include "gtest/gtest.h"
+#include "search/search.h"
 
 TEST(PawnMoves, StartingPosition) {
     Board testBoard;
@@ -24,6 +25,7 @@ TEST(PawnMoves, Promotion) {
 
     testBoard.squares[53].piece = Piece(ChessPieceColor::WHITE, ChessPieceType::PAWN);
     testBoard.squares[61].piece = Piece();
+    testBoard.updateBitboards();
 
     std::vector<std::pair<int, int>> promotionMoves =
         GetAllMoves(testBoard, ChessPieceColor::WHITE);

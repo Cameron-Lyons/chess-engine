@@ -22,8 +22,6 @@ TEST(Fen, ComplexPosition) {
     ASSERT_EQ(testBoard.squares[60].piece.PieceType, ChessPieceType::KING);
     ASSERT_EQ(testBoard.squares[60].piece.PieceColor, ChessPieceColor::BLACK);
     ASSERT_EQ(testBoard.turn, ChessPieceColor::WHITE);
-    ASSERT_TRUE(testBoard.whiteKingsideCastle);
-    ASSERT_TRUE(testBoard.whiteQueensideCastle);
-    ASSERT_TRUE(testBoard.blackKingsideCastle);
-    ASSERT_TRUE(testBoard.blackQueensideCastle);
+    ASSERT_TRUE(testBoard.whiteCanCastle);
+    ASSERT_TRUE(testBoard.blackCanCastle);
 }

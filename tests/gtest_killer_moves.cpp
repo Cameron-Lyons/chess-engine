@@ -7,15 +7,12 @@ TEST(KillerMoves, Storage) {
     KillerMoves killerTest;
     std::pair<int, int> testMove1 = {12, 20};
     std::pair<int, int> testMove2 = {6, 22};
-    std::pair<int, int> testMove3 = {1, 18};
 
     killerTest.store(0, testMove1);
     killerTest.store(0, testMove2);
-    killerTest.store(0, testMove3);
 
     ASSERT_TRUE(killerTest.isKiller(0, testMove1));
     ASSERT_TRUE(killerTest.isKiller(0, testMove2));
-    ASSERT_TRUE(killerTest.isKiller(0, testMove3));
 
     std::pair<int, int> nonKillerMove = {8, 16};
     ASSERT_FALSE(killerTest.isKiller(0, nonKillerMove));

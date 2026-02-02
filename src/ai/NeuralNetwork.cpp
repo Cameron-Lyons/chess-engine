@@ -74,9 +74,9 @@ public:
         for (size_t i = 0; i < layers.size(); ++i) {
             Layer& layer = layers[i];
 
-            for (int j = 0; j < layer.weights.size(); ++j) {
+            for (size_t j = 0; j < layer.weights.size(); ++j) {
                 float sum = layer.biases[j];
-                for (int k = 0; k < layer.weights[j].size(); ++k) {
+                for (size_t k = 0; k < layer.weights[j].size(); ++k) {
                     sum += layer.weights[j][k] * currentInput[k];
                 }
 
@@ -105,10 +105,10 @@ public:
             Layer& layer = layers[i];
             std::vector<float> currentGradient(layer.weights.size());
 
-            for (int j = 0; j < layer.weights.size(); ++j) {
+            for (size_t j = 0; j < layer.weights.size(); ++j) {
                 float activationGradient = nextGradient[j];
 
-                if (i == layers.size() - 1) {
+                if (static_cast<size_t>(i) == layers.size() - 1) {
 
                     activationGradient *= (1.0f - (layer.activations[j] * layer.activations[j]));
                 } else {
@@ -126,8 +126,8 @@ public:
                 std::vector<float> prevInput = (i == 0) ? input : layers[i - 1].activations;
                 nextGradient.resize(prevInput.size(), 0.0f);
 
-                for (int j = 0; j < layer.weights.size(); ++j) {
-                    for (int k = 0; k < layer.weights[j].size(); ++k) {
+                for (size_t j = 0; j < layer.weights.size(); ++j) {
+                    for (size_t k = 0; k < layer.weights[j].size(); ++k) {
                         nextGradient[k] += layer.weights[j][k] * currentGradient[j];
                     }
                 }
@@ -141,8 +141,8 @@ public:
         for (size_t i = 0; i < layers.size(); ++i) {
             Layer& layer = layers[i];
 
-            for (int j = 0; j < layer.weights.size(); ++j) {
-                for (int k = 0; k < layer.weights[j].size(); ++k) {
+            for (size_t j = 0; j < layer.weights.size(); ++j) {
+                for (size_t k = 0; k < layer.weights[j].size(); ++k) {
                     layer.weights[j][k] -= learningRate * layer.gradients[j] * currentInput[k];
                 }
                 layer.biases[j] -= learningRate * layer.gradients[j];

@@ -39,6 +39,7 @@ bool AdvancedSearch::futilityPruning(const Board& board, int depth, int alpha, i
 
 bool AdvancedSearch::staticNullMovePruning(const Board& board, int depth, int alpha, int beta,
                                            int staticEval) {
+    (void)alpha;
 
     if (isInCheck(board, board.turn) || depth == 0) {
         return false;
@@ -58,6 +59,8 @@ bool AdvancedSearch::staticNullMovePruning(const Board& board, int depth, int al
 }
 
 bool AdvancedSearch::nullMovePruning(const Board& board, int depth, int alpha, int beta) {
+    (void)alpha;
+    (void)beta;
 
     if (isInCheck(board, board.turn) || depth < 3) {
         return false;
@@ -87,6 +90,8 @@ bool AdvancedSearch::nullMovePruning(const Board& board, int depth, int alpha, i
 
 bool AdvancedSearch::lateMoveReduction(const Board& board, int depth, int moveNumber, int alpha,
                                        int beta) {
+    (void)alpha;
+    (void)beta;
 
     if (isInCheck(board, board.turn) || depth < 3 || moveNumber < 4) {
         return false;
@@ -110,6 +115,7 @@ bool AdvancedSearch::lateMoveReduction(const Board& board, int depth, int moveNu
 }
 
 bool AdvancedSearch::multiCutPruning(Board& board, int depth, int alpha, int beta, int r) {
+    (void)alpha;
 
     if (isInCheck(board, board.turn) || depth < 4) {
         return false;
@@ -154,8 +160,8 @@ std::pair<int, int> AdvancedSearch::internalIterativeDeepening(Board& board, int
     ParallelSearchContext context(1);
 
     int reducedDepth = std::max(1, depth - 2);
-    int score = AlphaBetaSearch(board, reducedDepth, alpha, beta,
-                                board.turn == ChessPieceColor::WHITE, 0, historyTable, context);
+    (void)AlphaBetaSearch(board, reducedDepth, alpha, beta,
+                          board.turn == ChessPieceColor::WHITE, 0, historyTable, context);
 
     return {-1, -1};
 }
@@ -230,6 +236,7 @@ bool AdvancedSearch::historyPruning(const Board& board, int depth, const std::pa
 }
 
 bool AdvancedSearch::lateMovePruning(const Board& board, int depth, int moveNumber, bool inCheck) {
+    (void)board;
 
     if (inCheck) {
         return false;
@@ -248,6 +255,7 @@ bool AdvancedSearch::lateMovePruning(const Board& board, int depth, int moveNumb
 
 bool AdvancedSearch::recaptureExtension(const Board& board, const std::pair<int, int>& move,
                                         int depth) {
+    (void)depth;
 
     if (board.LastMove < 0 || board.LastMove >= 64) {
         return false;
@@ -263,6 +271,7 @@ bool AdvancedSearch::recaptureExtension(const Board& board, const std::pair<int,
 
 bool AdvancedSearch::checkExtension(const Board& board, const std::pair<int, int>& move,
                                     int depth) {
+    (void)depth;
 
     Board tempBoard = board;
     if (!tempBoard.movePiece(move.first, move.second)) {
@@ -276,6 +285,7 @@ bool AdvancedSearch::checkExtension(const Board& board, const std::pair<int, int
 
 bool AdvancedSearch::pawnPushExtension(const Board& board, const std::pair<int, int>& move,
                                        int depth) {
+    (void)depth;
     const Piece& piece = board.squares[move.first].piece;
 
     if (piece.PieceType != ChessPieceType::PAWN) {
@@ -299,6 +309,7 @@ bool AdvancedSearch::pawnPushExtension(const Board& board, const std::pair<int, 
 
 bool AdvancedSearch::passedPawnExtension(const Board& board, const std::pair<int, int>& move,
                                          int depth) {
+    (void)depth;
     const Piece& piece = board.squares[move.first].piece;
 
     if (piece.PieceType != ChessPieceType::PAWN) {
@@ -512,6 +523,7 @@ int TimeManager::calculateIncrement() {
 }
 
 bool TimeManager::shouldStop(int elapsedTime, int allocatedTime, int depth, int nodes) {
+    (void)nodes;
 
     if (elapsedTime >= allocatedTime) {
         return true;
@@ -880,5 +892,5 @@ EnhancedOpeningBook::BookStats EnhancedOpeningBook::getStats() const {
 }
 
 void EnhancedOpeningBook::analyzeBook() {
-    BookStats stats = getStats();
+    (void)getStats();
 }

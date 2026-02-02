@@ -247,6 +247,7 @@ float evaluateWithNeuralNetwork(const Board& board) {
 }
 
 float evaluateHybrid(const Board& board, float nnWeight) {
+    (void)nnWeight;
     if (g_enhancedEvaluator) {
         return g_enhancedEvaluator->getHybridEvaluation(board);
     } else {

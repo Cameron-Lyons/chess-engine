@@ -87,7 +87,7 @@ public:
     }
 
     inline Bitboard getPieceBitboard(ChessPieceType type, ChessPieceColor color) const {
-        return pieces[color == ChessPieceColor::WHITE ? WHITE : BLACK][static_cast<int>(type) - 1];
+        return pieces[color == ChessPieceColor::WHITE ? WHITE : BLACK][static_cast<int>(type)];
     }
 
     inline Bitboard getColorBitboard(ChessPieceColor color) const {

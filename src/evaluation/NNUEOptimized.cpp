@@ -8,15 +8,6 @@ namespace NNUEOptimized {
 
 std::unique_ptr<NNUEEvaluator> globalEvaluator;
 
-static bool hasAVX2() {
-    unsigned int eax, ebx, ecx, edx;
-    if (__get_cpuid_max(0, nullptr) >= 7) {
-        __cpuid_count(7, 0, eax, ebx, ecx, edx);
-        return (ebx & bit_AVX2) != 0;
-    }
-    return false;
-}
-
 static bool hasAVX512() {
     unsigned int eax, ebx, ecx, edx;
     if (__get_cpuid_max(0, nullptr) >= 7) {
@@ -46,7 +37,7 @@ void Accumulator::refresh(const BitboardPosition& pos) {
         int kingBucket = FeatureTransformer::getKingBucket(kingSquare);
 
         for (int pt = 0; pt < 6; ++pt) {
-            ChessPieceType pieceType = static_cast<ChessPieceType>(pt + 1);
+            ChessPieceType pieceType = static_cast<ChessPieceType>(pt);
             Bitboard pieceBB = pos.getPieceBitboard(pieceType, c);
 
             while (pieceBB) {
@@ -365,6 +356,7 @@ void NNUEEvaluator::updateBeforeMove(const BitboardPosition& pos, int from, int 
 
 void NNUEEvaluator::updateAfterMove(const BitboardPosition& pos, int from, int to,
                                     ChessPieceType piece, ChessPieceType promotion) {
+    (void)from;
 
     int color = pos.getColorAt(to) == ChessPieceColor::WHITE ? 0 : 1;
     int kingSquare = __builtin_ctzll(pos.getPieceBitboard(

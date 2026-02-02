@@ -32,23 +32,6 @@ static int popcount(uint64_t bb) {
     return __builtin_popcountll(bb);
 }
 
-static int lsb(uint64_t bb) {
-    return __builtin_ctzll(bb);
-}
-
-static uint64_t pext(uint64_t val, uint64_t mask) {
-#ifdef __BMI2__
-    return _pext_u64(val, mask);
-#else
-    uint64_t res = 0;
-    for (uint64_t bb = 1; mask; bb += bb) {
-        if (val & mask & -mask)
-            res |= bb;
-        mask &= mask - 1;
-    }
-    return res;
-#endif
-}
 
 Position Position::fromBoard(const Board& board) {
     Position pos;

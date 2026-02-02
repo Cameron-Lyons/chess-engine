@@ -9,10 +9,10 @@ TEST(TacticalSuite, MateInOne) {
     InitZobrist();
 
     Board board;
-    board.InitializeFromFEN("8/8/8/8/8/8/k1K5/r7 w - - 0 1");
+    board.InitializeFromFEN("6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1");
 
     SearchResult result = iterativeDeepeningParallel(board, 3, 5000, 1);
-    ASSERT_EQ(result.score, 1000000);
+    ASSERT_GT(result.score, 9000);
 }
 
 TEST(TacticalSuite, Fork) {

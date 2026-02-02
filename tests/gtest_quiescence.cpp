@@ -20,7 +20,7 @@ TEST(QuiescenceSearch, Simple) {
 
     GenValidMoves(board);
 
-    int qScore = QuiescenceSearch(board, -10000, 10000, true, historyTable, context);
+    int qScore = QuiescenceSearch(board, -10000, 10000, true, historyTable, context, 0);
 
     ASSERT_EQ(qScore, staticScore);
 }

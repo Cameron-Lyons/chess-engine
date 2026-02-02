@@ -75,7 +75,7 @@ void BitboardPosition::updateOccupancy() {
 
 void BitboardPosition::removePiece(int square, ChessPieceColor color, ChessPieceType type) {
     int c = (color == ChessPieceColor::WHITE) ? WHITE : BLACK;
-    int p = static_cast<int>(type) - 1;
+    int p = static_cast<int>(type);
 
     pieces[c][p] &= ~(1ULL << square);
     updateHash(square, color, type);
@@ -83,7 +83,7 @@ void BitboardPosition::removePiece(int square, ChessPieceColor color, ChessPiece
 
 void BitboardPosition::placePiece(int square, ChessPieceColor color, ChessPieceType type) {
     int c = (color == ChessPieceColor::WHITE) ? WHITE : BLACK;
-    int p = static_cast<int>(type) - 1;
+    int p = static_cast<int>(type);
 
     pieces[c][p] |= (1ULL << square);
     updateHash(square, color, type);
@@ -91,7 +91,7 @@ void BitboardPosition::placePiece(int square, ChessPieceColor color, ChessPieceT
 
 void BitboardPosition::updateHash(int square, ChessPieceColor color, ChessPieceType type) {
     int c = (color == ChessPieceColor::WHITE) ? WHITE : BLACK;
-    int p = static_cast<int>(type) - 1;
+    int p = static_cast<int>(type);
 
     hash ^= zobristPieces[c][p][square];
 }

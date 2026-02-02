@@ -115,19 +115,12 @@ uint64_t MagicBitboards::generateBishopMask(int square) {
     for (int r = 0; r < 8; ++r) {
         for (int f = 0; f < 8; ++f) {
             if (r != rank && f != file && abs(r - rank) == abs(f - file)) {
-                set_bit(mask, r * 8 + f);
+                if (r > 0 && r < 7 && f > 0 && f < 7) {
+                    set_bit(mask, r * 8 + f);
+                }
             }
         }
     }
-
-    if (rank != 0 && file != 0)
-        clear_bit(mask, (rank - 1) * 8 + (file - 1));
-    if (rank != 0 && file != 7)
-        clear_bit(mask, (rank - 1) * 8 + (file + 1));
-    if (rank != 7 && file != 0)
-        clear_bit(mask, (rank + 1) * 8 + (file - 1));
-    if (rank != 7 && file != 7)
-        clear_bit(mask, (rank + 1) * 8 + (file + 1));
 
     return mask;
 }

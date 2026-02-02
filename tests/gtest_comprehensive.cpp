@@ -1,6 +1,7 @@
 #include "ChessBoard.h"
 #include "core/BitboardMoves.h"
 #include "gtest/gtest.h"
+#include "search/ValidMoves.h"
 
 std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color);
 
@@ -17,14 +18,9 @@ TEST(Comprehensive, BasicMoveGeneration) {
 
 TEST(Comprehensive, CheckDetection) {
     Board board;
-    board.InitializeFromFEN("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
-    board.movePiece(1, 18);
-    board.movePiece(52, 36);
-    board.movePiece(18, 28);
-    board.movePiece(60, 52);
-    board.movePiece(28, 45);
+    board.InitializeFromFEN("rnbqkb1r/pppppppp/5N2/8/8/8/PPPPPPPP/R1BQKBNR b KQkq - 0 1");
 
-    ASSERT_TRUE(isKingInCheck(board, ChessPieceColor::BLACK));
+    ASSERT_TRUE(IsKingInCheck(board, ChessPieceColor::BLACK));
 }
 
 TEST(Comprehensive, BitboardSync) {

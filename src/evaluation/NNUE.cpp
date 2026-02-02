@@ -197,6 +197,7 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
 
 void NNUEEvaluator::transformFeatures(const Board& board, ChessPieceColor perspective,
                                       int16_t* output) const {
+    (void)board;
 
     const Accumulator& acc = accumulator[static_cast<int>(perspective)];
 
