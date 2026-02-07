@@ -7,7 +7,10 @@
 #include "NNUE.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <vector>
+
+extern uint64_t ZobristTable[64][12];
 
 using namespace EvaluationParams;
 
@@ -612,7 +615,21 @@ int evaluateEndgame(const Board& board) {
     return score;
 }
 
-int evaluatePosition(const Board& board) {
+static PawnHashTable pawnHashTable;
+
+uint64_t computePawnHash(const Board& board) {
+    uint64_t h = 0;
+    for (int sq = 0; sq < 64; ++sq) {
+        const Piece& p = board.squares[sq].piece;
+        if (p.PieceType == ChessPieceType::PAWN) {
+            int idx = (p.PieceColor == ChessPieceColor::WHITE) ? 0 : 6;
+            h ^= ZobristTable[sq][idx];
+        }
+    }
+    return h;
+}
+
+int evaluatePosition(const Board& board, int contempt) {
 
     if (useNNUE && NNUE::globalEvaluator) {
         return NNUE::evaluate(board);
@@ -622,40 +639,9 @@ int evaluatePosition(const Board& board) {
     int egScore = 0;
 
     int gamePhase = 0;
-
     for (int square = 0; square < 64; ++square) {
-        const Piece& piece = board.squares[square].piece;
-        if (piece.PieceType == ChessPieceType::NONE)
-            continue;
-
-        int materialValue = piece.PieceValue;
-        int adjustedSquare = (piece.PieceColor == ChessPieceColor::WHITE) ? square : 63 - square;
-
-        int oldMgPST = getPieceSquareValue(piece.PieceType, adjustedSquare, piece.PieceColor);
-        int oldEgPST = getPieceSquareValue(piece.PieceType, adjustedSquare, piece.PieceColor);
-
-        int newMgPST = getTunedPST(piece.PieceType, adjustedSquare, false);
-        int newEgPST = getTunedPST(piece.PieceType, adjustedSquare, true);
-        int newPositionalValue = interpolatePhase(newMgPST, newEgPST, gamePhase);
-
-        int oldPositionalValue = interpolatePhase(oldMgPST, oldEgPST, gamePhase);
-        (void)((newPositionalValue * 7 + oldPositionalValue * 3) / 10);
-
-        if (piece.PieceColor == ChessPieceColor::WHITE) {
-            mgScore += materialValue + newMgPST;
-            egScore += materialValue + newEgPST;
-        } else {
-            mgScore -= materialValue + newMgPST;
-            egScore -= materialValue + newEgPST;
-        }
-
-        switch (piece.PieceType) {
-            case ChessPieceType::PAWN:
-                gamePhase += 0;
-                break;
+        switch (board.squares[square].piece.PieceType) {
             case ChessPieceType::KNIGHT:
-                gamePhase += 1;
-                break;
             case ChessPieceType::BISHOP:
                 gamePhase += 1;
                 break;
@@ -665,46 +651,69 @@ int evaluatePosition(const Board& board) {
             case ChessPieceType::QUEEN:
                 gamePhase += 4;
                 break;
-            case ChessPieceType::KING:
-                gamePhase += 0;
-                break;
             default:
                 break;
         }
     }
+    if (gamePhase > TOTAL_PHASE)
+        gamePhase = TOTAL_PHASE;
+
+    for (int square = 0; square < 64; ++square) {
+        const Piece& piece = board.squares[square].piece;
+        if (piece.PieceType == ChessPieceType::NONE)
+            continue;
+
+        int materialValue = piece.PieceValue;
+        int adjustedSquare = (piece.PieceColor == ChessPieceColor::WHITE) ? square : 63 - square;
+
+        int newMgPST = getTunedPST(piece.PieceType, adjustedSquare, false);
+        int newEgPST = getTunedPST(piece.PieceType, adjustedSquare, true);
+
+        if (piece.PieceColor == ChessPieceColor::WHITE) {
+            mgScore += materialValue + newMgPST;
+            egScore += materialValue + newEgPST;
+        } else {
+            mgScore -= materialValue + newMgPST;
+            egScore -= materialValue + newEgPST;
+        }
+    }
 
     if (ENABLE_PAWN_STRUCTURE) {
-        int pawnScore = evaluatePawnStructure(board);
-        mgScore += pawnScore;
-        egScore += pawnScore * 1.2;
-        logEvaluationComponents("Pawn Structure", pawnScore);
+        uint64_t pawnKey = computePawnHash(board);
+        int pawnMg, pawnEg;
+        if (pawnHashTable.probe(pawnKey, pawnMg, pawnEg)) {
+            mgScore += pawnMg;
+            egScore += pawnEg;
+        } else {
+            int pawnScore = evaluatePawnStructure(board);
+            int passedPawnScore = evaluatePassedPawns(board);
+            pawnMg = pawnScore + static_cast<int>(passedPawnScore * 0.8);
+            pawnEg = static_cast<int>(pawnScore * 1.2) + static_cast<int>(passedPawnScore * 1.5);
+            pawnHashTable.store(pawnKey, pawnMg, pawnEg);
+            mgScore += pawnMg;
+            egScore += pawnEg;
+        }
     }
 
     if (ENABLE_PIECE_MOBILITY) {
         int mobilityScore = evaluateMobility(board);
         mgScore += mobilityScore;
-        egScore += mobilityScore * 0.8;
-        logEvaluationComponents("Piece Mobility", mobilityScore);
+        egScore += static_cast<int>(mobilityScore * 0.8);
     }
 
     if (ENABLE_KING_SAFETY) {
         int kingSafetyScore = evaluateKingSafety(board);
         mgScore += kingSafetyScore;
-        egScore += kingSafetyScore * 0.3;
-        logEvaluationComponents("King Safety", kingSafetyScore);
+        egScore += static_cast<int>(kingSafetyScore * 0.3);
     }
 
     int bishopPairScore = evaluateBishopPair(board);
     mgScore += bishopPairScore;
-    egScore += bishopPairScore * 1.5;
+    egScore += static_cast<int>(bishopPairScore * 1.5);
 
     int rookFileScore = evaluateRooksOnOpenFiles(board);
     mgScore += rookFileScore;
     egScore += rookFileScore;
-
-    int passedPawnScore = evaluatePassedPawns(board);
-    mgScore += passedPawnScore * 0.8;
-    egScore += passedPawnScore * 1.5;
 
     int tacticalSafetyScore = evaluateTacticalSafety(board);
     mgScore += tacticalSafetyScore;
@@ -717,7 +726,7 @@ int evaluatePosition(const Board& board) {
         int endgameKnowledgeScore = EndgameKnowledge::evaluateEndgame(board);
         egScore += endgameKnowledgeScore;
     }
-    egScore += tacticalSafetyScore * 0.7;
+    egScore += static_cast<int>(tacticalSafetyScore * 0.7);
 
     int hangingPiecesScore = evaluateHangingPieces(board);
     mgScore += hangingPiecesScore;
@@ -725,7 +734,7 @@ int evaluatePosition(const Board& board) {
 
     int queenTrapScore = evaluateQueenTrapDanger(board);
     mgScore += queenTrapScore;
-    egScore += queenTrapScore * 0.5;
+    egScore += static_cast<int>(queenTrapScore * 0.5);
 
     if (board.turn == ChessPieceColor::WHITE) {
         mgScore += TEMPO_BONUS;
@@ -737,9 +746,9 @@ int evaluatePosition(const Board& board) {
 
     int finalScore = interpolatePhase(mgScore, egScore, gamePhase);
 
-#ifdef USE_ENHANCED_EVALUATION
-
-#endif
+    if (contempt != 0) {
+        finalScore += (board.turn == ChessPieceColor::WHITE) ? contempt : -contempt;
+    }
 
     logEvaluationComponents("Final Enhanced Score", finalScore);
     return finalScore;

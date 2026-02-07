@@ -4,6 +4,7 @@
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
 #include "NNUE.h"
+#include <cstring>
 
 const int KING_SAFETY_PAWN_SHIELD_BONUS = 10;
 const int KING_SAFETY_OPEN_FILE_PENALTY = 20;
@@ -54,12 +55,39 @@ int evaluateHangingPieces(const Board& board);
 int evaluateQueenTrapDanger(const Board& board);
 int evaluateTacticalSafety(const Board& board);
 bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos);
-int evaluatePosition(const Board& board);
+int evaluatePosition(const Board& board, int contempt = 0);
 int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor color);
 int evaluatePassedPawns(const Board& board);
 int evaluateBishopPair(const Board& board);
 int evaluateRooksOnOpenFiles(const Board& board);
 int evaluateEndgame(const Board& board);
+
+struct PawnHashEntry {
+    uint64_t key;
+    int mgScore;
+    int egScore;
+};
+
+struct PawnHashTable {
+    static constexpr size_t SIZE = 16384;
+    PawnHashEntry entries[SIZE];
+
+    PawnHashTable() { clear(); }
+    void clear() { std::memset(entries, 0, sizeof(entries)); }
+
+    bool probe(uint64_t key, int& mg, int& eg) const {
+        const auto& e = entries[key % SIZE];
+        if (e.key == key) { mg = e.mgScore; eg = e.egScore; return true; }
+        return false;
+    }
+
+    void store(uint64_t key, int mg, int eg) {
+        auto& e = entries[key % SIZE];
+        e.key = key; e.mgScore = mg; e.egScore = eg;
+    }
+};
+
+uint64_t computePawnHash(const Board& board);
 
 bool isNNUEEnabled();
 void setNNUEEnabled(bool enabled);

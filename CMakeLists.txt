@@ -92,7 +92,8 @@ set(TEST_NAMES
     gtest_killer_moves
     gtest_engine_improvements
     gtest_tactical_suite
-    
+    gtest_perft
+    gtest_wac
 )
 
 foreach(test_name ${TEST_NAMES})

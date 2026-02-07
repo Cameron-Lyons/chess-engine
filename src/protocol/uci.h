@@ -26,6 +26,7 @@ public:
         bool useNeuralNetwork = true;
         float nnWeight = 0.7f;
         bool useTablebases = true;
+        std::string syzygyPath;
 
         bool debug = false;
         bool showCurrLine = false;
@@ -45,6 +46,7 @@ public:
     void handlePosition(const std::string& command);
     void handleGo(const std::string& command);
     void handleStop();
+    void handlePonderHit();
     void handleQuit();
     void handleDebug(const std::string& command);
     void handleRegister(const std::string& command);
@@ -66,10 +68,13 @@ private:
     std::unique_ptr<TimeManager> timeManager;
 
     bool isSearching;
+    bool isPondering;
     std::chrono::steady_clock::time_point searchStartTime;
     int searchTimeLimit;
     int searchDepthLimit;
     int searchNodeLimit;
+    std::thread searchThread;
+    ParallelSearchContext* activeContext = nullptr;
 
     std::string moveToUCI(const std::pair<int, int>& move);
     std::pair<int, int> uciToMove(const std::string& uciMove);
@@ -80,7 +85,8 @@ private:
 
     void startSearch();
     void stopSearch();
-    SearchResult performSearch(const Board& board, int depth, int timeLimit);
+    SearchResult performSearch(const Board& board, int depth, int timeLimit,
+                               int optimalTime = 0, int maxTime = 0);
 
     void setHashSize(int size);
     void setThreads(int num);

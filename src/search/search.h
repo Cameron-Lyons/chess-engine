@@ -151,7 +151,43 @@ struct ParallelSearchContext {
     int contempt = 0;
     int multiPV = 1;
     std::vector<std::pair<int, int>> excludedRootMoves;
+    int optimalTimeMs = 0;
+    int maxTimeMs = 0;
+    std::atomic<int> tbHits{0};
+    bool useSyzygy = false;
+
+    int continuationHistory[6][64][6][64];
+    int captureHistory[6][6][64];
+    int prevPieceAtPly[64];
+    int prevToAtPly[64];
+
     ParallelSearchContext(int threads = 0);
+
+    void updateContinuationHistory(int prevPiece, int prevTo, int piece, int to, int bonus) {
+        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64) return;
+        if (piece < 0 || piece >= 6 || to < 0 || to >= 64) return;
+        int& entry = continuationHistory[prevPiece][prevTo][piece][to];
+        entry += bonus - entry * std::abs(bonus) / 16384;
+    }
+
+    int getContinuationHistory(int prevPiece, int prevTo, int piece, int to) const {
+        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64) return 0;
+        if (piece < 0 || piece >= 6 || to < 0 || to >= 64) return 0;
+        return continuationHistory[prevPiece][prevTo][piece][to];
+    }
+
+    void updateCaptureHistory(int attacker, int victim, int to, int bonus) {
+        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6) return;
+        if (to < 0 || to >= 64) return;
+        int& entry = captureHistory[attacker][victim][to];
+        entry += bonus - entry * std::abs(bonus) / 16384;
+    }
+
+    int getCaptureHistory(int attacker, int victim, int to) const {
+        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6) return 0;
+        if (to < 0 || to >= 64) return 0;
+        return captureHistory[attacker][victim][to];
+    }
 };
 
 struct ScoredMove {
@@ -185,6 +221,18 @@ uint64_t ComputeZobrist(const Board& board);
 
 int getMVVLVA_Score(const Board& board, int srcPos, int destPos);
 bool isCapture(const Board& board, int, int destPos);
+
+inline int pieceTypeIndex(ChessPieceType pt) {
+    switch (pt) {
+        case ChessPieceType::PAWN: return 0;
+        case ChessPieceType::KNIGHT: return 1;
+        case ChessPieceType::BISHOP: return 2;
+        case ChessPieceType::ROOK: return 3;
+        case ChessPieceType::QUEEN: return 4;
+        case ChessPieceType::KING: return 5;
+        default: return -1;
+    }
+}
 bool givesCheck(const Board& board, int srcPos, int destPos);
 bool isInCheck(const Board& board, ChessPieceColor color);
 std::vector<ScoredMove> scoreMovesParallel(const Board& board,
@@ -207,7 +255,8 @@ std::vector<ScoredMove> scoreMovesWithKillers(const Board& board,
                                               int numThreads);
 std::string getBookMove(const std::string& fen);
 SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs,
-                                        int numThreads = 0, int contempt = 0, int multiPV = 1);
+                                        int numThreads = 0, int contempt = 0, int multiPV = 1,
+                                        int optimalTimeMs = 0, int maxTimeMs = 0);
 std::pair<int, int> findBestMove(Board& board, int depth);
 int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer,
                              int ply, ThreadSafeHistory& historyTable,

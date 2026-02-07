@@ -1,8 +1,10 @@
 #include "uci.h"
+#include "../ai/SyzygyTablebase.h"
 #include "../core/BitboardMoves.h"
 #include "../evaluation/Evaluation.h"
 #include "../search/ValidMoves.h"
 #include "../search/search.h"
+#include "../utils/TunableParams.h"
 #include "../utils/engine_globals.h"
 #include <chrono>
 #include <future>
@@ -13,7 +15,7 @@
 extern Board ChessBoard;
 extern Board PrevBoard;
 
-UCIEngine::UCIEngine() : isSearching(false) {
+UCIEngine::UCIEngine() : isSearching(false), isPondering(false) {
 
     initKnightAttacks();
     initKingAttacks();
@@ -66,6 +68,8 @@ void UCIEngine::processCommand(const std::string& command) {
         handleGo(command);
     } else if (cmd == "stop") {
         handleStop();
+    } else if (cmd == "ponderhit") {
+        handlePonderHit();
     } else if (cmd == "quit") {
         handleQuit();
     } else if (cmd == "debug") {
@@ -98,9 +102,17 @@ void UCIEngine::handleUCI() {
     std::cout << "option name Neural Network Weight type spin default 70 min 0 max 100"
               << std::endl;
     std::cout << "option name Use Tablebases type check default true" << std::endl;
+    std::cout << "option name SyzygyPath type string default " << std::endl;
     std::cout << "option name Debug type check default false" << std::endl;
     std::cout << "option name Show Current Line type check default false" << std::endl;
     std::cout << "option name Contempt type spin default 0 min -100 max 100" << std::endl;
+
+    for (const auto& p : TunableRegistry::instance().all()) {
+        std::cout << "option name " << p.name
+                  << " type spin default " << p.defaultValue
+                  << " min " << p.minValue
+                  << " max " << p.maxValue << std::endl;
+    }
 
     std::cout << "uciok" << std::endl;
 }
@@ -110,52 +122,51 @@ void UCIEngine::handleIsReady() {
 }
 
 void UCIEngine::handleSetOption(const std::string& command) {
-    std::istringstream iss(command);
-    std::string word;
-    iss >> word;
-
     std::string name, value;
-    if (iss >> word && word == "name") {
-        std::getline(iss, name);
+    auto namePos = command.find("name ");
+    auto valuePos = command.find(" value ");
+    if (namePos == std::string::npos) return;
+    namePos += 5;
+    if (valuePos != std::string::npos) {
+        name = command.substr(namePos, valuePos - namePos);
+        value = command.substr(valuePos + 7);
+    } else {
+        name = command.substr(namePos);
+    }
 
-        if (!name.empty() && name[0] == ' ') {
-            name = name.substr(1);
+    if (name == "Hash") {
+        setHashSize(std::stoi(value));
+    } else if (name == "Threads") {
+        setThreads(std::stoi(value));
+    } else if (name == "MultiPV") {
+        setMultiPV(std::stoi(value));
+    } else if (name == "Ponder") {
+        setPonder(value == "true");
+    } else if (name == "OwnBook") {
+        setOwnBook(value == "true");
+    } else if (name == "Move Overhead") {
+        setMoveOverhead(std::stoi(value));
+    } else if (name == "Minimum Thinking Time") {
+        setMinimumThinkingTime(std::stoi(value));
+    } else if (name == "Use Neural Network") {
+        setUseNeuralNetwork(value == "true");
+    } else if (name == "Neural Network Weight") {
+        setNNWeight(std::stof(value) / 100.0f);
+    } else if (name == "Use Tablebases") {
+        setUseTablebases(value == "true");
+    } else if (name == "SyzygyPath") {
+        options.syzygyPath = value;
+        if (!value.empty()) {
+            Syzygy::init(value);
         }
-
-        if (iss >> word && word == "value") {
-            std::getline(iss, value);
-            if (!value.empty() && value[0] == ' ') {
-                value = value.substr(1);
-            }
-
-            if (name == "Hash") {
-                setHashSize(std::stoi(value));
-            } else if (name == "Threads") {
-                setThreads(std::stoi(value));
-            } else if (name == "MultiPV") {
-                setMultiPV(std::stoi(value));
-            } else if (name == "Ponder") {
-                setPonder(value == "true");
-            } else if (name == "OwnBook") {
-                setOwnBook(value == "true");
-            } else if (name == "Move Overhead") {
-                setMoveOverhead(std::stoi(value));
-            } else if (name == "Minimum Thinking Time") {
-                setMinimumThinkingTime(std::stoi(value));
-            } else if (name == "Use Neural Network") {
-                setUseNeuralNetwork(value == "true");
-            } else if (name == "Neural Network Weight") {
-                setNNWeight(std::stof(value) / 100.0f);
-            } else if (name == "Use Tablebases") {
-                setUseTablebases(value == "true");
-            } else if (name == "Debug") {
-                setDebug(value == "true");
-            } else if (name == "Show Current Line") {
-                setShowCurrLine(value == "true");
-            } else if (name == "Contempt") {
-                options.contempt = std::stoi(value);
-            }
-        }
+    } else if (name == "Debug") {
+        setDebug(value == "true");
+    } else if (name == "Show Current Line") {
+        setShowCurrLine(value == "true");
+    } else if (name == "Contempt") {
+        options.contempt = std::stoi(value);
+    } else {
+        TunableRegistry::instance().set(name, std::stoi(value));
     }
 }
 
@@ -251,6 +262,8 @@ void UCIEngine::handleGo(const std::string& command) {
 
     int wtime = -1, btime = -1, winc = 0, binc = 0;
     int movestogo = -1, searchDepth = 8, movetime = -1;
+    bool isPonder = false;
+    bool isInfinite = false;
 
     while (iss >> word) {
         if (word == "wtime") {
@@ -267,36 +280,74 @@ void UCIEngine::handleGo(const std::string& command) {
             iss >> searchDepth;
         } else if (word == "movetime") {
             iss >> movetime;
+        } else if (word == "ponder") {
+            isPonder = true;
+        } else if (word == "infinite") {
+            isInfinite = true;
         }
     }
 
     int timeForMove = 5000;
+    int optimalTime = 5000;
+    int maxTime = 5000;
 
-    if (movetime > 0) {
+    if (isPonder || isInfinite) {
+        timeForMove = 999999999;
+        optimalTime = 999999999;
+        maxTime = 999999999;
+    } else if (movetime > 0) {
         timeForMove = movetime;
+        optimalTime = movetime;
+        maxTime = movetime;
     } else if (wtime > 0 || btime > 0) {
         int currentTime = (board.turn == ChessPieceColor::WHITE) ? wtime : btime;
         int increment = (board.turn == ChessPieceColor::WHITE) ? winc : binc;
 
         if (currentTime > 0) {
-            timeForMove = currentTime / 30;
-            if (increment > 0) {
-                timeForMove += increment;
+            int baseTime;
+            if (movestogo > 0) {
+                baseTime = currentTime / movestogo;
+            } else {
+                baseTime = currentTime / 30;
             }
+            optimalTime = baseTime + static_cast<int>(increment * 0.75) - options.moveOverhead;
+            maxTime = std::min(static_cast<int>(currentTime * 0.5),
+                               optimalTime * 5) - options.moveOverhead;
+            optimalTime = std::max(optimalTime, options.minimumThinkingTime);
+            maxTime = std::max(maxTime, optimalTime);
+            timeForMove = optimalTime;
         }
     }
 
     isSearching = true;
+    isPondering = isPonder;
     searchStartTime = std::chrono::steady_clock::now();
     searchTimeLimit = timeForMove;
     searchDepthLimit = searchDepth;
 
-    std::thread searchThread([this, searchDepth, timeForMove]() {
+    if (searchThread.joinable()) {
+        searchThread.join();
+    }
+
+    searchThread = std::thread([this, searchDepth, timeForMove, optimalTime, maxTime]() {
         try {
-            SearchResult result = performSearch(board, searchDepth, timeForMove);
+            SearchResult result = performSearch(board, searchDepth, timeForMove, optimalTime, maxTime);
 
             if (isSearching) {
-                reportBestMove(result.bestMove);
+                std::pair<int, int> ponderMove = {-1, -1};
+                if (result.bestMove.first >= 0) {
+                    Board tempBoard = board;
+                    tempBoard.movePiece(result.bestMove.first, result.bestMove.second);
+                    tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE)
+                                         ? ChessPieceColor::BLACK
+                                         : ChessPieceColor::WHITE;
+                    uint64_t hash = ComputeZobrist(tempBoard);
+                    TTEntry ttEntry;
+                    if (TransTable.find(hash, ttEntry) && ttEntry.bestMove.first >= 0) {
+                        ponderMove = ttEntry.bestMove;
+                    }
+                }
+                reportBestMove(result.bestMove, ponderMove);
                 int nps = result.timeMs > 0 ? result.nodes * 1000 / result.timeMs : 0;
                 reportInfo(result.depth, result.depth, result.timeMs, result.nodes,
                            nps, {}, result.score, 0);
@@ -306,17 +357,28 @@ void UCIEngine::handleGo(const std::string& command) {
         }
 
         isSearching = false;
+        isPondering = false;
     });
-
-    searchThread.detach();
 }
 
 void UCIEngine::handleStop() {
     isSearching = false;
+    isPondering = false;
+    if (searchThread.joinable()) {
+        searchThread.join();
+    }
+}
+
+void UCIEngine::handlePonderHit() {
+    isPondering = false;
 }
 
 void UCIEngine::handleQuit() {
     isSearching = false;
+    isPondering = false;
+    if (searchThread.joinable()) {
+        searchThread.join();
+    }
     std::exit(0);
 }
 
@@ -554,7 +616,8 @@ void UCIEngine::stopSearch() {
     isSearching = false;
 }
 
-SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLimit) {
+SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLimit,
+                                      int optimalTime, int maxTime) {
     SearchResult result;
 
     if (options.useTablebases && tablebase) {
@@ -588,7 +651,8 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
 
     Board searchBoard = board;
 
-    result = iterativeDeepeningParallel(searchBoard, depth, timeLimit, 1, options.contempt, options.multiPV);
+    result = iterativeDeepeningParallel(searchBoard, depth, timeLimit, 1, options.contempt,
+                                         options.multiPV, optimalTime, maxTime);
 
     return result;
 }
