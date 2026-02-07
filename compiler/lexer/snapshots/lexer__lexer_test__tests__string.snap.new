@@ -1,0 +1,26 @@
+---
+source: lexer/lexer_test.rs
+assertion_line: 25
+expression: "\"a\""
+---
+[
+  {
+    "kind": {
+      "type": "STRING",
+      "value": "a"
+    },
+    "span": {
+      "start": 0,
+      "end": 3
+    }
+  },
+  {
+    "kind": {
+      "type": "EOF"
+    },
+    "span": {
+      "start": 3,
+      "end": 4
+    }
+  }
+]

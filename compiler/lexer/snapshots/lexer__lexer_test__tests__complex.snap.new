@@ -1,0 +1,718 @@
+---
+source: lexer/lexer_test.rs
+assertion_line: 25
+expression: "\n// welcome to monkeylang\nlet five = 5;\nlet ten = 10;\n\nlet add = fn(x, y) {\n  x + y;\n};\n\nlet result = add(five, ten);\n!-/*5;\n5 < 10 > 5;\n\nif (5 < 10) {\n\treturn true;\n} else {\n\treturn false;\n}\n\n10 == 10;\n10 != 9;"
+---
+[
+  {
+    "kind": {
+      "type": "LET"
+    },
+    "span": {
+      "start": 26,
+      "end": 29
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "five"
+      }
+    },
+    "span": {
+      "start": 30,
+      "end": 34
+    }
+  },
+  {
+    "kind": {
+      "type": "ASSIGN"
+    },
+    "span": {
+      "start": 35,
+      "end": 36
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 5
+    },
+    "span": {
+      "start": 37,
+      "end": 38
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 38,
+      "end": 39
+    }
+  },
+  {
+    "kind": {
+      "type": "LET"
+    },
+    "span": {
+      "start": 40,
+      "end": 43
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "ten"
+      }
+    },
+    "span": {
+      "start": 44,
+      "end": 47
+    }
+  },
+  {
+    "kind": {
+      "type": "ASSIGN"
+    },
+    "span": {
+      "start": 48,
+      "end": 49
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 10
+    },
+    "span": {
+      "start": 50,
+      "end": 52
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 52,
+      "end": 53
+    }
+  },
+  {
+    "kind": {
+      "type": "LET"
+    },
+    "span": {
+      "start": 55,
+      "end": 58
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "add"
+      }
+    },
+    "span": {
+      "start": 59,
+      "end": 62
+    }
+  },
+  {
+    "kind": {
+      "type": "ASSIGN"
+    },
+    "span": {
+      "start": 63,
+      "end": 64
+    }
+  },
+  {
+    "kind": {
+      "type": "FUNCTION"
+    },
+    "span": {
+      "start": 65,
+      "end": 67
+    }
+  },
+  {
+    "kind": {
+      "type": "LPAREN"
+    },
+    "span": {
+      "start": 67,
+      "end": 68
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "x"
+      }
+    },
+    "span": {
+      "start": 68,
+      "end": 69
+    }
+  },
+  {
+    "kind": {
+      "type": "COMMA"
+    },
+    "span": {
+      "start": 69,
+      "end": 70
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "y"
+      }
+    },
+    "span": {
+      "start": 71,
+      "end": 72
+    }
+  },
+  {
+    "kind": {
+      "type": "RPAREN"
+    },
+    "span": {
+      "start": 72,
+      "end": 73
+    }
+  },
+  {
+    "kind": {
+      "type": "LBRACE"
+    },
+    "span": {
+      "start": 74,
+      "end": 75
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "x"
+      }
+    },
+    "span": {
+      "start": 78,
+      "end": 79
+    }
+  },
+  {
+    "kind": {
+      "type": "PLUS"
+    },
+    "span": {
+      "start": 80,
+      "end": 81
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "y"
+      }
+    },
+    "span": {
+      "start": 82,
+      "end": 83
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 83,
+      "end": 84
+    }
+  },
+  {
+    "kind": {
+      "type": "RBRACE"
+    },
+    "span": {
+      "start": 85,
+      "end": 86
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 86,
+      "end": 87
+    }
+  },
+  {
+    "kind": {
+      "type": "LET"
+    },
+    "span": {
+      "start": 89,
+      "end": 92
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "result"
+      }
+    },
+    "span": {
+      "start": 93,
+      "end": 99
+    }
+  },
+  {
+    "kind": {
+      "type": "ASSIGN"
+    },
+    "span": {
+      "start": 100,
+      "end": 101
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "add"
+      }
+    },
+    "span": {
+      "start": 102,
+      "end": 105
+    }
+  },
+  {
+    "kind": {
+      "type": "LPAREN"
+    },
+    "span": {
+      "start": 105,
+      "end": 106
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "five"
+      }
+    },
+    "span": {
+      "start": 106,
+      "end": 110
+    }
+  },
+  {
+    "kind": {
+      "type": "COMMA"
+    },
+    "span": {
+      "start": 110,
+      "end": 111
+    }
+  },
+  {
+    "kind": {
+      "type": "IDENTIFIER",
+      "value": {
+        "name": "ten"
+      }
+    },
+    "span": {
+      "start": 112,
+      "end": 115
+    }
+  },
+  {
+    "kind": {
+      "type": "RPAREN"
+    },
+    "span": {
+      "start": 115,
+      "end": 116
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 116,
+      "end": 117
+    }
+  },
+  {
+    "kind": {
+      "type": "BANG"
+    },
+    "span": {
+      "start": 118,
+      "end": 119
+    }
+  },
+  {
+    "kind": {
+      "type": "MINUS"
+    },
+    "span": {
+      "start": 119,
+      "end": 120
+    }
+  },
+  {
+    "kind": {
+      "type": "SLASH"
+    },
+    "span": {
+      "start": 120,
+      "end": 121
+    }
+  },
+  {
+    "kind": {
+      "type": "ASTERISK"
+    },
+    "span": {
+      "start": 121,
+      "end": 122
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 5
+    },
+    "span": {
+      "start": 122,
+      "end": 123
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 123,
+      "end": 124
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 5
+    },
+    "span": {
+      "start": 125,
+      "end": 126
+    }
+  },
+  {
+    "kind": {
+      "type": "LT"
+    },
+    "span": {
+      "start": 127,
+      "end": 128
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 10
+    },
+    "span": {
+      "start": 129,
+      "end": 131
+    }
+  },
+  {
+    "kind": {
+      "type": "GT"
+    },
+    "span": {
+      "start": 132,
+      "end": 133
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 5
+    },
+    "span": {
+      "start": 134,
+      "end": 135
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 135,
+      "end": 136
+    }
+  },
+  {
+    "kind": {
+      "type": "IF"
+    },
+    "span": {
+      "start": 138,
+      "end": 140
+    }
+  },
+  {
+    "kind": {
+      "type": "LPAREN"
+    },
+    "span": {
+      "start": 141,
+      "end": 142
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 5
+    },
+    "span": {
+      "start": 142,
+      "end": 143
+    }
+  },
+  {
+    "kind": {
+      "type": "LT"
+    },
+    "span": {
+      "start": 144,
+      "end": 145
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 10
+    },
+    "span": {
+      "start": 146,
+      "end": 148
+    }
+  },
+  {
+    "kind": {
+      "type": "RPAREN"
+    },
+    "span": {
+      "start": 148,
+      "end": 149
+    }
+  },
+  {
+    "kind": {
+      "type": "LBRACE"
+    },
+    "span": {
+      "start": 150,
+      "end": 151
+    }
+  },
+  {
+    "kind": {
+      "type": "RETURN"
+    },
+    "span": {
+      "start": 153,
+      "end": 159
+    }
+  },
+  {
+    "kind": {
+      "type": "TRUE"
+    },
+    "span": {
+      "start": 160,
+      "end": 164
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 164,
+      "end": 165
+    }
+  },
+  {
+    "kind": {
+      "type": "RBRACE"
+    },
+    "span": {
+      "start": 166,
+      "end": 167
+    }
+  },
+  {
+    "kind": {
+      "type": "ELSE"
+    },
+    "span": {
+      "start": 168,
+      "end": 172
+    }
+  },
+  {
+    "kind": {
+      "type": "LBRACE"
+    },
+    "span": {
+      "start": 173,
+      "end": 174
+    }
+  },
+  {
+    "kind": {
+      "type": "RETURN"
+    },
+    "span": {
+      "start": 176,
+      "end": 182
+    }
+  },
+  {
+    "kind": {
+      "type": "FALSE"
+    },
+    "span": {
+      "start": 183,
+      "end": 188
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 188,
+      "end": 189
+    }
+  },
+  {
+    "kind": {
+      "type": "RBRACE"
+    },
+    "span": {
+      "start": 190,
+      "end": 191
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 10
+    },
+    "span": {
+      "start": 193,
+      "end": 195
+    }
+  },
+  {
+    "kind": {
+      "type": "EQ"
+    },
+    "span": {
+      "start": 197,
+      "end": 198
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 10
+    },
+    "span": {
+      "start": 199,
+      "end": 201
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 201,
+      "end": 202
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 10
+    },
+    "span": {
+      "start": 203,
+      "end": 205
+    }
+  },
+  {
+    "kind": {
+      "type": "NotEq"
+    },
+    "span": {
+      "start": 207,
+      "end": 208
+    }
+  },
+  {
+    "kind": {
+      "type": "INT",
+      "value": 9
+    },
+    "span": {
+      "start": 209,
+      "end": 210
+    }
+  },
+  {
+    "kind": {
+      "type": "SEMICOLON"
+    },
+    "span": {
+      "start": 210,
+      "end": 211
+    }
+  },
+  {
+    "kind": {
+      "type": "EOF"
+    },
+    "span": {
+      "start": 211,
+      "end": 212
+    }
+  }
+]

@@ -1,0 +1,16 @@
+---
+source: lexer/lexer_test.rs
+assertion_line: 25
+expression: // I am comments
+---
+[
+  {
+    "kind": {
+      "type": "EOF"
+    },
+    "span": {
+      "start": 16,
+      "end": 17
+    }
+  }
+]

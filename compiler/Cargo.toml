@@ -1,0 +1,9 @@
+[workspace]
+members = [
+  "lexer",
+  "parser",
+  "object",
+  "interpreter",
+  "compiler",
+]
+edition = '2021'
