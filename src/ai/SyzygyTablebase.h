@@ -1,7 +1,7 @@
-#ifndef SYZYGY_TABLEBASE_H
-#define SYZYGY_TABLEBASE_H
+#pragma once
 
 #include "../core/ChessBoard.h"
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -58,5 +58,3 @@ struct Position {
 };
 
 } // namespace Syzygy
-
-#endif

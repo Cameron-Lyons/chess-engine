@@ -1,7 +1,7 @@
-#ifndef MAGIC_BITBOARDS_H
-#define MAGIC_BITBOARDS_H
+#pragma once
 
 #include "Bitboard.h"
+
 #include <array>
 #include <vector>
 
@@ -37,5 +37,3 @@ private:
                                            uint64_t occupancy);
     static std::vector<uint64_t> generateOccupancyVariations(uint64_t mask);
 };
-
-#endif

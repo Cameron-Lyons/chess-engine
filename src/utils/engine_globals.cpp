@@ -1,4 +1,5 @@
 #include "engine_globals.h"
+
 #include <random>
 #include <sstream>
 #include <vector>
@@ -78,8 +79,8 @@ std::string getFEN(const Board& board) {
     std::string fen;
     for (int row = 7; row >= 0; --row) {
         int emptyCount = 0;
-        for (int col = 0; col < 8; ++col) {
-            int pos = row * 8 + col;
+        for (int col = 0; col < BOARD_SIZE; ++col) {
+            int pos = row * BOARD_SIZE + col;
             const Piece& piece = board.squares[pos].piece;
             if (piece.PieceType == ChessPieceType::NONE) {
                 emptyCount++;
@@ -203,18 +204,18 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         destCol = cleanMove[0] - 'a';
         destRow = cleanMove[1] - '1';
 
-        if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8) {
+        if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE) {
             return false;
         }
 
         if (board.turn == ChessPieceColor::WHITE) {
             if (destRow > 0) {
                 int checkRow = destRow - 1;
-                int pos = checkRow * 8 + destCol;
+                int pos = checkRow * BOARD_SIZE + destCol;
                 const Piece& piece = board.squares[pos].piece;
                 if (piece.PieceType == ChessPieceType::PAWN &&
                     piece.PieceColor == ChessPieceColor::WHITE) {
-                    int destPos = destRow * 8 + destCol;
+                    int destPos = destRow * BOARD_SIZE + destCol;
                     if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE) {
                         srcCol = destCol;
                         srcRow = checkRow;
@@ -225,12 +226,12 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
 
             if (destRow == 3) {
                 int checkRow = 1;
-                int pos = checkRow * 8 + destCol;
+                int pos = checkRow * BOARD_SIZE + destCol;
                 const Piece& piece = board.squares[pos].piece;
                 if (piece.PieceType == ChessPieceType::PAWN &&
                     piece.PieceColor == ChessPieceColor::WHITE) {
-                    int destPos = destRow * 8 + destCol;
-                    int intermediatPos = 2 * 8 + destCol;
+                    int destPos = destRow * BOARD_SIZE + destCol;
+                    int intermediatPos = 2 * BOARD_SIZE + destCol;
                     if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE &&
                         board.squares[intermediatPos].piece.PieceType == ChessPieceType::NONE) {
                         srcCol = destCol;
@@ -242,11 +243,11 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         } else {
             if (destRow < 7) {
                 int checkRow = destRow + 1;
-                int pos = checkRow * 8 + destCol;
+                int pos = checkRow * BOARD_SIZE + destCol;
                 const Piece& piece = board.squares[pos].piece;
                 if (piece.PieceType == ChessPieceType::PAWN &&
                     piece.PieceColor == ChessPieceColor::BLACK) {
-                    int destPos = destRow * 8 + destCol;
+                    int destPos = destRow * BOARD_SIZE + destCol;
                     if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE) {
                         srcCol = destCol;
                         srcRow = checkRow;
@@ -257,12 +258,12 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
 
             if (destRow == 4) {
                 int checkRow = 6;
-                int pos = checkRow * 8 + destCol;
+                int pos = checkRow * BOARD_SIZE + destCol;
                 const Piece& piece = board.squares[pos].piece;
                 if (piece.PieceType == ChessPieceType::PAWN &&
                     piece.PieceColor == ChessPieceColor::BLACK) {
-                    int destPos = destRow * 8 + destCol;
-                    int intermediatPos = 5 * 8 + destCol;
+                    int destPos = destRow * BOARD_SIZE + destCol;
+                    int intermediatPos = 5 * BOARD_SIZE + destCol;
                     if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE &&
                         board.squares[intermediatPos].piece.PieceType == ChessPieceType::NONE) {
                         srcCol = destCol;
@@ -279,15 +280,15 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         destCol = cleanMove[2] - 'a';
         destRow = cleanMove[3] - '1';
         srcCol = cleanMove[0] - 'a';
-        if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8 || srcCol < 0 || srcCol >= 8)
+        if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE || srcCol < 0 || srcCol >= BOARD_SIZE)
             return false;
 
-        for (int row = 0; row < 8; row++) {
-            int pos = row * 8 + srcCol;
+        for (int row = 0; row < BOARD_SIZE; row++) {
+            int pos = row * BOARD_SIZE + srcCol;
             const Piece& piece = board.squares[pos].piece;
             if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == board.turn) {
                 int from = pos;
-                int to = destRow * 8 + destCol;
+                int to = destRow * BOARD_SIZE + destCol;
                 if (board.turn == ChessPieceColor::WHITE) {
                     if ((to == from + 7 && srcCol > 0) || (to == from + 9 && srcCol < 7)) {
                         if (board.squares[to].piece.PieceType != ChessPieceType::NONE &&
@@ -317,7 +318,7 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             destCol = cleanMove[equalPos - 2] - 'a';
             destRow = cleanMove[equalPos - 1] - '1';
 
-            if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8) {
+            if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE) {
                 return false;
             }
 
@@ -331,11 +332,11 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             if (board.turn == ChessPieceColor::WHITE) {
                 if (destRow > 0) {
                     int checkRow = destRow - 1;
-                    int pos = checkRow * 8 + destCol;
+                    int pos = checkRow * BOARD_SIZE + destCol;
                     const Piece& piece = board.squares[pos].piece;
                     if (piece.PieceType == ChessPieceType::PAWN &&
                         piece.PieceColor == ChessPieceColor::WHITE) {
-                        int destPos = destRow * 8 + destCol;
+                        int destPos = destRow * BOARD_SIZE + destCol;
                         if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE) {
                             srcCol = destCol;
                             srcRow = checkRow;
@@ -346,11 +347,11 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             } else {
                 if (destRow < 7) {
                     int checkRow = destRow + 1;
-                    int pos = checkRow * 8 + destCol;
+                    int pos = checkRow * BOARD_SIZE + destCol;
                     const Piece& piece = board.squares[pos].piece;
                     if (piece.PieceType == ChessPieceType::PAWN &&
                         piece.PieceColor == ChessPieceColor::BLACK) {
-                        int destPos = destRow * 8 + destCol;
+                        int destPos = destRow * BOARD_SIZE + destCol;
                         if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE) {
                             srcCol = destCol;
                             srcRow = checkRow;
@@ -367,8 +368,8 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             destRow = cleanMove[3] - '1';
             srcCol = cleanMove[0] - 'a';
 
-            if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8 || srcCol < 0 ||
-                srcCol >= 8)
+            if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE || srcCol < 0 ||
+                srcCol >= BOARD_SIZE)
                 return false;
 
             bool isPromotionRank = (destRow == 7 && board.turn == ChessPieceColor::WHITE) ||
@@ -378,12 +379,12 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                 return false;
             }
 
-            for (int row = 0; row < 8; row++) {
-                int pos = row * 8 + srcCol;
+            for (int row = 0; row < BOARD_SIZE; row++) {
+                int pos = row * BOARD_SIZE + srcCol;
                 const Piece& piece = board.squares[pos].piece;
                 if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == board.turn) {
                     int from = pos;
-                    int to = destRow * 8 + destCol;
+                    int to = destRow * BOARD_SIZE + destCol;
                     if (board.turn == ChessPieceColor::WHITE) {
                         if ((to == from + 7 && srcCol > 0) || (to == from + 9 && srcCol < 7)) {
                             if (board.squares[to].piece.PieceType != ChessPieceType::NONE &&
@@ -422,10 +423,10 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             destRow = cleanMove[startPos + 1] - '1';
         }
 
-        if (destCol < 0 || destCol >= 8 || destRow < 0 || destRow >= 8)
+        if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE)
             return false;
 
-        int destPos = destRow * 8 + destCol;
+        int destPos = destRow * BOARD_SIZE + destCol;
         const Piece& destPiece = board.squares[destPos].piece;
 
         if (isCapture) {
@@ -440,9 +441,9 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
 
         std::vector<std::pair<int, int>> candidates;
 
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int pos = row * 8 + col;
+        for (int row = 0; row < BOARD_SIZE; row++) {
+            for (int col = 0; col < BOARD_SIZE; col++) {
+                int pos = row * BOARD_SIZE + col;
                 const Piece& piece = board.squares[pos].piece;
 
                 if (piece.PieceType == pieceType && piece.PieceColor == board.turn) {
@@ -465,7 +466,7 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                                 int colStep = (destCol > col) ? 1 : -1;
                                 canReach = true;
                                 for (int i = 1; i < rowDiff; i++) {
-                                    int checkPos = (row + i * rowStep) * 8 + (col + i * colStep);
+                                    int checkPos = (row + i * rowStep) * BOARD_SIZE + (col + i * colStep);
                                     if (board.squares[checkPos].piece.PieceType !=
                                         ChessPieceType::NONE) {
                                         canReach = false;
@@ -483,7 +484,7 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                                     int start = std::min(col, destCol) + 1;
                                     int end = std::max(col, destCol);
                                     for (int c = start; c < end; c++) {
-                                        if (board.squares[row * 8 + c].piece.PieceType !=
+                                        if (board.squares[row * BOARD_SIZE + c].piece.PieceType !=
                                             ChessPieceType::NONE) {
                                             canReach = false;
                                             break;
@@ -493,7 +494,7 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                                     int start = std::min(row, destRow) + 1;
                                     int end = std::max(row, destRow);
                                     for (int r = start; r < end; r++) {
-                                        if (board.squares[r * 8 + col].piece.PieceType !=
+                                        if (board.squares[r * BOARD_SIZE + col].piece.PieceType !=
                                             ChessPieceType::NONE) {
                                             canReach = false;
                                             break;
@@ -514,7 +515,7 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                                     int start = std::min(col, destCol) + 1;
                                     int end = std::max(col, destCol);
                                     for (int c = start; c < end; c++) {
-                                        if (board.squares[row * 8 + c].piece.PieceType !=
+                                        if (board.squares[row * BOARD_SIZE + c].piece.PieceType !=
                                             ChessPieceType::NONE) {
                                             canReach = false;
                                             break;
@@ -524,7 +525,7 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                                     int start = std::min(row, destRow) + 1;
                                     int end = std::max(row, destRow);
                                     for (int r = start; r < end; r++) {
-                                        if (board.squares[r * 8 + col].piece.PieceType !=
+                                        if (board.squares[r * BOARD_SIZE + col].piece.PieceType !=
                                             ChessPieceType::NONE) {
                                             canReach = false;
                                             break;
@@ -535,7 +536,7 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                                     int colStep = (destCol > col) ? 1 : -1;
                                     for (int i = 1; i < rowDiff; i++) {
                                         int checkPos =
-                                            (row + i * rowStep) * 8 + (col + i * colStep);
+                                            (row + i * rowStep) * BOARD_SIZE + (col + i * colStep);
                                         if (board.squares[checkPos].piece.PieceType !=
                                             ChessPieceType::NONE) {
                                             canReach = false;

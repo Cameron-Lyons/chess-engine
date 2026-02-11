@@ -1,4 +1,5 @@
 #include "BitboardOnly.h"
+
 #include <cctype>
 #include <sstream>
 

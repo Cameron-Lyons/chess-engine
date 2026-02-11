@@ -1,8 +1,8 @@
-#ifndef VALIDMOVES_H
-#define VALIDMOVES_H
+#pragma once
 
 #include "../core/BitboardMoves.h"
 #include "../core/ChessBoard.h"
+
 #include <vector>
 
 extern bool BlackAttackBoard[64];
@@ -34,5 +34,3 @@ bool IsMoveLegal(Board& board, int srcPos, int destPos);
 void addCastlingMovesBitboard(Board& board, ChessPieceColor color);
 
 void GenValidMoves(Board& board);
-
-#endif

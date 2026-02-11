@@ -1,5 +1,4 @@
-#ifndef CHESS_PIECE_H
-#define CHESS_PIECE_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -77,5 +76,3 @@ public:
         }
     }
 };
-
-#endif

@@ -1,7 +1,10 @@
-#ifndef EVALUATION_TUNING_H
-#define EVALUATION_TUNING_H
+#pragma once
 
+#include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
+
+#include <string>
+#include <vector>
 
 namespace EvaluationParams {
 
@@ -81,10 +84,6 @@ constexpr bool ENABLE_TACTICAL_BONUSES = true;
 
 } // namespace EvaluationParams
 
-#include "../core/ChessBoard.h"
-#include <string>
-#include <vector>
-
 struct TuningPosition {
     std::string fen;
     double result;
@@ -108,5 +107,3 @@ public:
     void initParams();
     double getError() const { return computeError(params); }
 };
-
-#endif

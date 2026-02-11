@@ -1,6 +1,7 @@
 #include "NeuralNetwork.h"
 #include "../evaluation/Evaluation.h"
 #include "../search/ValidMoves.h"
+
 #include <algorithm>
 #include <array>
 #include <chrono>

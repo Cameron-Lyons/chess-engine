@@ -2,6 +2,7 @@
 
 #include "../core/ChessBoard.h"
 #include "../core/MoveContent.h"
+
 #include <string>
 
 namespace EnhancedSearch {

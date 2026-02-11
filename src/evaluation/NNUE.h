@@ -1,7 +1,7 @@
-#ifndef NNUE_H
-#define NNUE_H
+#pragma once
 
 #include "core/ChessBoard.h"
+
 #include <array>
 #include <cstdint>
 #include <immintrin.h>
@@ -102,5 +102,3 @@ bool init(const std::string& networkPath);
 int evaluate(const Board& board);
 
 } // namespace NNUE
-
-#endif

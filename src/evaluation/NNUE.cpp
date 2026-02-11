@@ -1,4 +1,5 @@
 #include "NNUE.h"
+
 #include <algorithm>
 #include <cstring>
 #include <fstream>

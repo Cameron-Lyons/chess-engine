@@ -1,5 +1,4 @@
-#ifndef TRANSPOSITION_TABLE_V2_H
-#define TRANSPOSITION_TABLE_V2_H
+#pragma once
 
 #include <atomic>
 #include <cstdint>
@@ -176,5 +175,3 @@ private:
 extern TranspositionTable TT;
 
 } // namespace TTv2
-
-#endif

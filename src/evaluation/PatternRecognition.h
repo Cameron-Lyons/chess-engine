@@ -1,8 +1,8 @@
-#ifndef PATTERN_RECOGNITION_H
-#define PATTERN_RECOGNITION_H
+#pragma once
 
 #include "../core/Bitboard.h"
 #include "../core/ChessBoard.h"
+
 #include <array>
 #include <unordered_map>
 #include <vector>
@@ -173,5 +173,3 @@ constexpr int BISHOP_PAIR_BONUS = 30;
 constexpr int ROOK_COORDINATION_BONUS = 20;
 constexpr int KNIGHT_COORDINATION_BONUS = 15;
 } // namespace PatternScores
-
-#endif

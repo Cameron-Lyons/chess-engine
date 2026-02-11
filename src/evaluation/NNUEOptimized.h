@@ -1,7 +1,7 @@
-#ifndef NNUE_OPTIMIZED_H
-#define NNUE_OPTIMIZED_H
+#pragma once
 
 #include "core/BitboardOnly.h"
+
 #include <array>
 #include <cstdint>
 #include <immintrin.h>
@@ -191,5 +191,3 @@ bool init(const std::string& networkPath);
 int evaluate(const BitboardPosition& pos);
 
 } // namespace NNUEOptimized
-
-#endif

@@ -1,8 +1,8 @@
-#ifndef ADVANCED_SEARCH_H
-#define ADVANCED_SEARCH_H
+#pragma once
 
 #include "../core/ChessBoard.h"
 #include "search.h"
+
 #include <cstdint>
 #include <unordered_map>
 #include <vector>
@@ -143,5 +143,3 @@ private:
     void normalizeWeights(std::vector<BookEntry>& entries);
     std::pair<int, int> parseMove(const std::string& move);
 };
-
-#endif

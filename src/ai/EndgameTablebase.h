@@ -1,7 +1,7 @@
-#ifndef ENDGAME_TABLEBASE_H
-#define ENDGAME_TABLEBASE_H
+#pragma once
 
 #include "../core/ChessBoard.h"
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -68,5 +68,3 @@ private:
     static auto isPawnPromoting(const Board& board, int pawnSquare) -> bool;
     static auto getPawnAdvancement(const Board& board, int pawnSquare) -> int;
 };
-
-#endif

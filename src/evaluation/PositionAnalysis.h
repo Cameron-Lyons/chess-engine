@@ -1,8 +1,8 @@
-#ifndef POSITION_ANALYSIS_H
-#define POSITION_ANALYSIS_H
+#pragma once
 
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
+
 #include <string>
 #include <vector>
 
@@ -84,5 +84,3 @@ private:
     static std::vector<std::string> identifyOpportunities(const Board& board);
     static std::vector<std::string> identifyWeaknesses(const Board& board);
 };
-
-#endif

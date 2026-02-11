@@ -1,8 +1,8 @@
-#ifndef CHESSBOARD_H
-#define CHESSBOARD_H
+#pragma once
 
 #include "Bitboard.h"
 #include "ChessPiece.h"
+
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -230,5 +230,3 @@ inline std::string formatError(ChessError error) {
     }
 }
 } // namespace ChessUtils
-
-#endif

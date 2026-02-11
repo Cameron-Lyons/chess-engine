@@ -1,5 +1,4 @@
-#ifndef MODERNCHESS_H
-#define MODERNCHESS_H
+#pragma once
 
 #include <algorithm>
 #include <array>
@@ -255,5 +254,3 @@ std::string formatError(ChessError error) {
     }
 }
 } // namespace ModernChessUtils
-
-#endif

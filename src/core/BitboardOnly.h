@@ -1,8 +1,8 @@
-#ifndef BITBOARD_ONLY_H
-#define BITBOARD_ONLY_H
+#pragma once
 
 #include "Bitboard.h"
 #include "ChessPiece.h"
+
 #include <chrono>
 #include <cstdint>
 #include <string>
@@ -215,5 +215,3 @@ public:
         return position;
     }
 };
-
-#endif

@@ -4,6 +4,7 @@
 #include "../core/MoveContent.h"
 #include "../utils/Profiler.h"
 #include "MoveOrdering.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>

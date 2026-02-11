@@ -2,6 +2,7 @@
 
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
+
 #include <array>
 #include <cstring>
 #include <fstream>
@@ -118,14 +119,14 @@ private:
             if (!file)
                 return false;
 
-            file.read((char*)inputWeights, sizeof(inputWeights));
-            file.read((char*)inputBias, sizeof(inputBias));
-            file.read((char*)l1Weights, sizeof(l1Weights));
-            file.read((char*)l1Bias, sizeof(l1Bias));
-            file.read((char*)l2Weights, sizeof(l2Weights));
-            file.read((char*)l2Bias, sizeof(l2Bias));
-            file.read((char*)outputWeights, sizeof(outputWeights));
-            file.read((char*)outputBias, sizeof(outputBias));
+            file.read(reinterpret_cast<char*>(inputWeights), sizeof(inputWeights));
+            file.read(reinterpret_cast<char*>(inputBias), sizeof(inputBias));
+            file.read(reinterpret_cast<char*>(l1Weights), sizeof(l1Weights));
+            file.read(reinterpret_cast<char*>(l1Bias), sizeof(l1Bias));
+            file.read(reinterpret_cast<char*>(l2Weights), sizeof(l2Weights));
+            file.read(reinterpret_cast<char*>(l2Bias), sizeof(l2Bias));
+            file.read(reinterpret_cast<char*>(outputWeights), sizeof(outputWeights));
+            file.read(reinterpret_cast<char*>(outputBias), sizeof(outputBias));
 
             loaded = file.good();
             return loaded;
@@ -136,14 +137,14 @@ private:
             if (!file)
                 return;
 
-            file.write((char*)inputWeights, sizeof(inputWeights));
-            file.write((char*)inputBias, sizeof(inputBias));
-            file.write((char*)l1Weights, sizeof(l1Weights));
-            file.write((char*)l1Bias, sizeof(l1Bias));
-            file.write((char*)l2Weights, sizeof(l2Weights));
-            file.write((char*)l2Bias, sizeof(l2Bias));
-            file.write((char*)outputWeights, sizeof(outputWeights));
-            file.write((char*)outputBias, sizeof(outputBias));
+            file.write(reinterpret_cast<const char*>(inputWeights), sizeof(inputWeights));
+            file.write(reinterpret_cast<const char*>(inputBias), sizeof(inputBias));
+            file.write(reinterpret_cast<const char*>(l1Weights), sizeof(l1Weights));
+            file.write(reinterpret_cast<const char*>(l1Bias), sizeof(l1Bias));
+            file.write(reinterpret_cast<const char*>(l2Weights), sizeof(l2Weights));
+            file.write(reinterpret_cast<const char*>(l2Bias), sizeof(l2Bias));
+            file.write(reinterpret_cast<const char*>(outputWeights), sizeof(outputWeights));
+            file.write(reinterpret_cast<const char*>(outputBias), sizeof(outputBias));
         }
     };
 
@@ -241,7 +242,7 @@ private:
                     sum, _mm256_cvtepi16_epi32(_mm256_extracti128_si256(prod_nstm, 0)));
             }
 
-            int32_t* sum_array = (int32_t*)&sum;
+            int32_t* sum_array = reinterpret_cast<int32_t*>(&sum);
             int32_t total = 0;
             for (int k = 0; k < 8; k++) {
                 total += sum_array[k];
@@ -253,8 +254,8 @@ private:
             int32_t sum = 0;
 
             for (int j = 0; j < L1_SIZE; j++) {
-                int16_t val_stm = std::max((int16_t)0, accumulator[stm].values[j]);
-                int16_t val_nstm = std::max((int16_t)0, accumulator[nstm].values[j]);
+                int16_t val_stm = std::max(static_cast<int16_t>(0), accumulator[stm].values[j]);
+                int16_t val_nstm = std::max(static_cast<int16_t>(0), accumulator[nstm].values[j]);
 
                 sum += val_stm * network.l1Weights[i * L1_SIZE * 2 + j];
                 sum += val_nstm * network.l1Weights[i * L1_SIZE * 2 + L1_SIZE + j];

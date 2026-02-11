@@ -1,8 +1,8 @@
-#ifndef EVALUATION_ENHANCED_H
-#define EVALUATION_ENHANCED_H
+#pragma once
 
 #include "../ai/NeuralNetwork.h"
 #include "../core/ChessBoard.h"
+
 #include <memory>
 
 class EnhancedEvaluator {
@@ -69,5 +69,3 @@ int evaluateEnhancedEndgame(const Board& board);
 
 float evaluateWithNeuralNetwork(const Board& board);
 float evaluateHybrid(const Board& board, float nnWeight = 0.7f);
-
-#endif

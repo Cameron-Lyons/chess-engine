@@ -1,4 +1,5 @@
 #include "OpeningBook.h"
+
 #include <memory>
 
 std::unique_ptr<OpeningBook> g_openingBook;

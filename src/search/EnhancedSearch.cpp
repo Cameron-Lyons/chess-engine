@@ -8,6 +8,7 @@
 #include "SearchEnhancements.h"
 #include "TranspositionTableV2.h"
 #include "ValidMoves.h"
+
 #include <algorithm>
 #include <chrono>
 #include <limits>

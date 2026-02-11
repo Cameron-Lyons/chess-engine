@@ -4,6 +4,7 @@
 #include "../core/ChessBoard.h"
 #include "../search/ValidMoves.h"
 #include "Profiler.h"
+
 #include <atomic>
 #include <chrono>
 #include <future>

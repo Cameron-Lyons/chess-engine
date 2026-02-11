@@ -1,8 +1,8 @@
-#ifndef LMR_ENHANCED_H
-#define LMR_ENHANCED_H
+#pragma once
 
 #include "../core/ChessBoard.h"
 #include "search.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -188,5 +188,3 @@ inline int adjustReduction(int baseReduction, int failCount, bool improving) {
 }
 
 } // namespace LMREnhanced
-
-#endif
