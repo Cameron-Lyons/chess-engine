@@ -3,6 +3,7 @@
 #include "../utils/engine_globals.h"
 #include "AdvancedSearch.h"
 #include "LMREnhanced.h"
+
 #include <algorithm>
 #include <chrono>
 #include <future>
@@ -639,7 +640,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
         scoredMoves.push_back({move, score});
     }
 
-    std::sort(scoredMoves.begin(), scoredMoves.end());
+    std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
 
     int bestValue = standPat;
 
@@ -1446,7 +1447,7 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
     lastScore = 0;
     context.stopSearch = false;
 
-    for (int depth = 1; depth <= std::max(maxDepth, 10); depth++) {
+    for (int depth = 1; depth <= maxDepth; depth++) {
         int alpha, beta;
 
         if (depth <= 3) {
@@ -1586,6 +1587,23 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
 
         if (timeToStop) {
             break;
+        }
+    }
+
+    if (result.bestMove.first < 0) {
+        uint64_t rootHash = ComputeZobrist(board);
+        TTEntry rootEntry;
+        if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= 0) {
+            result.bestMove = rootEntry.bestMove;
+        } else {
+            GenValidMoves(board);
+            std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
+            if (!moves.empty()) {
+                std::vector<ScoredMove> scoredMoves =
+                    scoreMovesOptimized(board, moves, context.historyTable, context.killerMoves, 0);
+                std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
+                result.bestMove = scoredMoves[0].move;
+            }
         }
     }
 
@@ -1734,10 +1752,10 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
     tempBoard.squares[fromSquare].piece = Piece();
     tempBoard.updateBitboards();
 
-    ChessPieceColor currentSide = sideToMove;
+    ChessPieceColor currentSide = (sideToMove == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
+                                                                        : ChessPieceColor::WHITE;
 
     while (true) {
-
         int smallestAttacker = getSmallestAttacker(tempBoard, toSquare, currentSide);
         if (smallestAttacker == -1) {
             break;
@@ -1749,11 +1767,7 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
         tempBoard.squares[smallestAttacker].piece = Piece();
         tempBoard.updateBitboards();
 
-        if (currentSide == sideToMove) {
-            score = currentAttacker.PieceValue - score;
-        } else {
-            score = currentAttacker.PieceValue - score;
-        }
+        score = currentAttacker.PieceValue - score;
 
         currentSide = (currentSide == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                               : ChessPieceColor::WHITE;
@@ -1791,18 +1805,6 @@ bool isGoodCapture(const Board& board, int fromSquare, int toSquare) {
 bool isCaptureProfitable(const Board& board, int fromSquare, int toSquare, int threshold) {
     int see = staticExchangeEvaluation(board, fromSquare, toSquare);
     return see >= threshold;
-}
-
-bool isDiscoveredCheck(const Board& board, int from, int to);
-bool isPromotion(const Board& board, int from, int to);
-bool isCastling(const Board& board, int from, int to);
-int staticExchangeEval(const Board& board, int fromSquare, int toSquare);
-
-bool isDiscoveredCheck(const Board& board, int from, int) {
-
-    ChessPieceType movingPiece = board.squares[from].piece.PieceType;
-    return (movingPiece != ChessPieceType::QUEEN && movingPiece != ChessPieceType::ROOK &&
-            movingPiece != ChessPieceType::BISHOP);
 }
 
 bool isPromotion(const Board& board, int from, int to) {

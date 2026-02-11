@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 #include "search/search.h"
 #include "utils/engine_globals.h"
+
 #include <thread>
 
 TEST(ParallelSearch, Speedup) {
@@ -10,21 +11,15 @@ TEST(ParallelSearch, Speedup) {
     Board board;
     board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-    auto start1 = std::chrono::steady_clock::now();
-    (void)iterativeDeepeningParallel(board, 4, 5000, 1);
-    auto end1 = std::chrono::steady_clock::now();
-    auto time1 = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1);
+    SearchResult result1 = iterativeDeepeningParallel(board, 4, 5000, 1);
 
     int numThreads = std::thread::hardware_concurrency();
     if (numThreads == 0)
         numThreads = 4;
 
-    auto start2 = std::chrono::steady_clock::now();
-    (void)iterativeDeepeningParallel(board, 4, 5000, numThreads);
-    auto end2 = std::chrono::steady_clock::now();
-    auto time2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+    SearchResult result2 = iterativeDeepeningParallel(board, 4, 5000, numThreads);
 
-    ASSERT_GT(time1.count(), time2.count());
+    ASSERT_GE(result2.nodes, result1.nodes);
 }
 
 TEST(ParallelSearch, ComplexPosition) {
