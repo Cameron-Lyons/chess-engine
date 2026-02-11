@@ -1,6 +1,7 @@
 #include "LazySMP.h"
 #include "../evaluation/Evaluation.h"
 #include "AdvancedSearch.h"
+
 #include <algorithm>
 #include <iostream>
 #include <random>

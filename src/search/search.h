@@ -1,10 +1,10 @@
-#ifndef SEARCH_H
-#define SEARCH_H
+#pragma once
 
 #include "../core/ChessBoard.h"
 #include "../evaluation/Evaluation.h"
 #include "TranspositionTableV2.h"
 #include "ValidMoves.h"
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -270,7 +270,6 @@ bool isCaptureProfitable(const Board& board, int fromSquare, int toSquare, int t
 int getSmallestAttacker(const Board& board, int targetSquare, ChessPieceColor color);
 
 bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos);
-bool isDiscoveredCheck(const Board& board, int from, int to);
 bool isPromotion(const Board& board, int from, int to);
 bool isCastling(const Board& board, int from, int to);
 std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
@@ -357,5 +356,3 @@ int getHistoryScore(const ThreadSafeHistory& history, int fromSquare, int toSqua
 int getKillerScore(const KillerMoves& killers, int ply, int fromSquare, int toSquare);
 int getPositionalScore(const Board& board, int fromSquare, int toSquare);
 } // namespace EnhancedMoveOrdering
-
-#endif

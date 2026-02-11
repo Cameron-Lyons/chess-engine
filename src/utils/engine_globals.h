@@ -1,8 +1,8 @@
-#ifndef ENGINE_GLOBALS_H
-#define ENGINE_GLOBALS_H
+#pragma once
 
 #include "../core/ChessBoard.h"
 #include "../search/search.h"
+
 #include <cstdint>
 #include <map>
 #include <string>
@@ -21,5 +21,3 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                         int& destRow);
 
 ChessPieceType getPromotionPiece(std::string_view move);
-
-#endif

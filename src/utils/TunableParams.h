@@ -1,5 +1,4 @@
-#ifndef TUNABLE_PARAMS_H
-#define TUNABLE_PARAMS_H
+#pragma once
 
 #include <functional>
 #include <string>
@@ -80,5 +79,3 @@ TUNABLE(RAZORING_MARGIN, 300, 200, 500, 20);
 TUNABLE(DELTA_MARGIN, 200, 100, 400, 20);
 TUNABLE(HISTORY_GRAVITY, 16384, 8192, 32768, 1024);
 TUNABLE(IIR_DEPTH, 4, 3, 6, 1);
-
-#endif

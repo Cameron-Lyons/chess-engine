@@ -1,7 +1,7 @@
-#ifndef MOVE_CONTENT_H
-#define MOVE_CONTENT_H
+#pragma once
 
 #include "ChessPiece.h"
+
 #include <string>
 
 enum class MoveType { NORMAL, CASTLE_KING, CASTLE_QUEEN, EN_PASSANT, PROMOTION };
@@ -178,5 +178,3 @@ std::string PortableGameNotation() {
     }
     return pgn;
 }
-
-#endif

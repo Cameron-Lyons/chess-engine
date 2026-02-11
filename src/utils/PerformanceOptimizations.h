@@ -1,8 +1,8 @@
-#ifndef PERFORMANCE_OPTIMIZATIONS_H
-#define PERFORMANCE_OPTIMIZATIONS_H
+#pragma once
 
 #include "../core/ChessBoard.h"
 #include "../search/search.h"
+
 #include <array>
 #include <vector>
 #ifdef __x86_64__
@@ -222,5 +222,3 @@ constexpr uint64_t generateMoves() {
     return FromBB & ToBB;
 }
 } // namespace CompileTimeOptimizations
-
-#endif

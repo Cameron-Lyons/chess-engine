@@ -1,5 +1,6 @@
 #include "EndgameTablebase.h"
 #include "SyzygyTablebase.h"
+
 #include <cctype>
 #include <iostream>
 #include <unordered_map>

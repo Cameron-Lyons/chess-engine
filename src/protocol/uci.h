@@ -1,11 +1,11 @@
-#ifndef UCI_H
-#define UCI_H
+#pragma once
 
 #include "../ai/EndgameTablebase.h"
 #include "../ai/NeuralNetwork.h"
 #include "../core/ChessBoard.h"
 #include "../search/AdvancedSearch.h"
 #include "../search/search.h"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -144,5 +144,3 @@ public:
 
     static std::string formatNPS(int nodes, int timeMs);
 };
-
-#endif

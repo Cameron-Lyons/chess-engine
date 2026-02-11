@@ -1,8 +1,8 @@
-#ifndef LAZY_SMP_H
-#define LAZY_SMP_H
+#pragma once
 
 #include "../core/ChessBoard.h"
 #include "search.h"
+
 #include <atomic>
 #include <condition_variable>
 #include <memory>
@@ -97,5 +97,3 @@ public:
     int getElapsedTime() const;
     int getRemainingTime() const;
 };
-
-#endif

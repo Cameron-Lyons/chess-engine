@@ -1,4 +1,5 @@
 #include "MagicBitboards.h"
+
 #include <algorithm>
 #include <random>
 

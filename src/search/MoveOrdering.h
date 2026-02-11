@@ -3,6 +3,7 @@
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
 #include "../core/MoveContent.h"
+
 #include <algorithm>
 #include <cstring>
 #include <vector>

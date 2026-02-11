@@ -3,6 +3,7 @@
 #include "../search/ValidMoves.h"
 #include "../search/search.h"
 #include "Evaluation.h"
+
 #include <algorithm>
 #include <iostream>
 #include <sstream>

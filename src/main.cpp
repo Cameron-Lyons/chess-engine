@@ -13,6 +13,7 @@
 #include "search/ValidMoves.h"
 #include "search/search.h"
 #include "utils/engine_globals.h"
+
 #include <chrono>
 #include <iostream>
 #include <string>
@@ -39,8 +40,8 @@ bool parseMove(std::string_view move, int& srcCol, int& srcRow, int& destCol, in
     srcRow = move[1] - '1';
     destCol = move[2] - 'a';
     destRow = move[3] - '1';
-    bool valid = srcCol >= 0 && srcCol < 8 && srcRow >= 0 && srcRow < 8 && destCol >= 0 &&
-                 destCol < 8 && destRow >= 0 && destRow < 8;
+    bool valid = srcCol >= 0 && srcCol < BOARD_SIZE && srcRow >= 0 && srcRow < BOARD_SIZE &&
+                 destCol >= 0 && destCol < BOARD_SIZE && destRow >= 0 && destRow < BOARD_SIZE;
     return valid;
 }
 
@@ -48,8 +49,8 @@ void printBoard(const Board& board) {
     std::cout << "  a b c d e f g h\n";
     for (int row = 7; row >= 0; --row) {
         std::cout << (row + 1) << " ";
-        for (int col = 0; col < 8; ++col) {
-            int pos = row * 8 + col;
+        for (int col = 0; col < BOARD_SIZE; ++col) {
+            int pos = row * BOARD_SIZE + col;
             const Piece& piece = board.squares[pos].piece;
             if (piece.PieceType == ChessPieceType::NONE) {
                 std::cout << ". ";
@@ -97,7 +98,7 @@ int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
     int baseTime = totalTimeMs / std::max(1, 40 - movesPlayed);
 
     int totalMaterial = 0;
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < NUM_SQUARES; i++) {
         if (board.squares[i].piece.PieceType != ChessPieceType::NONE) {
             totalMaterial += board.squares[i].piece.PieceValue;
         }
@@ -127,7 +128,7 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
         std::cout << "Using opening book move: " << bookMove << "\n";
         int srcCol, srcRow, destCol, destRow;
         if (parseAlgebraicMove(bookMove, board, srcCol, srcRow, destCol, destRow)) {
-            return {srcCol + srcRow * 8, destCol + destRow * 8};
+            return {srcCol + srcRow * BOARD_SIZE, destCol + destRow * BOARD_SIZE};
         }
     }
 
@@ -175,7 +176,7 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
         searchDepth += 1;
 
     bool hasHangingPieces = false;
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < NUM_SQUARES; i++) {
         const Piece& piece = board.squares[i].piece;
         if (piece.PieceType == ChessPieceType::NONE || piece.PieceType == ChessPieceType::PAWN)
             continue;
@@ -183,7 +184,7 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
         ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE)
                                          ? ChessPieceColor::BLACK
                                          : ChessPieceColor::WHITE;
-        for (int j = 0; j < 64; j++) {
+        for (int j = 0; j < NUM_SQUARES; j++) {
             const Piece& enemy = board.squares[j].piece;
             if (enemy.PieceColor == enemyColor && canPieceAttackSquare(board, j, i)) {
                 hasHangingPieces = true;
@@ -207,10 +208,10 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
 }
 
 std::string positionToNotation(int pos) {
-    if (pos < 0 || pos >= 64)
+    if (pos < 0 || pos >= NUM_SQUARES)
         return "??";
-    int row = pos / 8;
-    int col = pos % 8;
+    int row = pos / BOARD_SIZE;
+    int col = pos % BOARD_SIZE;
     return std::string(1, 'a' + col) + std::to_string(row + 1);
 }
 
@@ -276,7 +277,7 @@ GameState checkGameState(Board& board) {
     }
 
     std::vector<ChessPieceType> whitePieces, blackPieces;
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < NUM_SQUARES; i++) {
         const Piece& piece = board.squares[i].piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
@@ -580,10 +581,10 @@ int main(int argc, char* argv[]) {
             if (computerMove.first != -1 && computerMove.second != -1) {
                 int from = computerMove.first;
                 int to = computerMove.second;
-                int srcCol = from % 8;
-                int srcRow = from / 8;
-                int destCol = to % 8;
-                int destRow = to / 8;
+                int srcCol = from % BOARD_SIZE;
+                int srcRow = from / BOARD_SIZE;
+                int destCol = to % BOARD_SIZE;
+                int destRow = to / BOARD_SIZE;
 
                 ChessPieceType computerPromotionPiece = ChessPieceType::QUEEN;
                 const Piece& movingPiece = ChessBoard.squares[from].piece;

@@ -2,6 +2,7 @@
 #include "../core/BitboardMoves.h"
 #include "../evaluation/Evaluation.h"
 #include "../utils/engine_globals.h"
+
 #include <algorithm>
 #include <cmath>
 #include <fstream>

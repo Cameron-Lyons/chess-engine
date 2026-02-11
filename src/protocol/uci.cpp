@@ -6,6 +6,7 @@
 #include "../search/search.h"
 #include "../utils/TunableParams.h"
 #include "../utils/engine_globals.h"
+
 #include <chrono>
 #include <future>
 #include <iostream>
@@ -261,7 +262,7 @@ void UCIEngine::handleGo(const std::string& command) {
     iss >> word;
 
     int wtime = -1, btime = -1, winc = 0, binc = 0;
-    int movestogo = -1, searchDepth = 8, movetime = -1;
+    int movestogo = -1, searchDepth = 64, movetime = -1;
     bool isPonder = false;
     bool isInfinite = false;
 

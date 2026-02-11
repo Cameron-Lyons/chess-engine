@@ -1,9 +1,9 @@
-#ifndef BITBOARD_MOVES_H
-#define BITBOARD_MOVES_H
+#pragma once
 
 #include "Bitboard.h"
 #include "ChessPiece.h"
 #include "MagicBitboards.h"
+
 #include <array>
 
 extern std::array<Bitboard, 64> KnightAttacks;
@@ -29,5 +29,3 @@ Bitboard pawnCaptures(Bitboard pawns, Bitboard enemyPieces, ChessPieceColor colo
 Bitboard rookMoves(Bitboard rooks, Bitboard ownPieces, Bitboard occupancy);
 Bitboard bishopMoves(Bitboard bishops, Bitboard ownPieces, Bitboard occupancy);
 Bitboard queenMoves(Bitboard queens, Bitboard ownPieces, Bitboard occupancy);
-
-#endif

@@ -1,4 +1,5 @@
 #include "NNUEOptimized.h"
+
 #include <algorithm>
 #include <cpuid.h>
 #include <cstring>

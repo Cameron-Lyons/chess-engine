@@ -1,7 +1,7 @@
-#ifndef PIECE_MOVES_H
-#define PIECE_MOVES_H
+#pragma once
 
 #include "../core/ChessPiece.h"
+
 #include <string>
 #include <vector>
 
@@ -55,5 +55,3 @@ struct {
     int queenTotalMoves8[64] = {};
     PieceMoveSet kingMoves;
 } MoveArrays;
-
-#endif

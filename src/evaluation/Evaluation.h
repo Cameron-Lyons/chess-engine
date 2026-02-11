@@ -1,9 +1,9 @@
-#ifndef EVALUATION_H
-#define EVALUATION_H
+#pragma once
 
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
 #include "NNUE.h"
+
 #include <cstring>
 
 const int KING_SAFETY_PAWN_SHIELD_BONUS = 10;
@@ -92,5 +92,3 @@ uint64_t computePawnHash(const Board& board);
 bool isNNUEEnabled();
 void setNNUEEnabled(bool enabled);
 int evaluatePositionNNUE(const Board& board);
-
-#endif

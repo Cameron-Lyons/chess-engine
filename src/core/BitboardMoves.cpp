@@ -1,4 +1,5 @@
 #include "BitboardMoves.h"
+
 #include <iostream>
 
 std::array<Bitboard, 64> KnightAttacks;

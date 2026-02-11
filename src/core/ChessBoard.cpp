@@ -1,4 +1,5 @@
 #include "ChessBoard.h"
+
 #include <algorithm>
 
 void Board::clearBitboards() {
@@ -9,7 +10,7 @@ void Board::clearBitboards() {
 
 void Board::updateBitboards() {
     clearBitboards();
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < NUM_SQUARES; i++) {
         const Piece& piece = squares[i].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
@@ -109,7 +110,7 @@ Bitboard Board::getPieceBitboard(ChessPieceType type, ChessPieceColor color) con
 }
 
 bool Board::movePiece(int from, int to) {
-    if (from < 0 || from >= 64 || to < 0 || to >= 64)
+    if (from < 0 || from >= NUM_SQUARES || to < 0 || to >= NUM_SQUARES)
         return false;
 
     Piece& fromPiece = squares[from].piece;
@@ -273,7 +274,7 @@ bool Board::movePiece(int from, int to) {
 }
 
 ChessError Board::validateMove(int from, int to) const {
-    if (from < 0 || from >= 64 || to < 0 || to >= 64) {
+    if (from < 0 || from >= NUM_SQUARES || to < 0 || to >= NUM_SQUARES) {
         return ChessError::InvalidPosition;
     }
 
@@ -299,8 +300,8 @@ std::string Board::toFEN() const {
 
     for (int row = 7; row >= 0; --row) {
         int emptyCount = 0;
-        for (int col = 0; col < 8; ++col) {
-            int pos = row * 8 + col;
+        for (int col = 0; col < BOARD_SIZE; ++col) {
+            int pos = row * BOARD_SIZE + col;
             const Piece& piece = squares[pos].piece;
 
             if (piece.PieceType == ChessPieceType::NONE) {
@@ -378,7 +379,7 @@ bool Board::fromFEN(ChessString fen) {
 }
 
 void Board::InitializeFromFEN(ChessString fen) {
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < NUM_SQUARES; i++) {
         squares[i] = Square(i);
         squares[i].piece = Piece();
     }
@@ -424,11 +425,11 @@ void Board::InitializeFromFEN(ChessString fen) {
             else
                 color = ChessPieceColor::BLACK;
 
-            if (type != ChessPieceType::NONE && fenRank >= 0 && fenRank < 8 && file >= 0 &&
-                file < 8) {
+            if (type != ChessPieceType::NONE && fenRank >= 0 && fenRank < BOARD_SIZE && file >= 0 &&
+                file < BOARD_SIZE) {
                 int boardRow = fenRank;
-                int idx = boardRow * 8 + file;
-                if (idx >= 0 && idx < 64) {
+                int idx = boardRow * BOARD_SIZE + file;
+                if (idx >= 0 && idx < NUM_SQUARES) {
                     squares[idx].piece = Piece(color, type);
                 }
             }

@@ -1,7 +1,7 @@
-#ifndef NEURAL_NETWORK_H
-#define NEURAL_NETWORK_H
+#pragma once
 
 #include "../core/ChessBoard.h"
+
 #include <array>
 #include <memory>
 #include <random>
@@ -165,5 +165,3 @@ private:
                    bool takeFirst) -> std::vector<std::pair<Board, float>>;
     auto calculateLoss(const std::vector<std::pair<Board, float>>& data) -> float;
 };
-
-#endif

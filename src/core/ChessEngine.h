@@ -1,6 +1,9 @@
+#pragma once
+
 #include "core/ChessBoard.h"
 #include "core/ChessPiece.h"
 #include "search/ValidMoves.h"
+
 #include <iostream>
 #include <stack>
 #include <string>

@@ -1,8 +1,8 @@
-#ifndef SEARCH_IMPROVEMENTS_H
-#define SEARCH_IMPROVEMENTS_H
+#pragma once
 
 #include "../core/ChessBoard.h"
 #include "search.h"
+
 #include <atomic>
 #include <chrono>
 #include <future>
@@ -159,5 +159,3 @@ int getCombinedScore(const Board& board, const std::pair<int, int>& move,
                      const ThreadSafeHistory& history, const KillerMoves& killers, int ply,
                      const std::pair<int, int>& hashMove);
 } // namespace EnhancedMoveOrdering
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef BITBOARD_H
-#define BITBOARD_H
+#pragma once
 
 #include <cstdint>
 
@@ -7,6 +6,9 @@ using Bitboard = uint64_t;
 
 constexpr Bitboard EMPTY = 0ULL;
 constexpr Bitboard FULL = ~0ULL;
+
+constexpr int BOARD_SIZE = 8;
+constexpr int NUM_SQUARES = 64;
 
 inline int popcount(Bitboard b) {
 #if defined(__GNUC__) || defined(__clang__)
@@ -62,5 +64,3 @@ inline void clear_bit(Bitboard& b, int sq) {
 inline bool get_bit(Bitboard b, int sq) {
     return (b >> sq) & 1ULL;
 }
-
-#endif
