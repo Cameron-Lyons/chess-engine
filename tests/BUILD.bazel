@@ -4,6 +4,7 @@ load("@rules_cc//cc:defs.bzl", "cc_test")
     cc_test(
         name = test_name,
         srcs = [test_name + ".cpp"],
+        copts = ["-Werror", "-Wno-sign-compare"],
         deps = [
             "//:engine_lib",
             "@googletest//:gtest_main",
@@ -29,6 +30,7 @@ cc_test(
     name = "gtest_perft",
     srcs = ["gtest_perft.cpp"],
     size = "enormous",
+    copts = ["-Werror", "-Wno-sign-compare"],
     deps = [
         "//:engine_lib",
         "@googletest//:gtest_main",

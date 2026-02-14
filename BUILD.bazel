@@ -26,6 +26,7 @@ cc_library(
         "src/search/search.cpp",
         "src/utils/engine_globals.cpp",
     ],
+    copts = ["-Werror"],
     hdrs = glob(["src/**/*.h"]),
     includes = ["src", "src/core"],
     linkopts = ["-lpthread"],
@@ -34,6 +35,7 @@ cc_library(
 
 cc_binary(
     name = "chess_engine",
+    copts = ["-Werror"],
     srcs = ["src/main.cpp"],
     deps = [":engine_lib"],
 )

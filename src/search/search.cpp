@@ -8,6 +8,7 @@
 #include <chrono>
 #include <future>
 #include <random>
+#include <ranges>
 #include <thread>
 
 void ThreadSafeTT::insert(uint64_t hash, const TTEntry& entry) {
@@ -286,28 +287,32 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
     return scoredMoves;
 }
 
-MovePicker::MovePicker(Board& b, std::pair<int, int> hm, const KillerMoves& km,
-                       int p, const ThreadSafeHistory& h, ParallelSearchContext& ctx)
+MovePicker::MovePicker(Board& b, std::pair<int, int> hm, const KillerMoves& km, int p,
+                       const ThreadSafeHistory& h, ParallelSearchContext& ctx)
     : board(b), hashMove(hm), killerMoves(km), ply(p), history(h), context(ctx),
       stage(MovePickerStage::HASH_MOVE) {}
 
 void MovePicker::generateAndPartitionMoves() {
-    if (movesGenerated) return;
+    if (movesGenerated)
+        return;
     movesGenerated = true;
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
 
     for (const auto& move : moves) {
-        if (move == hashMove) continue;
-        if (killerMoves.isKiller(ply, move)) continue;
+        if (move == hashMove)
+            continue;
+        if (killerMoves.isKiller(ply, move))
+            continue;
 
         int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
         int prevDest = board.LastMove;
         std::pair<int, int> cm = {-1, -1};
         if (prevDest >= 0 && prevDest < 64)
             cm = context.counterMoves[colorIdx][prevDest];
-        if (cm.first >= 0 && move == cm) continue;
+        if (cm.first >= 0 && move == cm)
+            continue;
 
         bool isCap = isCapture(board, move.first, move.second);
         int movingPieceIdx = pieceTypeIndex(board.squares[move.first].piece.PieceType);
@@ -332,98 +337,98 @@ void MovePicker::generateAndPartitionMoves() {
         }
     }
 
-    std::sort(goodCaptures.begin(), goodCaptures.end(), std::greater<ScoredMove>());
-    std::sort(quietMoves.begin(), quietMoves.end(), std::greater<ScoredMove>());
-    std::sort(badCaptures.begin(), badCaptures.end(), std::greater<ScoredMove>());
+    std::ranges::sort(goodCaptures, std::greater<ScoredMove>());
+    std::ranges::sort(quietMoves, std::greater<ScoredMove>());
+    std::ranges::sort(badCaptures, std::greater<ScoredMove>());
 }
 
 std::pair<int, int> MovePicker::next() {
     while (true) {
         switch (stage) {
-        case MovePickerStage::HASH_MOVE:
-            stage = MovePickerStage::GEN_CAPTURES;
-            if (hashMove.first >= 0 && hashMove.second >= 0) {
-                returned.push_back(hashMove);
-                return hashMove;
-            }
-            break;
+            case MovePickerStage::HASH_MOVE:
+                stage = MovePickerStage::GEN_CAPTURES;
+                if (hashMove.first >= 0 && hashMove.second >= 0) {
+                    returned.push_back(hashMove);
+                    return hashMove;
+                }
+                break;
 
-        case MovePickerStage::GEN_CAPTURES:
-            generateAndPartitionMoves();
-            captureIdx = 0;
-            stage = MovePickerStage::GOOD_CAPTURES;
-            break;
+            case MovePickerStage::GEN_CAPTURES:
+                generateAndPartitionMoves();
+                captureIdx = 0;
+                stage = MovePickerStage::GOOD_CAPTURES;
+                break;
 
-        case MovePickerStage::GOOD_CAPTURES:
-            if (captureIdx < goodCaptures.size()) {
-                auto m = goodCaptures[captureIdx++].move;
-                if (!alreadyReturned(m)) {
-                    returned.push_back(m);
-                    return m;
+            case MovePickerStage::GOOD_CAPTURES:
+                if (captureIdx < goodCaptures.size()) {
+                    auto m = goodCaptures[captureIdx++].move;
+                    if (!alreadyReturned(m)) {
+                        returned.push_back(m);
+                        return m;
+                    }
+                    break;
+                }
+                stage = MovePickerStage::KILLERS;
+                break;
+
+            case MovePickerStage::KILLERS:
+                stage = MovePickerStage::COUNTERMOVE;
+                for (int i = 0; i < KillerMoves::MAX_KILLER_MOVES; ++i) {
+                    auto k = killerMoves.killers[ply][i];
+                    if (k.first >= 0 && !alreadyReturned(k)) {
+                        returned.push_back(k);
+                        stage = MovePickerStage::KILLERS;
+                        return k;
+                    }
+                }
+                break;
+
+            case MovePickerStage::COUNTERMOVE: {
+                stage = MovePickerStage::GEN_QUIETS;
+                int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
+                int prevDest = board.LastMove;
+                if (prevDest >= 0 && prevDest < 64) {
+                    auto cm = context.counterMoves[colorIdx][prevDest];
+                    if (cm.first >= 0 && !alreadyReturned(cm)) {
+                        returned.push_back(cm);
+                        return cm;
+                    }
                 }
                 break;
             }
-            stage = MovePickerStage::KILLERS;
-            break;
 
-        case MovePickerStage::KILLERS:
-            stage = MovePickerStage::COUNTERMOVE;
-            for (int i = 0; i < KillerMoves::MAX_KILLER_MOVES; ++i) {
-                auto k = killerMoves.killers[ply][i];
-                if (k.first >= 0 && !alreadyReturned(k)) {
-                    returned.push_back(k);
-                    stage = MovePickerStage::KILLERS;
-                    return k;
-                }
-            }
-            break;
-
-        case MovePickerStage::COUNTERMOVE: {
-            stage = MovePickerStage::GEN_QUIETS;
-            int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
-            int prevDest = board.LastMove;
-            if (prevDest >= 0 && prevDest < 64) {
-                auto cm = context.counterMoves[colorIdx][prevDest];
-                if (cm.first >= 0 && !alreadyReturned(cm)) {
-                    returned.push_back(cm);
-                    return cm;
-                }
-            }
-            break;
-        }
-
-        case MovePickerStage::GEN_QUIETS:
-            quietIdx = 0;
-            stage = MovePickerStage::QUIETS;
-            break;
-
-        case MovePickerStage::QUIETS:
-            if (quietIdx < quietMoves.size()) {
-                auto m = quietMoves[quietIdx++].move;
-                if (!alreadyReturned(m)) {
-                    returned.push_back(m);
-                    return m;
-                }
+            case MovePickerStage::GEN_QUIETS:
+                quietIdx = 0;
+                stage = MovePickerStage::QUIETS;
                 break;
-            }
-            badCaptureIdx = 0;
-            stage = MovePickerStage::BAD_CAPTURES;
-            break;
 
-        case MovePickerStage::BAD_CAPTURES:
-            if (badCaptureIdx < badCaptures.size()) {
-                auto m = badCaptures[badCaptureIdx++].move;
-                if (!alreadyReturned(m)) {
-                    returned.push_back(m);
-                    return m;
+            case MovePickerStage::QUIETS:
+                if (quietIdx < quietMoves.size()) {
+                    auto m = quietMoves[quietIdx++].move;
+                    if (!alreadyReturned(m)) {
+                        returned.push_back(m);
+                        return m;
+                    }
+                    break;
                 }
+                badCaptureIdx = 0;
+                stage = MovePickerStage::BAD_CAPTURES;
                 break;
-            }
-            stage = MovePickerStage::DONE;
-            break;
 
-        case MovePickerStage::DONE:
-            return {-1, -1};
+            case MovePickerStage::BAD_CAPTURES:
+                if (badCaptureIdx < badCaptures.size()) {
+                    auto m = badCaptures[badCaptureIdx++].move;
+                    if (!alreadyReturned(m)) {
+                        returned.push_back(m);
+                        return m;
+                    }
+                    break;
+                }
+                stage = MovePickerStage::DONE;
+                break;
+
+            case MovePickerStage::DONE:
+                return {-1, -1};
         }
     }
 }
@@ -537,8 +542,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
     bool inCheck = isInCheck(board, currentColor);
 
     GenValidMoves(board);
-    std::vector<std::pair<int, int>> moves =
-        GetAllMoves(board, currentColor);
+    std::vector<std::pair<int, int>> moves = GetAllMoves(board, currentColor);
 
     if (moves.empty()) {
         if (inCheck) {
@@ -640,7 +644,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
         scoredMoves.push_back({move, score});
     }
 
-    std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
+    std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
 
     int bestValue = standPat;
 
@@ -733,7 +737,8 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             }
             if (tbBound == 0 || (tbBound == 1 && tbScore >= beta) ||
                 (tbBound == -1 && tbScore <= alpha)) {
-                context.transTable.insert(zobristKey, TTEntry(depth, tbScore, tbBound, {-1, -1}, zobristKey));
+                context.transTable.insert(zobristKey,
+                                          TTEntry(depth, tbScore, tbBound, {-1, -1}, zobristKey));
                 return tbScore;
             }
         }
@@ -749,10 +754,17 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     for (int sq = 0; sq < 64; ++sq) {
         switch (board.squares[sq].piece.PieceType) {
             case ChessPieceType::KNIGHT:
-            case ChessPieceType::BISHOP: gamePhase += 1; break;
-            case ChessPieceType::ROOK:   gamePhase += 2; break;
-            case ChessPieceType::QUEEN:  gamePhase += 4; break;
-            default: break;
+            case ChessPieceType::BISHOP:
+                gamePhase += 1;
+                break;
+            case ChessPieceType::ROOK:
+                gamePhase += 2;
+                break;
+            case ChessPieceType::QUEEN:
+                gamePhase += 4;
+                break;
+            default:
+                break;
         }
     }
 
@@ -801,9 +813,13 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         if (ply == 0) {
             bool excluded = false;
             for (const auto& ex : context.excludedRootMoves) {
-                if (ex == move) { excluded = true; break; }
+                if (ex == move) {
+                    excluded = true;
+                    break;
+                }
             }
-            if (excluded) continue;
+            if (excluded)
+                continue;
         }
 
         bool isCaptureMove = isCapture(board, move.first, move.second);
@@ -820,7 +836,8 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                 continue;
             }
 
-            if (AdvancedSearch::lateMovePruning(board, depth, movesSearched, isInCheck(board, board.turn))) {
+            if (AdvancedSearch::lateMovePruning(board, depth, movesSearched,
+                                                isInCheck(board, board.turn))) {
                 continue;
             }
         }
@@ -850,8 +867,9 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             int seMargin = 2 * depth;
             int seBeta = ttEntry.value - seMargin;
             Board seBoard = board;
-            int seVal = PrincipalVariationSearch(seBoard, depth / 2, seBeta - 1, seBeta,
-                                                 maximizingPlayer, ply + 1, historyTable, context, false);
+            int seVal =
+                PrincipalVariationSearch(seBoard, depth / 2, seBeta - 1, seBeta, maximizingPlayer,
+                                         ply + 1, historyTable, context, false);
             if (seVal < seBeta) {
                 extension = 1;
             } else if (seVal >= beta) {
@@ -1035,7 +1053,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             } else if (wdl == Syzygy::PROBE_LOSS || wdl == Syzygy::PROBE_BLESSED_LOSS) {
                 tbScore = -9000 + ply;
             }
-            if (!maximizingPlayer) tbScore = -tbScore;
+            if (!maximizingPlayer)
+                tbScore = -tbScore;
             context.transTable.insert(hash, TTEntry(depth, tbScore, 0, {-1, -1}, hash));
             return tbScore;
         }
@@ -1065,8 +1084,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         return drawScore;
     }
 
-    if (depth >= 3 && depth <= 10 && ply < 30 &&
-        !isInCheck(board, currentColor)) {
+    if (depth >= 3 && depth <= 10 && ply < 30 && !isInCheck(board, currentColor)) {
         Board nullBoard = board;
         nullBoard.turn = (nullBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                     : ChessPieceColor::WHITE;
@@ -1120,9 +1138,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     if (abPrevDest >= 0 && abPrevDest < 64) {
         abCounterMove = context.counterMoves[abColorIdx][abPrevDest];
     }
-    std::vector<ScoredMove> scoredMoves =
-        scoreMovesOptimized(board, moves, historyTable, context.killerMoves, ply, hashMove, abCounterMove);
-    std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
+    std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
+        board, moves, historyTable, context.killerMoves, ply, hashMove, abCounterMove);
+    std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
     int origAlpha = alpha;
     int bestValue = maximizingPlayer ? -10000 : 10000;
     int flag = 0;
@@ -1222,8 +1240,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                             eval = reducedEval;
                         }
                     } else {
-                        eval = AlphaBetaSearch(newBoard, depth - 1, alpha, alpha + 1, false, ply + 1,
-                                               historyTable, context);
+                        eval = AlphaBetaSearch(newBoard, depth - 1, alpha, alpha + 1, false,
+                                               ply + 1, historyTable, context);
 
                         if (eval > alpha && eval < beta) {
                             eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1,
@@ -1407,9 +1425,9 @@ std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color
     return generateBitboardMoves(board, color);
 }
 
-SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs,
-                                        int numThreads, int contempt, int multiPV,
-                                        int optimalTimeMs, int maxTimeMs) {
+SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs, int numThreads,
+                                        int contempt, int multiPV, int optimalTimeMs,
+                                        int maxTimeMs) {
     SearchResult result;
     ParallelSearchContext context(numThreads);
     context.startTime = std::chrono::steady_clock::now();
@@ -1444,173 +1462,168 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
 
     for (int pvIdx = 0; pvIdx < context.multiPV; ++pvIdx) {
 
-    lastScore = 0;
-    context.stopSearch = false;
+        lastScore = 0;
+        context.stopSearch = false;
 
-    for (int depth = 1; depth <= maxDepth; depth++) {
-        int alpha, beta;
+        for (int depth = 1; depth <= maxDepth; depth++) {
+            int alpha, beta;
 
-        if (depth <= 3) {
+            if (depth <= 3) {
 
-            alpha = -10000;
-            beta = 10000;
-        } else {
+                alpha = -10000;
+                beta = 10000;
+            } else {
 
-            alpha = lastScore - ASPIRATION_WINDOW;
-            beta = lastScore + ASPIRATION_WINDOW;
-        }
+                alpha = lastScore - ASPIRATION_WINDOW;
+                beta = lastScore + ASPIRATION_WINDOW;
+            }
 
-        int searchScore;
-        bool failedHigh = false, failedLow = false;
-        int searchAttempts = 0;
-        const int MAX_SEARCH_ATTEMPTS = 4;
+            int searchScore;
+            bool failedHigh = false, failedLow = false;
+            int searchAttempts = 0;
+            const int MAX_SEARCH_ATTEMPTS = 4;
 
-        do {
-            searchScore =
-                PrincipalVariationSearch(board, depth, alpha, beta,
-                                         board.turn == ChessPieceColor::WHITE, 0,
-                                         context.historyTable, context, true);
-            searchAttempts++;
+            do {
+                searchScore = PrincipalVariationSearch(board, depth, alpha, beta,
+                                                       board.turn == ChessPieceColor::WHITE, 0,
+                                                       context.historyTable, context, true);
+                searchAttempts++;
+
+                if (context.stopSearch.load()) {
+                    break;
+                }
+
+                if (searchScore <= alpha) {
+
+                    alpha = alpha - ASPIRATION_WINDOW * (1 << searchAttempts);
+                    failedLow = true;
+                    if (alpha < -10000)
+                        alpha = -10000;
+                } else if (searchScore >= beta) {
+
+                    beta = beta + ASPIRATION_WINDOW * (1 << searchAttempts);
+                    failedHigh = true;
+                    if (beta > 10000)
+                        beta = 10000;
+                } else {
+
+                    break;
+                }
+
+                if (searchAttempts >= MAX_SEARCH_ATTEMPTS) {
+
+                    alpha = -10000;
+                    beta = 10000;
+                }
+
+            } while ((failedHigh || failedLow) && searchAttempts < MAX_SEARCH_ATTEMPTS &&
+                     !context.stopSearch.load());
 
             if (context.stopSearch.load()) {
                 break;
             }
 
-            if (searchScore <= alpha) {
+            lastScore = searchScore;
+            result.score = searchScore;
+            result.depth = depth;
+            result.nodes = context.nodeCount.load();
 
-                alpha = alpha - ASPIRATION_WINDOW * (1 << searchAttempts);
-                failedLow = true;
-                if (alpha < -10000)
-                    alpha = -10000;
-            } else if (searchScore >= beta) {
-
-                beta = beta + ASPIRATION_WINDOW * (1 << searchAttempts);
-                failedHigh = true;
-                if (beta > 10000)
-                    beta = 10000;
+            uint64_t rootHash = ComputeZobrist(board);
+            TTEntry rootEntry;
+            if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= 0) {
+                result.bestMove = rootEntry.bestMove;
             } else {
-
-                break;
+                GenValidMoves(board);
+                std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
+                if (!moves.empty()) {
+                    std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
+                        board, moves, context.historyTable, context.killerMoves, 0);
+                    std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
+                    result.bestMove = scoredMoves[0].move;
+                }
             }
 
-            if (searchAttempts >= MAX_SEARCH_ATTEMPTS) {
-
-                alpha = -10000;
-                beta = 10000;
+            if (pvIdx == 0) {
+                if (result.bestMove == previousBestMove) {
+                    bestMoveStableCount++;
+                } else {
+                    bestMoveChangeCount++;
+                    bestMoveStableCount = 0;
+                }
+                previousBestMove = result.bestMove;
             }
 
-        } while ((failedHigh || failedLow) && searchAttempts < MAX_SEARCH_ATTEMPTS &&
-                 !context.stopSearch.load());
-
-        if (context.stopSearch.load()) {
-            break;
-        }
-
-        lastScore = searchScore;
-        result.score = searchScore;
-        result.depth = depth;
-        result.nodes = context.nodeCount.load();
-
-        uint64_t rootHash = ComputeZobrist(board);
-        TTEntry rootEntry;
-        if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= 0) {
-            result.bestMove = rootEntry.bestMove;
-        } else {
-            GenValidMoves(board);
-            std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
-            if (!moves.empty()) {
-                std::vector<ScoredMove> scoredMoves =
-                    scoreMovesOptimized(board, moves, context.historyTable, context.killerMoves, 0);
-                std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
-                result.bestMove = scoredMoves[0].move;
+            if (context.multiPV > 1) {
+                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::steady_clock::now() - context.startTime)
+                                   .count();
+                int nps = elapsed > 0 ? static_cast<int>(result.nodes * 1000 / elapsed) : 0;
+                std::cout << "info depth " << depth << " multipv " << (pvIdx + 1) << " score cp "
+                          << result.score << " nodes " << result.nodes << " nps " << nps
+                          << " hashfull " << context.transTable.hashfull();
+                if (context.tbHits.load() > 0) {
+                    std::cout << " tbhits " << context.tbHits.load();
+                }
+                std::cout << std::endl;
             }
-        }
 
-        if (pvIdx == 0) {
-            if (result.bestMove == previousBestMove) {
-                bestMoveStableCount++;
-            } else {
-                bestMoveChangeCount++;
-                bestMoveStableCount = 0;
-            }
-            previousBestMove = result.bestMove;
-        }
-
-        if (context.multiPV > 1) {
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                                std::chrono::steady_clock::now() - context.startTime)
                                .count();
-            int nps = elapsed > 0 ? static_cast<int>(result.nodes * 1000 / elapsed) : 0;
-            std::cout << "info depth " << depth
-                      << " multipv " << (pvIdx + 1)
-                      << " score cp " << result.score
-                      << " nodes " << result.nodes
-                      << " nps " << nps
-                      << " hashfull " << context.transTable.hashfull();
-            if (context.tbHits.load() > 0) {
-                std::cout << " tbhits " << context.tbHits.load();
+
+            int optTime = context.optimalTimeMs > 0 ? context.optimalTimeMs : timeLimitMs;
+            int maxTime = context.maxTimeMs > 0 ? context.maxTimeMs : timeLimitMs;
+
+            double stabilityFactor = 1.0;
+            if (bestMoveChangeCount >= 2 && bestMoveStableCount < 2) {
+                stabilityFactor = 1.5;
+            } else if (bestMoveStableCount >= 4) {
+                stabilityFactor = 0.6;
             }
-            std::cout << std::endl;
-        }
 
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                           std::chrono::steady_clock::now() - context.startTime)
-                           .count();
+            double scoreFactor = 1.0;
+            if (depth >= 5 && pvIdx == 0) {
+                if (lastScore < result.score - 50) {
+                    scoreFactor = 1.5;
+                } else if (lastScore > result.score + 20) {
+                    scoreFactor = 0.7;
+                }
+            }
 
-        int optTime = context.optimalTimeMs > 0 ? context.optimalTimeMs : timeLimitMs;
-        int maxTime = context.maxTimeMs > 0 ? context.maxTimeMs : timeLimitMs;
+            int softLimit = static_cast<int>(optTime * stabilityFactor * scoreFactor);
+            bool timeToStop = false;
 
-        double stabilityFactor = 1.0;
-        if (bestMoveChangeCount >= 2 && bestMoveStableCount < 2) {
-            stabilityFactor = 1.5;
-        } else if (bestMoveStableCount >= 4) {
-            stabilityFactor = 0.6;
-        }
+            if (elapsed >= maxTime) {
+                timeToStop = true;
+            } else if (depth >= 5 && elapsed >= softLimit) {
+                timeToStop = true;
+            }
 
-        double scoreFactor = 1.0;
-        if (depth >= 5 && pvIdx == 0) {
-            if (lastScore < result.score - 50) {
-                scoreFactor = 1.5;
-            } else if (lastScore > result.score + 20) {
-                scoreFactor = 0.7;
+            if (timeToStop) {
+                break;
             }
         }
 
-        int softLimit = static_cast<int>(optTime * stabilityFactor * scoreFactor);
-        bool timeToStop = false;
-
-        if (elapsed >= maxTime) {
-            timeToStop = true;
-        } else if (depth >= 5 && elapsed >= softLimit) {
-            timeToStop = true;
-        }
-
-        if (timeToStop) {
-            break;
-        }
-    }
-
-    if (result.bestMove.first < 0) {
-        uint64_t rootHash = ComputeZobrist(board);
-        TTEntry rootEntry;
-        if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= 0) {
-            result.bestMove = rootEntry.bestMove;
-        } else {
-            GenValidMoves(board);
-            std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
-            if (!moves.empty()) {
-                std::vector<ScoredMove> scoredMoves =
-                    scoreMovesOptimized(board, moves, context.historyTable, context.killerMoves, 0);
-                std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
-                result.bestMove = scoredMoves[0].move;
+        if (result.bestMove.first < 0) {
+            uint64_t rootHash = ComputeZobrist(board);
+            TTEntry rootEntry;
+            if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= 0) {
+                result.bestMove = rootEntry.bestMove;
+            } else {
+                GenValidMoves(board);
+                std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
+                if (!moves.empty()) {
+                    std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
+                        board, moves, context.historyTable, context.killerMoves, 0);
+                    std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
+                    result.bestMove = scoredMoves[0].move;
+                }
             }
         }
-    }
 
-    if (pvIdx < context.multiPV - 1 && result.bestMove.first >= 0) {
-        context.excludedRootMoves.push_back(result.bestMove);
-    }
-
+        if (pvIdx < context.multiPV - 1 && result.bestMove.first >= 0) {
+            context.excludedRootMoves.push_back(result.bestMove);
+        }
     }
 
     auto endTime = std::chrono::steady_clock::now();
@@ -1639,7 +1652,7 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
 
     std::vector<ScoredMove> scoredMoves =
         scoreMovesOptimized(board, moves, historyTable, context.killerMoves, 0);
-    std::sort(scoredMoves.begin(), scoredMoves.end(), std::greater<ScoredMove>());
+    std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
 
     int bestEval = (board.turn == ChessPieceColor::WHITE) ? -10000 : 10000;
     std::pair<int, int> bestMove = {-1, -1};
@@ -1752,8 +1765,8 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
     tempBoard.squares[fromSquare].piece = Piece();
     tempBoard.updateBitboards();
 
-    ChessPieceColor currentSide = (sideToMove == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                        : ChessPieceColor::WHITE;
+    ChessPieceColor currentSide =
+        (sideToMove == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
 
     while (true) {
         int smallestAttacker = getSmallestAttacker(tempBoard, toSquare, currentSide);

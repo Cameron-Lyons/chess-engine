@@ -7,6 +7,7 @@
 #include <cmath>
 #include <fstream>
 #include <random>
+#include <ranges>
 #include <sstream>
 #include <unordered_map>
 
@@ -161,8 +162,8 @@ std::pair<int, int> AdvancedSearch::internalIterativeDeepening(Board& board, int
     ParallelSearchContext context(1);
 
     int reducedDepth = std::max(1, depth - 2);
-    (void)AlphaBetaSearch(board, reducedDepth, alpha, beta,
-                          board.turn == ChessPieceColor::WHITE, 0, historyTable, context);
+    (void)AlphaBetaSearch(board, reducedDepth, alpha, beta, board.turn == ChessPieceColor::WHITE, 0,
+                          historyTable, context);
 
     return {-1, -1};
 }
@@ -665,13 +666,13 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
             }
             return entries[0].move;
         } else {
-            auto bestIt = std::max_element(entries.begin(), entries.end(),
-                                           [](const BookEntry& a, const BookEntry& b) {
-                                               if (a.weight != b.weight) {
-                                                   return a.weight < b.weight;
-                                               }
-                                               return a.winRate < b.winRate;
-                                           });
+            auto bestIt =
+                std::ranges::max_element(entries, [](const BookEntry& a, const BookEntry& b) {
+                    if (a.weight != b.weight) {
+                        return a.weight < b.weight;
+                    }
+                    return a.winRate < b.winRate;
+                });
             return bestIt->move;
         }
     }
@@ -721,7 +722,7 @@ std::pair<int, int> EnhancedOpeningBook::parseMove(const std::string& move) {
 
 bool EnhancedOpeningBook::isInBook(const Board& board) {
     std::string key = boardToKey(board);
-    return book.find(key) != book.end();
+    return book.contains(key);
 }
 
 void EnhancedOpeningBook::addMove(const Board& board, const BookEntry& entry) {

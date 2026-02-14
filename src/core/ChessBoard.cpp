@@ -1,6 +1,7 @@
 #include "ChessBoard.h"
 
 #include <algorithm>
+#include <ranges>
 
 void Board::clearBitboards() {
     whitePawns = whiteKnights = whiteBishops = whiteRooks = whiteQueens = whiteKings = 0;
@@ -288,7 +289,7 @@ ChessError Board::validateMove(int from, int to) const {
     }
 
     const auto& validMoves = squares[from].ValidMoves;
-    if (std::find(validMoves.begin(), validMoves.end(), to) == validMoves.end()) {
+    if (std::ranges::find(validMoves, to) == validMoves.end()) {
         return ChessError::InvalidMove;
     }
 
