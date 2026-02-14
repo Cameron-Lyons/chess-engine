@@ -1,0 +1,39 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+
+cc_library(
+    name = "engine_lib",
+    srcs = [
+        "src/ai/EndgameTablebase.cpp",
+        "src/ai/NeuralNetwork.cpp",
+        "src/ai/OpeningBook.cpp",
+        "src/ai/SyzygyTablebase.cpp",
+        "src/core/BitboardMoves.cpp",
+        "src/core/BitboardOnly.cpp",
+        "src/core/ChessBoard.cpp",
+        "src/core/MagicBitboards.cpp",
+        "src/evaluation/Evaluation.cpp",
+        "src/evaluation/EvaluationEnhanced.cpp",
+        "src/evaluation/EvaluationTuning.cpp",
+        "src/evaluation/NNUE.cpp",
+        "src/evaluation/NNUEOptimized.cpp",
+        "src/evaluation/PositionAnalysis.cpp",
+        "src/protocol/uci.cpp",
+        "src/search/AdvancedSearch.cpp",
+        "src/search/LMREnhanced.cpp",
+        "src/search/LazySMP.cpp",
+        "src/search/TranspositionTableV2.cpp",
+        "src/search/ValidMoves.cpp",
+        "src/search/search.cpp",
+        "src/utils/engine_globals.cpp",
+    ],
+    hdrs = glob(["src/**/*.h"]),
+    includes = ["src", "src/core"],
+    linkopts = ["-lpthread"],
+    visibility = ["//visibility:public"],
+)
+
+cc_binary(
+    name = "chess_engine",
+    srcs = ["src/main.cpp"],
+    deps = [":engine_lib"],
+)
