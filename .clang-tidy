@@ -1,0 +1,27 @@
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  performance-*,
+  modernize-use-override,
+  modernize-use-nullptr,
+  modernize-use-auto,
+  modernize-use-emplace,
+  modernize-loop-convert,
+  modernize-use-starts-ends-with,
+  modernize-use-std-numbers,
+  modernize-use-using,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-prefer-member-initializer,
+  cppcoreguidelines-slicing,
+  readability-*,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-function-cognitive-complexity,
+  -readability-else-after-return,
+  -readability-implicit-bool-conversion,
+  -readability-convert-member-functions-to-static,
+
+WarningsAsErrors: ''
+
+HeaderFilterRegex: 'src/.*'

@@ -51,81 +51,7 @@ This document summarizes all the major improvements implemented in the chess eng
 - Advanced move scoring with MVV-LVA, SEE, and history
 - Pattern-based pruning decisions
 
-## 3. Pattern Recognition System
-
-### Files Added/Modified:
-- `src/evaluation/PatternRecognition.h` - New header file
-- `src/evaluation/PatternRecognition.cpp` - New implementation file
-
-### Improvements:
-- **Tactical pattern recognition**:
-  - Fork detection and evaluation
-  - Pin and skewer identification
-  - Discovered attack patterns
-  - Double check recognition
-- **Strategic pattern recognition**:
-  - Outpost identification
-  - Weak square detection
-  - Hole pattern recognition
-  - Battery formation detection
-  - Overloaded piece identification
-- **Endgame pattern recognition**:
-  - Pawn endgame patterns
-  - Rook endgame patterns
-  - Bishop and knight endgame patterns
-- **Pawn structure analysis**:
-  - Isolated pawn detection
-  - Doubled pawn identification
-  - Backward pawn recognition
-  - Passed pawn evaluation
-  - Connected pawn bonuses
-- **King safety patterns**:
-  - Pawn shield evaluation
-  - Open file penalties
-  - King attack patterns
-- **Piece coordination patterns**:
-  - Bishop pair bonuses
-  - Rook coordination
-  - Knight coordination
-
-### Technical Details:
-- Bitboard-based pattern detection for efficiency
-- Configurable scoring system for different patterns
-- Phase-dependent pattern weights
-- Comprehensive attack and defense counting
-
-## 4. Enhanced Opening Book System
-
-### Files Added/Modified:
-- `src/ai/OpeningBook.h` - New header file
-- `src/ai/OpeningBook.cpp` - New implementation file
-
-### Improvements:
-- **Statistical opening book** with game results
-- **Multi-format support** (BIN, PGN, JSON, CSV)
-- **Adaptive move selection** based on:
-  - Win/loss/draw statistics
-  - Average rating of games
-  - Analysis depth
-  - Position evaluation
-- **Reliability filtering** for move quality
-- **Temperature-based randomization** for variety
-- **Book generation tools**:
-  - From PGN game collections
-  - From engine analysis
-  - Book merging capabilities
-- **Comprehensive book management**:
-  - Add/update/remove positions
-  - Book validation and optimization
-  - Statistics and analysis
-
-### Technical Details:
-- FEN-based position indexing
-- Weighted move selection algorithms
-- Configurable reliability thresholds
-- Automatic book optimization
-
-## 5. Enhanced Neural Network Integration
+## 3. Enhanced Neural Network Integration
 
 ### Files Modified:
 - `src/ai/NeuralNetwork.h` - Enhanced with training capabilities
@@ -150,18 +76,18 @@ This document summarizes all the major improvements implemented in the chess eng
 - Comprehensive training pipeline
 - Model persistence and versioning
 
-## 6. Build System Updates
+## 4. Build System Updates
 
 ### Files Modified:
-- `CMakeLists.txt` - Updated to include all new source files
+- `BUILD.bazel` - Bazel build configuration
 
 ### Improvements:
-- **Automatic compilation** of all new components
+- **Bazel build system** with bzlmod dependency management
 - **Proper dependency management**
 - **Test integration** for new features
-- **Optimized build configuration**
+- **Optimized build configuration** with `-Werror`
 
-## 7. Main Program Enhancements
+## 5. Main Program Enhancements
 
 ### Files Modified:
 - `src/main.cpp` - Updated to use all new features
@@ -182,23 +108,17 @@ This document summarizes all the major improvements implemented in the chess eng
 ### Expected Performance Gains:
 1. **Move Generation**: 3-5x faster with magic bitboards
 2. **Search Speed**: 2-3x faster with enhanced pruning
-3. **Evaluation Quality**: 20-30% improvement with pattern recognition
-4. **Opening Play**: More accurate with statistical opening book
-5. **Overall Strength**: Estimated 200-300 Elo improvement
+3. **Overall Strength**: Estimated 200-300 Elo improvement
 
 ### Memory Usage:
 - **Magic bitboards**: ~2MB additional memory
-- **Pattern recognition**: ~1MB additional memory
 - **Enhanced search**: ~10MB additional memory
-- **Opening book**: Variable (typically 5-50MB)
 
 ## Usage Instructions
 
 ### Compilation:
 ```bash
-mkdir build && cd build
-cmake ..
-make -j$(nproc)
+bazel build //:chess_engine
 ```
 
 ### Running Different Modes:
@@ -222,8 +142,6 @@ make -j$(nproc)
 ### Configuration:
 - Edit `config/engine_config.json` for engine parameters
 - Modify neural network weights in `src/ai/NeuralNetwork.h`
-- Adjust pattern recognition scores in `src/evaluation/PatternRecognition.h`
-- Configure opening book settings in `src/ai/OpeningBook.h`
 
 ## Future Improvements
 

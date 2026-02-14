@@ -35,7 +35,6 @@ Contains position evaluation functions:
 - `NNUE.h` - NNUE (Efficiently Updatable Neural Network) evaluation
 - `NNUEEvaluation.h` - NNUE evaluation interface
 - `NNUEOptimized.h/cpp` - Optimized NNUE implementation
-- `PatternRecognition.h` - Pattern recognition for tactical and strategic evaluation
 - `PositionAnalysis.h/cpp` - Position analysis utilities
 
 ### `protocol/` - Communication Protocols
@@ -47,7 +46,6 @@ Contains advanced AI and machine learning components:
 - `NeuralNetwork.h/cpp` - Neural network evaluation and training
 - `EndgameTablebase.h/cpp` - Endgame tablebase support
 - `SyzygyTablebase.h/cpp` - Syzygy tablebase integration
-- `OpeningBook.h/cpp` - Statistical opening book with multi-format support
 
 ### `utils/` - Utilities and Optimizations
 Contains utility functions and performance optimizations:
@@ -68,20 +66,17 @@ Contains utility functions and performance optimizations:
 - Transposition table with Zobrist hashing
 - Advanced pruning techniques (futility, null move, LMR)
 - Move ordering (MVV-LVA, history heuristic, killer moves)
-- Pattern recognition system
 - Neural network evaluation framework
 - UCI protocol support
 - Time management system
 - Parallel search (Lazy SMP)
 
 ### In Progress 🔄
-- Enhanced opening book implementation (EnhancedOpeningBook class)
 - Endgame tablebase integration
 - Neural network training pipeline
 - Advanced time management features
 
 ### Planned 📋
-- Complete opening book persistence (save/load)
 - Syzygy tablebase integration
 - Advanced neural network architectures
 - Tournament mode
@@ -89,7 +84,7 @@ Contains utility functions and performance optimizations:
 
 ## Build System
 
-The CMakeLists.txt file has been updated to reflect the new directory structure. All include paths have been updated to use relative paths from the appropriate directories.
+Bazel with `MODULE.bazel` (bzlmod) for dependency management. C++23 standard with `-Werror`.
 
 ## Dependencies
 
@@ -104,32 +99,29 @@ The CMakeLists.txt file has been updated to reflect the new directory structure.
 
 To build the project:
 ```bash
-mkdir build
-cd build
-cmake ..
-make -j$(nproc)
+bazel build //:chess_engine
+```
+
+To run tests:
+```bash
+bazel test //tests/...
 ```
 
 The main executable will be built as `chess_engine` and can be run directly or through UCI-compatible chess GUIs.
 
 ## Next Steps
 
-1. **Complete EnhancedOpeningBook Implementation**
-   - Implement book persistence (save/load to binary format)
-   - Add book statistics and analysis
-   - Integrate with UCI protocol
-
-2. **Endgame Tablebase Integration**
+1. **Endgame Tablebase Integration**
    - Complete Syzygy tablebase support
    - Add tablebase probing in search
    - Implement endgame-specific evaluation
 
-3. **Neural Network Training**
+2. **Neural Network Training**
    - Complete training data generation
    - Implement batch training pipeline
    - Add model versioning and management
 
-4. **Performance Optimizations**
+3. **Performance Optimizations**
    - SIMD-optimized evaluation
    - Lock-free transposition table
-   - Cache-optimized data structures 
+   - Cache-optimized data structures

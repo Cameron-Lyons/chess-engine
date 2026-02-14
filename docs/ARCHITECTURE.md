@@ -72,12 +72,9 @@ Multiple evaluation backends, selected at runtime:
 - **`NNUEOptimized.h/cpp`** — SIMD-optimized NNUE using AVX2/AVX512/VNNI
   intrinsics with runtime CPU feature detection.
 - **`PositionAnalysis.h/cpp`** — Position analysis and reporting utilities.
-- **`PatternRecognition.h`** — Pattern-based evaluation features.
 
 ### AI (`src/ai/`)
 
-- **`OpeningBook.h/cpp`** — Opening book data structures and lookup
-  (header defines full API; implementation is stub).
 - **`EndgameTablebase.h/cpp`** — Endgame knowledge and basic endgame
   evaluation rules.
 - **`SyzygyTablebase.h/cpp`** — Syzygy tablebase probing for WDL/DTZ
