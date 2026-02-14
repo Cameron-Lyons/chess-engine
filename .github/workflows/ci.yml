@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  format-check:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check formatting
+        run: |
+          find src/ tests/ -name '*.cpp' -o -name '*.h' | \
+            xargs clang-format --dry-run --Werror
+
+  build-and-test:
+    name: Build & Test (${{ matrix.compiler }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - compiler: gcc-14
+            cc: gcc-14
+            cxx: g++-14
+          - compiler: clang-18
+            cc: clang-18
+            cxx: clang++-18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Mount bazel cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-${{ matrix.compiler }}-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc') }}
+          restore-keys: bazel-${{ matrix.compiler }}-
+
+      - name: Build
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: >
+          bazel build //:chess_engine
+          --copt=-march=x86-64-v3
+          --copt=-mavx2
+
+      - name: Test
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: >
+          bazel test //tests/...
+          --config=release
+          --copt=-march=x86-64-v3
+          --copt=-mavx2
+          --test_output=errors
