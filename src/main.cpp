@@ -557,7 +557,7 @@ int main(int argc, char* argv[]) {
         int srcCol, srcRow, destCol, destRow;
         if (parseAlgebraicMove(input, ChessBoard, srcCol, srcRow, destCol, destRow)) {
             ChessPieceType promotionPiece = ChessPieceType::QUEEN;
-            if (input.find('=') != std::string::npos) {
+            if (input.contains('=')) {
                 promotionPiece = getPromotionPiece(input);
             }
 

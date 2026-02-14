@@ -155,7 +155,6 @@ public:
         static bool unlikely(bool condition);
         static void prefetch(const void* ptr);
         static void prefetchWrite(const void* ptr);
-
     };
 
     class PerformanceMonitor {

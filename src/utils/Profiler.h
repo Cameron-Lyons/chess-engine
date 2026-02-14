@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <iostream>
 #include <mutex>
+#include <ranges>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -87,7 +88,7 @@ public:
 
         std::vector<std::pair<std::string, ProfileData>> sortedProfiles(profiles.begin(),
                                                                         profiles.end());
-        std::sort(sortedProfiles.begin(), sortedProfiles.end(), [](const auto& a, const auto& b) {
+        std::ranges::sort(sortedProfiles, [](const auto& a, const auto& b) {
             return a.second.totalTime > b.second.totalTime;
         });
 

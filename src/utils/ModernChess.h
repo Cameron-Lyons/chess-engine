@@ -5,6 +5,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <ranges>
 #include <string_view>
 #include <vector>
 
@@ -47,21 +48,21 @@ struct Position {
     int row;
     int col;
 
-    Position(int r, int c) : row(r), col(c) {}
+    constexpr Position(int r, int c) : row(r), col(c) {}
 
-    bool isValid() const {
+    constexpr bool isValid() const {
         return row >= 0 && row < 8 && col >= 0 && col < 8;
     }
 
-    int toIndex() const {
+    constexpr int toIndex() const {
         return row * 8 + col;
     }
 
-    static Position fromIndex(int index) {
+    static constexpr Position fromIndex(int index) {
         return Position(index / 8, index % 8);
     }
 
-    bool operator==(const Position& other) const {
+    constexpr bool operator==(const Position& other) const {
         return row == other.row && col == other.col;
     }
 };
@@ -127,16 +128,16 @@ public:
     std::vector<std::pair<int, ModernPiece*>> getPiecesOfType(int type) const {
         std::vector<std::pair<int, ModernPiece*>> result;
         auto allPieces = getPieces();
-        std::copy_if(allPieces.begin(), allPieces.end(), std::back_inserter(result),
-                     [type](const auto& pair) { return pair.second->type == type; });
+        std::ranges::copy_if(allPieces, std::back_inserter(result),
+                             [type](const auto& pair) { return pair.second->type == type; });
         return result;
     }
 
     std::vector<std::pair<int, ModernPiece*>> getPiecesOfColor(int color) const {
         std::vector<std::pair<int, ModernPiece*>> result;
         auto allPieces = getPieces();
-        std::copy_if(allPieces.begin(), allPieces.end(), std::back_inserter(result),
-                     [color](const auto& pair) { return pair.second->color == color; });
+        std::ranges::copy_if(allPieces, std::back_inserter(result),
+                             [color](const auto& pair) { return pair.second->color == color; });
         return result;
     }
 
@@ -195,35 +196,36 @@ public:
 
 namespace ModernChessUtils {
 
-bool isValidPosition(int row, int col) {
+constexpr bool isValidPosition(int row, int col) {
     return row >= 0 && row < 8 && col >= 0 && col < 8;
 }
 
-int positionToIndex(int row, int col) {
+constexpr int positionToIndex(int row, int col) {
     return row * 8 + col;
 }
 
-std::pair<int, int> indexToPosition(int index) {
+constexpr std::pair<int, int> indexToPosition(int index) {
     return {index / 8, index % 8};
 }
 
 template <typename T>
-bool isValidIndex(T index) {
+constexpr bool isValidIndex(T index) {
     return index >= 0 && index < 64;
 }
 
 template <typename Container>
 std::vector<Move> filterValidMoves(const Container& moves) {
     std::vector<Move> result;
-    std::copy_if(moves.begin(), moves.end(), std::back_inserter(result),
-                 [](const Move& move) { return isValidIndex(move.from) && isValidIndex(move.to); });
+    std::ranges::copy_if(moves, std::back_inserter(result), [](const Move& move) {
+        return isValidIndex(move.from) && isValidIndex(move.to);
+    });
     return result;
 }
 
 template <typename Container>
 std::vector<Move> sortMoves(Container&& moves) {
     std::vector<Move> result(moves.begin(), moves.end());
-    std::sort(result.begin(), result.end());
+    std::ranges::sort(result);
     return result;
 }
 

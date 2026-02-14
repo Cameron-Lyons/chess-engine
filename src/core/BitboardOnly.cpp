@@ -257,13 +257,13 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
     sideToMove = (turn == "w") ? WHITE : BLACK;
 
     castlingRights = 0;
-    if (castling.find('K') != std::string::npos)
+    if (castling.contains('K'))
         castlingRights |= 1;
-    if (castling.find('Q') != std::string::npos)
+    if (castling.contains('Q'))
         castlingRights |= 2;
-    if (castling.find('k') != std::string::npos)
+    if (castling.contains('k'))
         castlingRights |= 4;
-    if (castling.find('q') != std::string::npos)
+    if (castling.contains('q'))
         castlingRights |= 8;
 
     if (ep != "-" && ep.length() >= 2) {

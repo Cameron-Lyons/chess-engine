@@ -99,12 +99,13 @@ int getPieceSquareValue(ChessPieceType piece, int square, ChessPieceColor color,
         return 0;
     }
 
-    static const int* const mgTables[] = {PAWN_MG,   KNIGHT_MG, BISHOP_MG,
-                                          ROOK_MG,   QUEEN_MG,  KING_MG};
-    static const int* const egTables[] = {PAWN_EG,   KNIGHT_EG, BISHOP_EG,
-                                          ROOK_EG,   QUEEN_EG,  KING_EG};
+    static const int* const mgTables[] = {PAWN_MG, KNIGHT_MG, BISHOP_MG,
+                                          ROOK_MG, QUEEN_MG,  KING_MG};
+    static const int* const egTables[] = {PAWN_EG, KNIGHT_EG, BISHOP_EG,
+                                          ROOK_EG, QUEEN_EG,  KING_EG};
     int idx = static_cast<int>(piece);
-    if (idx < 0 || idx >= 6) return 0;
+    if (idx < 0 || idx >= 6)
+        return 0;
     int mgValue = mgTables[idx][adjustedSquare];
     int egValue = egTables[idx][adjustedSquare];
 
@@ -145,9 +146,9 @@ int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor 
         return 0;
     }
 
-    static const int* const tables[] = {
-        PieceSquareTables::PAWN_MG,   PieceSquareTables::KNIGHT_MG, PieceSquareTables::BISHOP_MG,
-        PieceSquareTables::ROOK_MG,   PieceSquareTables::QUEEN_MG,  PieceSquareTables::KING_MG};
+    static const int* const tables[] = {PieceSquareTables::PAWN_MG,   PieceSquareTables::KNIGHT_MG,
+                                        PieceSquareTables::BISHOP_MG, PieceSquareTables::ROOK_MG,
+                                        PieceSquareTables::QUEEN_MG,  PieceSquareTables::KING_MG};
     int idx = static_cast<int>(pieceType);
     int value = (idx >= 0 && idx < 6) ? tables[idx][position] : 0;
     if (color == ChessPieceColor::BLACK) {
@@ -245,7 +246,8 @@ int evaluateMobility(const Board& board) {
                     for (int dist = 1; dist < BOARD_SIZE; dist++) {
                         int newRow = row + dir[0] * dist;
                         int newCol = col + dir[1] * dist;
-                        if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 || newCol >= BOARD_SIZE)
+                        if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 ||
+                            newCol >= BOARD_SIZE)
                             break;
 
                         int pos = newRow * BOARD_SIZE + newCol;
@@ -270,7 +272,8 @@ int evaluateMobility(const Board& board) {
                     for (int dist = 1; dist < BOARD_SIZE; dist++) {
                         int newRow = row + dir[0] * dist;
                         int newCol = col + dir[1] * dist;
-                        if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 || newCol >= BOARD_SIZE)
+                        if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 ||
+                            newCol >= BOARD_SIZE)
                             break;
 
                         int pos = newRow * BOARD_SIZE + newCol;
@@ -296,7 +299,8 @@ int evaluateMobility(const Board& board) {
                     for (int dist = 1; dist < BOARD_SIZE; dist++) {
                         int newRow = row + dir[0] * dist;
                         int newCol = col + dir[1] * dist;
-                        if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 || newCol >= BOARD_SIZE)
+                        if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 ||
+                            newCol >= BOARD_SIZE)
                             break;
 
                         int pos = newRow * BOARD_SIZE + newCol;
@@ -813,7 +817,8 @@ int evaluateHangingPieces(const Board& board) {
                     for (int dc = -2; dc <= 2; dc++) {
                         int checkRow = row + dr;
                         int checkCol = col + dc;
-                        if (checkRow >= 0 && checkRow < BOARD_SIZE && checkCol >= 0 && checkCol < BOARD_SIZE) {
+                        if (checkRow >= 0 && checkRow < BOARD_SIZE && checkCol >= 0 &&
+                            checkCol < BOARD_SIZE) {
                             int checkPos = checkRow * BOARD_SIZE + checkCol;
                             if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE &&
                                 board.squares[checkPos].piece.PieceColor == enemyColor) {
@@ -950,7 +955,8 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
                     int rowStep = (rowDiff > 0) ? 1 : -1;
                     int colStep = (colDiff > 0) ? 1 : -1;
                     for (int i = 1; i < abs(rowDiff); i++) {
-                        int checkPos = (fromRow + i * rowStep) * BOARD_SIZE + (fromCol + i * colStep);
+                        int checkPos =
+                            (fromRow + i * rowStep) * BOARD_SIZE + (fromCol + i * colStep);
                         if (checkPos < 0 || checkPos >= NUM_SQUARES)
                             return false;
                         if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE)
