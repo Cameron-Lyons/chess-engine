@@ -75,41 +75,19 @@ const int TUNED_KING_EG[64] = {-74, -35, -18, -18, -11, 15,  4,   -17, -12, 17, 
                                14,  4,   -5,  -17, -53, -34, -21, -11, -28, -14, -24, -43};
 
 int getMaterialValue(ChessPieceType piece) {
-    switch (piece) {
-        case ChessPieceType::PAWN:
-            return PAWN_VALUE;
-        case ChessPieceType::KNIGHT:
-            return KNIGHT_VALUE;
-        case ChessPieceType::BISHOP:
-            return BISHOP_VALUE;
-        case ChessPieceType::ROOK:
-            return ROOK_VALUE;
-        case ChessPieceType::QUEEN:
-            return QUEEN_VALUE;
-        case ChessPieceType::KING:
-            return KING_VALUE;
-        default:
-            return 0;
-    }
+    constexpr int values[] = {PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE,
+                              ROOK_VALUE, QUEEN_VALUE,  KING_VALUE, 0};
+    return values[static_cast<int>(piece)];
 }
 
 int getTunedPST(ChessPieceType piece, int square, bool isEndgame) {
-    switch (piece) {
-        case ChessPieceType::PAWN:
-            return isEndgame ? TUNED_PAWN_EG[square] : TUNED_PAWN_MG[square];
-        case ChessPieceType::KNIGHT:
-            return isEndgame ? TUNED_KNIGHT_EG[square] : TUNED_KNIGHT_MG[square];
-        case ChessPieceType::BISHOP:
-            return isEndgame ? TUNED_BISHOP_EG[square] : TUNED_BISHOP_MG[square];
-        case ChessPieceType::ROOK:
-            return isEndgame ? TUNED_ROOK_EG[square] : TUNED_ROOK_MG[square];
-        case ChessPieceType::QUEEN:
-            return isEndgame ? TUNED_QUEEN_EG[square] : TUNED_QUEEN_MG[square];
-        case ChessPieceType::KING:
-            return isEndgame ? TUNED_KING_EG[square] : TUNED_KING_MG[square];
-        default:
-            return 0;
-    }
+    static const int* const mgTables[] = {TUNED_PAWN_MG,   TUNED_KNIGHT_MG, TUNED_BISHOP_MG,
+                                          TUNED_ROOK_MG,   TUNED_QUEEN_MG,  TUNED_KING_MG};
+    static const int* const egTables[] = {TUNED_PAWN_EG,   TUNED_KNIGHT_EG, TUNED_BISHOP_EG,
+                                          TUNED_ROOK_EG,   TUNED_QUEEN_EG,  TUNED_KING_EG};
+    int idx = static_cast<int>(piece);
+    if (idx < 0 || idx >= 6) return 0;
+    return isEndgame ? egTables[idx][square] : mgTables[idx][square];
 }
 
 int interpolatePhase(int mgScore, int egScore, int phase) {

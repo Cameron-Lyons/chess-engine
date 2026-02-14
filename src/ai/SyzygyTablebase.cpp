@@ -29,11 +29,6 @@ struct TBEntry {
 
 static std::vector<TBEntry> tbEntries;
 
-static int popcount(uint64_t bb) {
-    return __builtin_popcountll(bb);
-}
-
-
 Position Position::fromBoard(const Board& board) {
     Position pos;
     pos.white = 0;

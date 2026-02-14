@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <bit>
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -80,7 +81,7 @@ public:
     void resize(size_t mbSize) {
         size_t newClusterCount = (mbSize * 1024 * 1024) / sizeof(TTCluster);
 
-        newClusterCount = 1ULL << (63 - __builtin_clzll(newClusterCount));
+        newClusterCount = std::bit_floor(newClusterCount);
 
         if (newClusterCount != clusterCount) {
             clusterCount = newClusterCount;

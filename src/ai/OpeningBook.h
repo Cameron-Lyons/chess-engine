@@ -172,7 +172,7 @@ std::string getBookMove(const Board& board);
 bool isBookMove(const Board& board);
 
 namespace BookFormats {
-enum Format { BIN, PGN, JSON, CSV };
+enum class Format { BIN, PGN, JSON, CSV };
 
 void saveBook(const std::string& filename, const OpeningBook& book, Format format);
 void loadBook(const std::string& filename, OpeningBook& book, Format format);
