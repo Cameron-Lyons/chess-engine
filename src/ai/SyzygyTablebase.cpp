@@ -11,9 +11,6 @@
 namespace Syzygy {
 
 constexpr int TB_PIECES_MAX = 7;
-constexpr int TB_HASHBITS = 10;
-constexpr int TB_MAX_PIECE = 6;
-constexpr int TB_MAX_PAWN = 4;
 
 static std::string tbPath;
 static int tbMaxPieces = 0;

@@ -72,18 +72,28 @@ struct PawnHashTable {
     static constexpr size_t SIZE = 16384;
     PawnHashEntry entries[SIZE];
 
-    PawnHashTable() { clear(); }
-    void clear() { std::memset(entries, 0, sizeof(entries)); }
+    PawnHashTable() {
+        clear();
+    }
+    void clear() {
+        std::memset(entries, 0, sizeof(entries));
+    }
 
     bool probe(uint64_t key, int& mg, int& eg) const {
         const auto& e = entries[key % SIZE];
-        if (e.key == key) { mg = e.mgScore; eg = e.egScore; return true; }
+        if (e.key == key) {
+            mg = e.mgScore;
+            eg = e.egScore;
+            return true;
+        }
         return false;
     }
 
     void store(uint64_t key, int mg, int eg) {
         auto& e = entries[key % SIZE];
-        e.key = key; e.mgScore = mg; e.egScore = eg;
+        e.key = key;
+        e.mgScore = mg;
+        e.egScore = eg;
     }
 };
 

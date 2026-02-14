@@ -138,8 +138,6 @@ public:
 
 private:
     BookConfig config;
-    std::unordered_map<std::string, PositionEntry> positions;
-    BookStats stats;
     std::mt19937 rng;
 
     std::string boardToFEN(const Board& board) const;

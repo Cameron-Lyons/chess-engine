@@ -166,15 +166,11 @@ NeuralNetworkEvaluator* EnhancedEvaluator::getNeuralNetwork() const {
 
 float EnhancedEvaluator::getGamePhase(const Board& board) {
     int totalPieces = 0;
-    int pawns = 0;
 
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
             totalPieces++;
-            if (piece.PieceType == ChessPieceType::PAWN) {
-                pawns++;
-            }
         }
     }
 

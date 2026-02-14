@@ -105,5 +105,7 @@ public:
     void exportParams(const std::string& filename) const;
 
     void initParams();
-    double getError() const { return computeError(params); }
+    double getError() const {
+        return computeError(params);
+    }
 };

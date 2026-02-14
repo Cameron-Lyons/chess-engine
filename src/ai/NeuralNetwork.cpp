@@ -258,8 +258,7 @@ public:
     }
 };
 
-NeuralNetworkEvaluator::NeuralNetworkEvaluator()
-    : NeuralNetworkEvaluator(NetworkConfig()) {}
+NeuralNetworkEvaluator::NeuralNetworkEvaluator() : NeuralNetworkEvaluator(NetworkConfig()) {}
 
 NeuralNetworkEvaluator::NeuralNetworkEvaluator(const NetworkConfig& config)
     : m_pImpl(std::make_unique<Impl>(config)) {}
@@ -526,15 +525,11 @@ auto FeatureExtractor::calculatePawnStructure(const Board& board, ChessPieceColo
 
 auto FeatureExtractor::calculateGamePhase(const Board& board) -> float {
     int totalPieces = 0;
-    int pawns = 0;
 
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
             totalPieces++;
-            if (piece.PieceType == ChessPieceType::PAWN) {
-                pawns++;
-            }
         }
     }
 
@@ -794,8 +789,7 @@ auto TrainingDataGenerator::loadTrainingData(const std::string& path)
     return data;
 }
 
-NNTrainer::NNTrainer(NeuralNetworkEvaluator& nn)
-    : NNTrainer(nn, TrainingConfig()) {}
+NNTrainer::NNTrainer(NeuralNetworkEvaluator& nn) : NNTrainer(nn, TrainingConfig()) {}
 
 NNTrainer::NNTrainer(NeuralNetworkEvaluator& nn, const TrainingConfig& config)
     : m_neuralNetwork(nn), m_config(config) {}

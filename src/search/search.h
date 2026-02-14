@@ -50,42 +50,48 @@ class TranspositionTableAdapter {
     TTv2::TranspositionTable tt;
 
     static TTv2::Bound flagToBound(int flag) {
-        if (flag == 0) return TTv2::BOUND_EXACT;
-        if (flag == -1) return TTv2::BOUND_UPPER;
-        if (flag == 1) return TTv2::BOUND_LOWER;
+        if (flag == 0)
+            return TTv2::BOUND_EXACT;
+        if (flag == -1)
+            return TTv2::BOUND_UPPER;
+        if (flag == 1)
+            return TTv2::BOUND_LOWER;
         return TTv2::BOUND_NONE;
     }
 
     static int boundToFlag(TTv2::Bound b) {
-        if (b == TTv2::BOUND_EXACT) return 0;
-        if (b == TTv2::BOUND_UPPER) return -1;
-        if (b == TTv2::BOUND_LOWER) return 1;
+        if (b == TTv2::BOUND_EXACT)
+            return 0;
+        if (b == TTv2::BOUND_UPPER)
+            return -1;
+        if (b == TTv2::BOUND_LOWER)
+            return 1;
         return 0;
     }
 
 public:
-    TranspositionTableAdapter() { tt.resize(32); }
+    TranspositionTableAdapter() {
+        tt.resize(32);
+    }
 
     void insert(uint64_t hash, const TTEntry& entry) {
         bool found;
         TTv2::TTEntry* tte = tt.probe(hash, found);
-        TTv2::PackedMove pm = TTv2::packMove(
-            entry.bestMove.first >= 0 ? entry.bestMove.first : 0,
-            entry.bestMove.second >= 0 ? entry.bestMove.second : 0);
-        if (entry.bestMove.first < 0) pm = 0;
-        tte->save(hash,
-                  static_cast<int16_t>(entry.value),
-                  static_cast<int16_t>(entry.value),
-                  flagToBound(entry.flag),
-                  static_cast<int8_t>(std::clamp(entry.depth, -127, 127)),
-                  pm,
-                  tt.generation());
+        TTv2::PackedMove pm =
+            TTv2::packMove(entry.bestMove.first >= 0 ? entry.bestMove.first : 0,
+                           entry.bestMove.second >= 0 ? entry.bestMove.second : 0);
+        if (entry.bestMove.first < 0)
+            pm = 0;
+        tte->save(hash, static_cast<int16_t>(entry.value), static_cast<int16_t>(entry.value),
+                  flagToBound(entry.flag), static_cast<int8_t>(std::clamp(entry.depth, -127, 127)),
+                  pm, tt.generation());
     }
 
     bool find(uint64_t hash, TTEntry& entry) const {
         bool found;
         TTv2::TTEntry* tte = const_cast<TTv2::TranspositionTable&>(tt).probe(hash, found);
-        if (!found) return false;
+        if (!found)
+            return false;
         entry.depth = tte->depth;
         entry.value = tte->value;
         entry.flag = boundToFlag(tte->bound());
@@ -100,15 +106,25 @@ public:
         return true;
     }
 
-    void clear() { tt.clear(); }
+    void clear() {
+        tt.clear();
+    }
 
-    void resize(size_t mbSize) { tt.resize(mbSize); }
+    void resize(size_t mbSize) {
+        tt.resize(mbSize);
+    }
 
-    void newSearch() { tt.newSearch(); }
+    void newSearch() {
+        tt.newSearch();
+    }
 
-    void prefetch(uint64_t key) const { tt.prefetch(key); }
+    void prefetch(uint64_t key) const {
+        tt.prefetch(key);
+    }
 
-    int hashfull() const { return tt.hashfull(); }
+    int hashfull() const {
+        return tt.hashfull();
+    }
 };
 
 struct ThreadSafeHistory {
@@ -164,28 +180,36 @@ struct ParallelSearchContext {
     ParallelSearchContext(int threads = 0);
 
     void updateContinuationHistory(int prevPiece, int prevTo, int piece, int to, int bonus) {
-        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64) return;
-        if (piece < 0 || piece >= 6 || to < 0 || to >= 64) return;
+        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64)
+            return;
+        if (piece < 0 || piece >= 6 || to < 0 || to >= 64)
+            return;
         int& entry = continuationHistory[prevPiece][prevTo][piece][to];
         entry += bonus - entry * std::abs(bonus) / 16384;
     }
 
     int getContinuationHistory(int prevPiece, int prevTo, int piece, int to) const {
-        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64) return 0;
-        if (piece < 0 || piece >= 6 || to < 0 || to >= 64) return 0;
+        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64)
+            return 0;
+        if (piece < 0 || piece >= 6 || to < 0 || to >= 64)
+            return 0;
         return continuationHistory[prevPiece][prevTo][piece][to];
     }
 
     void updateCaptureHistory(int attacker, int victim, int to, int bonus) {
-        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6) return;
-        if (to < 0 || to >= 64) return;
+        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6)
+            return;
+        if (to < 0 || to >= 64)
+            return;
         int& entry = captureHistory[attacker][victim][to];
         entry += bonus - entry * std::abs(bonus) / 16384;
     }
 
     int getCaptureHistory(int attacker, int victim, int to) const {
-        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6) return 0;
-        if (to < 0 || to >= 64) return 0;
+        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6)
+            return 0;
+        if (to < 0 || to >= 64)
+            return 0;
         return captureHistory[attacker][victim][to];
     }
 };
@@ -224,13 +248,20 @@ bool isCapture(const Board& board, int, int destPos);
 
 inline int pieceTypeIndex(ChessPieceType pt) {
     switch (pt) {
-        case ChessPieceType::PAWN: return 0;
-        case ChessPieceType::KNIGHT: return 1;
-        case ChessPieceType::BISHOP: return 2;
-        case ChessPieceType::ROOK: return 3;
-        case ChessPieceType::QUEEN: return 4;
-        case ChessPieceType::KING: return 5;
-        default: return -1;
+        case ChessPieceType::PAWN:
+            return 0;
+        case ChessPieceType::KNIGHT:
+            return 1;
+        case ChessPieceType::BISHOP:
+            return 2;
+        case ChessPieceType::ROOK:
+            return 3;
+        case ChessPieceType::QUEEN:
+            return 4;
+        case ChessPieceType::KING:
+            return 5;
+        default:
+            return -1;
     }
 }
 bool givesCheck(const Board& board, int srcPos, int destPos);
@@ -311,15 +342,16 @@ class MovePicker {
 
     bool alreadyReturned(const std::pair<int, int>& m) const {
         for (const auto& r : returned)
-            if (r == m) return true;
+            if (r == m)
+                return true;
         return false;
     }
 
     void generateAndPartitionMoves();
 
 public:
-    MovePicker(Board& b, std::pair<int, int> hm, const KillerMoves& km,
-               int p, const ThreadSafeHistory& h, ParallelSearchContext& ctx);
+    MovePicker(Board& b, std::pair<int, int> hm, const KillerMoves& km, int p,
+               const ThreadSafeHistory& h, ParallelSearchContext& ctx);
 
     std::pair<int, int> next();
 };

@@ -91,7 +91,6 @@ private:
     TimeControl timeControl;
     int moveNumber;
     int totalMoves;
-    double timeFactor;
 
     int calculateBaseTime();
     int calculateIncrement();

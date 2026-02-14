@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install latest clang-format
+        run: |
+          pip install clang-format
       - name: Check formatting
         run: |
           find src/ tests/ -name '*.cpp' -o -name '*.h' | \

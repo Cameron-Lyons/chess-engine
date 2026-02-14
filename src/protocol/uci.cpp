@@ -109,10 +109,8 @@ void UCIEngine::handleUCI() {
     std::cout << "option name Contempt type spin default 0 min -100 max 100" << std::endl;
 
     for (const auto& p : TunableRegistry::instance().all()) {
-        std::cout << "option name " << p.name
-                  << " type spin default " << p.defaultValue
-                  << " min " << p.minValue
-                  << " max " << p.maxValue << std::endl;
+        std::cout << "option name " << p.name << " type spin default " << p.defaultValue << " min "
+                  << p.minValue << " max " << p.maxValue << std::endl;
     }
 
     std::cout << "uciok" << std::endl;
@@ -126,7 +124,8 @@ void UCIEngine::handleSetOption(const std::string& command) {
     std::string name, value;
     auto namePos = command.find("name ");
     auto valuePos = command.find(" value ");
-    if (namePos == std::string::npos) return;
+    if (namePos == std::string::npos)
+        return;
     namePos += 5;
     if (valuePos != std::string::npos) {
         name = command.substr(namePos, valuePos - namePos);
@@ -312,8 +311,8 @@ void UCIEngine::handleGo(const std::string& command) {
                 baseTime = currentTime / 30;
             }
             optimalTime = baseTime + static_cast<int>(increment * 0.75) - options.moveOverhead;
-            maxTime = std::min(static_cast<int>(currentTime * 0.5),
-                               optimalTime * 5) - options.moveOverhead;
+            maxTime = std::min(static_cast<int>(currentTime * 0.5), optimalTime * 5) -
+                      options.moveOverhead;
             optimalTime = std::max(optimalTime, options.minimumThinkingTime);
             maxTime = std::max(maxTime, optimalTime);
             timeForMove = optimalTime;
@@ -332,7 +331,8 @@ void UCIEngine::handleGo(const std::string& command) {
 
     searchThread = std::thread([this, searchDepth, timeForMove, optimalTime, maxTime]() {
         try {
-            SearchResult result = performSearch(board, searchDepth, timeForMove, optimalTime, maxTime);
+            SearchResult result =
+                performSearch(board, searchDepth, timeForMove, optimalTime, maxTime);
 
             if (isSearching) {
                 std::pair<int, int> ponderMove = {-1, -1};
@@ -350,8 +350,8 @@ void UCIEngine::handleGo(const std::string& command) {
                 }
                 reportBestMove(result.bestMove, ponderMove);
                 int nps = result.timeMs > 0 ? result.nodes * 1000 / result.timeMs : 0;
-                reportInfo(result.depth, result.depth, result.timeMs, result.nodes,
-                           nps, {}, result.score, 0);
+                reportInfo(result.depth, result.depth, result.timeMs, result.nodes, nps, {},
+                           result.score, 0);
             }
         } catch (const std::exception& e) {
             std::cout << "info string Search error: " << e.what() << std::endl;
@@ -617,8 +617,8 @@ void UCIEngine::stopSearch() {
     isSearching = false;
 }
 
-SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLimit,
-                                      int optimalTime, int maxTime) {
+SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLimit, int optimalTime,
+                                      int maxTime) {
     SearchResult result;
 
     if (options.useTablebases && tablebase) {
@@ -653,7 +653,7 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
     Board searchBoard = board;
 
     result = iterativeDeepeningParallel(searchBoard, depth, timeLimit, 1, options.contempt,
-                                         options.multiPV, optimalTime, maxTime);
+                                        options.multiPV, optimalTime, maxTime);
 
     return result;
 }

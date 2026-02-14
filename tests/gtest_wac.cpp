@@ -19,7 +19,8 @@ protected:
         InitZobrist();
     }
 
-    bool checkMove(const char* fen, int expectedFrom, int expectedTo, int depthLimit, int timeLimitMs) {
+    bool checkMove(const char* fen, int expectedFrom, int expectedTo, int depthLimit,
+                   int timeLimitMs) {
         Board board;
         board.InitializeFromFEN(fen);
 
@@ -73,7 +74,8 @@ TEST_F(WACTest, WAC012_Skewer) {
 
 TEST_F(WACTest, WAC015_Sacrifice) {
     Board board;
-    board.InitializeFromFEN("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 1");
+    board.InitializeFromFEN(
+        "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 1");
     SearchResult result = iterativeDeepeningParallel(board, 8, 5000, 1, 0, 1);
     EXPECT_TRUE(result.bestMove.first >= 0);
 }
