@@ -1,0 +1,36 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+[
+    cc_test(
+        name = test_name,
+        srcs = [test_name + ".cpp"],
+        deps = [
+            "//:engine_lib",
+            "@googletest//:gtest_main",
+        ],
+    )
+    for test_name in [
+        "gtest_bitboard_moves",
+        "gtest_comprehensive",
+        "gtest_crash",
+        "gtest_engine_improvements",
+        "gtest_fen",
+        "gtest_killer_moves",
+        "gtest_king_safety",
+        "gtest_parallel",
+        "gtest_pawn",
+        "gtest_quiescence",
+        "gtest_tactical_suite",
+        "gtest_wac",
+    ]
+]
+
+cc_test(
+    name = "gtest_perft",
+    srcs = ["gtest_perft.cpp"],
+    size = "enormous",
+    deps = [
+        "//:engine_lib",
+        "@googletest//:gtest_main",
+    ],
+)
