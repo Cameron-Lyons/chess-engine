@@ -281,7 +281,7 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
         for (int piece = 0; piece < 6; ++piece) {
             Bitboard bb = pieces[color][piece];
             while (bb) {
-                int square = __builtin_ctzll(bb);
+                int square = std::countr_zero(bb);
                 hash ^= zobristPieces[color][piece][square];
                 bb &= bb - 1;
             }

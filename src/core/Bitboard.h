@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bit>
 #include <cstdint>
 
 using Bitboard = uint64_t;
@@ -11,46 +12,15 @@ constexpr int BOARD_SIZE = 8;
 constexpr int NUM_SQUARES = 64;
 
 inline int popcount(Bitboard b) {
-#if defined(__GNUC__) || defined(__clang__)
-    return __builtin_popcountll(b);
-#else
-    int count = 0;
-    while (b) {
-        b &= b - 1;
-        ++count;
-    }
-    return count;
-#endif
+    return std::popcount(b);
 }
 
 inline int lsb(Bitboard b) {
-#if defined(__GNUC__) || defined(__clang__)
-    return b ? __builtin_ctzll(b) : -1;
-#else
-    if (!b)
-        return -1;
-    int idx = 0;
-    while ((b & 1) == 0) {
-        b >>= 1;
-        ++idx;
-    }
-    return idx;
-#endif
+    return b ? std::countr_zero(b) : -1;
 }
 
 inline int msb(Bitboard b) {
-#if defined(__GNUC__) || defined(__clang__)
-    return b ? 63 - __builtin_clzll(b) : -1;
-#else
-    if (!b)
-        return -1;
-    int idx = 63;
-    while ((b & (1ULL << 63)) == 0) {
-        b <<= 1;
-        --idx;
-    }
-    return idx;
-#endif
+    return b ? std::bit_width(b) - 1 : -1;
 }
 
 inline void set_bit(Bitboard& b, int sq) {

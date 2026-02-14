@@ -1,6 +1,7 @@
 #include "NNUEOptimized.h"
 
 #include <algorithm>
+#include <bit>
 #include <cpuid.h>
 #include <cstring>
 #include <fstream>
@@ -34,7 +35,7 @@ void Accumulator::refresh(const BitboardPosition& pos) {
         ChessPieceColor c = color == 0 ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
 
         Bitboard kingBB = pos.getPieceBitboard(ChessPieceType::KING, c);
-        int kingSquare = __builtin_ctzll(kingBB);
+        int kingSquare = std::countr_zero(kingBB);
         int kingBucket = FeatureTransformer::getKingBucket(kingSquare);
 
         for (int pt = 0; pt < 6; ++pt) {
@@ -42,7 +43,7 @@ void Accumulator::refresh(const BitboardPosition& pos) {
             Bitboard pieceBB = pos.getPieceBitboard(pieceType, c);
 
             while (pieceBB) {
-                int square = __builtin_ctzll(pieceBB);
+                int square = std::countr_zero(pieceBB);
                 int featureIdx = FeatureTransformer::makeIndex(square, pt, color, kingBucket);
 
                 addFeature(0, featureIdx);
@@ -337,7 +338,7 @@ void NNUEEvaluator::updateBeforeMove(const BitboardPosition& pos, int from, int 
                                      ChessPieceType piece, ChessPieceType captured) {
 
     int color = pos.getColorAt(from) == ChessPieceColor::WHITE ? 0 : 1;
-    int kingSquare = __builtin_ctzll(pos.getPieceBitboard(
+    int kingSquare = std::countr_zero(pos.getPieceBitboard(
         ChessPieceType::KING, color == 0 ? ChessPieceColor::WHITE : ChessPieceColor::BLACK));
     int kingBucket = FeatureTransformer::getKingBucket(kingSquare);
 
@@ -360,7 +361,7 @@ void NNUEEvaluator::updateAfterMove(const BitboardPosition& pos, int from, int t
     (void)from;
 
     int color = pos.getColorAt(to) == ChessPieceColor::WHITE ? 0 : 1;
-    int kingSquare = __builtin_ctzll(pos.getPieceBitboard(
+    int kingSquare = std::countr_zero(pos.getPieceBitboard(
         ChessPieceType::KING, color == 0 ? ChessPieceColor::WHITE : ChessPieceColor::BLACK));
     int kingBucket = FeatureTransformer::getKingBucket(kingSquare);
 

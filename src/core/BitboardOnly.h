@@ -137,7 +137,7 @@ public:
     inline void forEachPiece(ChessPieceColor color, ChessPieceType type, Func&& func) const {
         Bitboard bb = getPieceBitboard(type, color);
         while (bb) {
-            int square = __builtin_ctzll(bb);
+            int square = std::countr_zero(bb);
             func(square);
             bb &= bb - 1;
         }

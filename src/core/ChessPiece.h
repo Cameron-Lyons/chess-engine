@@ -35,44 +35,12 @@ public:
     }
 
     static constexpr short getPieceValue(ChessPieceType pieceType) {
-        switch (pieceType) {
-            case ChessPieceType::PAWN:
-                return 100;
-            case ChessPieceType::KNIGHT:
-                return 320;
-            case ChessPieceType::BISHOP:
-                return 325;
-            case ChessPieceType::ROOK:
-                return 500;
-            case ChessPieceType::QUEEN:
-                return 975;
-            case ChessPieceType::KING:
-                return 32767;
-            case ChessPieceType::NONE:
-                return 0;
-            default:
-                return 0;
-        }
+        constexpr short values[] = {100, 320, 325, 500, 975, 32767, 0};
+        return values[static_cast<int>(pieceType)];
     }
 
     static constexpr short getPieceActionValue(ChessPieceType pieceType) {
-        switch (pieceType) {
-            case ChessPieceType::PAWN:
-                return 6;
-            case ChessPieceType::KNIGHT:
-                return 3;
-            case ChessPieceType::BISHOP:
-                return 3;
-            case ChessPieceType::ROOK:
-                return 2;
-            case ChessPieceType::QUEEN:
-                return 2;
-            case ChessPieceType::KING:
-                return 1;
-            case ChessPieceType::NONE:
-                return 0;
-            default:
-                return 0;
-        }
+        constexpr short values[] = {6, 3, 3, 2, 2, 1, 0};
+        return values[static_cast<int>(pieceType)];
     }
 };

@@ -99,36 +99,14 @@ int getPieceSquareValue(ChessPieceType piece, int square, ChessPieceColor color,
         return 0;
     }
 
-    int mgValue = 0, egValue = 0;
-
-    switch (piece) {
-        case ChessPieceType::PAWN:
-            mgValue = PAWN_MG[adjustedSquare];
-            egValue = PAWN_EG[adjustedSquare];
-            break;
-        case ChessPieceType::KNIGHT:
-            mgValue = KNIGHT_MG[adjustedSquare];
-            egValue = KNIGHT_EG[adjustedSquare];
-            break;
-        case ChessPieceType::BISHOP:
-            mgValue = BISHOP_MG[adjustedSquare];
-            egValue = BISHOP_EG[adjustedSquare];
-            break;
-        case ChessPieceType::ROOK:
-            mgValue = ROOK_MG[adjustedSquare];
-            egValue = ROOK_EG[adjustedSquare];
-            break;
-        case ChessPieceType::QUEEN:
-            mgValue = QUEEN_MG[adjustedSquare];
-            egValue = QUEEN_EG[adjustedSquare];
-            break;
-        case ChessPieceType::KING:
-            mgValue = KING_MG[adjustedSquare];
-            egValue = KING_EG[adjustedSquare];
-            break;
-        default:
-            return 0;
-    }
+    static const int* const mgTables[] = {PAWN_MG,   KNIGHT_MG, BISHOP_MG,
+                                          ROOK_MG,   QUEEN_MG,  KING_MG};
+    static const int* const egTables[] = {PAWN_EG,   KNIGHT_EG, BISHOP_EG,
+                                          ROOK_EG,   QUEEN_EG,  KING_EG};
+    int idx = static_cast<int>(piece);
+    if (idx < 0 || idx >= 6) return 0;
+    int mgValue = mgTables[idx][adjustedSquare];
+    int egValue = egTables[idx][adjustedSquare];
 
     return ((mgValue * (256 - gamePhase)) + (egValue * gamePhase)) / 256;
 }
@@ -167,30 +145,11 @@ int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor 
         return 0;
     }
 
-    int value = 0;
-    switch (pieceType) {
-        case ChessPieceType::PAWN:
-            value = PieceSquareTables::PAWN_MG[position];
-            break;
-        case ChessPieceType::KNIGHT:
-            value = PieceSquareTables::KNIGHT_MG[position];
-            break;
-        case ChessPieceType::BISHOP:
-            value = PieceSquareTables::BISHOP_MG[position];
-            break;
-        case ChessPieceType::ROOK:
-            value = PieceSquareTables::ROOK_MG[position];
-            break;
-        case ChessPieceType::QUEEN:
-            value = PieceSquareTables::QUEEN_MG[position];
-            break;
-        case ChessPieceType::KING:
-            value = PieceSquareTables::KING_MG[position];
-            break;
-        default:
-            value = 0;
-            break;
-    }
+    static const int* const tables[] = {
+        PieceSquareTables::PAWN_MG,   PieceSquareTables::KNIGHT_MG, PieceSquareTables::BISHOP_MG,
+        PieceSquareTables::ROOK_MG,   PieceSquareTables::QUEEN_MG,  PieceSquareTables::KING_MG};
+    int idx = static_cast<int>(pieceType);
+    int value = (idx >= 0 && idx < 6) ? tables[idx][position] : 0;
     if (color == ChessPieceColor::BLACK) {
         value = -value;
     }

@@ -312,30 +312,8 @@ std::string Board::toFEN() const {
                     emptyCount = 0;
                 }
 
-                char pieceChar = ' ';
-                switch (piece.PieceType) {
-                    case ChessPieceType::PAWN:
-                        pieceChar = 'P';
-                        break;
-                    case ChessPieceType::KNIGHT:
-                        pieceChar = 'N';
-                        break;
-                    case ChessPieceType::BISHOP:
-                        pieceChar = 'B';
-                        break;
-                    case ChessPieceType::ROOK:
-                        pieceChar = 'R';
-                        break;
-                    case ChessPieceType::QUEEN:
-                        pieceChar = 'Q';
-                        break;
-                    case ChessPieceType::KING:
-                        pieceChar = 'K';
-                        break;
-                    default:
-                        pieceChar = '?';
-                        break;
-                }
+                constexpr char pieceChars[] = {'P', 'N', 'B', 'R', 'Q', 'K', '?'};
+                char pieceChar = pieceChars[static_cast<int>(piece.PieceType)];
 
                 if (piece.PieceColor == ChessPieceColor::BLACK) {
                     pieceChar = tolower(pieceChar);
