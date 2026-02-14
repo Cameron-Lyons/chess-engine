@@ -144,9 +144,6 @@ public:
         static void convertToAligned(const Board& board, AlignedBoard& aligned);
         static void convertFromAligned(const AlignedBoard& aligned, Board& board);
         static void prefetchAligned(const AlignedBoard& aligned);
-
-    private:
-        static constexpr size_t CACHE_LINE_SIZE = 64;
     };
 
     class BranchPrediction {

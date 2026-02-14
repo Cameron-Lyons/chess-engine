@@ -7,7 +7,8 @@
 std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color);
 
 static uint64_t perft(Board& board, ChessPieceColor color, int depth) {
-    if (depth == 0) return 1;
+    if (depth == 0)
+        return 1;
 
     GenValidMoves(board);
     auto moves = generateBitboardMoves(board, color);
@@ -20,7 +21,8 @@ static uint64_t perft(Board& board, ChessPieceColor color, int depth) {
         Board copy = board;
         copy.movePiece(move.first, move.second);
 
-        if (isInCheck(copy, color)) continue;
+        if (isInCheck(copy, color))
+            continue;
 
         copy.turn = nextColor;
         copy.updateBitboards();

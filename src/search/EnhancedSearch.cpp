@@ -84,7 +84,6 @@ bool IsInCheck(const Board& board, ChessPieceColor color) {
 
 static constexpr int MATE_SCORE = 30000;
 static constexpr int MATE_THRESHOLD = 29000;
-static constexpr int MAX_PLY = 128;
 
 static std::chrono::steady_clock::time_point searchStartTime;
 static int searchTimeLimit = 0;

@@ -72,9 +72,7 @@ private:
     std::chrono::steady_clock::time_point searchStartTime;
     int searchTimeLimit;
     int searchDepthLimit;
-    int searchNodeLimit;
     std::thread searchThread;
-    ParallelSearchContext* activeContext = nullptr;
 
     std::string moveToUCI(const std::pair<int, int>& move);
     std::pair<int, int> uciToMove(const std::string& uciMove);
@@ -85,8 +83,8 @@ private:
 
     void startSearch();
     void stopSearch();
-    SearchResult performSearch(const Board& board, int depth, int timeLimit,
-                               int optimalTime = 0, int maxTime = 0);
+    SearchResult performSearch(const Board& board, int depth, int timeLimit, int optimalTime = 0,
+                               int maxTime = 0);
 
     void setHashSize(int size);
     void setThreads(int num);

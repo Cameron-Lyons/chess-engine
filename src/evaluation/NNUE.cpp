@@ -36,8 +36,10 @@ void Accumulator::refresh(const Board& board) {
 }
 
 void Accumulator::addFeature(int feature) {
-    if (!featureWeights) return;
-    if (feature < 0 || feature >= INPUT_DIMENSIONS) return;
+    if (!featureWeights)
+        return;
+    if (feature < 0 || feature >= INPUT_DIMENSIONS)
+        return;
 
     const int16_t* w = &featureWeights[feature * L1_SIZE];
 
@@ -60,8 +62,10 @@ void Accumulator::addFeature(int feature) {
 }
 
 void Accumulator::removeFeature(int feature) {
-    if (!featureWeights) return;
-    if (feature < 0 || feature >= INPUT_DIMENSIONS) return;
+    if (!featureWeights)
+        return;
+    if (feature < 0 || feature >= INPUT_DIMENSIONS)
+        return;
 
     const int16_t* w = &featureWeights[feature * L1_SIZE];
 
@@ -152,12 +156,10 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
     }
 
     ftWeights.resize(INPUT_DIMENSIONS * L1_SIZE);
-    file.read(reinterpret_cast<char*>(ftWeights.data()),
-              ftWeights.size() * sizeof(int16_t));
+    file.read(reinterpret_cast<char*>(ftWeights.data()), ftWeights.size() * sizeof(int16_t));
 
     std::vector<int32_t> ftBiases32(L1_SIZE);
-    file.read(reinterpret_cast<char*>(ftBiases32.data()),
-              ftBiases32.size() * sizeof(int32_t));
+    file.read(reinterpret_cast<char*>(ftBiases32.data()), ftBiases32.size() * sizeof(int32_t));
     ftBiases.resize(L1_SIZE);
     for (int i = 0; i < L1_SIZE; ++i)
         ftBiases[i] = static_cast<int16_t>(std::clamp(ftBiases32[i], -32768, 32767));

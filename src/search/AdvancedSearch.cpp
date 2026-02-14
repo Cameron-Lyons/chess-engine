@@ -474,8 +474,7 @@ int EnhancedMoveOrdering::getPositionalScore(const Board& board, const std::pair
     return score;
 }
 
-TimeManager::TimeManager(const TimeControl& tc)
-    : timeControl(tc), moveNumber(0), totalMoves(30), timeFactor(1.0) {}
+TimeManager::TimeManager(const TimeControl& tc) : timeControl(tc), moveNumber(0), totalMoves(30) {}
 
 int TimeManager::allocateTime(Board& board, int depth, int nodes, bool isInCheck) {
 

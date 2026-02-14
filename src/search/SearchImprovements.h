@@ -88,11 +88,9 @@ public:
             uint64_t hash;
             int eval;
             int depth;
-            std::chrono::steady_clock::time_point timestamp;
 
             Entry() : hash(0), eval(0), depth(0) {}
-            Entry(uint64_t h, int e, int d)
-                : hash(h), eval(e), depth(d), timestamp(std::chrono::steady_clock::now()) {}
+            Entry(uint64_t h, int e, int d) : hash(h), eval(e), depth(d) {}
         };
 
         std::unordered_map<uint64_t, Entry> cache;

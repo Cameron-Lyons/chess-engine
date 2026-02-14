@@ -29,7 +29,9 @@ public:
         params.push_back({name, value, def, min, max, step});
     }
 
-    const std::vector<TunableParam>& all() const { return params; }
+    const std::vector<TunableParam>& all() const {
+        return params;
+    }
 
     bool set(const std::string& name, int val) {
         for (auto& p : params) {
@@ -46,7 +48,8 @@ public:
 
     const TunableParam* find(const std::string& name) const {
         for (const auto& p : params) {
-            if (p.name == name) return &p;
+            if (p.name == name)
+                return &p;
         }
         return nullptr;
     }
@@ -64,8 +67,8 @@ struct TunableInit {
     }
 };
 
-#define TUNABLE(name, def, min, max, step) \
-    inline int TUNABLE_##name = def; \
+#define TUNABLE(name, def, min, max, step)                                                         \
+    inline int TUNABLE_##name = def;                                                               \
     inline TunableInit TUNABLE_INIT_##name(#name, &TUNABLE_##name, def, min, max, step)
 
 TUNABLE(LMR_BASE, 75, 50, 120, 5);

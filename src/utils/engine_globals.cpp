@@ -280,7 +280,8 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         destCol = cleanMove[2] - 'a';
         destRow = cleanMove[3] - '1';
         srcCol = cleanMove[0] - 'a';
-        if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE || srcCol < 0 || srcCol >= BOARD_SIZE)
+        if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE ||
+            srcCol < 0 || srcCol >= BOARD_SIZE)
             return false;
 
         for (int row = 0; row < BOARD_SIZE; row++) {
@@ -368,8 +369,8 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             destRow = cleanMove[3] - '1';
             srcCol = cleanMove[0] - 'a';
 
-            if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE || srcCol < 0 ||
-                srcCol >= BOARD_SIZE)
+            if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE ||
+                srcCol < 0 || srcCol >= BOARD_SIZE)
                 return false;
 
             bool isPromotionRank = (destRow == 7 && board.turn == ChessPieceColor::WHITE) ||
@@ -466,7 +467,8 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                                 int colStep = (destCol > col) ? 1 : -1;
                                 canReach = true;
                                 for (int i = 1; i < rowDiff; i++) {
-                                    int checkPos = (row + i * rowStep) * BOARD_SIZE + (col + i * colStep);
+                                    int checkPos =
+                                        (row + i * rowStep) * BOARD_SIZE + (col + i * colStep);
                                     if (board.squares[checkPos].piece.PieceType !=
                                         ChessPieceType::NONE) {
                                         canReach = false;
