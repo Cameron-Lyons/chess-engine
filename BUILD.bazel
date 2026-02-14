@@ -5,7 +5,6 @@ cc_library(
     srcs = [
         "src/ai/EndgameTablebase.cpp",
         "src/ai/NeuralNetwork.cpp",
-        "src/ai/OpeningBook.cpp",
         "src/ai/SyzygyTablebase.cpp",
         "src/core/BitboardMoves.cpp",
         "src/core/BitboardOnly.cpp",

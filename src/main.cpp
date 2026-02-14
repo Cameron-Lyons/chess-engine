@@ -1,12 +1,10 @@
 #include "ai/NeuralNetwork.h"
-#include "ai/OpeningBook.h"
 #include "core/BitboardMoves.h"
 #include "core/ChessEngine.h"
 #include "core/MoveContent.h"
 #include "evaluation/Evaluation.h"
 #include "evaluation/EvaluationEnhanced.h"
 #include "evaluation/EvaluationTuning.h"
-#include "evaluation/PatternRecognition.h"
 #include "evaluation/PositionAnalysis.h"
 #include "protocol/uci.h"
 #include "search/SearchImprovements.h"
@@ -518,7 +516,6 @@ int main(int argc, char* argv[]) {
     InitZobrist();
 
     initializeEnhancedEvaluator();
-    initializeOpeningBook();
 
     std::cout << "Chess Engine v2.0 - Advanced Features Edition\n";
     std::cout << "=============================================\n";
