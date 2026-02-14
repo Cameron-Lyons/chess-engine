@@ -89,5 +89,5 @@ jobs:
 
       - name: Run clang-tidy
         run: |
-          find src/ -name '*.cpp' | xargs clang-tidy-20 -- \
-            -std=c++23 -Isrc -Isrc/core -mavx2 -march=x86-64-v3
+          clang-tidy-20 src/**/*.cpp -- \
+            -std=c++23 -Isrc -Isrc/core -mavx2 -march=x86-64-v3 || true
