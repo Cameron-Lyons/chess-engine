@@ -19,12 +19,10 @@ Contains all search-related functionality:
 - `search.h/cpp` - Main search algorithms (minimax, alpha-beta)
 - `ValidMoves.h/cpp` - Legal move generation and validation
 - `AdvancedSearch.h/cpp` - Advanced search techniques (futility pruning, null move, extensions)
-- `EnhancedSearch.h/cpp` - Enhanced search with additional optimizations
 - `LazySMP.h/cpp` - Lazy SMP (Symmetric Multi-Processing) parallel search
 - `LMREnhanced.h/cpp` - Enhanced Late Move Reductions
 - `MoveOrdering.h` - Move ordering heuristics
 - `SearchEnhancements.h` - Additional search enhancements
-- `SearchImprovements.h` - Search improvement techniques
 - `TranspositionTableV2.h/cpp` - Advanced transposition table implementation
 
 ### `evaluation/` - Position Evaluation

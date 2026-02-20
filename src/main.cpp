@@ -7,15 +7,16 @@
 #include "evaluation/EvaluationTuning.h"
 #include "evaluation/PositionAnalysis.h"
 #include "protocol/uci.h"
-#include "search/SearchImprovements.h"
 #include "search/ValidMoves.h"
 #include "search/search.h"
 #include "utils/engine_globals.h"
 
+#include <cctype>
 #include <chrono>
+#include <cstdint>
+#include <exception>
 #include <iostream>
 #include <string>
-#include <string_view>
 #include <vector>
 
 using ChessClock = std::chrono::steady_clock;
@@ -30,25 +31,12 @@ PieceMoving MovingPiece(ChessPieceColor::WHITE, ChessPieceType::PAWN, false);
 PieceMoving MovingPieceSecondary(ChessPieceColor::WHITE, ChessPieceType::PAWN, false);
 bool PawnPromoted = false;
 
-bool parseMove(std::string_view move, int& srcCol, int& srcRow, int& destCol, int& destRow) {
-    if (move.length() < 4) {
-        return false;
-    }
-    srcCol = move[0] - 'a';
-    srcRow = move[1] - '1';
-    destCol = move[2] - 'a';
-    destRow = move[3] - '1';
-    bool valid = srcCol >= 0 && srcCol < BOARD_SIZE && srcRow >= 0 && srcRow < BOARD_SIZE &&
-                 destCol >= 0 && destCol < BOARD_SIZE && destRow >= 0 && destRow < BOARD_SIZE;
-    return valid;
-}
-
 void printBoard(const Board& board) {
     std::cout << "  a b c d e f g h\n";
     for (int row = 7; row >= 0; --row) {
         std::cout << (row + 1) << " ";
         for (int col = 0; col < BOARD_SIZE; ++col) {
-            int pos = row * BOARD_SIZE + col;
+            int pos = (row * BOARD_SIZE) + col;
             const Piece& piece = board.squares[pos].piece;
             if (piece.PieceType == ChessPieceType::NONE) {
                 std::cout << ". ";
@@ -78,7 +66,7 @@ void printBoard(const Board& board) {
                         break;
                 }
                 if (piece.PieceColor == ChessPieceColor::BLACK) {
-                    pieceChar = tolower(pieceChar);
+                    pieceChar = static_cast<char>(std::tolower(static_cast<unsigned char>(pieceChar)));
                 }
                 std::cout << pieceChar << " ";
             }
@@ -102,21 +90,21 @@ int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
         }
     }
 
-    float complexityMultiplier = 1.0f;
+    float complexityMultiplier = 1.0F;
 
     if (movesPlayed < 10) {
-        complexityMultiplier = 0.8f;
+        complexityMultiplier = 0.8F;
     } else if (totalMaterial > 3000) {
-        complexityMultiplier = 3.0f;
+        complexityMultiplier = 3.0F;
     } else if (totalMaterial < 1500) {
-        complexityMultiplier = 2.5f;
+        complexityMultiplier = 2.5F;
     }
 
     if (IsKingInCheck(board, board.turn)) {
-        complexityMultiplier *= 1.5f;
+        complexityMultiplier *= 1.5F;
     }
 
-    return static_cast<int>(baseTime * complexityMultiplier);
+    return static_cast<int>(static_cast<float>(baseTime) * complexityMultiplier);
 }
 
 std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
@@ -124,9 +112,12 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {
         std::cout << "Using opening book move: " << bookMove << "\n";
-        int srcCol, srcRow, destCol, destRow;
+        int srcCol = 0;
+        int srcRow = 0;
+        int destCol = 0;
+        int destRow = 0;
         if (parseAlgebraicMove(bookMove, board, srcCol, srcRow, destCol, destRow)) {
-            return {srcCol + srcRow * BOARD_SIZE, destCol + destRow * BOARD_SIZE};
+            return {(srcCol + (srcRow * BOARD_SIZE)), (destCol + (destRow * BOARD_SIZE))};
         }
     }
 
@@ -140,27 +131,29 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
     std::cout << "Using optimized single-threaded search...\n";
 
     int searchDepth = 8;
-    if (adaptiveTime > 12000)
+    if (adaptiveTime > 12000) {
         searchDepth = 12;
-    else if (adaptiveTime > 8000)
+    } else if (adaptiveTime > 8000) {
         searchDepth = 11;
-    else if (adaptiveTime > 5000)
+    } else if (adaptiveTime > 5000) {
         searchDepth = 10;
-    else if (adaptiveTime > 3000)
+    } else if (adaptiveTime > 3000) {
         searchDepth = 9;
-    else if (adaptiveTime > 1500)
+    } else if (adaptiveTime > 1500) {
         searchDepth = 8;
-    else if (adaptiveTime < 800)
+    } else if (adaptiveTime < 800) {
         searchDepth = 6;
+}
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
-    int numMoves = moves.size();
+    int numMoves = static_cast<int>(moves.size());
 
-    if (numMoves > 35)
+    if (numMoves > 35) {
         searchDepth += 3;
-    else if (numMoves < 15)
+    } else if (numMoves < 15) {
         searchDepth -= 1;
+}
 
     int numCaptures = 0;
     for (const auto& move : moves) {
@@ -168,16 +161,19 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
             numCaptures++;
         }
     }
-    if (numCaptures > 5)
+    if (numCaptures > 5) {
         searchDepth += 2;
-    if (numCaptures > 8)
+}
+    if (numCaptures > 8) {
         searchDepth += 1;
+}
 
     bool hasHangingPieces = false;
     for (int i = 0; i < NUM_SQUARES; i++) {
         const Piece& piece = board.squares[i].piece;
-        if (piece.PieceType == ChessPieceType::NONE || piece.PieceType == ChessPieceType::PAWN)
+        if (piece.PieceType == ChessPieceType::NONE || piece.PieceType == ChessPieceType::PAWN) {
             continue;
+}
 
         ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE)
                                          ? ChessPieceColor::BLACK
@@ -189,8 +185,9 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
                 break;
             }
         }
-        if (hasHangingPieces)
+        if (hasHangingPieces) {
             break;
+}
     }
 
     if (hasHangingPieces) {
@@ -206,37 +203,15 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
 }
 
 std::string positionToNotation(int pos) {
-    if (pos < 0 || pos >= NUM_SQUARES)
+    if (pos < 0 || pos >= NUM_SQUARES) {
         return "??";
+}
     int row = pos / BOARD_SIZE;
     int col = pos % BOARD_SIZE;
-    return std::string(1, 'a' + col) + std::to_string(row + 1);
+    return std::string(1, static_cast<char>('a' + col)) + std::to_string(row + 1);
 }
 
-std::string to_string(ChessPieceType type) {
-    switch (type) {
-        case ChessPieceType::PAWN:
-            return "Pawn";
-        case ChessPieceType::KNIGHT:
-            return "Knight";
-        case ChessPieceType::BISHOP:
-            return "Bishop";
-        case ChessPieceType::ROOK:
-            return "Rook";
-        case ChessPieceType::QUEEN:
-            return "Queen";
-        case ChessPieceType::KING:
-            return "King";
-        default:
-            return "None";
-    }
-}
-
-std::string to_string(ChessPieceColor color) {
-    return color == ChessPieceColor::WHITE ? "White" : "Black";
-}
-
-enum class GameState {
+enum class GameState : std::uint8_t {
     ONGOING,
     CHECKMATE_WHITE_WINS,
     CHECKMATE_BLACK_WINS,
@@ -274,7 +249,8 @@ GameState checkGameState(Board& board) {
         }
     }
 
-    std::vector<ChessPieceType> whitePieces, blackPieces;
+    std::vector<ChessPieceType> whitePieces;
+    std::vector<ChessPieceType> blackPieces;
     for (int i = 0; i < NUM_SQUARES; i++) {
         const Piece& piece = board.squares[i].piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
@@ -286,24 +262,17 @@ GameState checkGameState(Board& board) {
         }
     }
 
-    bool insufficientMaterial = false;
+    const bool bareKings = whitePieces.empty() && blackPieces.empty();
+    const bool loneMinorVsKing =
+        (whitePieces.size() == 1 && blackPieces.empty() &&
+         (whitePieces[0] == ChessPieceType::BISHOP || whitePieces[0] == ChessPieceType::KNIGHT)) ||
+        (blackPieces.size() == 1 && whitePieces.empty() &&
+         (blackPieces[0] == ChessPieceType::BISHOP || blackPieces[0] == ChessPieceType::KNIGHT));
+    const bool bishopsOnly = whitePieces.size() == 1 && blackPieces.size() == 1 &&
+                             whitePieces[0] == ChessPieceType::BISHOP &&
+                             blackPieces[0] == ChessPieceType::BISHOP;
 
-    if (whitePieces.empty() && blackPieces.empty()) {
-        insufficientMaterial = true;
-    } else if ((whitePieces.size() == 1 && blackPieces.empty() &&
-                (whitePieces[0] == ChessPieceType::BISHOP ||
-                 whitePieces[0] == ChessPieceType::KNIGHT)) ||
-               (blackPieces.size() == 1 && whitePieces.empty() &&
-                (blackPieces[0] == ChessPieceType::BISHOP ||
-                 blackPieces[0] == ChessPieceType::KNIGHT))) {
-        insufficientMaterial = true;
-    } else if (whitePieces.size() == 1 && blackPieces.size() == 1 &&
-               whitePieces[0] == ChessPieceType::BISHOP &&
-               blackPieces[0] == ChessPieceType::BISHOP) {
-        insufficientMaterial = true;
-    }
-
-    if (insufficientMaterial) {
+    if (bareKings || loneMinorVsKing || bishopsOnly) {
         return GameState::DRAW_INSUFFICIENT_MATERIAL;
     }
 
@@ -352,6 +321,7 @@ void announceGameResult(GameState state) {
 }
 
 int main(int argc, char* argv[]) {
+    try {
     if (argc > 1) {
         std::string mode = argv[1];
 
@@ -365,16 +335,16 @@ int main(int argc, char* argv[]) {
 
             EnhancedEvaluator::EvaluationConfig config;
             config.useNeuralNetwork = true;
-            config.nnWeight = 0.7f;
+            config.nnWeight = 0.7F;
             config.useTraditionalEval = true;
-            config.traditionalWeight = 0.3f;
+            config.traditionalWeight = 0.3F;
 
             initializeEnhancedEvaluator(config);
 
             NNTrainer::TrainingConfig trainConfig;
             trainConfig.batchSize = 32;
             trainConfig.epochs = 5;
-            trainConfig.validationSplit = 0.2f;
+            trainConfig.validationSplit = 0.2F;
             trainConfig.earlyStoppingPatience = 3;
             trainConfig.modelPath = "models/chess_nn.bin";
             trainConfig.trainingDataPath = "data/training_data.bin";
@@ -392,7 +362,7 @@ int main(int argc, char* argv[]) {
             trainer.generateTrainingReport("training_report.txt");
 
             std::cout << "\nTraining completed! Model saved to: " << trainConfig.modelPath
-                      << std::endl;
+                      << '\n';
             return 0;
         } else if (mode == "test") {
             std::cout << "Neural Network Test Mode\n";
@@ -400,9 +370,9 @@ int main(int argc, char* argv[]) {
 
             EnhancedEvaluator::EvaluationConfig config;
             config.useNeuralNetwork = true;
-            config.nnWeight = 0.7f;
+            config.nnWeight = 0.7F;
             config.useTraditionalEval = true;
-            config.traditionalWeight = 0.3f;
+            config.traditionalWeight = 0.3F;
 
             initializeEnhancedEvaluator(config);
 
@@ -420,20 +390,20 @@ int main(int argc, char* argv[]) {
                 Board board;
                 board.InitializeFromFEN(testFens[i]);
 
-                std::cout << "Position " << (i + 1) << ": " << positionNames[i] << std::endl;
-                std::cout << "FEN: " << testFens[i] << std::endl;
+                std::cout << "Position " << (i + 1) << ": " << positionNames[i] << '\n';
+                std::cout << "FEN: " << testFens[i] << '\n';
 
                 int traditionalEval = evaluatePosition(board);
                 std::cout << "Traditional evaluation: " << traditionalEval << " centipawns"
-                          << std::endl;
+                          << '\n';
 
                 float nnEval = evaluateWithNeuralNetwork(board);
-                std::cout << "Neural network evaluation: " << nnEval << " centipawns" << std::endl;
+                std::cout << "Neural network evaluation: " << nnEval << " centipawns" << '\n';
 
                 float hybridEval = evaluateHybrid(board);
-                std::cout << "Hybrid evaluation: " << hybridEval << " centipawns" << std::endl;
+                std::cout << "Hybrid evaluation: " << hybridEval << " centipawns" << '\n';
 
-                std::cout << std::endl;
+                std::cout << '\n';
             }
 
             return 0;
@@ -458,8 +428,8 @@ int main(int argc, char* argv[]) {
 
             generator.saveTrainingData(trainingData, dataPath);
 
-            std::cout << "Training data saved to: " << dataPath << std::endl;
-            std::cout << "Generated " << trainingData.size() << " training examples" << std::endl;
+            std::cout << "Training data saved to: " << dataPath << '\n';
+            std::cout << "Generated " << trainingData.size() << " training examples" << '\n';
 
             return 0;
         } else if (mode == "--tune" || mode == "tune") {
@@ -525,7 +495,6 @@ int main(int argc, char* argv[]) {
     ChessBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     std::string input;
-    std::string input2;
     while (true) {
         printBoard(ChessBoard);
 
@@ -537,7 +506,7 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        std::string checkIndicator = "";
+        std::string checkIndicator;
         if (IsKingInCheck(ChessBoard, ChessBoard.turn)) {
             checkIndicator = " [CHECK!] ";
         }
@@ -551,7 +520,10 @@ int main(int argc, char* argv[]) {
 
         ChessTimePoint moveStartTime = ChessClock::now();
 
-        int srcCol, srcRow, destCol, destRow;
+        int srcCol = 0;
+        int srcRow = 0;
+        int destCol = 0;
+        int destRow = 0;
         if (parseAlgebraicMove(input, ChessBoard, srcCol, srcRow, destCol, destRow)) {
             ChessPieceType promotionPiece = ChessPieceType::QUEEN;
             if (input.contains('=')) {
@@ -630,4 +602,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Thanks for playing!\n";
 
     return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Fatal error: " << e.what() << '\n';
+        return 1;
+    }
 }

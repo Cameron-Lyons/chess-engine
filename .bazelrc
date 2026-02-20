@@ -3,7 +3,7 @@ build --cxxopt=-Wall
 build --cxxopt=-Wextra
 build --cxxopt=-Wpedantic
 build --copt=-march=native
-build --copt=-mavx2
 
 build:release --copt=-O3 --copt=-DNDEBUG
 build:debug --copt=-g --copt=-DDEBUG
+build:avx2 --copt=-mavx2

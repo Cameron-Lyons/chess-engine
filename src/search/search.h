@@ -38,34 +38,32 @@ struct TTEntry {
         : depth(d), value(v), flag(f), bestMove(move), zobristKey(key) {}
 };
 
-struct ThreadSafeTT {
-    std::unordered_map<uint64_t, TTEntry> table;
-    mutable std::mutex mutex;
-    void insert(uint64_t hash, const TTEntry& entry);
-    bool find(uint64_t hash, TTEntry& entry) const;
-    void clear();
-};
-
 class TranspositionTableAdapter {
     TTv2::TranspositionTable tt;
 
     static TTv2::Bound flagToBound(int flag) {
-        if (flag == 0)
+        if (flag == 0) {
             return TTv2::BOUND_EXACT;
-        if (flag == -1)
+        }
+        if (flag == -1) {
             return TTv2::BOUND_UPPER;
-        if (flag == 1)
+        }
+        if (flag == 1) {
             return TTv2::BOUND_LOWER;
+        }
         return TTv2::BOUND_NONE;
     }
 
     static int boundToFlag(TTv2::Bound b) {
-        if (b == TTv2::BOUND_EXACT)
+        if (b == TTv2::BOUND_EXACT) {
             return 0;
-        if (b == TTv2::BOUND_UPPER)
+        }
+        if (b == TTv2::BOUND_UPPER) {
             return -1;
-        if (b == TTv2::BOUND_LOWER)
+        }
+        if (b == TTv2::BOUND_LOWER) {
             return 1;
+        }
         return 0;
     }
 
@@ -75,28 +73,32 @@ public:
     }
 
     void insert(uint64_t hash, const TTEntry& entry) {
-        bool found;
+        bool found = false;
         TTv2::TTEntry* tte = tt.probe(hash, found);
         TTv2::PackedMove pm =
             TTv2::packMove(entry.bestMove.first >= 0 ? entry.bestMove.first : 0,
                            entry.bestMove.second >= 0 ? entry.bestMove.second : 0);
-        if (entry.bestMove.first < 0)
+        if (entry.bestMove.first < 0) {
             pm = 0;
+        }
         tte->save(hash, static_cast<int16_t>(entry.value), static_cast<int16_t>(entry.value),
                   flagToBound(entry.flag), static_cast<int8_t>(std::clamp(entry.depth, -127, 127)),
                   pm, tt.generation());
     }
 
     bool find(uint64_t hash, TTEntry& entry) const {
-        bool found;
+        bool found = false;
         TTv2::TTEntry* tte = const_cast<TTv2::TranspositionTable&>(tt).probe(hash, found);
-        if (!found)
+        if (!found) {
             return false;
-        entry.depth = tte->depth;
+        }
+        entry.depth = static_cast<int>(static_cast<unsigned char>(tte->depth));
         entry.value = tte->value;
         entry.flag = boundToFlag(tte->bound());
         if (tte->move) {
-            int from, to, promo;
+            int from = 0;
+            int to = 0;
+            int promo = 0;
             TTv2::unpackMove(tte->move, from, to, promo);
             entry.bestMove = {from, to};
         } else {
@@ -180,36 +182,44 @@ struct ParallelSearchContext {
     ParallelSearchContext(int threads = 0);
 
     void updateContinuationHistory(int prevPiece, int prevTo, int piece, int to, int bonus) {
-        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64)
+        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64) {
             return;
-        if (piece < 0 || piece >= 6 || to < 0 || to >= 64)
+        }
+        if (piece < 0 || piece >= 6 || to < 0 || to >= 64) {
             return;
+        }
         int& entry = continuationHistory[prevPiece][prevTo][piece][to];
-        entry += bonus - entry * std::abs(bonus) / 16384;
+        entry += bonus - (entry * std::abs(bonus) / 16384);
     }
 
     int getContinuationHistory(int prevPiece, int prevTo, int piece, int to) const {
-        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64)
+        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64) {
             return 0;
-        if (piece < 0 || piece >= 6 || to < 0 || to >= 64)
+        }
+        if (piece < 0 || piece >= 6 || to < 0 || to >= 64) {
             return 0;
+        }
         return continuationHistory[prevPiece][prevTo][piece][to];
     }
 
     void updateCaptureHistory(int attacker, int victim, int to, int bonus) {
-        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6)
+        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6) {
             return;
-        if (to < 0 || to >= 64)
+        }
+        if (to < 0 || to >= 64) {
             return;
+        }
         int& entry = captureHistory[attacker][victim][to];
-        entry += bonus - entry * std::abs(bonus) / 16384;
+        entry += bonus - (entry * std::abs(bonus) / 16384);
     }
 
     int getCaptureHistory(int attacker, int victim, int to) const {
-        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6)
+        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6) {
             return 0;
-        if (to < 0 || to >= 64)
+        }
+        if (to < 0 || to >= 64) {
             return 0;
+        }
         return captureHistory[attacker][victim][to];
     }
 };
@@ -243,8 +253,7 @@ void InitZobrist();
 int pieceToZobristIndex(const Piece& p);
 uint64_t ComputeZobrist(const Board& board);
 
-int getMVVLVA_Score(const Board& board, int srcPos, int destPos);
-bool isCapture(const Board& board, int, int destPos);
+bool isCapture(const Board& board, int srcPos, int destPos);
 
 inline int pieceTypeIndex(ChessPieceType pt) {
     switch (pt) {
@@ -266,24 +275,13 @@ inline int pieceTypeIndex(ChessPieceType pt) {
 }
 bool givesCheck(const Board& board, int srcPos, int destPos);
 bool isInCheck(const Board& board, ChessPieceColor color);
-std::vector<ScoredMove> scoreMovesParallel(const Board& board,
-                                           const std::vector<std::pair<int, int>>& moves,
-                                           const ThreadSafeHistory& historyTable, int numThreads);
-void updateHistoryTable(ThreadSafeHistory& historyTable, int srcPos, int destPos, int depth);
+void updateHistoryTable(ThreadSafeHistory& historyTable, int fromSquare, int toSquare, int depth);
 bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLimitMs);
-bool SearchForMate(ChessPieceColor movingSide, Board& board, bool& BlackMate, bool& WhiteMate,
-                   bool& StaleMate);
 int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, int ply,
                     ThreadSafeHistory& historyTable, ParallelSearchContext& context);
 int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
                      ThreadSafeHistory& historyTable, ParallelSearchContext& context, int ply);
 std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color);
-std::vector<std::pair<int, int>> GetQuietMoves(Board& board, ChessPieceColor color);
-std::vector<ScoredMove> scoreMovesWithKillers(const Board& board,
-                                              const std::vector<std::pair<int, int>>& moves,
-                                              const ThreadSafeHistory& historyTable,
-                                              const KillerMoves& killerMoves, int ply,
-                                              int numThreads);
 std::string getBookMove(const std::string& fen);
 SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs,
                                         int numThreads = 0, int contempt = 0, int multiPV = 1,
@@ -293,24 +291,19 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                              int ply, ThreadSafeHistory& historyTable,
                              ParallelSearchContext& context, bool isPVNode = true);
 
-SearchResult lazySMPSearch(Board& board, int maxDepth, int timeLimitMs, int numThreads = 0);
-
 int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare);
-bool isGoodCapture(const Board& board, int fromSquare, int toSquare);
-bool isCaptureProfitable(const Board& board, int fromSquare, int toSquare, int threshold = 0);
 int getSmallestAttacker(const Board& board, int targetSquare, ChessPieceColor color);
 
-bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos);
 bool isPromotion(const Board& board, int from, int to);
 bool isCastling(const Board& board, int from, int to);
 std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
                                             const std::vector<std::pair<int, int>>& moves,
                                             const ThreadSafeHistory& historyTable,
                                             const KillerMoves& killerMoves, int ply,
-                                            const std::pair<int, int>& hashMove = {-1, -1},
+                                            const std::pair<int, int>& ttMove = {-1, -1},
                                             const std::pair<int, int>& counterMove = {-1, -1});
 
-enum class MovePickerStage {
+enum class MovePickerStage : std::uint8_t {
     HASH_MOVE,
     GEN_CAPTURES,
     GOOD_CAPTURES,
@@ -341,10 +334,8 @@ class MovePicker {
     std::vector<std::pair<int, int>> returned;
 
     bool alreadyReturned(const std::pair<int, int>& m) const {
-        for (const auto& r : returned)
-            if (r == m)
-                return true;
-        return false;
+        return std::any_of(returned.begin(), returned.end(),
+                           [&m](const std::pair<int, int>& r) { return r == m; });
     }
 
     void generateAndPartitionMoves();

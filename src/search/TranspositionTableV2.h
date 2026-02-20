@@ -134,6 +134,8 @@ public:
 #ifdef __SSE__
         char* addr = reinterpret_cast<char*>(&table[mulhi64(key, clusterCount)]);
         _mm_prefetch(addr, _MM_HINT_T0);
+#else
+        (void)key;
 #endif
     }
 

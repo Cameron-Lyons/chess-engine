@@ -24,7 +24,7 @@ public:
         int minimumThinkingTime = 20;
 
         bool useNeuralNetwork = true;
-        float nnWeight = 0.7f;
+        float nnWeight = 0.7F;
         bool useTablebases = true;
         std::string syzygyPath;
 
@@ -48,7 +48,7 @@ public:
     void handleStop();
     void handlePonderHit();
     void handleQuit();
-    void handleDebug(const std::string& command);
+    void handleDebug(const std::string& command) const;
     void handleRegister(const std::string& command);
     void handleInfo(const std::string& command);
     void handleBookStats();
@@ -74,15 +74,6 @@ private:
     int searchDepthLimit;
     std::thread searchThread;
 
-    std::string moveToUCI(const std::pair<int, int>& move);
-    std::pair<int, int> uciToMove(const std::string& uciMove);
-    std::string boardToFEN(const Board& board);
-    void parseFEN(const std::string& fen, Board& board);
-    void parseMoves(const std::string& moves, Board& board);
-    std::vector<std::pair<int, int>> getPrincipalVariation(const Board& board, int depth);
-
-    void startSearch();
-    void stopSearch();
     SearchResult performSearch(const Board& board, int depth, int timeLimit, int optimalTime = 0,
                                int maxTime = 0);
 

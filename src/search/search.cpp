@@ -7,89 +7,10 @@
 #include <algorithm>
 #include <chrono>
 #include <future>
+#include <limits>
 #include <random>
 #include <ranges>
 #include <thread>
-
-void ThreadSafeTT::insert(uint64_t hash, const TTEntry& entry) {
-    std::lock_guard<std::mutex> lock(mutex);
-
-    auto it = table.find(hash);
-    if (it != table.end()) {
-        const TTEntry& existing = it->second;
-
-        if (existing.zobristKey != 0 && existing.zobristKey != entry.zobristKey) {
-            int replaceScore = 0;
-
-            replaceScore += (entry.depth - existing.depth) * 4;
-
-            if (entry.flag == 0)
-                replaceScore += 2;
-            if (existing.flag == 0)
-                replaceScore -= 2;
-
-            if (replaceScore > 0) {
-                TTEntry newEntry = entry;
-                newEntry.zobristKey = entry.zobristKey;
-                table[hash] = newEntry;
-            }
-            return;
-        }
-
-        bool shouldReplace = false;
-
-        if (entry.depth > existing.depth + 1) {
-            shouldReplace = true;
-        } else if (entry.depth == existing.depth && entry.flag == 0 && existing.flag != 0) {
-            shouldReplace = true;
-        } else if (entry.depth >= existing.depth) {
-            shouldReplace = true;
-        }
-
-        if (shouldReplace) {
-            TTEntry newEntry = entry;
-            newEntry.zobristKey = entry.zobristKey;
-            table[hash] = newEntry;
-        }
-    } else {
-        const size_t MAX_TABLE_SIZE = 500000;
-        if (table.size() >= MAX_TABLE_SIZE) {
-            int minDepth = 100;
-            auto victimIt = table.begin();
-
-            auto checkIt = table.begin();
-            for (int i = 0; i < 100 && checkIt != table.end(); ++i, ++checkIt) {
-                if (checkIt->second.depth < minDepth) {
-                    minDepth = checkIt->second.depth;
-                    victimIt = checkIt;
-                }
-            }
-
-            table.erase(victimIt);
-        }
-        TTEntry newEntry = entry;
-        newEntry.zobristKey = entry.zobristKey;
-        table[hash] = newEntry;
-    }
-}
-
-bool ThreadSafeTT::find(uint64_t hash, TTEntry& entry) const {
-    std::lock_guard<std::mutex> lock(mutex);
-    auto it = table.find(hash);
-    if (it != table.end()) {
-        entry = it->second;
-        if (entry.zobristKey != 0 && entry.zobristKey != hash) {
-            return false;
-        }
-        return true;
-    }
-    return false;
-}
-
-void ThreadSafeTT::clear() {
-    std::lock_guard<std::mutex> lock(mutex);
-    table.clear();
-}
 
 ThreadSafeHistory::ThreadSafeHistory() : table(64, std::vector<int>(64, 0)) {}
 void ThreadSafeHistory::update(int srcPos, int destPos, int depth) {
@@ -102,19 +23,21 @@ int ThreadSafeHistory::get(int srcPos, int destPos) const {
 }
 
 KillerMoves::KillerMoves() {
-    for (int ply = 0; ply < MAX_PLY; ply++) {
-        for (int slot = 0; slot < MAX_KILLER_MOVES; slot++) {
-            killers[ply][slot] = {-1, -1};
+    for (auto& killersForPly : killers) {
+        for (auto& killerMove : killersForPly) {
+            killerMove = {-1, -1};
         }
     }
 }
 
 void KillerMoves::store(int ply, std::pair<int, int> move) {
-    if (ply < 0 || ply >= MAX_PLY)
+    if (ply < 0 || ply >= MAX_PLY) {
         return;
+}
 
-    if (isKiller(ply, move))
+    if (isKiller(ply, move)) {
         return;
+}
 
     for (int i = MAX_KILLER_MOVES - 1; i > 0; i--) {
         killers[ply][i] = killers[ply][i - 1];
@@ -123,8 +46,9 @@ void KillerMoves::store(int ply, std::pair<int, int> move) {
 }
 
 bool KillerMoves::isKiller(int ply, std::pair<int, int> move) const {
-    if (ply < 0 || ply >= MAX_PLY)
+    if (ply < 0 || ply >= MAX_PLY) {
         return false;
+}
 
     for (int i = 0; i < MAX_KILLER_MOVES; i++) {
         if (killers[ply][i] == move) {
@@ -135,12 +59,13 @@ bool KillerMoves::isKiller(int ply, std::pair<int, int> move) const {
 }
 
 int KillerMoves::getKillerScore(int ply, std::pair<int, int> move) const {
-    if (ply < 0 || ply >= MAX_PLY)
+    if (ply < 0 || ply >= MAX_PLY) {
         return 0;
+}
 
     for (int i = 0; i < MAX_KILLER_MOVES; i++) {
         if (killers[ply][i] == move) {
-            return 5000 - i * 100;
+            return 5000 - (i * 100);
         }
     }
     return 0;
@@ -149,35 +74,41 @@ int KillerMoves::getKillerScore(int ply, std::pair<int, int> move) const {
 ParallelSearchContext::ParallelSearchContext(int threads)
     : stopSearch(false), nodeCount(0), numThreads(threads), ply(0), contempt(0), multiPV(1),
       continuationHistory{}, captureHistory{}, prevPieceAtPly{}, prevToAtPly{} {
-    if (numThreads == 0)
-        numThreads = std::thread::hardware_concurrency();
-    if (numThreads == 0)
+    if (numThreads == 0) {
+        numThreads = static_cast<int>(std::thread::hardware_concurrency());
+    }
+    if (numThreads == 0) {
         numThreads = 4;
-    for (int c = 0; c < 2; ++c)
-        for (int sq = 0; sq < 64; ++sq)
-            counterMoves[c][sq] = {-1, -1};
+    }
+    for (auto& movesBySquare : counterMoves) {
+        for (auto& counterMove : movesBySquare) {
+            counterMove = {-1, -1};
+        }
+    }
 }
 
 SearchResult::SearchResult() : bestMove({-1, -1}), score(0), depth(0), nodes(0), timeMs(0) {}
 
 void InitZobrist() {
     static bool initialized = false;
-    if (initialized)
+    if (initialized) {
         return;
+}
     initialized = true;
     std::mt19937_64 rng(202406);
     std::uniform_int_distribution<uint64_t> dist;
-    for (int sq = 0; sq < 64; ++sq) {
-        for (int pt = 0; pt < 12; ++pt) {
-            ZobristTable[sq][pt] = dist(rng);
+    for (auto& squareKeys : ZobristTable) {
+        for (auto& pieceKey : squareKeys) {
+            pieceKey = dist(rng);
         }
     }
     ZobristBlackToMove = dist(rng);
 }
 
 int pieceToZobristIndex(const Piece& p) {
-    if (p.PieceType == ChessPieceType::NONE)
+    if (p.PieceType == ChessPieceType::NONE) {
         return -1;
+}
     return (static_cast<int>(p.PieceType) - 1) + (p.PieceColor == ChessPieceColor::BLACK ? 6 : 0);
 }
 
@@ -185,23 +116,18 @@ uint64_t ComputeZobrist(const Board& board) {
     uint64_t h = 0;
     for (int sq = 0; sq < 64; ++sq) {
         int idx = pieceToZobristIndex(board.squares[sq].piece);
-        if (idx >= 0)
+        if (idx >= 0) {
             h ^= ZobristTable[sq][idx];
+}
     }
-    if (board.turn == ChessPieceColor::BLACK)
+    if (board.turn == ChessPieceColor::BLACK) {
         h ^= ZobristBlackToMove;
+}
     return h;
 }
 
-int getMVVLVA_Score(const Board& board, int srcPos, int destPos) {
-    const Piece& attacker = board.squares[srcPos].piece;
-    const Piece& victim = board.squares[destPos].piece;
-    if (victim.PieceType == ChessPieceType::NONE)
-        return 0;
-    return victim.PieceValue * 10 - attacker.PieceValue;
-}
-
-bool isCapture(const Board& board, int, int destPos) {
+bool isCapture(const Board& board, int srcPos, int destPos) {
+    (void)srcPos;
     return board.squares[destPos].piece.PieceType != ChessPieceType::NONE;
 }
 
@@ -218,16 +144,11 @@ bool isInCheck(const Board& board, ChessPieceColor color) {
     return IsKingInCheck(board, color);
 }
 
-int getHistoryScore(const ThreadSafeHistory& historyTable, int srcPos, int destPos) {
-    return historyTable.get(srcPos, destPos);
-}
-
 int getPieceValue(ChessPieceType pieceType) {
     switch (pieceType) {
         case ChessPieceType::PAWN:
             return 100;
         case ChessPieceType::KNIGHT:
-            return 300;
         case ChessPieceType::BISHOP:
             return 300;
         case ChessPieceType::ROOK:
@@ -236,8 +157,6 @@ int getPieceValue(ChessPieceType pieceType) {
             return 975;
         case ChessPieceType::KING:
             return 10000;
-        case ChessPieceType::NONE:
-            return 0;
         default:
             return 0;
     }
@@ -262,7 +181,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
         else if (board.squares[move.second].piece.PieceType != ChessPieceType::NONE) {
             int mvvLva = EnhancedMoveOrdering::getMVVLVA_Score(board, move.first, move.second);
             int see = staticExchangeEvaluation(board, move.first, move.second);
-            score = EnhancedMoveOrdering::CAPTURE_SCORE_BASE + mvvLva * 1000 + see;
+            score = EnhancedMoveOrdering::CAPTURE_SCORE_BASE + (mvvLva * 1000) + see;
         }
 
         else if (killerMoves.isKiller(ply, move)) {
@@ -281,7 +200,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
             score += EnhancedMoveOrdering::getPositionalScore(board, move.first, move.second);
         }
 
-        scoredMoves.push_back({move, score});
+        scoredMoves.emplace_back(move, score);
     }
 
     return scoredMoves;
@@ -293,26 +212,31 @@ MovePicker::MovePicker(Board& b, std::pair<int, int> hm, const KillerMoves& km, 
       stage(MovePickerStage::HASH_MOVE) {}
 
 void MovePicker::generateAndPartitionMoves() {
-    if (movesGenerated)
+    if (movesGenerated) {
         return;
+}
     movesGenerated = true;
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
 
     for (const auto& move : moves) {
-        if (move == hashMove)
+        if (move == hashMove) {
             continue;
-        if (killerMoves.isKiller(ply, move))
+}
+        if (killerMoves.isKiller(ply, move)) {
             continue;
+}
 
         int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
         int prevDest = board.LastMove;
         std::pair<int, int> cm = {-1, -1};
-        if (prevDest >= 0 && prevDest < 64)
+        if (prevDest >= 0 && prevDest < 64) {
             cm = context.counterMoves[colorIdx][prevDest];
-        if (cm.first >= 0 && move == cm)
+}
+        if (cm.first >= 0 && move == cm) {
             continue;
+}
 
         bool isCap = isCapture(board, move.first, move.second);
         int movingPieceIdx = pieceTypeIndex(board.squares[move.first].piece.PieceType);
@@ -321,11 +245,11 @@ void MovePicker::generateAndPartitionMoves() {
             int see = staticExchangeEvaluation(board, move.first, move.second);
             int victimIdx = pieceTypeIndex(board.squares[move.second].piece.PieceType);
             int capHist = context.getCaptureHistory(movingPieceIdx, victimIdx, move.second);
-            int score = mvvLva * 1000 + see + capHist / 8;
+            int score = (mvvLva * 1000) + see + (capHist / 8);
             if (see >= 0) {
-                goodCaptures.push_back({move, score});
+                goodCaptures.emplace_back(move, score);
             } else {
-                badCaptures.push_back({move, score});
+                badCaptures.emplace_back(move, score);
             }
         } else {
             int score = EnhancedMoveOrdering::getHistoryScore(history, move.first, move.second);
@@ -333,7 +257,7 @@ void MovePicker::generateAndPartitionMoves() {
             int pp = context.prevPieceAtPly[std::min(ply, 63)];
             int pt = context.prevToAtPly[std::min(ply, 63)];
             score += context.getContinuationHistory(pp, pt, movingPieceIdx, move.second) / 4;
-            quietMoves.push_back({move, score});
+            quietMoves.emplace_back(move, score);
         }
     }
 
@@ -438,8 +362,9 @@ void updateHistoryTable(ThreadSafeHistory& historyTable, int fromSquare, int toS
 }
 
 bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLimitMs) {
-    if (timeLimitMs <= 0)
+    if (timeLimitMs <= 0) {
         return false;
+}
 
     auto currentTime = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime);
@@ -454,82 +379,23 @@ std::string getBookMove(const std::string& fen) {
         if (!options.empty()) {
             static std::random_device rd;
             static std::mt19937 gen(rd());
-            std::uniform_int_distribution<> dis(0, options.size() - 1);
+            std::uniform_int_distribution<std::size_t> dis(0, options.size() - 1);
             return options[dis(gen)];
         }
     }
 
     auto it = OpeningBook.find(fen);
-    if (it != OpeningBook.end())
+    if (it != OpeningBook.end()) {
         return it->second;
+}
     return "";
-}
-
-bool SearchForMate(ChessPieceColor movingSide, Board& board, bool& BlackMate, bool& WhiteMate,
-                   bool& StaleMate) {
-    ThreadSafeHistory historyTable;
-    ParallelSearchContext context(1);
-    for (int depth = 1; depth <= 4; depth++) {
-        int result =
-            AlphaBetaSearch(board, depth, -10000, 10000, (movingSide == ChessPieceColor::WHITE), 0,
-                            historyTable, context);
-        if (result >= 9000) {
-            if (movingSide == ChessPieceColor::WHITE) {
-                BlackMate = true;
-                return true;
-            }
-        } else if (result <= -9000) {
-            if (movingSide == ChessPieceColor::BLACK) {
-                WhiteMate = true;
-                return true;
-            }
-        }
-    }
-    GenValidMoves(board);
-    std::vector<std::pair<int, int>> moves = GetAllMoves(board, movingSide);
-    if (moves.empty()) {
-        StaleMate = true;
-        return true;
-    }
-    return false;
-}
-
-std::vector<std::pair<int, int>> GetQuietMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> allMoves = generateBitboardMoves(board, color);
-    std::vector<std::pair<int, int>> noisyMoves;
-
-    for (const auto& move : allMoves) {
-        int srcPos = move.first;
-        int destPos = move.second;
-
-        if (isCapture(board, srcPos, destPos)) {
-            noisyMoves.push_back(move);
-            continue;
-        }
-
-        if (givesCheck(board, srcPos, destPos)) {
-            noisyMoves.push_back(move);
-            continue;
-        }
-
-        const Piece& piece = board.squares[srcPos].piece;
-        if (piece.PieceType == ChessPieceType::PAWN) {
-            int destRow = destPos / 8;
-            if ((piece.PieceColor == ChessPieceColor::WHITE && destRow == 7) ||
-                (piece.PieceColor == ChessPieceColor::BLACK && destRow == 0)) {
-                noisyMoves.push_back(move);
-                continue;
-            }
-        }
-    }
-
-    return noisyMoves;
 }
 
 int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
                      ThreadSafeHistory& historyTable, ParallelSearchContext& context, int ply) {
-    if (context.stopSearch.load())
+    if (context.stopSearch.load()) {
         return 0;
+}
 
     if (ply < 0 || ply >= 50) {
         return evaluatePosition(board, context.contempt);
@@ -559,12 +425,14 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
     }
 
     if (maximizingPlayer) {
-        if (standPat >= beta)
+        if (standPat >= beta) {
             return beta;
+}
         alpha = std::max(alpha, standPat);
     } else {
-        if (standPat <= alpha)
+        if (standPat <= alpha) {
             return alpha;
+}
         beta = std::min(beta, standPat);
     }
 
@@ -613,11 +481,11 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
             int victimValue = getPieceValue(board.squares[move.second].piece.PieceType);
             int attackerValue = getPieceValue(board.squares[move.first].piece.PieceType);
 
-            score = victimValue * 100 - attackerValue;
+            score = (victimValue * 100) - attackerValue;
 
             int seeValue = staticExchangeEvaluation(board, move.first, move.second);
 
-            int seeThreshold = -25 - ply * 15;
+            int seeThreshold = -25 - (ply * 15);
             if (seeValue < seeThreshold) {
                 continue;
             }
@@ -641,7 +509,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
             }
         }
 
-        scoredMoves.push_back({move, score});
+        scoredMoves.emplace_back(move, score);
     }
 
     std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
@@ -649,8 +517,9 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
     int bestValue = standPat;
 
     for (const auto& scoredMove : scoredMoves) {
-        if (context.stopSearch.load())
+        if (context.stopSearch.load()) {
             return 0;
+}
 
         const auto& move = scoredMove.move;
         Board newBoard = board;
@@ -662,8 +531,9 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
 
         int eval = QuiescenceSearch(newBoard, alpha, beta, !maximizingPlayer, historyTable, context,
                                     ply + 1);
-        if (context.stopSearch.load())
+        if (context.stopSearch.load()) {
             return 0;
+}
 
         if (maximizingPlayer) {
             bestValue = std::max(bestValue, eval);
@@ -806,7 +676,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     int bestValue = maximizingPlayer ? -10000 : 10000;
     std::pair<int, int> bestMove = {-1, -1};
     int flag = -1;
-    size_t movesSearched = 0;
+    int movesSearched = 0;
 
     std::pair<int, int> move;
     while ((move = picker.next()).first >= 0) {
@@ -818,8 +688,9 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                     break;
                 }
             }
-            if (excluded)
+            if (excluded) {
                 continue;
+}
         }
 
         bool isCaptureMove = isCapture(board, move.first, move.second);
@@ -854,13 +725,11 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                                                                     : ChessPieceColor::WHITE;
 
         int extension = 0;
-        if (AdvancedSearch::checkExtension(board, move, depth)) {
-            extension = 1;
-        } else if (AdvancedSearch::recaptureExtension(board, move, depth)) {
-            extension = 1;
-        } else if (AdvancedSearch::pawnPushExtension(board, move, depth)) {
-            extension = 1;
-        } else if (AdvancedSearch::passedPawnExtension(board, move, depth)) {
+        const bool basicExtension = AdvancedSearch::checkExtension(board, move, depth) ||
+                                    AdvancedSearch::recaptureExtension(board, move, depth) ||
+                                    AdvancedSearch::pawnPushExtension(board, move, depth) ||
+                                    AdvancedSearch::passedPawnExtension(board, move, depth);
+        if (basicExtension) {
             extension = 1;
         } else if (depth >= 8 && move == ttEntry.bestMove && ttEntry.depth >= depth - 3 &&
                    ttEntry.value > alpha && ttEntry.value < beta) {
@@ -877,7 +746,11 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             }
         }
 
-        int searchDepth = depth - 1 + extension;
+        if (ply >= 16) {
+            extension = 0;
+        }
+
+        int searchDepth = std::max(0, depth - 1 + extension);
 
         if (movesSearched >= 2 && searchDepth >= 2) {
             LMREnhanced::MoveClassification mc;
@@ -888,7 +761,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             mc.isPromotion = isPromotion(board, move.first, move.second);
             mc.isCastling = isCastling(board, move.first, move.second);
             mc.historyScore = historyTable.get(move.first, move.second);
-            mc.moveNumber = static_cast<int>(movesSearched);
+            mc.moveNumber = movesSearched;
 
             LMREnhanced::PositionContext pc;
             pc.inCheck = isInCheck(board, board.turn);
@@ -903,7 +776,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             }
         }
 
-        int score;
+        int score = 0;
         if (movesSearched == 0 || isPVNode) {
             score =
                 -PrincipalVariationSearch(tempBoard, searchDepth, -beta, -alpha, !maximizingPlayer,
@@ -1029,12 +902,15 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     std::pair<int, int> hashMove = {-1, -1};
     if (context.transTable.find(hash, entry)) {
         if (entry.depth >= depth) {
-            if (entry.flag == 0)
+            if (entry.flag == 0) {
                 return entry.value;
-            if (entry.flag == -1 && entry.value <= alpha)
+}
+            if (entry.flag == -1 && entry.value <= alpha) {
                 return alpha;
-            if (entry.flag == 1 && entry.value >= beta)
+}
+            if (entry.flag == 1 && entry.value >= beta) {
                 return beta;
+}
         }
 
         if (entry.bestMove.first != -1 && entry.bestMove.second != -1) {
@@ -1053,8 +929,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             } else if (wdl == Syzygy::PROBE_LOSS || wdl == Syzygy::PROBE_BLESSED_LOSS) {
                 tbScore = -9000 + ply;
             }
-            if (!maximizingPlayer)
+            if (!maximizingPlayer) {
                 tbScore = -tbScore;
+}
             context.transTable.insert(hash, TTEntry(depth, tbScore, 0, {-1, -1}, hash));
             return tbScore;
         }
@@ -1093,8 +970,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         if (reducedDepth > 0 && reducedDepth <= 10) {
             int nullValue = AlphaBetaSearch(nullBoard, reducedDepth, alpha, beta, !maximizingPlayer,
                                             ply + 1, historyTable, context);
-            if (context.stopSearch.load())
+            if (context.stopSearch.load()) {
                 return 0;
+}
             if (maximizingPlayer) {
                 if (nullValue >= beta) {
                     if (nullValue >= beta + 300) {
@@ -1105,8 +983,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                         int verificationValue =
                             AlphaBetaSearch(nullBoard, depth - 1, alpha, beta, !maximizingPlayer,
                                             ply + 1, historyTable, context);
-                        if (context.stopSearch.load())
+                        if (context.stopSearch.load()) {
                             return 0;
+}
                         if (verificationValue >= beta) {
                             return beta;
                         }
@@ -1122,8 +1001,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                         int verificationValue =
                             AlphaBetaSearch(nullBoard, depth - 1, alpha, beta, !maximizingPlayer,
                                             ply + 1, historyTable, context);
-                        if (context.stopSearch.load())
+                        if (context.stopSearch.load()) {
                             return 0;
+}
                         if (verificationValue <= alpha) {
                             return alpha;
                         }
@@ -1150,8 +1030,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     if (maximizingPlayer) {
         int moveCount = 0;
         for (const auto& scoredMove : scoredMoves) {
-            if (context.stopSearch.load())
+            if (context.stopSearch.load()) {
                 return 0;
+}
             const auto& move = scoredMove.move;
             Board newBoard = board;
             newBoard.movePiece(move.first, move.second);
@@ -1160,7 +1041,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 continue;
             }
 
-            int eval;
+            int eval = 0;
             bool isCaptureMove = isCapture(board, move.first, move.second);
             bool isCheckMove = givesCheck(board, move.first, move.second);
 
@@ -1252,8 +1133,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             }
 
             moveCount++;
-            if (context.stopSearch.load())
+            if (context.stopSearch.load()) {
                 return 0;
+}
             if (eval > bestValue) {
                 bestValue = eval;
                 bestMoveFound = move;
@@ -1282,17 +1164,19 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 break;
             }
         }
-        if (bestValue <= origAlpha)
+        if (bestValue <= origAlpha) {
             flag = -1;
-        else if (bestValue >= beta)
+        } else if (bestValue >= beta) {
             flag = 1;
-        else
+        } else {
             flag = 0;
+}
     } else {
         int moveCount = 0;
         for (const auto& scoredMove : scoredMoves) {
-            if (context.stopSearch.load())
+            if (context.stopSearch.load()) {
                 return 0;
+}
             const auto& move = scoredMove.move;
             Board newBoard = board;
             newBoard.movePiece(move.first, move.second);
@@ -1301,7 +1185,7 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 continue;
             }
 
-            int eval;
+            int eval = 0;
             bool isCaptureMove = isCapture(board, move.first, move.second);
             bool isCheckMove = givesCheck(board, move.first, move.second);
 
@@ -1379,8 +1263,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             }
 
             moveCount++;
-            if (context.stopSearch.load())
+            if (context.stopSearch.load()) {
                 return 0;
+}
             if (eval < bestValue) {
                 bestValue = eval;
                 bestMoveFound = move;
@@ -1409,12 +1294,13 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 break;
             }
         }
-        if (bestValue >= beta)
+        if (bestValue >= beta) {
             flag = 1;
-        else if (bestValue <= origAlpha)
+        } else if (bestValue <= origAlpha) {
             flag = -1;
-        else
+        } else {
             flag = 0;
+}
     }
 
     context.transTable.insert(hash, TTEntry(depth, bestValue, flag, bestMoveFound, hash));
@@ -1445,9 +1331,12 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {
-        int srcCol, srcRow, destCol, destRow;
+        int srcCol = 0;
+        int srcRow = 0;
+        int destCol = 0;
+        int destRow = 0;
         if (parseAlgebraicMove(bookMove, board, srcCol, srcRow, destCol, destRow)) {
-            result.bestMove = {srcRow * 8 + srcCol, destRow * 8 + destCol};
+            result.bestMove = {(srcRow * 8) + srcCol, (destRow * 8) + destCol};
             result.score = 0;
             result.depth = 1;
             result.nodes = 1;
@@ -1466,7 +1355,8 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
         context.stopSearch = false;
 
         for (int depth = 1; depth <= maxDepth; depth++) {
-            int alpha, beta;
+            int alpha = -10000;
+            int beta = 10000;
 
             if (depth <= 3) {
 
@@ -1478,8 +1368,9 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
                 beta = lastScore + ASPIRATION_WINDOW;
             }
 
-            int searchScore;
-            bool failedHigh = false, failedLow = false;
+            int searchScore = 0;
+            bool failedHigh = false;
+            bool failedLow = false;
             int searchAttempts = 0;
             const int MAX_SEARCH_ATTEMPTS = 4;
 
@@ -1495,16 +1386,14 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
 
                 if (searchScore <= alpha) {
 
-                    alpha = alpha - ASPIRATION_WINDOW * (1 << searchAttempts);
+                    alpha = alpha - (ASPIRATION_WINDOW * (1 << searchAttempts));
                     failedLow = true;
-                    if (alpha < -10000)
-                        alpha = -10000;
+                    alpha = std::max(alpha, -10000);
                 } else if (searchScore >= beta) {
 
-                    beta = beta + ASPIRATION_WINDOW * (1 << searchAttempts);
+                    beta = beta + (ASPIRATION_WINDOW * (1 << searchAttempts));
                     failedHigh = true;
-                    if (beta > 10000)
-                        beta = 10000;
+                    beta = std::min(beta, 10000);
                 } else {
 
                     break;
@@ -1557,14 +1446,16 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                                    std::chrono::steady_clock::now() - context.startTime)
                                    .count();
-                int nps = elapsed > 0 ? static_cast<int>(result.nodes * 1000 / elapsed) : 0;
+                const auto nodesPerSecond =
+                    elapsed > 0 ? ((static_cast<long long>(result.nodes) * 1000LL) / elapsed) : 0LL;
+                int nps = static_cast<int>(nodesPerSecond);
                 std::cout << "info depth " << depth << " multipv " << (pvIdx + 1) << " score cp "
                           << result.score << " nodes " << result.nodes << " nps " << nps
                           << " hashfull " << context.transTable.hashfull();
                 if (context.tbHits.load() > 0) {
                     std::cout << " tbhits " << context.tbHits.load();
                 }
-                std::cout << std::endl;
+                std::cout << '\n';
             }
 
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1591,13 +1482,7 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             }
 
             int softLimit = static_cast<int>(optTime * stabilityFactor * scoreFactor);
-            bool timeToStop = false;
-
-            if (elapsed >= maxTime) {
-                timeToStop = true;
-            } else if (depth >= 5 && elapsed >= softLimit) {
-                timeToStop = true;
-            }
+            bool timeToStop = (elapsed >= maxTime) || (depth >= 5 && elapsed >= softLimit);
 
             if (timeToStop) {
                 break;
@@ -1627,8 +1512,11 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
     }
 
     auto endTime = std::chrono::steady_clock::now();
-    result.timeMs =
+    const auto elapsedMs =
         std::chrono::duration_cast<std::chrono::milliseconds>(endTime - context.startTime).count();
+    result.timeMs = (elapsedMs > std::numeric_limits<int>::max())
+                        ? std::numeric_limits<int>::max()
+                        : static_cast<int>(elapsedMs);
 
     return result;
 }
@@ -1659,7 +1547,8 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
 
     for (int currentDepth = 1; currentDepth <= depth; currentDepth++) {
 
-        int alpha, beta;
+        int alpha = -10000;
+        int beta = 10000;
 
         if (currentDepth == 1) {
 
@@ -1689,9 +1578,7 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
                     currentBestEval = eval;
                     currentBestMove = move;
 
-                    if (eval > alpha) {
-                        alpha = eval;
-                    }
+                    alpha = std::max(eval, alpha);
 
                     if (eval >= beta) {
                         searchFailed = true;
@@ -1703,9 +1590,7 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
                     currentBestEval = eval;
                     currentBestMove = move;
 
-                    if (eval < beta) {
-                        beta = eval;
-                    }
+                    beta = std::min(eval, beta);
 
                     if (eval <= alpha) {
                         searchFailed = true;
@@ -1810,22 +1695,13 @@ int getSmallestAttacker(const Board& board, int targetSquare, ChessPieceColor co
     return smallestAttacker;
 }
 
-bool isGoodCapture(const Board& board, int fromSquare, int toSquare) {
-    int see = staticExchangeEvaluation(board, fromSquare, toSquare);
-    return see >= 0;
-}
-
-bool isCaptureProfitable(const Board& board, int fromSquare, int toSquare, int threshold) {
-    int see = staticExchangeEvaluation(board, fromSquare, toSquare);
-    return see >= threshold;
-}
-
 bool isPromotion(const Board& board, int from, int to) {
     ChessPieceType piece = board.squares[from].piece.PieceType;
     ChessPieceColor color = board.squares[from].piece.PieceColor;
 
-    if (piece != ChessPieceType::PAWN)
+    if (piece != ChessPieceType::PAWN) {
         return false;
+}
 
     int destRow = to / 8;
     return (color == ChessPieceColor::WHITE && destRow == 7) ||
@@ -1834,8 +1710,9 @@ bool isPromotion(const Board& board, int from, int to) {
 
 bool isCastling(const Board& board, int from, int to) {
     ChessPieceType piece = board.squares[from].piece.PieceType;
-    if (piece != ChessPieceType::KING)
+    if (piece != ChessPieceType::KING) {
         return false;
+}
 
     return std::abs(to - from) == 2;
 }
@@ -1848,8 +1725,9 @@ int EnhancedMoveOrdering::getMVVLVA_Score(const Board& board, int fromSquare, in
     const Piece& attacker = board.squares[fromSquare].piece;
     const Piece& victim = board.squares[toSquare].piece;
 
-    if (victim.PieceType == ChessPieceType::NONE)
+    if (victim.PieceType == ChessPieceType::NONE) {
         return 0;
+}
 
     int attackerIndex = static_cast<int>(attacker.PieceType) - 1;
     int victimIndex = static_cast<int>(victim.PieceType) - 1;
@@ -1877,15 +1755,10 @@ int EnhancedMoveOrdering::getKillerScore(const KillerMoves& killers, int ply, in
 
 int EnhancedMoveOrdering::getPositionalScore(const Board& board, int fromSquare, int toSquare) {
     const Piece& piece = board.squares[fromSquare].piece;
-    if (piece.PieceType == ChessPieceType::NONE)
+    if (piece.PieceType == ChessPieceType::NONE) {
         return 0;
+}
 
     int toSquareAdjusted = (piece.PieceColor == ChessPieceColor::WHITE) ? toSquare : 63 - toSquare;
     return getPieceSquareValue(piece.PieceType, toSquareAdjusted, piece.PieceColor) / 10;
-}
-#include "LazySMP.h"
-
-SearchResult lazySMPSearch(Board& board, int maxDepth, int timeLimitMs, int numThreads) {
-    LazySMP smp(numThreads);
-    return smp.search(board, maxDepth, timeLimitMs);
 }

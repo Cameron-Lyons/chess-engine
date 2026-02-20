@@ -8,6 +8,7 @@
 #include "../utils/engine_globals.h"
 
 #include <chrono>
+#include <cctype>
 #include <future>
 #include <iostream>
 #include <sstream>
@@ -83,49 +84,51 @@ void UCIEngine::processCommand(const std::string& command) {
         handleBookStats();
     } else {
 
-        std::cout << "info string Unknown command: " << cmd << std::endl;
+        std::cout << "info string Unknown command: " << cmd << '\n';
     }
 }
 
 void UCIEngine::handleUCI() {
-    std::cout << "id name ModernChess v2.0" << std::endl;
-    std::cout << "id author Chess Engine Team" << std::endl;
+    std::cout << "id name ModernChess v2.0" << '\n';
+    std::cout << "id author Chess Engine Team" << '\n';
 
-    std::cout << "option name Hash type spin default 32 min 1 max 1024" << std::endl;
-    std::cout << "option name Threads type spin default 1 min 1 max 16" << std::endl;
-    std::cout << "option name MultiPV type spin default 1 min 1 max 10" << std::endl;
-    std::cout << "option name Ponder type check default false" << std::endl;
-    std::cout << "option name OwnBook type check default true" << std::endl;
-    std::cout << "option name Move Overhead type spin default 10 min 0 max 5000" << std::endl;
+    std::cout << "option name Hash type spin default 32 min 1 max 1024" << '\n';
+    std::cout << "option name Threads type spin default 1 min 1 max 16" << '\n';
+    std::cout << "option name MultiPV type spin default 1 min 1 max 10" << '\n';
+    std::cout << "option name Ponder type check default false" << '\n';
+    std::cout << "option name OwnBook type check default true" << '\n';
+    std::cout << "option name Move Overhead type spin default 10 min 0 max 5000" << '\n';
     std::cout << "option name Minimum Thinking Time type spin default 20 min 0 max 5000"
-              << std::endl;
-    std::cout << "option name Use Neural Network type check default true" << std::endl;
+              << '\n';
+    std::cout << "option name Use Neural Network type check default true" << '\n';
     std::cout << "option name Neural Network Weight type spin default 70 min 0 max 100"
-              << std::endl;
-    std::cout << "option name Use Tablebases type check default true" << std::endl;
-    std::cout << "option name SyzygyPath type string default " << std::endl;
-    std::cout << "option name Debug type check default false" << std::endl;
-    std::cout << "option name Show Current Line type check default false" << std::endl;
-    std::cout << "option name Contempt type spin default 0 min -100 max 100" << std::endl;
+              << '\n';
+    std::cout << "option name Use Tablebases type check default true" << '\n';
+    std::cout << "option name SyzygyPath type string default " << '\n';
+    std::cout << "option name Debug type check default false" << '\n';
+    std::cout << "option name Show Current Line type check default false" << '\n';
+    std::cout << "option name Contempt type spin default 0 min -100 max 100" << '\n';
 
     for (const auto& p : TunableRegistry::instance().all()) {
         std::cout << "option name " << p.name << " type spin default " << p.defaultValue << " min "
-                  << p.minValue << " max " << p.maxValue << std::endl;
+                  << p.minValue << " max " << p.maxValue << '\n';
     }
 
-    std::cout << "uciok" << std::endl;
+    std::cout << "uciok" << '\n';
 }
 
 void UCIEngine::handleIsReady() {
-    std::cout << "readyok" << std::endl;
+    std::cout << "readyok" << '\n';
 }
 
 void UCIEngine::handleSetOption(const std::string& command) {
-    std::string name, value;
+    std::string name;
+    std::string value;
     auto namePos = command.find("name ");
     auto valuePos = command.find(" value ");
-    if (namePos == std::string::npos)
+    if (namePos == std::string::npos) {
         return;
+}
     namePos += 5;
     if (valuePos != std::string::npos) {
         name = command.substr(namePos, valuePos - namePos);
@@ -151,7 +154,7 @@ void UCIEngine::handleSetOption(const std::string& command) {
     } else if (name == "Use Neural Network") {
         setUseNeuralNetwork(value == "true");
     } else if (name == "Neural Network Weight") {
-        setNNWeight(std::stof(value) / 100.0f);
+        setNNWeight(std::stof(value) / 100.0F);
     } else if (name == "Use Tablebases") {
         setUseTablebases(value == "true");
     } else if (name == "SyzygyPath") {
@@ -175,7 +178,7 @@ void UCIEngine::handleNewGame() {
     board = Board();
     board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     TransTable.clear();
-    std::cout << "info string New game started" << std::endl;
+    std::cout << "info string New game started" << '\n';
 }
 
 void UCIEngine::handlePosition(const std::string& command) {
@@ -184,7 +187,7 @@ void UCIEngine::handlePosition(const std::string& command) {
     iss >> word;
 
     if (!(iss >> word)) {
-        std::cout << "info string Error: Invalid position command" << std::endl;
+        std::cout << "info string Error: Invalid position command" << '\n';
         return;
     }
 
@@ -198,8 +201,9 @@ void UCIEngine::handlePosition(const std::string& command) {
         for (int i = 0; i < 6; i++) {
             std::string part;
             if (iss >> part) {
-                if (i > 0)
+                if (i > 0) {
                     fen += " ";
+}
                 fen += part;
             }
         }
@@ -208,20 +212,20 @@ void UCIEngine::handlePosition(const std::string& command) {
 
             board = Board();
             board.InitializeFromFEN(fen);
-            std::cout << "info string FEN position set: " << fen << std::endl;
+            std::cout << "info string FEN position set: " << fen << '\n';
         } else {
-            std::cout << "info string Error: Invalid FEN string" << std::endl;
+            std::cout << "info string Error: Invalid FEN string" << '\n';
             return;
         }
     } else {
-        std::cout << "info string Error: Expected 'startpos' or 'fen'" << std::endl;
+        std::cout << "info string Error: Expected 'startpos' or 'fen'" << '\n';
         return;
     }
 
     if (iss >> word && word == "moves") {
         std::string move;
         while (iss >> move) {
-            std::pair<int, int> movePos = uciToMove(move);
+            std::pair<int, int> movePos = UCINotation::uciToMove(move);
             if (movePos.first != -1 && movePos.second != -1) {
 
                 GenValidMoves(board);
@@ -241,10 +245,10 @@ void UCIEngine::handlePosition(const std::string& command) {
                                                                         : ChessPieceColor::WHITE;
                     board.updateBitboards();
                 } else {
-                    std::cout << "info string Warning: Invalid move " << move << std::endl;
+                    std::cout << "info string Warning: Invalid move " << move << '\n';
                 }
             } else {
-                std::cout << "info string Warning: Could not parse move " << move << std::endl;
+                std::cout << "info string Warning: Could not parse move " << move << '\n';
             }
         }
     }
@@ -252,7 +256,7 @@ void UCIEngine::handlePosition(const std::string& command) {
 
 void UCIEngine::handleGo(const std::string& command) {
     if (isSearching) {
-        std::cout << "info string Search already in progress" << std::endl;
+        std::cout << "info string Search already in progress" << '\n';
         return;
     }
 
@@ -260,8 +264,13 @@ void UCIEngine::handleGo(const std::string& command) {
     std::string word;
     iss >> word;
 
-    int wtime = -1, btime = -1, winc = 0, binc = 0;
-    int movestogo = -1, searchDepth = 64, movetime = -1;
+    int wtime = -1;
+    int btime = -1;
+    int winc = 0;
+    int binc = 0;
+    int movestogo = -1;
+    int searchDepth = 64;
+    int movetime = -1;
     bool isPonder = false;
     bool isInfinite = false;
 
@@ -304,7 +313,7 @@ void UCIEngine::handleGo(const std::string& command) {
         int increment = (board.turn == ChessPieceColor::WHITE) ? winc : binc;
 
         if (currentTime > 0) {
-            int baseTime;
+            int baseTime = 0;
             if (movestogo > 0) {
                 baseTime = currentTime / movestogo;
             } else {
@@ -354,7 +363,7 @@ void UCIEngine::handleGo(const std::string& command) {
                            result.score, 0);
             }
         } catch (const std::exception& e) {
-            std::cout << "info string Search error: " << e.what() << std::endl;
+            std::cout << "info string Search error: " << e.what() << '\n';
         }
 
         isSearching = false;
@@ -383,60 +392,66 @@ void UCIEngine::handleQuit() {
     std::exit(0);
 }
 
-void UCIEngine::handleDebug(const std::string& command) {
+void UCIEngine::handleDebug(const std::string& command) const {
     (void)command;
 
     std::cout << "info string Debug mode: " << (options.debug ? "enabled" : "disabled")
-              << std::endl;
+              << '\n';
 }
 
 void UCIEngine::handleRegister(const std::string& command) {
     (void)command;
 
-    std::cout << "info string Registration not required" << std::endl;
+    std::cout << "info string Registration not required" << '\n';
 }
 
 void UCIEngine::handleInfo(const std::string& command) {
     (void)command;
 
-    std::cout << "info string Info command received" << std::endl;
+    std::cout << "info string Info command received" << '\n';
 }
 
 void UCIEngine::handleBookStats() {
     if (!openingBook) {
-        std::cout << "info string Opening book not available" << std::endl;
+        std::cout << "info string Opening book not available" << '\n';
         return;
     }
 
     EnhancedOpeningBook::BookStats stats = openingBook->getStats();
-    std::cout << "info string Book Statistics:" << std::endl;
-    std::cout << "info string   Positions: " << stats.totalPositions << std::endl;
-    std::cout << "info string   Moves: " << stats.totalMoves << std::endl;
-    std::cout << "info string   Total Games: " << stats.totalGames << std::endl;
-    std::cout << "info string   Average Win Rate: " << stats.averageWinRate << std::endl;
-    std::cout << "info string   Average Rating: " << stats.averageRating << std::endl;
+    std::cout << "info string Book Statistics:" << '\n';
+    std::cout << "info string   Positions: " << stats.totalPositions << '\n';
+    std::cout << "info string   Moves: " << stats.totalMoves << '\n';
+    std::cout << "info string   Total Games: " << stats.totalGames << '\n';
+    std::cout << "info string   Average Win Rate: " << stats.averageWinRate << '\n';
+    std::cout << "info string   Average Rating: " << stats.averageRating << '\n';
 }
 
 void UCIEngine::reportBestMove(const std::pair<int, int>& move,
                                const std::pair<int, int>& ponderMove) {
-    std::string moveStr = moveToUCI(move);
-    std::string ponderStr = (ponderMove.first != -1) ? " ponder " + moveToUCI(ponderMove) : "";
-    std::cout << "bestmove " << moveStr << ponderStr << std::endl;
+    std::string moveStr = UCINotation::moveToUCI(move);
+    std::string ponderStr =
+        (ponderMove.first != -1) ? " ponder " + UCINotation::moveToUCI(ponderMove) : "";
+    std::cout << "bestmove " << moveStr << ponderStr << '\n';
 }
 
 void UCIEngine::reportInfo(int depth, int seldepth, int time, int nodes, int nps,
                            const std::vector<std::pair<int, int>>& pv, int score, int hashfull) {
     std::cout << "info depth " << depth;
-    if (seldepth > 0)
+    if (seldepth > 0) {
         std::cout << " seldepth " << seldepth;
-    if (time > 0)
+}
+    if (time > 0) {
         std::cout << " time " << time;
-    if (nodes > 0)
+}
+    if (nodes > 0) {
         std::cout << " nodes " << nodes;
-    if (nps > 0)
+}
+    if (nps > 0) {
         std::cout << " nps " << nps;
-    if (hashfull > 0)
+}
+    if (hashfull > 0) {
         std::cout << " hashfull " << hashfull;
+}
     if (score != 0) {
         std::cout << " score ";
         if (score > 30000) {
@@ -450,171 +465,14 @@ void UCIEngine::reportInfo(int depth, int seldepth, int time, int nodes, int nps
     if (!pv.empty()) {
         std::cout << " pv";
         for (const auto& move : pv) {
-            std::cout << " " << moveToUCI(move);
+            std::cout << " " << UCINotation::moveToUCI(move);
         }
     }
-    std::cout << std::endl;
+    std::cout << '\n';
 }
 
 void UCIEngine::reportInfo(const std::string& info) {
-    std::cout << "info string " << info << std::endl;
-}
-
-std::string UCIEngine::moveToUCI(const std::pair<int, int>& move) {
-    if (move.first == -1 || move.second == -1) {
-        return "0000";
-    }
-
-    int fromFile = move.first % 8;
-    int fromRank = move.first / 8;
-    int toFile = move.second % 8;
-    int toRank = move.second / 8;
-
-    std::string result;
-    result += static_cast<char>('a' + fromFile);
-    result += static_cast<char>('1' + fromRank);
-    result += static_cast<char>('a' + toFile);
-    result += static_cast<char>('1' + toRank);
-
-    return result;
-}
-
-std::pair<int, int> UCIEngine::uciToMove(const std::string& uciMove) {
-    if (uciMove.length() != 4) {
-        return {-1, -1};
-    }
-
-    int fromFile = uciMove[0] - 'a';
-    int fromRank = uciMove[1] - '1';
-    int toFile = uciMove[2] - 'a';
-    int toRank = uciMove[3] - '1';
-
-    if (fromFile < 0 || fromFile > 7 || fromRank < 0 || fromRank > 7 || toFile < 0 || toFile > 7 ||
-        toRank < 0 || toRank > 7) {
-        return {-1, -1};
-    }
-
-    int from = fromRank * 8 + fromFile;
-    int to = toRank * 8 + toFile;
-
-    return {from, to};
-}
-
-std::string UCIEngine::boardToFEN(const Board& board) {
-    std::string fen;
-
-    for (int rank = 7; rank >= 0; rank--) {
-        int emptyCount = 0;
-        for (int file = 0; file < 8; file++) {
-            int square = rank * 8 + file;
-            const Piece& piece = board.squares[square].piece;
-
-            if (piece.PieceType == ChessPieceType::NONE) {
-                emptyCount++;
-            } else {
-                if (emptyCount > 0) {
-                    fen += std::to_string(emptyCount);
-                    emptyCount = 0;
-                }
-
-                char pieceChar;
-                switch (piece.PieceType) {
-                    case ChessPieceType::PAWN:
-                        pieceChar = 'p';
-                        break;
-                    case ChessPieceType::KNIGHT:
-                        pieceChar = 'n';
-                        break;
-                    case ChessPieceType::BISHOP:
-                        pieceChar = 'b';
-                        break;
-                    case ChessPieceType::ROOK:
-                        pieceChar = 'r';
-                        break;
-                    case ChessPieceType::QUEEN:
-                        pieceChar = 'q';
-                        break;
-                    case ChessPieceType::KING:
-                        pieceChar = 'k';
-                        break;
-                    default:
-                        pieceChar = '?';
-                        break;
-                }
-
-                if (piece.PieceColor == ChessPieceColor::WHITE) {
-                    pieceChar = std::toupper(pieceChar);
-                }
-                fen += pieceChar;
-            }
-        }
-
-        if (emptyCount > 0) {
-            fen += std::to_string(emptyCount);
-        }
-
-        if (rank > 0) {
-            fen += '/';
-        }
-    }
-
-    fen += (board.turn == ChessPieceColor::WHITE) ? " w " : " b ";
-
-    fen += "KQkq ";
-
-    fen += "- ";
-
-    fen += "0 1";
-
-    return fen;
-}
-
-void UCIEngine::parseFEN(const std::string& fen, Board& board) {
-    board.InitializeFromFEN(fen);
-}
-
-void UCIEngine::parseMoves(const std::string& moves, Board& board) {
-    std::istringstream iss(moves);
-    std::string move;
-    while (iss >> move) {
-        std::pair<int, int> movePos = uciToMove(move);
-        if (movePos.first != -1 && movePos.second != -1) {
-            board.movePiece(movePos.first, movePos.second);
-            board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                : ChessPieceColor::WHITE;
-        }
-    }
-}
-
-std::vector<std::pair<int, int>> UCIEngine::getPrincipalVariation(const Board& board, int depth) {
-    std::vector<std::pair<int, int>> pv;
-    Board tempBoard = board;
-
-    for (int i = 0; i < depth; i++) {
-        uint64_t hash = ComputeZobrist(tempBoard);
-        TTEntry entry;
-
-        if (TransTable.find(hash, entry) && entry.bestMove.first != -1) {
-            pv.push_back(entry.bestMove);
-
-            tempBoard.movePiece(entry.bestMove.first, entry.bestMove.second);
-            tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                        : ChessPieceColor::WHITE;
-        } else {
-            break;
-        }
-    }
-
-    return pv;
-}
-
-void UCIEngine::startSearch() {
-    isSearching = true;
-    searchStartTime = std::chrono::steady_clock::now();
-}
-
-void UCIEngine::stopSearch() {
-    isSearching = false;
+    std::cout << "info string " << info << '\n';
 }
 
 SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLimit, int optimalTime,
@@ -626,8 +484,11 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
         if (tablebase->probe(board, tbResult)) {
             if (!tbResult.bestMoves.empty()) {
                 result.bestMove = tbResult.bestMoves[0];
-                result.score =
-                    tbResult.isExact ? (tbResult.distanceToMate > 0 ? 30000 : -30000) : 0;
+                if (tbResult.isExact) {
+                    result.score = (tbResult.distanceToMate > 0) ? 30000 : -30000;
+                } else {
+                    result.score = 0;
+                }
                 result.depth = 0;
                 result.nodes = 0;
                 result.timeMs = 0;
@@ -741,15 +602,16 @@ std::pair<int, int> UCINotation::uciToMove(const std::string& uciMove) {
         return {-1, -1};
     }
 
-    int from = fromRank * 8 + fromFile;
-    int to = toRank * 8 + toFile;
+    int from = (fromRank * 8) + fromFile;
+    int to = (toRank * 8) + toFile;
 
     return {from, to};
 }
 
 std::string UCINotation::squareToAlgebraic(int square) {
-    if (square < 0 || square > 63)
+    if (square < 0 || square > 63) {
         return "";
+}
 
     int file = square % 8;
     int rank = square / 8;
@@ -762,16 +624,18 @@ std::string UCINotation::squareToAlgebraic(int square) {
 }
 
 int UCINotation::algebraicToSquare(const std::string& algebraic) {
-    if (algebraic.length() != 2)
+    if (algebraic.length() != 2) {
         return -1;
+}
 
     int file = algebraic[0] - 'a';
     int rank = algebraic[1] - '1';
 
-    if (file < 0 || file > 7 || rank < 0 || rank > 7)
+    if (file < 0 || file > 7 || rank < 0 || rank > 7) {
         return -1;
+}
 
-    return rank * 8 + file;
+    return (rank * 8) + file;
 }
 
 bool UCINotation::isValidUCIMove(const std::string& uciMove) {
@@ -835,33 +699,40 @@ std::string UCIPosition::generateFEN(const Board& board) {
 }
 
 bool UCIPosition::isValidFEN(const std::string& fen) {
-    if (fen.empty())
+    if (fen.empty()) {
         return false;
+}
 
     std::istringstream iss(fen);
     std::string token;
 
-    if (!(iss >> token))
+    if (!(iss >> token)) {
         return false;
+}
 
-    int rank = 7, file = 0;
+    int rank = 7;
+    int file = 0;
     for (char c : token) {
         if (c == '/') {
-            if (file != 8)
+            if (file != 8) {
                 return false;
+}
             rank--;
             file = 0;
-            if (rank < 0)
+            if (rank < 0) {
                 return false;
+}
         } else if (isdigit(c)) {
             int count = c - '0';
-            if (count == 0 || file + count > 8)
+            if (count == 0 || file + count > 8) {
                 return false;
+}
             file += count;
         } else if (isalpha(c)) {
-            if (file >= 8)
+            if (file >= 8) {
                 return false;
-            char piece = tolower(c);
+}
+            char piece = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             if (piece != 'p' && piece != 'n' && piece != 'b' && piece != 'r' && piece != 'q' &&
                 piece != 'k') {
                 return false;
@@ -872,41 +743,52 @@ bool UCIPosition::isValidFEN(const std::string& fen) {
         }
     }
 
-    if (rank != 0 || file != 8)
+    if (rank != 0 || file != 8) {
         return false;
+}
 
-    if (!(iss >> token))
+    if (!(iss >> token)) {
         return false;
-    if (token != "w" && token != "b")
+}
+    if (token != "w" && token != "b") {
         return false;
+}
 
-    if (!(iss >> token))
+    if (!(iss >> token)) {
         return false;
+}
     for (char c : token) {
         if (c != 'K' && c != 'Q' && c != 'k' && c != 'q' && c != '-') {
             return false;
         }
     }
 
-    if (!(iss >> token))
+    if (!(iss >> token)) {
         return false;
+}
     if (token != "-") {
-        if (token.length() != 2)
+        if (token.length() != 2) {
             return false;
-        if (token[0] < 'a' || token[0] > 'h')
+}
+        if (token[0] < 'a' || token[0] > 'h') {
             return false;
-        if (token[1] != '3' && token[1] != '6')
+}
+        if (token[1] != '3' && token[1] != '6') {
             return false;
+}
     }
 
-    if (!(iss >> token))
+    if (!(iss >> token)) {
         return false;
-    if (!isdigit(token[0]))
+}
+    if (!isdigit(token[0])) {
         return false;
+}
 
     if (iss >> token) {
-        if (!isdigit(token[0]))
+        if (!isdigit(token[0])) {
             return false;
+}
     }
 
     return true;
@@ -921,20 +803,27 @@ std::string UCISearchInfo::formatInfo(int depth, int seldepth, int time, int nod
                                       int hashfull) {
     std::ostringstream oss;
     oss << "info depth " << depth;
-    if (seldepth > 0)
+    if (seldepth > 0) {
         oss << " seldepth " << seldepth;
-    if (time > 0)
+}
+    if (time > 0) {
         oss << " time " << time;
-    if (nodes > 0)
+}
+    if (nodes > 0) {
         oss << " nodes " << nodes;
-    if (nps > 0)
+}
+    if (nps > 0) {
         oss << " nps " << nps;
-    if (hashfull > 0)
+}
+    if (hashfull > 0) {
         oss << " hashfull " << hashfull;
-    if (score != 0)
+}
+    if (score != 0) {
         oss << " " << formatScore(score);
-    if (!pv.empty())
+}
+    if (!pv.empty()) {
         oss << " pv" << formatPV(pv);
+}
     return oss.str();
 }
 
@@ -965,8 +854,9 @@ std::string UCISearchInfo::formatTime(int timeMs) {
 }
 
 std::string UCISearchInfo::formatNPS(int nodes, int timeMs) {
-    if (timeMs == 0)
+    if (timeMs == 0) {
         return "0";
+}
     return std::to_string(nodes * 1000 / timeMs);
 }
 

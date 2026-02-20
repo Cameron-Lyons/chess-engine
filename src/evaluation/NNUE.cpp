@@ -1,6 +1,7 @@
 #include "NNUE.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstring>
 #include <fstream>
 
@@ -36,12 +37,16 @@ void Accumulator::refresh(const Board& board) {
 }
 
 void Accumulator::addFeature(int feature) {
-    if (!featureWeights)
+    if (!featureWeights) {
         return;
-    if (feature < 0 || feature >= INPUT_DIMENSIONS)
+    }
+    if (feature < 0 || feature >= INPUT_DIMENSIONS) {
         return;
+    }
 
-    const int16_t* w = &featureWeights[feature * L1_SIZE];
+    const auto featureOffset =
+        static_cast<std::size_t>(feature) * static_cast<std::size_t>(L1_SIZE);
+    const int16_t* w = featureWeights + featureOffset;
 
 #ifdef __AVX2__
     for (int i = 0; i < L1_SIZE; i += 16) {
@@ -55,19 +60,23 @@ void Accumulator::addFeature(int feature) {
     }
 #else
     for (int i = 0; i < L1_SIZE; ++i) {
-        white[i] += w[i];
-        black[i] += w[i];
+        white[i] = static_cast<int16_t>(white[i] + w[i]);
+        black[i] = static_cast<int16_t>(black[i] + w[i]);
     }
 #endif
 }
 
 void Accumulator::removeFeature(int feature) {
-    if (!featureWeights)
+    if (!featureWeights) {
         return;
-    if (feature < 0 || feature >= INPUT_DIMENSIONS)
+    }
+    if (feature < 0 || feature >= INPUT_DIMENSIONS) {
         return;
+    }
 
-    const int16_t* w = &featureWeights[feature * L1_SIZE];
+    const auto featureOffset =
+        static_cast<std::size_t>(feature) * static_cast<std::size_t>(L1_SIZE);
+    const int16_t* w = featureWeights + featureOffset;
 
 #ifdef __AVX2__
     for (int i = 0; i < L1_SIZE; i += 16) {
@@ -81,24 +90,31 @@ void Accumulator::removeFeature(int feature) {
     }
 #else
     for (int i = 0; i < L1_SIZE; ++i) {
-        white[i] -= w[i];
-        black[i] -= w[i];
+        white[i] = static_cast<int16_t>(white[i] - w[i]);
+        black[i] = static_cast<int16_t>(black[i] - w[i]);
     }
 #endif
 }
 
 LinearLayer::LinearLayer(int in, int out)
-    : inputSize(in), outputSize(out), weights(in * out), biases(out) {}
+    : inputSize(in),
+      outputSize(out),
+      weights(static_cast<std::size_t>(in) * static_cast<std::size_t>(out)),
+      biases(static_cast<std::size_t>(out)) {}
 
 void LinearLayer::forward(const void* input, void* output) const {
-    const int16_t* in = static_cast<const int16_t*>(input);
-    int32_t* out = static_cast<int32_t*>(output);
+    const auto* in = static_cast<const int16_t*>(input);
+    auto* out = static_cast<int32_t*>(output);
 
     for (int i = 0; i < outputSize; ++i) {
+#ifdef __AVX2__
         __m256i sum = _mm256_setzero_si256();
+        const auto rowOffset =
+            static_cast<std::size_t>(i) * static_cast<std::size_t>(inputSize);
+        const int16_t* wRow = weights.data() + rowOffset;
 
         for (int j = 0; j < inputSize; j += 16) {
-            __m256i w = _mm256_load_si256((__m256i*)&weights[i * inputSize + j]);
+            __m256i w = _mm256_load_si256((__m256i*)&wRow[j]);
             __m256i x = _mm256_load_si256((__m256i*)&in[j]);
             __m256i prod = _mm256_madd_epi16(w, x);
             sum = _mm256_add_epi32(sum, prod);
@@ -111,6 +127,16 @@ void LinearLayer::forward(const void* input, void* output) const {
         __m128i sum_32 = _mm_add_epi32(sum_64, _mm_srli_si128(sum_64, 4));
 
         out[i] = _mm_cvtsi128_si32(sum_32) + biases[i];
+#else
+        int32_t sum = 0;
+        const auto rowOffset =
+            static_cast<std::size_t>(i) * static_cast<std::size_t>(inputSize);
+        const int16_t* w = weights.data() + rowOffset;
+        for (int j = 0; j < inputSize; ++j) {
+            sum += static_cast<int32_t>(w[j]) * static_cast<int32_t>(in[j]);
+        }
+        out[i] = sum + biases[i];
+#endif
     }
 }
 
@@ -120,8 +146,8 @@ void LinearLayer::loadWeights(const int16_t* w, const int32_t* b) {
 }
 
 void ClippedReLU::forward(const void* input, void* output) const {
-    const int32_t* in = static_cast<const int32_t*>(input);
-    int16_t* out = static_cast<int16_t*>(output);
+    const auto* in = static_cast<const int32_t*>(input);
+    auto* out = static_cast<int16_t*>(output);
 
     for (int i = 0; i < size; ++i) {
         int32_t val = in[i];
@@ -144,10 +170,12 @@ NNUEEvaluator::~NNUEEvaluator() = default;
 
 bool NNUEEvaluator::loadNetwork(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);
-    if (!file)
+    if (!file) {
         return false;
+    }
 
-    int32_t magic, version;
+    int32_t magic = 0;
+    int32_t version = 0;
     file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
     file.read(reinterpret_cast<char*>(&version), sizeof(version));
 
@@ -155,36 +183,49 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
         return false;
     }
 
-    ftWeights.resize(INPUT_DIMENSIONS * L1_SIZE);
-    file.read(reinterpret_cast<char*>(ftWeights.data()), ftWeights.size() * sizeof(int16_t));
+    ftWeights.resize(static_cast<std::size_t>(INPUT_DIMENSIONS) * static_cast<std::size_t>(L1_SIZE));
+    const auto ftWeightsBytes =
+        static_cast<std::streamsize>(ftWeights.size() * sizeof(int16_t));
+    file.read(reinterpret_cast<char*>(ftWeights.data()), ftWeightsBytes);
 
     std::vector<int32_t> ftBiases32(L1_SIZE);
-    file.read(reinterpret_cast<char*>(ftBiases32.data()), ftBiases32.size() * sizeof(int32_t));
+    const auto ftBiasesBytes =
+        static_cast<std::streamsize>(ftBiases32.size() * sizeof(int32_t));
+    file.read(reinterpret_cast<char*>(ftBiases32.data()), ftBiasesBytes);
     ftBiases.resize(L1_SIZE);
-    for (int i = 0; i < L1_SIZE; ++i)
+    for (int i = 0; i < L1_SIZE; ++i) {
         ftBiases[i] = static_cast<int16_t>(std::clamp(ftBiases32[i], -32768, 32767));
+    }
 
     {
-        std::vector<int16_t> w(2 * L1_SIZE * L2_SIZE);
+        std::vector<int16_t> w(static_cast<std::size_t>(2) * static_cast<std::size_t>(L1_SIZE) *
+                               static_cast<std::size_t>(L2_SIZE));
         std::vector<int32_t> b(L2_SIZE);
-        file.read(reinterpret_cast<char*>(w.data()), w.size() * sizeof(int16_t));
-        file.read(reinterpret_cast<char*>(b.data()), b.size() * sizeof(int32_t));
+        const auto wBytes = static_cast<std::streamsize>(w.size() * sizeof(int16_t));
+        const auto bBytes = static_cast<std::streamsize>(b.size() * sizeof(int32_t));
+        file.read(reinterpret_cast<char*>(w.data()), wBytes);
+        file.read(reinterpret_cast<char*>(b.data()), bBytes);
         hidden1->loadWeights(w.data(), b.data());
     }
 
     {
-        std::vector<int16_t> w(L2_SIZE * L3_SIZE);
+        std::vector<int16_t> w(static_cast<std::size_t>(L2_SIZE) * static_cast<std::size_t>(L3_SIZE));
         std::vector<int32_t> b(L3_SIZE);
-        file.read(reinterpret_cast<char*>(w.data()), w.size() * sizeof(int16_t));
-        file.read(reinterpret_cast<char*>(b.data()), b.size() * sizeof(int32_t));
+        const auto wBytes = static_cast<std::streamsize>(w.size() * sizeof(int16_t));
+        const auto bBytes = static_cast<std::streamsize>(b.size() * sizeof(int32_t));
+        file.read(reinterpret_cast<char*>(w.data()), wBytes);
+        file.read(reinterpret_cast<char*>(b.data()), bBytes);
         hidden2->loadWeights(w.data(), b.data());
     }
 
     {
-        std::vector<int16_t> w(L3_SIZE * OUTPUT_SIZE);
+        std::vector<int16_t> w(static_cast<std::size_t>(L3_SIZE) *
+                               static_cast<std::size_t>(OUTPUT_SIZE));
         std::vector<int32_t> b(OUTPUT_SIZE);
-        file.read(reinterpret_cast<char*>(w.data()), w.size() * sizeof(int16_t));
-        file.read(reinterpret_cast<char*>(b.data()), b.size() * sizeof(int32_t));
+        const auto wBytes = static_cast<std::streamsize>(w.size() * sizeof(int16_t));
+        const auto bBytes = static_cast<std::streamsize>(b.size() * sizeof(int32_t));
+        file.read(reinterpret_cast<char*>(w.data()), wBytes);
+        file.read(reinterpret_cast<char*>(b.data()), bBytes);
         outputLayer->loadWeights(w.data(), b.data());
     }
 

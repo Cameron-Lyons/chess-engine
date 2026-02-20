@@ -4,9 +4,12 @@
 
 #include <array>
 #include <cstdint>
-#include <immintrin.h>
 #include <memory>
 #include <vector>
+
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+#include <immintrin.h>
+#endif
 
 namespace NNUE {
 
@@ -20,7 +23,7 @@ constexpr int SCALE = 64;
 
 struct FeatureIndex {
     static constexpr int index(int sq, ChessPieceType pt, ChessPieceColor c) {
-        return sq + 64 * (static_cast<int>(pt) + 6 * static_cast<int>(c));
+        return sq + (64 * (static_cast<int>(pt) + (6 * static_cast<int>(c))));
     }
 };
 
