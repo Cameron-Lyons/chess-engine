@@ -214,29 +214,32 @@ MovePicker::MovePicker(Board& b, std::pair<int, int> hm, const KillerMoves& km, 
 void MovePicker::generateAndPartitionMoves() {
     if (movesGenerated) {
         return;
-}
+    }
     movesGenerated = true;
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
+    goodCaptures.reserve(moves.size());
+    badCaptures.reserve(moves.size());
+    quietMoves.reserve(moves.size());
+
+    const int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
+    const int prevDest = board.LastMove;
+    std::pair<int, int> counterMove = {-1, -1};
+    if (prevDest >= 0 && prevDest < 64) {
+        counterMove = context.counterMoves[colorIdx][prevDest];
+    }
 
     for (const auto& move : moves) {
         if (move == hashMove) {
             continue;
-}
+        }
         if (killerMoves.isKiller(ply, move)) {
             continue;
-}
-
-        int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
-        int prevDest = board.LastMove;
-        std::pair<int, int> cm = {-1, -1};
-        if (prevDest >= 0 && prevDest < 64) {
-            cm = context.counterMoves[colorIdx][prevDest];
-}
-        if (cm.first >= 0 && move == cm) {
+        }
+        if (counterMove.first >= 0 && move == counterMove) {
             continue;
-}
+        }
 
         bool isCap = isCapture(board, move.first, move.second);
         int movingPieceIdx = pieceTypeIndex(board.squares[move.first].piece.PieceType);
@@ -272,7 +275,7 @@ std::pair<int, int> MovePicker::next() {
             case MovePickerStage::HASH_MOVE:
                 stage = MovePickerStage::GEN_CAPTURES;
                 if (hashMove.first >= 0 && hashMove.second >= 0) {
-                    returned.push_back(hashMove);
+                    markReturned(hashMove);
                     return hashMove;
                 }
                 break;
@@ -287,7 +290,7 @@ std::pair<int, int> MovePicker::next() {
                 if (captureIdx < goodCaptures.size()) {
                     auto m = goodCaptures[captureIdx++].move;
                     if (!alreadyReturned(m)) {
-                        returned.push_back(m);
+                        markReturned(m);
                         return m;
                     }
                     break;
@@ -300,7 +303,7 @@ std::pair<int, int> MovePicker::next() {
                 for (int i = 0; i < KillerMoves::MAX_KILLER_MOVES; ++i) {
                     auto k = killerMoves.killers[ply][i];
                     if (k.first >= 0 && !alreadyReturned(k)) {
-                        returned.push_back(k);
+                        markReturned(k);
                         stage = MovePickerStage::KILLERS;
                         return k;
                     }
@@ -314,7 +317,7 @@ std::pair<int, int> MovePicker::next() {
                 if (prevDest >= 0 && prevDest < 64) {
                     auto cm = context.counterMoves[colorIdx][prevDest];
                     if (cm.first >= 0 && !alreadyReturned(cm)) {
-                        returned.push_back(cm);
+                        markReturned(cm);
                         return cm;
                     }
                 }
@@ -330,7 +333,7 @@ std::pair<int, int> MovePicker::next() {
                 if (quietIdx < quietMoves.size()) {
                     auto m = quietMoves[quietIdx++].move;
                     if (!alreadyReturned(m)) {
-                        returned.push_back(m);
+                        markReturned(m);
                         return m;
                     }
                     break;
@@ -343,7 +346,7 @@ std::pair<int, int> MovePicker::next() {
                 if (badCaptureIdx < badCaptures.size()) {
                     auto m = badCaptures[badCaptureIdx++].move;
                     if (!alreadyReturned(m)) {
-                        returned.push_back(m);
+                        markReturned(m);
                         return m;
                     }
                     break;
@@ -672,6 +675,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
 
     int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
     int prevDest = board.LastMove;
+    const bool sideInCheck = isInCheck(board, board.turn);
 
     int bestValue = maximizingPlayer ? -10000 : 10000;
     std::pair<int, int> bestMove = {-1, -1};
@@ -708,7 +712,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             }
 
             if (AdvancedSearch::lateMovePruning(board, depth, movesSearched,
-                                                isInCheck(board, board.turn))) {
+                                                sideInCheck)) {
                 continue;
             }
         }
@@ -764,7 +768,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             mc.moveNumber = movesSearched;
 
             LMREnhanced::PositionContext pc;
-            pc.inCheck = isInCheck(board, board.turn);
+            pc.inCheck = sideInCheck;
             pc.isPVNode = isPVNode;
             pc.isEndgame = (gamePhase < 10);
             pc.gamePhase = gamePhase;
@@ -828,7 +832,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     }
 
     if (movesSearched == 0) {
-        if (isInCheck(board, board.turn)) {
+        if (sideInCheck) {
             return maximizingPlayer ? -10000 + ply : 10000 - ply;
         } else {
             return -context.contempt;

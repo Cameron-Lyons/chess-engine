@@ -6,6 +6,7 @@
 #include "ValidMoves.h"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -331,11 +332,26 @@ class MovePicker {
     size_t quietIdx = 0;
     size_t badCaptureIdx = 0;
     bool movesGenerated = false;
-    std::vector<std::pair<int, int>> returned;
+    static constexpr std::size_t MOVE_MASK_SIZE = 64ULL * 64ULL;
+    std::array<bool, MOVE_MASK_SIZE> returnedMask{};
+
+    static constexpr std::size_t moveIndex(const std::pair<int, int>& m) {
+        return (static_cast<std::size_t>(m.first) * static_cast<std::size_t>(64)) +
+               static_cast<std::size_t>(m.second);
+    }
 
     bool alreadyReturned(const std::pair<int, int>& m) const {
-        return std::any_of(returned.begin(), returned.end(),
-                           [&m](const std::pair<int, int>& r) { return r == m; });
+        if (m.first < 0 || m.first >= 64 || m.second < 0 || m.second >= 64) {
+            return false;
+        }
+        return returnedMask[moveIndex(m)];
+    }
+
+    void markReturned(const std::pair<int, int>& m) {
+        if (m.first < 0 || m.first >= 64 || m.second < 0 || m.second >= 64) {
+            return;
+        }
+        returnedMask[moveIndex(m)] = true;
     }
 
     void generateAndPartitionMoves();
