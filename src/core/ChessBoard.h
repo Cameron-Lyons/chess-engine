@@ -18,7 +18,7 @@ using ChessClock = std::chrono::steady_clock;
 using ChessDuration = std::chrono::milliseconds;
 using ChessTimePoint = ChessClock::time_point;
 
-enum class ChessError {
+enum class ChessError : std::uint8_t {
     InvalidMove,
     NoPieceAtSource,
     WrongTurn,

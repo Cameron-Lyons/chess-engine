@@ -9,7 +9,7 @@
 
 namespace Syzygy {
 
-enum ProbeResult {
+enum ProbeResult : std::uint8_t {
     PROBE_FAIL = 0,
     PROBE_LOSS = 1,
     PROBE_BLESSED_LOSS = 2,

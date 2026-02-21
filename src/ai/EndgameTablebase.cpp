@@ -50,9 +50,9 @@ auto EndgameTablebase::probe(const Board& board, TablebaseResult& result) -> boo
 
     int success = 0;
     Syzygy::ProbeResult wdl = Syzygy::probeWDL(board, &success);
-    if (!success)
+    if (!success) {
         return false;
-
+    }
     result.isExact = true;
     result.bestMoves.clear();
 
@@ -229,8 +229,10 @@ auto EndgameKnowledge::evaluateEndgame(const Board& board) -> int {
 }
 
 auto EndgameKnowledge::getKingDistance(int king1, int king2) -> int {
-    int row1 = king1 / 8, col1 = king1 % 8;
-    int row2 = king2 / 8, col2 = king2 % 8;
+    int row1 = king1 / 8;
+    int col1 = king1 % 8;
+    int row2 = king2 / 8;
+    int col2 = king2 % 8;
     return std::max(std::abs(row1 - row2), std::abs(col1 - col2));
 }
 

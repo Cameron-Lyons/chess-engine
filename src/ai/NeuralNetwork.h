@@ -14,7 +14,7 @@ public:
         int inputSize{768};
         int hiddenSize{256};
         int outputSize{1};
-        float learningRate{0.001f};
+        float learningRate{0.001F};
         std::string modelPath{"models/chess_nn.bin"};
 
         NetworkConfig() = default;
@@ -41,7 +41,7 @@ public:
         int minor{0};
         int patch{0};
         std::string timestamp;
-        float validationLoss{0.0f};
+        float validationLoss{0.0F};
 
         bool operator<(const ModelVersion& other) const;
         bool operator==(const ModelVersion& other) const;
@@ -53,7 +53,7 @@ public:
     bool compareModels(const std::string& path1, const std::string& path2);
     std::vector<std::string> listModelVersions(const std::string& directory);
 
-    auto hybridEvaluate(const Board& board, float nnWeight = 0.7f) -> float;
+    auto hybridEvaluate(const Board& board, float nnWeight = 0.7F) -> float;
 
 private:
     class Impl;
@@ -135,7 +135,7 @@ public:
     struct TrainingConfig {
         int batchSize{32};
         int epochs{10};
-        float validationSplit{0.2f};
+        float validationSplit{0.2F};
         float earlyStoppingPatience{5};
         std::string modelPath{"models/chess_nn.bin"};
         std::string trainingDataPath{"data/training_data.bin"};

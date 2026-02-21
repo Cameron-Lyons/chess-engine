@@ -50,8 +50,8 @@ public:
             int inputSize = layerSizes[i];
             int outputSize = layerSizes[i + 1];
 
-            float scale = std::sqrt(2.0f / static_cast<float>(inputSize + outputSize));
-            std::normal_distribution<float> dist(0.0f, scale);
+            float scale = std::sqrt(2.0F / static_cast<float>(inputSize + outputSize));
+            std::normal_distribution<float> dist(0.0F, scale);
 
             layer.weights.resize(outputSize);
             for (int j = 0; j < outputSize; ++j) {
@@ -61,7 +61,7 @@ public:
                 }
             }
 
-            layer.biases.resize(outputSize, 0.0f);
+            layer.biases.resize(outputSize, 0.0F);
             layer.activations.resize(outputSize);
             layer.gradients.resize(outputSize);
 
@@ -86,7 +86,7 @@ public:
                     layer.activations[j] = std::tanh(sum);
                 } else {
 
-                    layer.activations[j] = std::max(0.0f, sum);
+                    layer.activations[j] = std::max(0.0F, sum);
                 }
             }
 
@@ -111,11 +111,11 @@ public:
 
                 if (static_cast<size_t>(i) == layers.size() - 1) {
 
-                    activationGradient *= (1.0f - (layer.activations[j] * layer.activations[j]));
+                    activationGradient *= (1.0F - (layer.activations[j] * layer.activations[j]));
                 } else {
 
                     if (layer.activations[j] <= 0) {
-                        activationGradient = 0.0f;
+                        activationGradient = 0.0F;
                     }
                 }
 
@@ -125,7 +125,7 @@ public:
 
             if (i > 0) {
                 std::vector<float> prevInput = (i == 0) ? input : layers[i - 1].activations;
-                nextGradient.resize(prevInput.size(), 0.0f);
+                nextGradient.resize(prevInput.size(), 0.0F);
 
                 for (size_t j = 0; j < layer.weights.size(); ++j) {
                     for (size_t k = 0; k < layer.weights[j].size(); ++k) {
@@ -269,11 +269,11 @@ auto NeuralNetworkEvaluator::evaluatePosition(const Board& board) -> float {
     std::vector<float> input = encodePosition(board);
     float evaluation = m_pImpl->forwardPass(input);
 
-    return evaluation * 1000.0f;
+    return evaluation * 1000.0F;
 }
 
 auto NeuralNetworkEvaluator::encodePosition(const Board& board) -> std::vector<float> {
-    std::vector<float> encoding(768, 0.0f);
+    std::vector<float> encoding(768, 0.0F);
 
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
@@ -282,7 +282,7 @@ auto NeuralNetworkEvaluator::encodePosition(const Board& board) -> std::vector<f
             if (piece.PieceColor == ChessPieceColor::BLACK) {
                 pieceIndex += 6;
             }
-            encoding[(square * 12) + pieceIndex] = 1.0f;
+            encoding[(square * 12) + pieceIndex] = 1.0F;
         }
     }
 
@@ -297,11 +297,11 @@ void NeuralNetworkEvaluator::train(const std::vector<std::pair<Board, float>>& t
 
     std::cout << "Training neural network with " << trainingData.size() << " positions..." << '\n';
 
-    float totalLoss = 0.0f;
+    float totalLoss = 0.0F;
     int batchSize = std::min(32, static_cast<int>(trainingData.size()));
 
     for (size_t i = 0; i < trainingData.size(); i += batchSize) {
-        float batchLoss = 0.0f;
+        float batchLoss = 0.0F;
 
         for (int j = 0; j < batchSize && i + j < trainingData.size(); ++j) {
             const auto& [board, target] = trainingData[i + j];
@@ -310,7 +310,7 @@ void NeuralNetworkEvaluator::train(const std::vector<std::pair<Board, float>>& t
 
             float predicted = m_pImpl->forwardPass(input);
 
-            float normalizedTarget = std::tanh(target / 1000.0f);
+            float normalizedTarget = std::tanh(target / 1000.0F);
 
             m_pImpl->backwardPass(input, normalizedTarget, predicted);
 
@@ -345,11 +345,11 @@ auto NeuralNetworkEvaluator::hybridEvaluate(const Board& board, float nnWeight) 
 
     float nnEval = evaluatePosition(board);
 
-    float traditionalEval = 0.0f;
+    float traditionalEval = 0.0F;
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
-            float value = static_cast<float>(piece.PieceValue);
+            auto value = static_cast<float>(piece.PieceValue);
             if (piece.PieceColor == ChessPieceColor::BLACK) {
                 value = -value;
             }
@@ -357,18 +357,18 @@ auto NeuralNetworkEvaluator::hybridEvaluate(const Board& board, float nnWeight) 
         }
     }
 
-    return (nnWeight * nnEval) + ((1.0f - nnWeight) * traditionalEval);
+    return (nnWeight * nnEval) + ((1.0F - nnWeight) * traditionalEval);
 }
 
 auto NeuralNetworkEvaluator::pieceToVector(const Piece& piece, int square) -> std::vector<float> {
     (void)square;
-    std::vector<float> vec(12, 0.0f);
+    std::vector<float> vec(12, 0.0F);
     if (piece.PieceType != ChessPieceType::NONE) {
         int index = static_cast<int>(piece.PieceType) - 1;
         if (piece.PieceColor == ChessPieceColor::BLACK) {
             index += 6;
         }
-        vec[index] = 1.0f;
+        vec[index] = 1.0F;
     }
     return vec;
 }
@@ -397,7 +397,8 @@ auto FeatureExtractor::extractFeatures(const Board& board) -> PositionFeatures {
         }
     }
 
-    int whiteMaterial = 0, blackMaterial = 0;
+    int whiteMaterial = 0;
+    int blackMaterial = 0;
     for (int piece = 0; piece < 6; ++piece) {
         whiteMaterial += features.materialCount[0][piece] *
                          Piece::getPieceValue(static_cast<ChessPieceType>(piece + 1));
@@ -488,9 +489,9 @@ auto FeatureExtractor::calculateKingSafety(const Board& board, ChessPieceColor c
         }
     }
 
-    if (kingSquare == -1)
+    if (kingSquare == -1) {
         return 0;
-
+    }
     int row = kingSquare / 8;
     int col = kingSquare % 8;
 
@@ -533,8 +534,8 @@ auto FeatureExtractor::calculateGamePhase(const Board& board) -> float {
         }
     }
 
-    float phase = 1.0f - (static_cast<float>(totalPieces) / 32.0f);
-    phase = std::max(0.0f, std::min(1.0f, phase));
+    float phase = 1.0F - (static_cast<float>(totalPieces) / 32.0F);
+    phase = std::max(0.0F, std::min(1.0F, phase));
 
     return phase;
 }
@@ -594,10 +595,10 @@ auto TrainingDataGenerator::playGame(int maxMoves)
         }
 
         std::pair<int, int> bestMove = legalMoves[0];
-        float bestScore = -10000.0f;
+        float bestScore = -10000.0F;
 
         for (const auto& move : legalMoves) {
-            float score = 0.0f;
+            float score = 0.0F;
 
             if (board.squares[move.second].piece.PieceType != ChessPieceType::NONE) {
                 score += static_cast<float>(board.squares[move.second].piece.PieceValue);
@@ -609,7 +610,7 @@ auto TrainingDataGenerator::playGame(int maxMoves)
                 score += 50;
             }
 
-            std::uniform_real_distribution<float> noise(-100.0f, 100.0f);
+            std::uniform_real_distribution<float> noise(-100.0F, 100.0F);
             score += noise(m_rng);
 
             if (score > bestScore) {
@@ -624,7 +625,7 @@ auto TrainingDataGenerator::playGame(int maxMoves)
         board.updateBitboards();
 
         example.targetScore = getMaterialScore(board) + getPositionalScore(board);
-        example.gameResult = 0.5f;
+        example.gameResult = 0.5F;
         examples.push_back(example);
 
         gameHistory.push_back(board);
@@ -641,7 +642,8 @@ auto TrainingDataGenerator::playGame(int maxMoves)
 
 auto TrainingDataGenerator::evaluateGameResult(const Board& board, int gameLength) -> float {
 
-    bool whiteInCheck = false, blackInCheck = false;
+    bool whiteInCheck = false;
+    bool blackInCheck = false;
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType == ChessPieceType::KING) {
@@ -654,29 +656,29 @@ auto TrainingDataGenerator::evaluateGameResult(const Board& board, int gameLengt
     }
 
     if (whiteInCheck && board.turn == ChessPieceColor::WHITE) {
-        return 0.0f;
+        return 0.0F;
     } else if (blackInCheck && board.turn == ChessPieceColor::BLACK) {
-        return 1.0f;
+        return 1.0F;
     }
 
     if (gameLength > 150) {
-        return 0.5f;
+        return 0.5F;
     }
 
     float materialScore = getMaterialScore(board);
     float positionalScore = getPositionalScore(board);
     float totalScore = materialScore + positionalScore;
 
-    return 1.0f / (1.0f + std::exp(-totalScore / 1000.0f));
+    return 1.0F / (1.0F + std::exp(-totalScore / 1000.0F));
 }
 
 auto TrainingDataGenerator::getMaterialScore(const Board& board) -> float {
-    float score = 0.0f;
+    float score = 0.0F;
 
     for (int square = 0; square < 64; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
-            float value = static_cast<float>(piece.PieceValue);
+            auto value = static_cast<float>(piece.PieceValue);
             if (piece.PieceColor == ChessPieceColor::BLACK) {
                 value = -value;
             }
@@ -688,13 +690,13 @@ auto TrainingDataGenerator::getMaterialScore(const Board& board) -> float {
 }
 
 auto TrainingDataGenerator::getPositionalScore(const Board& board) -> float {
-    float score = 0.0f;
+    float score = 0.0F;
 
     constexpr std::array<int, 4> centerSquares = {27, 28, 35, 36};
     for (int square : centerSquares) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
-            float bonus = static_cast<float>(piece.PieceValue) * 0.1f;
+            float bonus = static_cast<float>(piece.PieceValue) * 0.1F;
             if (piece.PieceColor == ChessPieceColor::BLACK) {
                 bonus = -bonus;
             }
@@ -711,7 +713,7 @@ auto TrainingDataGenerator::convertToNNFormat(const std::vector<TrainingExample>
 
     for (const auto& example : examples) {
 
-        float score = (example.gameResult - 0.5f) * 2000.0f;
+        float score = (example.gameResult - 0.5F) * 2000.0F;
         nnData.emplace_back(example.position, score);
     }
 
@@ -800,7 +802,7 @@ void NNTrainer::trainOnSelfPlayData(int numGames) {
     auto trainingExamples = m_dataGenerator.generateSelfPlayData(numGames);
     auto nnData = m_dataGenerator.convertToNNFormat(trainingExamples);
 
-    auto trainingData = splitData(nnData, 1.0f - m_config.validationSplit, true);
+    auto trainingData = splitData(nnData, 1.0F - m_config.validationSplit, true);
     auto validationData = splitData(nnData, m_config.validationSplit, false);
 
     std::cout << "Training set: " << trainingData.size() << " examples" << '\n';
@@ -845,7 +847,7 @@ void NNTrainer::trainOnFile(const std::string& dataPath) {
     auto trainingExamples = m_dataGenerator.loadTrainingData(dataPath);
     auto nnData = m_dataGenerator.convertToNNFormat(trainingExamples);
 
-    auto trainingData = splitData(nnData, 1.0f - m_config.validationSplit, true);
+    auto trainingData = splitData(nnData, 1.0F - m_config.validationSplit, true);
     auto validationData = splitData(nnData, m_config.validationSplit, false);
 
     std::cout << "Training set: " << trainingData.size() << " examples" << '\n';
@@ -862,7 +864,7 @@ void NNTrainer::validateModel(const std::vector<std::pair<Board, float>>& valida
 }
 
 auto NNTrainer::evaluateModel(const std::vector<std::pair<Board, float>>& testData) -> float {
-    float totalLoss = 0.0f;
+    float totalLoss = 0.0F;
     int correctPredictions = 0;
 
     for (const auto& [board, target] : testData) {
@@ -879,7 +881,7 @@ auto NNTrainer::evaluateModel(const std::vector<std::pair<Board, float>>& testDa
     float accuracy = static_cast<float>(correctPredictions) / static_cast<float>(testData.size());
 
     std::cout << "Test loss: " << avgLoss << '\n';
-    std::cout << "Prediction accuracy: " << (accuracy * 100.0f) << "%" << '\n';
+    std::cout << "Prediction accuracy: " << (accuracy * 100.0F) << "%" << '\n';
 
     return avgLoss;
 }
@@ -897,7 +899,7 @@ void NNTrainer::generateTrainingReport(const std::string& outputPath) {
     report << "Training Configuration:\n";
     report << "- Batch size: " << m_config.batchSize << "\n";
     report << "- Epochs: " << m_config.epochs << "\n";
-    report << "- Validation split: " << (m_config.validationSplit * 100.0f) << "%\n";
+    report << "- Validation split: " << (m_config.validationSplit * 100.0F) << "%\n";
     report << "- Early stopping patience: " << m_config.earlyStoppingPatience << "\n\n";
 
     report << "Training History:\n";
@@ -921,7 +923,7 @@ void NNTrainer::generateTrainingReport(const std::string& outputPath) {
 
 auto NNTrainer::splitData(const std::vector<std::pair<Board, float>>& data, float splitRatio,
                           bool takeFirst) -> std::vector<std::pair<Board, float>> {
-    size_t splitIndex = static_cast<size_t>(static_cast<float>(data.size()) * splitRatio);
+    auto splitIndex = static_cast<size_t>(static_cast<float>(data.size()) * splitRatio);
 
     if (takeFirst) {
         return std::vector<std::pair<Board, float>>(
@@ -933,7 +935,7 @@ auto NNTrainer::splitData(const std::vector<std::pair<Board, float>>& data, floa
 }
 
 auto NNTrainer::calculateLoss(const std::vector<std::pair<Board, float>>& data) -> float {
-    float totalLoss = 0.0f;
+    float totalLoss = 0.0F;
 
     for (const auto& [board, target] : data) {
         float predicted = m_neuralNetwork.evaluatePosition(board);
@@ -945,10 +947,12 @@ auto NNTrainer::calculateLoss(const std::vector<std::pair<Board, float>>& data) 
 }
 
 bool NeuralNetworkEvaluator::ModelVersion::operator<(const ModelVersion& other) const {
-    if (major != other.major)
+    if (major != other.major) {
         return major < other.major;
-    if (minor != other.minor)
+    }
+    if (minor != other.minor) {
         return minor < other.minor;
+    }
     return patch < other.patch;
 }
 
@@ -970,7 +974,8 @@ void NeuralNetworkEvaluator::setModelVersion(const ModelVersion& version) {
 }
 
 bool NeuralNetworkEvaluator::compareModels(const std::string& path1, const std::string& path2) {
-    ModelVersion v1, v2;
+    ModelVersion v1;
+    ModelVersion v2;
 
     std::ifstream file1(path1, std::ios::binary);
     if (file1.is_open()) {

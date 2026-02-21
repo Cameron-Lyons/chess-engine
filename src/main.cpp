@@ -66,7 +66,8 @@ void printBoard(const Board& board) {
                         break;
                 }
                 if (piece.PieceColor == ChessPieceColor::BLACK) {
-                    pieceChar = static_cast<char>(std::tolower(static_cast<unsigned char>(pieceChar)));
+                    pieceChar =
+                        static_cast<char>(std::tolower(static_cast<unsigned char>(pieceChar)));
                 }
                 std::cout << pieceChar << " ";
             }
@@ -107,7 +108,7 @@ int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
     return static_cast<int>(static_cast<float>(baseTime) * complexityMultiplier);
 }
 
-std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
+std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 6000) {
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {
@@ -143,7 +144,7 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
         searchDepth = 8;
     } else if (adaptiveTime < 800) {
         searchDepth = 6;
-}
+    }
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
@@ -153,7 +154,7 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
         searchDepth += 3;
     } else if (numMoves < 15) {
         searchDepth -= 1;
-}
+    }
 
     int numCaptures = 0;
     for (const auto& move : moves) {
@@ -163,17 +164,17 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
     }
     if (numCaptures > 5) {
         searchDepth += 2;
-}
+    }
     if (numCaptures > 8) {
         searchDepth += 1;
-}
+    }
 
     bool hasHangingPieces = false;
     for (int i = 0; i < NUM_SQUARES; i++) {
         const Piece& piece = board.squares[i].piece;
         if (piece.PieceType == ChessPieceType::NONE || piece.PieceType == ChessPieceType::PAWN) {
             continue;
-}
+        }
 
         ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE)
                                          ? ChessPieceColor::BLACK
@@ -187,7 +188,7 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
         }
         if (hasHangingPieces) {
             break;
-}
+        }
     }
 
     if (hasHangingPieces) {
@@ -199,13 +200,24 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 15000) {
     std::cout << "Search depth: " << searchDepth << " (moves: " << numMoves
               << ", captures: " << numCaptures << ")\n";
 
-    return findBestMove(board, searchDepth);
+    SearchResult result = iterativeDeepeningParallel(board, searchDepth, adaptiveTime, 1, 0, 1,
+                                                     adaptiveTime, adaptiveTime);
+
+    if (result.bestMove.first != -1 && result.bestMove.second != -1) {
+        return result.bestMove;
+    }
+
+    if (!moves.empty()) {
+        return moves.front();
+    }
+
+    return {-1, -1};
 }
 
 std::string positionToNotation(int pos) {
     if (pos < 0 || pos >= NUM_SQUARES) {
         return "??";
-}
+    }
     int row = pos / BOARD_SIZE;
     int col = pos % BOARD_SIZE;
     return std::string(1, static_cast<char>('a' + col)) + std::to_string(row + 1);
@@ -322,286 +334,286 @@ void announceGameResult(GameState state) {
 
 int main(int argc, char* argv[]) {
     try {
-    if (argc > 1) {
-        std::string mode = argv[1];
+        if (argc > 1) {
+            std::string mode = argv[1];
 
-        if (mode == "uci") {
-            UCIEngine engine;
-            engine.run();
-            return 0;
-        } else if (mode == "train") {
-            std::cout << "Neural Network Training Mode\n";
-            std::cout << "============================\n\n";
+            if (mode == "uci") {
+                UCIEngine engine;
+                engine.run();
+                return 0;
+            } else if (mode == "train") {
+                std::cout << "Neural Network Training Mode\n";
+                std::cout << "============================\n\n";
 
-            EnhancedEvaluator::EvaluationConfig config;
-            config.useNeuralNetwork = true;
-            config.nnWeight = 0.7F;
-            config.useTraditionalEval = true;
-            config.traditionalWeight = 0.3F;
+                EnhancedEvaluator::EvaluationConfig config;
+                config.useNeuralNetwork = true;
+                config.nnWeight = 0.7F;
+                config.useTraditionalEval = true;
+                config.traditionalWeight = 0.3F;
 
-            initializeEnhancedEvaluator(config);
+                initializeEnhancedEvaluator(config);
 
-            NNTrainer::TrainingConfig trainConfig;
-            trainConfig.batchSize = 32;
-            trainConfig.epochs = 5;
-            trainConfig.validationSplit = 0.2F;
-            trainConfig.earlyStoppingPatience = 3;
-            trainConfig.modelPath = "models/chess_nn.bin";
-            trainConfig.trainingDataPath = "data/training_data.bin";
+                NNTrainer::TrainingConfig trainConfig;
+                trainConfig.batchSize = 32;
+                trainConfig.epochs = 5;
+                trainConfig.validationSplit = 0.2F;
+                trainConfig.earlyStoppingPatience = 3;
+                trainConfig.modelPath = "models/chess_nn.bin";
+                trainConfig.trainingDataPath = "data/training_data.bin";
 
-            NNTrainer trainer(*getEnhancedEvaluator()->getNeuralNetwork(), trainConfig);
+                NNTrainer trainer(*getEnhancedEvaluator()->getNeuralNetwork(), trainConfig);
 
-            int numGames = 100;
-            if (argc > 2) {
-                numGames = std::stoi(argv[2]);
-            }
-
-            std::cout << "Generating " << numGames << " self-play games for training...\n";
-            trainer.trainOnSelfPlayData(numGames);
-
-            trainer.generateTrainingReport("training_report.txt");
-
-            std::cout << "\nTraining completed! Model saved to: " << trainConfig.modelPath
-                      << '\n';
-            return 0;
-        } else if (mode == "test") {
-            std::cout << "Neural Network Test Mode\n";
-            std::cout << "========================\n\n";
-
-            EnhancedEvaluator::EvaluationConfig config;
-            config.useNeuralNetwork = true;
-            config.nnWeight = 0.7F;
-            config.useTraditionalEval = true;
-            config.traditionalWeight = 0.3F;
-
-            initializeEnhancedEvaluator(config);
-
-            std::vector<std::string> testFens = {
-                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-                "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
-                "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
-                "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
-            };
-
-            std::vector<std::string> positionNames = {"Starting position", "e4 e5", "e4 e5 Nf3",
-                                                      "e4 e5 Nf3 Nc6"};
-
-            for (size_t i = 0; i < testFens.size(); ++i) {
-                Board board;
-                board.InitializeFromFEN(testFens[i]);
-
-                std::cout << "Position " << (i + 1) << ": " << positionNames[i] << '\n';
-                std::cout << "FEN: " << testFens[i] << '\n';
-
-                int traditionalEval = evaluatePosition(board);
-                std::cout << "Traditional evaluation: " << traditionalEval << " centipawns"
-                          << '\n';
-
-                float nnEval = evaluateWithNeuralNetwork(board);
-                std::cout << "Neural network evaluation: " << nnEval << " centipawns" << '\n';
-
-                float hybridEval = evaluateHybrid(board);
-                std::cout << "Hybrid evaluation: " << hybridEval << " centipawns" << '\n';
-
-                std::cout << '\n';
-            }
-
-            return 0;
-        } else if (mode == "generate") {
-            std::cout << "Training Data Generation Mode\n";
-            std::cout << "==============================\n\n";
-
-            TrainingDataGenerator generator;
-
-            int numGames = 50;
-            if (argc > 2) {
-                numGames = std::stoi(argv[2]);
-            }
-
-            std::cout << "Generating " << numGames << " self-play games...\n";
-            auto trainingData = generator.generateSelfPlayData(numGames);
-
-            std::string dataPath = "data/training_data.bin";
-            if (argc > 3) {
-                dataPath = argv[3];
-            }
-
-            generator.saveTrainingData(trainingData, dataPath);
-
-            std::cout << "Training data saved to: " << dataPath << '\n';
-            std::cout << "Generated " << trainingData.size() << " training examples" << '\n';
-
-            return 0;
-        } else if (mode == "--tune" || mode == "tune") {
-            if (argc < 3) {
-                std::cout << "Usage: chess_engine --tune <positions_file> [iterations]\n";
-                return 1;
-            }
-            std::string posFile = argv[2];
-            int iterations = 100;
-            if (argc > 3) {
-                iterations = std::stoi(argv[3]);
-            }
-
-            InitZobrist();
-
-            TexelTuner tuner;
-            if (!tuner.loadPositions(posFile)) {
-                std::cout << "Failed to load positions from: " << posFile << "\n";
-                return 1;
-            }
-            std::cout << "Loaded positions, starting Texel tuning...\n";
-            tuner.optimize(iterations);
-            tuner.exportParams("tuned_params.txt");
-            std::cout << "Tuned parameters exported to tuned_params.txt\n";
-            return 0;
-        } else if (mode == "analyze") {
-            std::cout << "Position Analysis Mode\n";
-            std::cout << "======================\n\n";
-
-            std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-            if (argc > 2) {
-                fen = argv[2];
-            }
-
-            Board board;
-            board.InitializeFromFEN(fen);
-
-            std::cout << "Analyzing position from FEN: " << fen << "\n\n";
-            printBoard(board);
-            std::cout << "\n";
-
-            PositionAnalysis analysis = PositionAnalyzer::analyzePosition(board);
-            PositionAnalyzer::printDetailedAnalysis(analysis);
-
-            return 0;
-        }
-    }
-
-    ChessTimePoint startTime = ChessClock::now();
-
-    initKnightAttacks();
-    initKingAttacks();
-
-    InitZobrist();
-
-    initializeEnhancedEvaluator();
-
-    std::cout << "Chess Engine v2.0 - Advanced Features Edition\n";
-    std::cout << "=============================================\n";
-    std::cout << "Features: Magic bitboards, Neural network evaluation, Pattern recognition\n";
-    std::cout << "Use './chess_engine uci' for UCI mode\n\n";
-
-    ChessBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-
-    std::string input;
-    while (true) {
-        printBoard(ChessBoard);
-
-        GameState gameState = checkGameState(ChessBoard);
-        if (gameState != GameState::ONGOING) {
-            announceGameResult(gameState);
-            std::string dummy;
-            std::getline(std::cin, dummy);
-            break;
-        }
-
-        std::string checkIndicator;
-        if (IsKingInCheck(ChessBoard, ChessBoard.turn)) {
-            checkIndicator = " [CHECK!] ";
-        }
-
-        std::cout << "\nEnter move (e.g., e4, Nf3, O-O) or 'quit':" << checkIndicator << " ";
-        std::getline(std::cin, input);
-
-        if (input == "quit" || input == "exit") {
-            break;
-        }
-
-        ChessTimePoint moveStartTime = ChessClock::now();
-
-        int srcCol = 0;
-        int srcRow = 0;
-        int destCol = 0;
-        int destRow = 0;
-        if (parseAlgebraicMove(input, ChessBoard, srcCol, srcRow, destCol, destRow)) {
-            ChessPieceType promotionPiece = ChessPieceType::QUEEN;
-            if (input.contains('=')) {
-                promotionPiece = getPromotionPiece(input);
-            }
-
-            if (MovePiece(srcCol, srcRow, destCol, destRow, promotionPiece)) {
-                std::cout << "✓ Move played successfully!\n";
-            } else {
-                std::cout << "❌ Invalid move. Try again.\n";
-            }
-        } else {
-            std::cout
-                << "❌ Could not parse move. Use algebraic notation (e.g., e4, Nf3, O-O, e8=Q).\n";
-        }
-
-        if (ChessBoard.turn == ChessPieceColor::BLACK) {
-            std::cout << "\nComputer is thinking...\n";
-
-            ChessTimePoint computerStartTime = ChessClock::now();
-            auto computerMove = getComputerMove(ChessBoard, 20000);
-            auto computerTime = ChessClock::now() - computerStartTime;
-
-            if (computerMove.first != -1 && computerMove.second != -1) {
-                int from = computerMove.first;
-                int to = computerMove.second;
-                int srcCol = from % BOARD_SIZE;
-                int srcRow = from / BOARD_SIZE;
-                int destCol = to % BOARD_SIZE;
-                int destRow = to / BOARD_SIZE;
-
-                ChessPieceType computerPromotionPiece = ChessPieceType::QUEEN;
-                const Piece& movingPiece = ChessBoard.squares[from].piece;
-                if (movingPiece.PieceType == ChessPieceType::PAWN &&
-                    (destRow == 0 || destRow == 7)) {
-                    computerPromotionPiece = ChessPieceType::QUEEN;
+                int numGames = 100;
+                if (argc > 2) {
+                    numGames = std::stoi(argv[2]);
                 }
 
-                if (MovePiece(srcCol, srcRow, destCol, destRow, computerPromotionPiece)) {
-                    std::cout << "Computer played: " << positionToNotation(computerMove.first)
-                              << " to " << positionToNotation(computerMove.second) << " (took "
-                              << std::chrono::duration_cast<ChessDuration>(computerTime).count()
-                              << "ms)\n";
+                std::cout << "Generating " << numGames << " self-play games for training...\n";
+                trainer.trainOnSelfPlayData(numGames);
 
-                    GameState postMoveState = checkGameState(ChessBoard);
-                    if (postMoveState != GameState::ONGOING) {
-                        printBoard(ChessBoard);
-                        announceGameResult(postMoveState);
+                trainer.generateTrainingReport("training_report.txt");
+
+                std::cout << "\nTraining completed! Model saved to: " << trainConfig.modelPath
+                          << '\n';
+                return 0;
+            } else if (mode == "test") {
+                std::cout << "Neural Network Test Mode\n";
+                std::cout << "========================\n\n";
+
+                EnhancedEvaluator::EvaluationConfig config;
+                config.useNeuralNetwork = true;
+                config.nnWeight = 0.7F;
+                config.useTraditionalEval = true;
+                config.traditionalWeight = 0.3F;
+
+                initializeEnhancedEvaluator(config);
+
+                std::vector<std::string> testFens = {
+                    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                    "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
+                    "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+                    "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+                };
+
+                std::vector<std::string> positionNames = {"Starting position", "e4 e5", "e4 e5 Nf3",
+                                                          "e4 e5 Nf3 Nc6"};
+
+                for (size_t i = 0; i < testFens.size(); ++i) {
+                    Board board;
+                    board.InitializeFromFEN(testFens[i]);
+
+                    std::cout << "Position " << (i + 1) << ": " << positionNames[i] << '\n';
+                    std::cout << "FEN: " << testFens[i] << '\n';
+
+                    int traditionalEval = evaluatePosition(board);
+                    std::cout << "Traditional evaluation: " << traditionalEval << " centipawns"
+                              << '\n';
+
+                    float nnEval = evaluateWithNeuralNetwork(board);
+                    std::cout << "Neural network evaluation: " << nnEval << " centipawns" << '\n';
+
+                    float hybridEval = evaluateHybrid(board);
+                    std::cout << "Hybrid evaluation: " << hybridEval << " centipawns" << '\n';
+
+                    std::cout << '\n';
+                }
+
+                return 0;
+            } else if (mode == "generate") {
+                std::cout << "Training Data Generation Mode\n";
+                std::cout << "==============================\n\n";
+
+                TrainingDataGenerator generator;
+
+                int numGames = 50;
+                if (argc > 2) {
+                    numGames = std::stoi(argv[2]);
+                }
+
+                std::cout << "Generating " << numGames << " self-play games...\n";
+                auto trainingData = generator.generateSelfPlayData(numGames);
+
+                std::string dataPath = "data/training_data.bin";
+                if (argc > 3) {
+                    dataPath = argv[3];
+                }
+
+                generator.saveTrainingData(trainingData, dataPath);
+
+                std::cout << "Training data saved to: " << dataPath << '\n';
+                std::cout << "Generated " << trainingData.size() << " training examples" << '\n';
+
+                return 0;
+            } else if (mode == "--tune" || mode == "tune") {
+                if (argc < 3) {
+                    std::cout << "Usage: chess_engine --tune <positions_file> [iterations]\n";
+                    return 1;
+                }
+                std::string posFile = argv[2];
+                int iterations = 100;
+                if (argc > 3) {
+                    iterations = std::stoi(argv[3]);
+                }
+
+                InitZobrist();
+
+                TexelTuner tuner;
+                if (!tuner.loadPositions(posFile)) {
+                    std::cout << "Failed to load positions from: " << posFile << "\n";
+                    return 1;
+                }
+                std::cout << "Loaded positions, starting Texel tuning...\n";
+                tuner.optimize(iterations);
+                tuner.exportParams("tuned_params.txt");
+                std::cout << "Tuned parameters exported to tuned_params.txt\n";
+                return 0;
+            } else if (mode == "analyze") {
+                std::cout << "Position Analysis Mode\n";
+                std::cout << "======================\n\n";
+
+                std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+                if (argc > 2) {
+                    fen = argv[2];
+                }
+
+                Board board;
+                board.InitializeFromFEN(fen);
+
+                std::cout << "Analyzing position from FEN: " << fen << "\n\n";
+                printBoard(board);
+                std::cout << "\n";
+
+                PositionAnalysis analysis = PositionAnalyzer::analyzePosition(board);
+                PositionAnalyzer::printDetailedAnalysis(analysis);
+
+                return 0;
+            }
+        }
+
+        ChessTimePoint startTime = ChessClock::now();
+
+        initKnightAttacks();
+        initKingAttacks();
+
+        InitZobrist();
+
+        initializeEnhancedEvaluator();
+
+        std::cout << "Chess Engine v2.0 - Advanced Features Edition\n";
+        std::cout << "=============================================\n";
+        std::cout << "Features: Magic bitboards, Neural network evaluation, Pattern recognition\n";
+        std::cout << "Use './chess_engine uci' for UCI mode\n\n";
+
+        ChessBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+        std::string input;
+        while (true) {
+            printBoard(ChessBoard);
+
+            GameState gameState = checkGameState(ChessBoard);
+            if (gameState != GameState::ONGOING) {
+                announceGameResult(gameState);
+                std::string dummy;
+                std::getline(std::cin, dummy);
+                break;
+            }
+
+            std::string checkIndicator;
+            if (IsKingInCheck(ChessBoard, ChessBoard.turn)) {
+                checkIndicator = " [CHECK!] ";
+            }
+
+            std::cout << "\nEnter move (e.g., e4, Nf3, O-O) or 'quit':" << checkIndicator << " ";
+            std::getline(std::cin, input);
+
+            if (input == "quit" || input == "exit") {
+                break;
+            }
+
+            ChessTimePoint moveStartTime = ChessClock::now();
+
+            int srcCol = 0;
+            int srcRow = 0;
+            int destCol = 0;
+            int destRow = 0;
+            if (parseAlgebraicMove(input, ChessBoard, srcCol, srcRow, destCol, destRow)) {
+                ChessPieceType promotionPiece = ChessPieceType::QUEEN;
+                if (input.contains('=')) {
+                    promotionPiece = getPromotionPiece(input);
+                }
+
+                if (MovePiece(srcCol, srcRow, destCol, destRow, promotionPiece)) {
+                    std::cout << "✓ Move played successfully!\n";
+                } else {
+                    std::cout << "❌ Invalid move. Try again.\n";
+                }
+            } else {
+                std::cout << "❌ Could not parse move. Use algebraic notation (e.g., e4, Nf3, O-O, "
+                             "e8=Q).\n";
+            }
+
+            if (ChessBoard.turn == ChessPieceColor::BLACK) {
+                std::cout << "\nComputer is thinking...\n";
+
+                ChessTimePoint computerStartTime = ChessClock::now();
+                auto computerMove = getComputerMove(ChessBoard, 6000);
+                auto computerTime = ChessClock::now() - computerStartTime;
+
+                if (computerMove.first != -1 && computerMove.second != -1) {
+                    int from = computerMove.first;
+                    int to = computerMove.second;
+                    int srcCol = from % BOARD_SIZE;
+                    int srcRow = from / BOARD_SIZE;
+                    int destCol = to % BOARD_SIZE;
+                    int destRow = to / BOARD_SIZE;
+
+                    ChessPieceType computerPromotionPiece = ChessPieceType::QUEEN;
+                    const Piece& movingPiece = ChessBoard.squares[from].piece;
+                    if (movingPiece.PieceType == ChessPieceType::PAWN &&
+                        (destRow == 0 || destRow == 7)) {
+                        computerPromotionPiece = ChessPieceType::QUEEN;
+                    }
+
+                    if (MovePiece(srcCol, srcRow, destCol, destRow, computerPromotionPiece)) {
+                        std::cout << "Computer played: " << positionToNotation(computerMove.first)
+                                  << " to " << positionToNotation(computerMove.second) << " (took "
+                                  << std::chrono::duration_cast<ChessDuration>(computerTime).count()
+                                  << "ms)\n";
+
+                        GameState postMoveState = checkGameState(ChessBoard);
+                        if (postMoveState != GameState::ONGOING) {
+                            printBoard(ChessBoard);
+                            announceGameResult(postMoveState);
+                            std::string dummy;
+                            std::getline(std::cin, dummy);
+                            return 0;
+                        }
+                    } else {
+                        std::cout << "Computer move failed!\n";
+                    }
+                } else {
+                    std::cout << "Computer couldn't find a valid move!\n";
+                    GameState state = checkGameState(ChessBoard);
+                    if (state != GameState::ONGOING) {
+                        announceGameResult(state);
                         std::string dummy;
                         std::getline(std::cin, dummy);
                         return 0;
                     }
-                } else {
-                    std::cout << "Computer move failed!\n";
-                }
-            } else {
-                std::cout << "Computer couldn't find a valid move!\n";
-                GameState state = checkGameState(ChessBoard);
-                if (state != GameState::ONGOING) {
-                    announceGameResult(state);
-                    std::string dummy;
-                    std::getline(std::cin, dummy);
-                    return 0;
                 }
             }
+
+            auto moveTime = ChessClock::now() - moveStartTime;
+            std::cout << "Move completed in "
+                      << std::chrono::duration_cast<ChessDuration>(moveTime).count() << "ms\n";
         }
 
-        auto moveTime = ChessClock::now() - moveStartTime;
-        std::cout << "Move completed in "
-                  << std::chrono::duration_cast<ChessDuration>(moveTime).count() << "ms\n";
-    }
+        auto totalTime = ChessClock::now() - startTime;
+        std::cout << "\nGame completed in "
+                  << std::chrono::duration_cast<ChessDuration>(totalTime).count() << "ms\n";
+        std::cout << "Thanks for playing!\n";
 
-    auto totalTime = ChessClock::now() - startTime;
-    std::cout << "\nGame completed in "
-              << std::chrono::duration_cast<ChessDuration>(totalTime).count() << "ms\n";
-    std::cout << "Thanks for playing!\n";
-
-    return 0;
+        return 0;
     } catch (const std::exception& e) {
         std::cerr << "Fatal error: " << e.what() << '\n';
         return 1;

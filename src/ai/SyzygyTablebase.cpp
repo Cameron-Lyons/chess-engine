@@ -39,9 +39,9 @@ Position Position::fromBoard(const Board& board) {
 
     for (int sq = 0; sq < 64; ++sq) {
         const Piece& piece = board.squares[sq].piece;
-        if (piece.PieceType == ChessPieceType::NONE)
+        if (piece.PieceType == ChessPieceType::NONE) {
             continue;
-
+        }
         uint64_t bb = 1ULL << sq;
 
         if (piece.PieceColor == ChessPieceColor::WHITE) {
@@ -76,10 +76,12 @@ Position Position::fromBoard(const Board& board) {
 
     pos.turn = (board.turn == ChessPieceColor::WHITE);
     pos.castling = 0;
-    if (board.whiteCanCastle)
+    if (board.whiteCanCastle) {
         pos.castling |= 0x3;
-    if (board.blackCanCastle)
+    }
+    if (board.blackCanCastle) {
         pos.castling |= 0xC;
+    }
     pos.ep = 0;
     pos.rule50 = 0;
 
@@ -131,9 +133,9 @@ bool init(const std::string& path) {
 }
 
 bool canProbe(const Board& board) {
-    if (!tbInitialized)
+    if (!tbInitialized) {
         return false;
-
+    }
     int pieceCount = 0;
 
     for (int sq = 0; sq < 64; ++sq) {
@@ -143,12 +145,12 @@ bool canProbe(const Board& board) {
         }
     }
 
-    if (pieceCount > tbMaxPieces)
+    if (pieceCount > tbMaxPieces) {
         return false;
-
-    if (board.whiteCanCastle || board.blackCanCastle)
+    }
+    if (board.whiteCanCastle || board.blackCanCastle) {
         return false;
-
+    }
     return true;
 }
 
@@ -161,11 +163,13 @@ ProbeResult probeWDL(const Board& board, int* success) {
 
     Position pos = Position::fromBoard(board);
 
-    int whiteMaterial = popcount(pos.queens) * 9 + popcount(pos.rooks) * 5 +
-                        popcount(pos.bishops) * 3 + popcount(pos.knights) * 3 + popcount(pos.pawns);
-    int blackMaterial = popcount(pos.queens & pos.black) * 9 + popcount(pos.rooks & pos.black) * 5 +
-                        popcount(pos.bishops & pos.black) * 3 +
-                        popcount(pos.knights & pos.black) * 3 + popcount(pos.pawns & pos.black);
+    int whiteMaterial = (popcount(pos.queens) * 9) + (popcount(pos.rooks) * 5) +
+                        (popcount(pos.bishops) * 3) + (popcount(pos.knights) * 3) +
+                        popcount(pos.pawns);
+    int blackMaterial = (popcount(pos.queens & pos.black) * 9) +
+                        (popcount(pos.rooks & pos.black) * 5) +
+                        (popcount(pos.bishops & pos.black) * 3) +
+                        (popcount(pos.knights & pos.black) * 3) + popcount(pos.pawns & pos.black);
 
     int whitePieces = popcount(pos.white);
     int blackPieces = popcount(pos.black);
@@ -181,15 +185,19 @@ ProbeResult probeWDL(const Board& board, int* success) {
     }
 
     if (pos.turn) {
-        if (whiteMaterial > 4 && whitePieces > blackPieces)
+        if (whiteMaterial > 4 && whitePieces > blackPieces) {
             return PROBE_WIN;
-        if (whiteMaterial < -4 && whitePieces < blackPieces)
+        }
+        if (whiteMaterial < -4 && whitePieces < blackPieces) {
             return PROBE_LOSS;
+        }
     } else {
-        if (blackMaterial > 4 && blackPieces > whitePieces)
+        if (blackMaterial > 4 && blackPieces > whitePieces) {
             return PROBE_WIN;
-        if (blackMaterial < -4 && blackPieces < whitePieces)
+        }
+        if (blackMaterial < -4 && blackPieces < whitePieces) {
             return PROBE_LOSS;
+        }
     }
 
     return PROBE_DRAW;

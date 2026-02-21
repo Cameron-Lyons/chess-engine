@@ -10,9 +10,9 @@ static uint64_t zobristEnPassant[8];
 static bool zobristInitialized = false;
 
 static void initializeZobrist() {
-    if (zobristInitialized)
+    if (zobristInitialized) {
         return;
-
+    }
     uint64_t seed = 0x123456789ABCDEF0ULL;
     auto next = [&seed]() {
         seed ^= seed << 13;
@@ -128,7 +128,8 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
     }
 
     if (movingPiece == ChessPieceType::KING && abs(to - from) == 2) {
-        int rookFrom, rookTo;
+        int rookFrom;
+        int rookTo;
         if (to > from) {
             rookFrom = to + 1;
             rookTo = to - 1;
@@ -148,14 +149,15 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
             castlingRights &= ~0xC;
         }
     } else if (movingPiece == ChessPieceType::ROOK) {
-        if (from == 0)
+        if (from == 0) {
             castlingRights &= ~0x2;
-        else if (from == 7)
+        } else if (from == 7) {
             castlingRights &= ~0x1;
-        else if (from == 56)
+        } else if (from == 56) {
             castlingRights &= ~0x8;
-        else if (from == 63)
+        } else if (from == 63) {
             castlingRights &= ~0x4;
+        }
     }
 
     if (movingPiece == ChessPieceType::PAWN || capturedPiece != ChessPieceType::NONE) {
@@ -210,11 +212,15 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
     }
 
     std::istringstream ss(fen);
-    std::string board, turn, castling, ep;
+    std::string board;
+    std::string turn;
+    std::string castling;
+    std::string ep;
 
     ss >> board >> turn >> castling >> ep >> halfmoveClock >> fullmoveNumber;
 
-    int rank = 7, file = 0;
+    int rank = 7;
+    int file = 0;
     for (char c : board) {
         if (c == '/') {
             rank--;
@@ -222,7 +228,7 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
         } else if (isdigit(c)) {
             file += c - '0';
         } else {
-            int square = rank * 8 + file;
+            int square = (rank * 8) + file;
             ChessPieceColor color = isupper(c) ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
             ChessPieceType type;
 
@@ -257,19 +263,22 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
     sideToMove = (turn == "w") ? WHITE : BLACK;
 
     castlingRights = 0;
-    if (castling.contains('K'))
+    if (castling.contains('K')) {
         castlingRights |= 1;
-    if (castling.contains('Q'))
+    }
+    if (castling.contains('Q')) {
         castlingRights |= 2;
-    if (castling.contains('k'))
+    }
+    if (castling.contains('k')) {
         castlingRights |= 4;
-    if (castling.contains('q'))
+    }
+    if (castling.contains('q')) {
         castlingRights |= 8;
-
+    }
     if (ep != "-" && ep.length() >= 2) {
         int file = ep[0] - 'a';
         int rank = ep[1] - '1';
-        epSquare = rank * 8 + file;
+        epSquare = (rank * 8) + file;
     } else {
         epSquare = 64;
     }
@@ -288,11 +297,13 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
         }
     }
 
-    if (sideToMove == BLACK)
+    if (sideToMove == BLACK) {
         hash ^= zobristSideToMove;
+    }
     hash ^= zobristCastling[castlingRights];
-    if (epSquare < 64)
+    if (epSquare < 64) {
         hash ^= zobristEnPassant[epSquare & 7];
+    }
 }
 
 std::string BitboardPosition::toFEN() const {
@@ -301,7 +312,7 @@ std::string BitboardPosition::toFEN() const {
     for (int rank = 7; rank >= 0; --rank) {
         int emptyCount = 0;
         for (int file = 0; file < 8; ++file) {
-            int square = rank * 8 + file;
+            int square = (rank * 8) + file;
             ChessPieceType piece = getPieceAt(square);
 
             if (piece == ChessPieceType::NONE) {
@@ -357,14 +368,18 @@ std::string BitboardPosition::toFEN() const {
 
     ss << ' ';
     std::string castling;
-    if (castlingRights & 1)
+    if (castlingRights & 1) {
         castling += 'K';
-    if (castlingRights & 2)
+    }
+    if (castlingRights & 2) {
         castling += 'Q';
-    if (castlingRights & 4)
+    }
+    if (castlingRights & 4) {
         castling += 'k';
-    if (castlingRights & 8)
+    }
+    if (castlingRights & 8) {
         castling += 'q';
+    }
     ss << (castling.empty() ? "-" : castling);
 
     ss << ' ';
@@ -386,7 +401,7 @@ std::string BitboardPosition::toString() const {
     for (int rank = 7; rank >= 0; --rank) {
         ss << (rank + 1) << ' ';
         for (int file = 0; file < 8; ++file) {
-            int square = rank * 8 + file;
+            int square = (rank * 8) + file;
             ChessPieceType piece = getPieceAt(square);
 
             if (piece == ChessPieceType::NONE) {

@@ -1,31 +1,16 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
-config_setting(
-    name = "cpu_darwin_x86_64",
-    values = {"cpu": "darwin_x86_64"},
-)
-
-config_setting(
-    name = "cpu_k8",
-    values = {"cpu": "k8"},
-)
-
-config_setting(
-    name = "cpu_x64_windows",
-    values = {"cpu": "x64_windows"},
-)
-
 x86_avx2_copts = select({
-    ":cpu_darwin_x86_64": ["-mavx2"],
-    ":cpu_k8": ["-mavx2"],
-    ":cpu_x64_windows": ["-mavx2"],
+    "@bazel_tools//src/conditions:darwin_x86_64": ["-mavx2"],
+    "@bazel_tools//src/conditions:linux_x86_64": ["-mavx2"],
+    "@bazel_tools//src/conditions:windows_x64": ["-mavx2"],
     "//conditions:default": [],
 })
 
 nnue_optimized_srcs = select({
-    ":cpu_darwin_x86_64": ["src/evaluation/NNUEOptimized.cpp"],
-    ":cpu_k8": ["src/evaluation/NNUEOptimized.cpp"],
-    ":cpu_x64_windows": ["src/evaluation/NNUEOptimized.cpp"],
+    "@bazel_tools//src/conditions:darwin_x86_64": ["src/evaluation/NNUEOptimized.cpp"],
+    "@bazel_tools//src/conditions:linux_x86_64": ["src/evaluation/NNUEOptimized.cpp"],
+    "@bazel_tools//src/conditions:windows_x64": ["src/evaluation/NNUEOptimized.cpp"],
     "//conditions:default": [],
 })
 

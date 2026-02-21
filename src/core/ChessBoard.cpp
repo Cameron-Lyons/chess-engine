@@ -111,15 +111,15 @@ Bitboard Board::getPieceBitboard(ChessPieceType type, ChessPieceColor color) con
 }
 
 bool Board::movePiece(int from, int to) {
-    if (from < 0 || from >= NUM_SQUARES || to < 0 || to >= NUM_SQUARES)
+    if (from < 0 || from >= NUM_SQUARES || to < 0 || to >= NUM_SQUARES) {
         return false;
-
+    }
     Piece& fromPiece = squares[from].piece;
     Piece& toPiece = squares[to].piece;
 
-    if (fromPiece.PieceType == ChessPieceType::NONE)
+    if (fromPiece.PieceType == ChessPieceType::NONE) {
         return false;
-
+    }
     if (fromPiece.PieceColor == ChessPieceColor::WHITE) {
         switch (fromPiece.PieceType) {
             case ChessPieceType::PAWN:
@@ -302,7 +302,7 @@ std::string Board::toFEN() const {
     for (int row = 7; row >= 0; --row) {
         int emptyCount = 0;
         for (int col = 0; col < BOARD_SIZE; ++col) {
-            int pos = row * BOARD_SIZE + col;
+            int pos = (row * BOARD_SIZE) + col;
             const Piece& piece = squares[pos].piece;
 
             if (piece.PieceType == ChessPieceType::NONE) {
@@ -335,14 +335,18 @@ std::string Board::toFEN() const {
     fen += " " + std::string(turn == ChessPieceColor::WHITE ? "w" : "b");
 
     std::string castling;
-    if (whiteCanCastle)
+    if (whiteCanCastle) {
         castling += "K";
-    if (whiteCanCastle)
+    }
+    if (whiteCanCastle) {
         castling += "Q";
-    if (blackCanCastle)
+    }
+    if (blackCanCastle) {
         castling += "k";
-    if (blackCanCastle)
+    }
+    if (blackCanCastle) {
         castling += "q";
+    }
     fen += " " + (castling.empty() ? "-" : castling);
 
     fen += " -";
@@ -399,15 +403,15 @@ void Board::InitializeFromFEN(ChessString fen) {
                     break;
             }
 
-            if (isupper(c))
+            if (isupper(c)) {
                 color = ChessPieceColor::WHITE;
-            else
+            } else {
                 color = ChessPieceColor::BLACK;
-
+            }
             if (type != ChessPieceType::NONE && fenRank >= 0 && fenRank < BOARD_SIZE && file >= 0 &&
                 file < BOARD_SIZE) {
                 int boardRow = fenRank;
-                int idx = boardRow * BOARD_SIZE + file;
+                int idx = (boardRow * BOARD_SIZE) + file;
                 if (idx >= 0 && idx < NUM_SQUARES) {
                     squares[idx].piece = Piece(color, type);
                 }

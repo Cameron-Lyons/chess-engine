@@ -41,33 +41,45 @@ public:
         Bitboard mask = 1ULL << square;
 
         if (occupancy[WHITE] & mask) {
-            if (pieces[WHITE][PAWN] & mask)
+            if (pieces[WHITE][PAWN] & mask) {
                 return ChessPieceType::PAWN;
-            if (pieces[WHITE][KNIGHT] & mask)
+            }
+            if (pieces[WHITE][KNIGHT] & mask) {
                 return ChessPieceType::KNIGHT;
-            if (pieces[WHITE][BISHOP] & mask)
+            }
+            if (pieces[WHITE][BISHOP] & mask) {
                 return ChessPieceType::BISHOP;
-            if (pieces[WHITE][ROOK] & mask)
+            }
+            if (pieces[WHITE][ROOK] & mask) {
                 return ChessPieceType::ROOK;
-            if (pieces[WHITE][QUEEN] & mask)
+            }
+            if (pieces[WHITE][QUEEN] & mask) {
                 return ChessPieceType::QUEEN;
-            if (pieces[WHITE][KING] & mask)
+            }
+            if (pieces[WHITE][KING] & mask) {
                 return ChessPieceType::KING;
+            }
         }
 
         if (occupancy[BLACK] & mask) {
-            if (pieces[BLACK][PAWN] & mask)
+            if (pieces[BLACK][PAWN] & mask) {
                 return ChessPieceType::PAWN;
-            if (pieces[BLACK][KNIGHT] & mask)
+            }
+            if (pieces[BLACK][KNIGHT] & mask) {
                 return ChessPieceType::KNIGHT;
-            if (pieces[BLACK][BISHOP] & mask)
+            }
+            if (pieces[BLACK][BISHOP] & mask) {
                 return ChessPieceType::BISHOP;
-            if (pieces[BLACK][ROOK] & mask)
+            }
+            if (pieces[BLACK][ROOK] & mask) {
                 return ChessPieceType::ROOK;
-            if (pieces[BLACK][QUEEN] & mask)
+            }
+            if (pieces[BLACK][QUEEN] & mask) {
                 return ChessPieceType::QUEEN;
-            if (pieces[BLACK][KING] & mask)
+            }
+            if (pieces[BLACK][KING] & mask) {
                 return ChessPieceType::KING;
+            }
         }
 
         return ChessPieceType::NONE;
@@ -75,10 +87,12 @@ public:
 
     inline ChessPieceColor getColorAt(int square) const {
         Bitboard mask = 1ULL << square;
-        if (occupancy[WHITE] & mask)
+        if (occupancy[WHITE] & mask) {
             return ChessPieceColor::WHITE;
-        if (occupancy[BLACK] & mask)
+        }
+        if (occupancy[BLACK] & mask) {
             return ChessPieceColor::BLACK;
+        }
         return ChessPieceColor::WHITE;
     }
 
