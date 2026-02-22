@@ -19,26 +19,20 @@ public:
         int multiPV = 1;
         bool ponder = false;
         bool ownBook = true;
-
         int moveOverhead = 10;
         int minimumThinkingTime = 20;
-
         bool useNeuralNetwork = true;
         float nnWeight = 0.7F;
         bool useTablebases = true;
         std::string syzygyPath;
-
         bool debug = false;
         bool showCurrLine = false;
         int contempt = 0;
     };
-
     UCIEngine();
     ~UCIEngine();
-
     void run();
     void processCommand(const std::string& command);
-
     void handleUCI();
     void handleIsReady();
     void handleSetOption(const std::string& command);
@@ -66,7 +60,6 @@ private:
     std::unique_ptr<EndgameTablebase> tablebase;
     std::unique_ptr<EnhancedOpeningBook> openingBook;
     std::unique_ptr<TimeManager> timeManager;
-
     bool isSearching;
     bool isPondering;
     std::chrono::steady_clock::time_point searchStartTime;
@@ -94,28 +87,19 @@ private:
 class UCINotation {
 public:
     static std::string moveToUCI(const std::pair<int, int>& move);
-
     static std::pair<int, int> uciToMove(const std::string& uciMove);
-
     static std::string squareToAlgebraic(int square);
-
     static int algebraicToSquare(const std::string& algebraic);
-
     static bool isValidUCIMove(const std::string& uciMove);
-
     static std::string getMoveType(const Board& board, const std::pair<int, int>& move);
 };
 
 class UCIPosition {
 public:
     static void parseFEN(const std::string& fen, Board& board);
-
     static void parseMoves(const std::string& moves, Board& board);
-
     static std::string generateFEN(const Board& board);
-
     static bool isValidFEN(const std::string& fen);
-
     static uint64_t getPositionHash(const Board& board);
 };
 
@@ -126,10 +110,7 @@ public:
                                   int hashfull);
 
     static std::string formatScore(int score, bool isMate = false);
-
     static std::string formatPV(const std::vector<std::pair<int, int>>& pv);
-
     static std::string formatTime(int timeMs);
-
     static std::string formatNPS(int nodes, int timeMs);
 };

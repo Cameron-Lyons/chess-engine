@@ -84,7 +84,6 @@ Position Position::fromBoard(const Board& board) {
     }
     pos.ep = 0;
     pos.rule50 = 0;
-
     return pos;
 }
 
@@ -99,7 +98,6 @@ bool init(const std::string& path) {
     for (const auto& entry : std::filesystem::directory_iterator(path)) {
         if (entry.is_regular_file()) {
             std::string filename = entry.path().filename().string();
-
             size_t len = filename.length();
             if ((len >= 5 && filename.substr(len - 5) == ".rtbw") ||
                 (len >= 5 && filename.substr(len - 5) == ".rtbz")) {
@@ -108,7 +106,6 @@ bool init(const std::string& path) {
                 tb.name = filename.substr(0, filename.find('.'));
                 tb.data = nullptr;
                 tb.size = entry.file_size();
-
                 tb.pieceCount = 0;
                 tb.hasPawns = false;
                 for (char c : tb.name) {
@@ -173,10 +170,8 @@ ProbeResult probeWDL(const Board& board, int* success) {
 
     int whitePieces = popcount(pos.white);
     int blackPieces = popcount(pos.black);
-
     whiteMaterial -= blackMaterial;
     whitePieces -= blackPieces;
-
     *success = 1;
 
     if (whiteMaterial == 0 && blackMaterial == 0) {
@@ -230,7 +225,6 @@ bool probeRoot(const Board& board, DTZResult& result) {
     result.from = -1;
     result.to = -1;
     result.promo = 0;
-
     return false;
 }
 

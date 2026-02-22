@@ -278,7 +278,6 @@ void TexelTuner::initParams() {
 void TexelTuner::optimize(int iterations) {
     initParams();
     findOptimalK();
-
     std::cout << "Optimal K: " << scalingK << '\n';
     std::cout << "Initial error: " << computeError(params) << '\n';
 
@@ -286,7 +285,6 @@ void TexelTuner::optimize(int iterations) {
         bool anyImproved = false;
         for (int& param : params) {
             double bestError = computeError(params);
-
             param += 1;
             double errorUp = computeError(params);
             if (errorUp < bestError) {
@@ -325,7 +323,6 @@ void TexelTuner::exportParams(const std::string& filename) const {
     file << "constexpr int BISHOP_VALUE = " << params[2] << ";\n";
     file << "constexpr int ROOK_VALUE = " << params[3] << ";\n";
     file << "constexpr int QUEEN_VALUE = " << params[4] << ";\n";
-
     const char* names[] = {"PAWN", "KNIGHT", "BISHOP", "ROOK", "QUEEN", "KING"};
     int base = 5;
     for (int p = 0; p < 6; ++p) {

@@ -102,7 +102,6 @@ private:
 public:
     void resize(size_t mbSize) {
         size_t newClusterCount = (mbSize * 1024 * 1024) / sizeof(TTCluster);
-
         newClusterCount = std::bit_floor(newClusterCount);
 
         if (newClusterCount != clusterCount) {
@@ -126,7 +125,6 @@ public:
         for (auto& i : cluster->entry) {
             if (i.key32 == key32 || !i.depth) {
                 i.genBound = static_cast<uint8_t>(generation8 | (i.genBound & kBoundBitsMask));
-
                 found = i.depth && i.key32 == key32;
                 return &i;
             }
@@ -182,11 +180,9 @@ private:
         uint64_t aHi = a >> kKeyHighShift;
         uint64_t bLo = static_cast<uint32_t>(b);
         uint64_t bHi = b >> kKeyHighShift;
-
         uint64_t c1 = (aLo * bLo) >> kKeyHighShift;
         uint64_t c2 = aHi * bLo + c1;
         uint64_t c3 = aLo * bHi + static_cast<uint32_t>(c2);
-
         return aHi * bHi + (c2 >> kKeyHighShift) + (c3 >> kKeyHighShift);
 #endif
     }

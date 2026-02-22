@@ -15,25 +15,19 @@ using ChessTimePoint = ChessClock::time_point;
 class BitboardPosition {
 private:
     Bitboard pieces[2][6];
-
     Bitboard occupancy[3];
-
     uint8_t sideToMove;
     uint8_t castlingRights;
     uint8_t epSquare;
     uint8_t halfmoveClock;
     uint16_t fullmoveNumber;
-
     ChessTimePoint lastMoveTime;
-
     uint64_t hash;
-
     static constexpr int PAWN = 0, KNIGHT = 1, BISHOP = 2, ROOK = 3, QUEEN = 4, KING = 5;
     static constexpr int WHITE = 0, BLACK = 1;
 
 public:
     BitboardPosition();
-
     void setFromFEN(const std::string& fen);
     std::string toFEN() const;
 

@@ -107,14 +107,12 @@ void printBoard(const Board& board) {
     }
     std::cout << "  a b c d e f g h\n";
     std::cout << "Turn: " << (board.turn == ChessPieceColor::WHITE ? "White" : "Black") << "\n";
-
     auto timeSinceLastMove = board.getTimeSinceLastMove();
     std::cout << "Time since last move: " << timeSinceLastMove.count() << "ms\n";
 }
 
 int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
     int baseTime = totalTimeMs / std::max(1, kNominalMovesToGo - movesPlayed);
-
     int totalMaterial = 0;
     for (int i = 0; i < NUM_SQUARES; i++) {
         if (board.squares[i].piece.PieceType != ChessPieceType::NONE) {
@@ -157,11 +155,8 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = kDefaultComp
     movesPlayed++;
     int adaptiveTime = calculateTimeForMove(board, timeLimitMs * kAdaptiveTimeScale, movesPlayed);
     adaptiveTime = std::min(adaptiveTime, timeLimitMs);
-
     std::cout << "Allocated " << adaptiveTime << "ms for this move\n";
-
     std::cout << "Using optimized single-threaded search...\n";
-
     int searchDepth = kBaseSearchDepth;
     if (adaptiveTime > kDepth12TimeThresholdMs) {
         searchDepth = 12;
@@ -265,10 +260,8 @@ enum class GameState : std::uint8_t {
 
 GameState checkGameState(Board& board) {
     ChessPieceColor currentPlayer = board.turn;
-
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, currentPlayer);
-
     std::vector<std::pair<int, int>> legalMoves;
     for (const auto& move : moves) {
         Board testBoard = board;
@@ -376,15 +369,12 @@ int main(int argc, char* argv[]) {
             } else if (mode == "train") {
                 std::cout << "Neural Network Training Mode\n";
                 std::cout << "============================\n\n";
-
                 HybridEvaluator::EvaluationConfig config;
                 config.useNeuralNetwork = true;
                 config.nnWeight = 0.7F;
                 config.useTraditionalEval = true;
                 config.traditionalWeight = 0.3F;
-
                 initializeHybridEvaluator(config);
-
                 NNTrainer::TrainingConfig trainConfig;
                 trainConfig.batchSize = kTrainingBatchSize;
                 trainConfig.epochs = kTrainingEpochs;
@@ -392,9 +382,7 @@ int main(int argc, char* argv[]) {
                 trainConfig.earlyStoppingPatience = kEarlyStoppingPatience;
                 trainConfig.modelPath = "models/chess_nn.bin";
                 trainConfig.trainingDataPath = "data/training_data.bin";
-
                 NNTrainer trainer(*getHybridEvaluator()->getNeuralNetwork(), trainConfig);
-
                 int numGames = kDefaultTrainingGames;
                 if (argc > 2) {
                     numGames = std::stoi(argv[2]);
@@ -402,7 +390,6 @@ int main(int argc, char* argv[]) {
 
                 std::cout << "Generating " << numGames << " self-play games for training...\n";
                 trainer.trainOnSelfPlayData(numGames);
-
                 trainer.generateTrainingReport("training_report.txt");
 
                 std::cout << "\nTraining completed! Model saved to: " << trainConfig.modelPath
@@ -411,13 +398,11 @@ int main(int argc, char* argv[]) {
             } else if (mode == "test") {
                 std::cout << "Neural Network Test Mode\n";
                 std::cout << "========================\n\n";
-
                 HybridEvaluator::EvaluationConfig config;
                 config.useNeuralNetwork = true;
                 config.nnWeight = 0.7F;
                 config.useTraditionalEval = true;
                 config.traditionalWeight = 0.3F;
-
                 initializeHybridEvaluator(config);
 
                 std::vector<std::string> testFens = {
@@ -433,20 +418,16 @@ int main(int argc, char* argv[]) {
                 for (size_t i = 0; i < testFens.size(); ++i) {
                     Board board;
                     board.InitializeFromFEN(testFens[i]);
-
                     std::cout << "Position " << (i + 1) << ": " << positionNames[i] << '\n';
                     std::cout << "FEN: " << testFens[i] << '\n';
-
                     int traditionalEval = evaluatePosition(board);
                     std::cout << "Traditional evaluation: " << traditionalEval << " centipawns"
                               << '\n';
 
                     float nnEval = evaluateWithNeuralNetwork(board);
                     std::cout << "Neural network evaluation: " << nnEval << " centipawns" << '\n';
-
                     float hybridEval = evaluateHybrid(board);
                     std::cout << "Hybrid evaluation: " << hybridEval << " centipawns" << '\n';
-
                     std::cout << '\n';
                 }
 
@@ -454,9 +435,7 @@ int main(int argc, char* argv[]) {
             } else if (mode == "generate") {
                 std::cout << "Training Data Generation Mode\n";
                 std::cout << "==============================\n\n";
-
                 TrainingDataGenerator generator;
-
                 int numGames = kDefaultDataGenerationGames;
                 if (argc > 2) {
                     numGames = std::stoi(argv[2]);
@@ -464,17 +443,14 @@ int main(int argc, char* argv[]) {
 
                 std::cout << "Generating " << numGames << " self-play games...\n";
                 auto trainingData = generator.generateSelfPlayData(numGames);
-
                 std::string dataPath = "data/training_data.bin";
                 if (argc > 3) {
                     dataPath = argv[3];
                 }
 
                 generator.saveTrainingData(trainingData, dataPath);
-
                 std::cout << "Training data saved to: " << dataPath << '\n';
                 std::cout << "Generated " << trainingData.size() << " training examples" << '\n';
-
                 return 0;
             } else if (mode == "--tune" || mode == "tune") {
                 if (argc < 3) {
@@ -488,7 +464,6 @@ int main(int argc, char* argv[]) {
                 }
 
                 InitZobrist();
-
                 TexelTuner tuner;
                 if (!tuner.loadPositions(posFile)) {
                     std::cout << "Failed to load positions from: " << posFile << "\n";
@@ -502,7 +477,6 @@ int main(int argc, char* argv[]) {
             } else if (mode == "analyze") {
                 std::cout << "Position Analysis Mode\n";
                 std::cout << "======================\n\n";
-
                 std::string fen = kStartingFen;
                 if (argc > 2) {
                     fen = argv[2];
@@ -510,38 +484,28 @@ int main(int argc, char* argv[]) {
 
                 Board board;
                 board.InitializeFromFEN(fen);
-
                 std::cout << "Analyzing position from FEN: " << fen << "\n\n";
                 printBoard(board);
                 std::cout << "\n";
-
                 PositionAnalysis analysis = PositionAnalyzer::analyzePosition(board);
                 PositionAnalyzer::printDetailedAnalysis(analysis);
-
                 return 0;
             }
         }
 
         ChessTimePoint startTime = ChessClock::now();
-
         initKnightAttacks();
         initKingAttacks();
-
         InitZobrist();
-
         initializeHybridEvaluator();
-
         std::cout << "Chess Engine v2.0 - Advanced Features Edition\n";
         std::cout << "=============================================\n";
         std::cout << "Features: Magic bitboards, Neural network evaluation, Pattern recognition\n";
         std::cout << "Use './chess_engine uci' for UCI mode\n\n";
-
         ChessBoard.InitializeFromFEN(kStartingFen);
-
         std::string input;
         while (true) {
             printBoard(ChessBoard);
-
             GameState gameState = checkGameState(ChessBoard);
             if (gameState != GameState::ONGOING) {
                 announceGameResult(gameState);
@@ -563,7 +527,6 @@ int main(int argc, char* argv[]) {
             }
 
             ChessTimePoint moveStartTime = ChessClock::now();
-
             int srcCol = 0;
             int srcRow = 0;
             int destCol = 0;
@@ -586,7 +549,6 @@ int main(int argc, char* argv[]) {
 
             if (ChessBoard.turn == ChessPieceColor::BLACK) {
                 std::cout << "\nComputer is thinking...\n";
-
                 ChessTimePoint computerStartTime = ChessClock::now();
                 auto computerMove = getComputerMove(ChessBoard, kDefaultComputerMoveTimeMs);
                 auto computerTime = ChessClock::now() - computerStartTime;
@@ -598,7 +560,6 @@ int main(int argc, char* argv[]) {
                     int srcRow = from / BOARD_SIZE;
                     int destCol = to % BOARD_SIZE;
                     int destRow = to / BOARD_SIZE;
-
                     ChessPieceType computerPromotionPiece = ChessPieceType::QUEEN;
                     const Piece& movingPiece = ChessBoard.squares[from].piece;
                     if (movingPiece.PieceType == ChessPieceType::PAWN &&
@@ -644,7 +605,6 @@ int main(int argc, char* argv[]) {
         std::cout << "\nGame completed in "
                   << std::chrono::duration_cast<ChessDuration>(totalTime).count() << "ms\n";
         std::cout << "Thanks for playing!\n";
-
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "Fatal error: " << e.what() << '\n';

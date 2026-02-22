@@ -60,9 +60,7 @@ struct FeatureTransformer {
 class alignas(SIMD_ALIGN) Accumulator {
 private:
     alignas(SIMD_ALIGN) std::array<int16_t, L1_SIZE> perspective[COLOR_COUNT];
-
     bool computed[COLOR_COUNT] = {false, false};
-
     const int16_t* weights = nullptr;
 
 public:
@@ -80,7 +78,6 @@ public:
     }
 
     void refresh(const BitboardPosition& pos);
-
     void addFeature(int color, int featureIdx);
     void removeFeature(int color, int featureIdx);
     void moveFeature(int color, int fromIdx, int toIdx);
@@ -104,20 +101,16 @@ private:
     const int outputSize;
     alignas(SIMD_ALIGN) std::vector<int8_t> weights;
     alignas(SIMD_ALIGN) std::vector<int32_t> biases;
-
     enum SIMDType : std::uint8_t { AVX2, AVX512, AVX512_VNNI };
     static SIMDType detectSIMD();
     SIMDType simdType;
 
 public:
     LinearLayer(int in, int out);
-
     void loadWeights(const int8_t* w, const int32_t* b);
-
     void forward_avx2(const int8_t* input, int32_t* output) const;
     void forward_avx512(const int8_t* input, int32_t* output) const;
     void forward_avx512_vnni(const int8_t* input, int32_t* output) const;
-
     void forward(const void* input, void* output) const;
 };
 
@@ -142,19 +135,14 @@ private:
     std::unique_ptr<ClippedReLU> ac2;
     std::unique_ptr<LinearLayer> fc3;
     std::unique_ptr<LinearLayer> fc4;
-
     alignas(SIMD_ALIGN) std::vector<int16_t> featureWeights;
-
     mutable Accumulator accumulator;
-
     void transformInput(const BitboardPosition& pos, int8_t* output) const;
 
 public:
     NNUEEvaluator();
     ~NNUEEvaluator() = default;
-
     bool loadNetwork(const std::string& filename);
-
     int evaluate(const BitboardPosition& pos) const;
 
     void updateBeforeMove(const BitboardPosition& pos, int from, int to, ChessPieceType piece,
@@ -185,10 +173,8 @@ inline __m256i dpbusd_epi32(__m256i acc, __m256i a, __m256i b) {
     __m256i a_hi = _mm256_unpackhi_epi8(a, _mm256_setzero_si256());
     __m256i b_lo = _mm256_unpacklo_epi8(b, _mm256_setzero_si256());
     __m256i b_hi = _mm256_unpackhi_epi8(b, _mm256_setzero_si256());
-
     __m256i prod_lo = _mm256_madd_epi16(a_lo, b_lo);
     __m256i prod_hi = _mm256_madd_epi16(a_hi, b_hi);
-
     return _mm256_add_epi32(acc, _mm256_add_epi32(prod_lo, prod_hi));
 #endif
 }

@@ -5,9 +5,7 @@
 TEST(PawnMoves, StartingPosition) {
     Board testBoard;
     testBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-
     std::vector<std::pair<int, int>> allMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
-
     int pawnMoveCount = 0;
     for (const auto& move : allMoves) {
         const Piece& piece = testBoard.squares[move.first].piece;
@@ -22,7 +20,6 @@ TEST(PawnMoves, StartingPosition) {
 TEST(PawnMoves, Promotion) {
     Board testBoard;
     testBoard.InitializeFromFEN("rnbqkb1r/ppppp2p/5n2/5Pp1/8/8/PPPPPP1P/RNBQKBNR w KQkq g6 0 4");
-
     testBoard.squares[53].piece = Piece(ChessPieceColor::WHITE, ChessPieceType::PAWN);
     testBoard.squares[61].piece = Piece();
     testBoard.updateBitboards();

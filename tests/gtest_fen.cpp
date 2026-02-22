@@ -4,7 +4,6 @@
 TEST(Fen, StartingPosition) {
     Board testBoard;
     testBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-
     ASSERT_EQ(testBoard.squares[0].piece.PieceType, ChessPieceType::ROOK);
     ASSERT_EQ(testBoard.squares[0].piece.PieceColor, ChessPieceColor::WHITE);
     ASSERT_EQ(testBoard.squares[63].piece.PieceType, ChessPieceType::ROOK);

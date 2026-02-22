@@ -218,7 +218,6 @@ public:
         bool see(const Board& board, const MoveContent& move, int threshold = ZERO) const {
             int from = move.src;
             int to = move.dest;
-
             int score = ZERO;
             if (move.capture != ChessPieceType::NONE) {
                 score = SEE_VALUES[static_cast<int>(move.capture)];
@@ -293,7 +292,6 @@ public:
         bool stopped = false;
         bool pondering = false;
         int multiPV = ONE;
-
         int staticEval[SEARCH_INFO_MAX_PLY];
         bool improving[SEARCH_INFO_MAX_PLY];
         MoveContent killers[SEARCH_INFO_MAX_PLY][TWO];

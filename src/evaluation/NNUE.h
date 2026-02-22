@@ -30,10 +30,8 @@ struct FeatureIndex {
 struct Accumulator {
     alignas(32) std::array<int16_t, L1_SIZE> white;
     alignas(32) std::array<int16_t, L1_SIZE> black;
-
     const int16_t* featureWeights = nullptr;
     const int16_t* featureBiases = nullptr;
-
     void init(const int16_t* weights, const int16_t* biases);
     void reset();
     void refresh(const Board& board);
@@ -77,24 +75,17 @@ private:
     std::unique_ptr<ClippedReLU> activation2;
     std::unique_ptr<LinearLayer> hidden2;
     std::unique_ptr<LinearLayer> outputLayer;
-
     std::vector<int16_t> ftWeights;
     std::vector<int16_t> ftBiases;
-
     mutable Accumulator accumulator[2];
-
     void transformFeatures(const Board& board, ChessPieceColor perspective, int16_t* output) const;
 
 public:
     NNUEEvaluator();
     ~NNUEEvaluator();
-
     bool loadNetwork(const std::string& filename);
-
     int evaluate(const Board& board, ChessPieceColor sideToMove) const;
-
     void updateAccumulator(const Board& board, int from, int to);
-
     void resetAccumulator(const Board& board);
 };
 

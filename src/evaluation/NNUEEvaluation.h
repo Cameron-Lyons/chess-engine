@@ -17,12 +17,10 @@ private:
     static constexpr int L2_SIZE = 32;
     static constexpr int L3_SIZE = 32;
     static constexpr int OUTPUT_SIZE = 1;
-
     static constexpr int KING_BUCKETS = 64;
     static constexpr int PIECE_TYPES = 6;
     static constexpr int COLORS = 2;
     static constexpr int SQUARES = 64;
-
     static constexpr int SCALE = 128;
     static constexpr int Q_SCALE = 64;
     static constexpr int kWhitePerspectiveIndex = 0;
@@ -93,16 +91,12 @@ private:
     struct Network {
         alignas(64) int16_t inputWeights[INPUT_DIMENSIONS * L1_SIZE];
         alignas(64) int16_t inputBias[L1_SIZE];
-
         alignas(64) int8_t l1Weights[L1_SIZE * L2_SIZE * COLORS];
         alignas(64) int32_t l1Bias[L2_SIZE];
-
         alignas(64) int8_t l2Weights[L2_SIZE * L3_SIZE];
         alignas(64) int32_t l2Bias[L3_SIZE];
-
         alignas(64) int8_t outputWeights[L3_SIZE * OUTPUT_SIZE];
         alignas(64) int32_t outputBias[OUTPUT_SIZE];
-
         bool loaded = false;
 
         void initialize() {
@@ -151,7 +145,6 @@ private:
             file.read(reinterpret_cast<char*>(l2Bias), sizeof(l2Bias));
             file.read(reinterpret_cast<char*>(outputWeights), sizeof(outputWeights));
             file.read(reinterpret_cast<char*>(outputBias), sizeof(outputBias));
-
             loaded = file.good();
             return loaded;
         }
@@ -171,7 +164,6 @@ private:
             file.write(reinterpret_cast<const char*>(outputBias), sizeof(outputBias));
         }
     };
-
     Network network;
     Accumulator accumulator[COLORS];
     std::vector<int> activeFeatures[COLORS];
@@ -250,7 +242,6 @@ private:
             for (int j = 0; j < L1_SIZE; j += kAvxFeatureChunk) {
                 __m256i acc_stm = _mm256_load_si256((__m256i*)&accumulator[stm].values[j]);
                 __m256i acc_nstm = _mm256_load_si256((__m256i*)&accumulator[nstm].values[j]);
-
                 acc_stm = _mm256_max_epi16(acc_stm, _mm256_setzero_si256());
                 acc_nstm = _mm256_max_epi16(acc_nstm, _mm256_setzero_si256());
 
@@ -261,7 +252,6 @@ private:
 
                 __m256i w_stm_256 = _mm256_cvtepi8_epi16(w_stm);
                 __m256i w_nstm_256 = _mm256_cvtepi8_epi16(w_nstm);
-
                 __m256i prod_stm = _mm256_mullo_epi16(acc_stm, w_stm_256);
                 __m256i prod_nstm = _mm256_mullo_epi16(acc_nstm, w_nstm_256);
 
@@ -347,7 +337,6 @@ public:
         }
 
         int32_t nnueScore = forward(board);
-
         int material = kZeroScore;
         for (int sq = 0; sq < SQUARES; sq++) {
             const Piece& piece = board.squares[sq].piece;
@@ -395,7 +384,6 @@ public:
 
             int fromIdx = getFeatureIndex(move.piece, board.turn, move.src, kingSquare);
             int toIdx = getFeatureIndex(move.piece, board.turn, move.dest, kingSquare);
-
             accumulator[perspective].removeFeature(fromIdx, network.inputWeights);
             accumulator[perspective].addFeature(toIdx, network.inputWeights);
 

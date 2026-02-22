@@ -17,7 +17,6 @@ private:
     static constexpr int PIECE_TYPE_COUNT = 6;
     static constexpr int WHITE_INDEX = 0;
     static constexpr int BLACK_INDEX = 1;
-
     static constexpr int KILLER_MOVE_BONUS = 900000;
     static constexpr int FIRST_KILLER_BONUS = 950000;
     static constexpr int SECOND_KILLER_BONUS = 940000;
@@ -28,7 +27,6 @@ private:
     static constexpr int PROMOTION_SCORE_BASE = 800000;
     static constexpr int HISTORY_MAX = 8192;
     static constexpr int HISTORY_DIVISOR = 2;
-
     static constexpr int PAWN_VALUE = 100;
     static constexpr int KNIGHT_VALUE = 320;
     static constexpr int BISHOP_VALUE = 330;
@@ -74,15 +72,11 @@ private:
             return ZERO;
         }
     };
-
     KillerMoves killers[BOARD_SQUARES];
-
     int historyTable[TWO][BOARD_SQUARES][BOARD_SQUARES];
     int butterflyHistory[TWO][BOARD_SQUARES][BOARD_SQUARES];
     int counterMoveHistory[PIECE_TYPE_COUNT][BOARD_SQUARES][PIECE_TYPE_COUNT][BOARD_SQUARES];
-
     MoveContent counterMoves[TWO][BOARD_SQUARES];
-
     MoveContent pvMove;
     bool hasPV = false;
 
@@ -238,7 +232,6 @@ public:
             MoveContent move;
             int score;
         };
-
         std::vector<ScoredMove> scoredMoves;
         scoredMoves.reserve(moves.size());
 

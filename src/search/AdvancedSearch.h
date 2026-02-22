@@ -31,13 +31,9 @@ public:
                                const ThreadSafeHistory& history);
 
     static bool lateMovePruning(const Board& board, int depth, int moveNumber, bool inCheck);
-
     static bool recaptureExtension(const Board& board, const std::pair<int, int>& move, int depth);
-
     static bool checkExtension(const Board& board, const std::pair<int, int>& move, int depth);
-
     static bool pawnPushExtension(const Board& board, const std::pair<int, int>& move, int depth);
-
     static bool passedPawnExtension(const Board& board, const std::pair<int, int>& move, int depth);
 };
 
@@ -78,24 +74,17 @@ public:
         int movesToGo;
         bool isInfinite;
     };
-
     TimeManager(const TimeControl& tc);
-
     int allocateTime(Board& board, int depth, int nodes, bool isInCheck);
-
     bool shouldStop(int elapsedTime, int allocatedTime, int depth, int nodes);
-
     void updateGameProgress(int moveNumber, int totalMoves);
-
     bool isEmergencyTime(int remainingTime, int allocatedTime);
-
     GamePhase getGamePhase(const Board& board) const;
 
 private:
     TimeControl timeControl;
     int moveNumber;
     int totalMoves;
-
     int calculateBaseTime() const;
     int calculateIncrement() const;
     double getTimeFactor(int depth, int nodes);
@@ -111,19 +100,12 @@ public:
         float winRate;
         int averageRating;
     };
-
     EnhancedOpeningBook(const std::string& bookPath = "books/opening_book.bin");
-
     std::vector<BookEntry> getBookMoves(const Board& board);
-
     std::pair<int, int> getBestMove(const Board& board, bool randomize = false);
-
     bool isInBook(const Board& board);
-
     void addMove(const Board& board, const BookEntry& entry);
-
     void saveBook(const std::string& path);
-
     void loadBook(const std::string& path);
 
     struct BookStats {
@@ -133,15 +115,12 @@ public:
         float averageWinRate;
         float averageRating;
     };
-
     BookStats getStats() const;
-
     void analyzeBook() const;
 
 private:
     std::unordered_map<std::string, std::vector<BookEntry>> book;
     std::string bookPath;
-
     std::string boardToKey(const Board& board);
     void normalizeWeights(std::vector<BookEntry>& entries);
     std::pair<int, int> parseMove(const std::string& move);

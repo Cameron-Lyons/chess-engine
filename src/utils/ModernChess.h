@@ -157,10 +157,8 @@ public:
         pieces[move.to] = fromPiece;
         pieces[move.to]->pos = Position::fromIndex(move.to);
         pieces[move.from] = nullptr;
-
         currentTurn = 1 - currentTurn;
         lastMoveTime = ChessClock::now();
-
         return true;
     }
 
@@ -188,9 +186,7 @@ public:
     }
 
     std::vector<Move> generateMoves() const;
-
     double evaluate() const;
-
     Move findBestMove(ChessDuration timeLimit) const;
 };
 

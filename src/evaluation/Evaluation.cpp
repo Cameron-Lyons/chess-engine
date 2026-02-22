@@ -173,7 +173,6 @@ int getPieceSquareValue(ChessPieceType piece, int square, ChessPieceColor color,
     }
     int mgValue = mgTables[idx][adjustedSquare];
     int egValue = egTables[idx][adjustedSquare];
-
     return ((mgValue * (kGamePhaseScale - gamePhase)) + (egValue * gamePhase)) / kGamePhaseScale;
 }
 
@@ -415,7 +414,6 @@ int evaluateCenterControl(const Board& board) {
 
 int evaluateKingSafety(const Board& board) {
     int safetyScore = 0;
-
     int whiteKingPos = -1;
     int blackKingPos = -1;
     for (int i = 0; i < NUM_SQUARES; i++) {
@@ -459,7 +457,6 @@ int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor 
     int score = 0;
     int kingRow = kingPos / BOARD_SIZE;
     int kingCol = kingPos % BOARD_SIZE;
-
     int pawnShield = 0;
     for (int dr = -1; dr <= 1; dr++) {
         for (int dc = -1; dc <= 1; dc++) {
@@ -475,7 +472,6 @@ int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor 
         }
     }
     score += pawnShield * KING_SAFETY_PAWN_SHIELD_BONUS;
-
     bool isOnOpenFile = true;
     for (int rank = 0; rank < BOARD_SIZE; rank++) {
         int square = (rank * BOARD_SIZE) + kingCol;
@@ -681,7 +677,6 @@ int evaluatePosition(const Board& board, int contempt) {
 
     int mgScore = 0;
     int egScore = 0;
-
     int gamePhase = 0;
     for (int square = 0; square < NUM_SQUARES; ++square) {
         switch (board.squares[square].piece.PieceType) {
@@ -757,28 +752,22 @@ int evaluatePosition(const Board& board, int contempt) {
     int bishopPairScore = evaluateBishopPair(board);
     mgScore += bishopPairScore;
     egScore += static_cast<int>(static_cast<float>(bishopPairScore) * kBishopPairEgScale);
-
     int rookFileScore = evaluateRooksOnOpenFiles(board);
     mgScore += rookFileScore;
     egScore += rookFileScore;
-
     int tacticalSafetyScore = evaluateTacticalSafety(board);
     mgScore += tacticalSafetyScore;
-
     int endgameScore = 0;
     if (gamePhase < kOpeningEndgameBoundaryPhase) {
         endgameScore = evaluateEndgame(board);
         egScore += endgameScore;
-
         int endgameKnowledgeScore = EndgameKnowledge::evaluateEndgame(board);
         egScore += endgameKnowledgeScore;
     }
     egScore += static_cast<int>(static_cast<float>(tacticalSafetyScore) * kTacticalSafetyEgScale);
-
     int hangingPiecesScore = evaluateHangingPieces(board);
     mgScore += hangingPiecesScore;
     egScore += hangingPiecesScore;
-
     int queenTrapScore = evaluateQueenTrapDanger(board);
     mgScore += queenTrapScore;
     egScore += static_cast<int>(static_cast<float>(queenTrapScore) * kQueenTrapEgScale);
@@ -926,7 +915,6 @@ int evaluateHangingPieces(const Board& board) {
 
             int row = i / BOARD_SIZE;
             int col = i % BOARD_SIZE;
-
             bool isOnEdge = (row == 0 || row == 7 || col == 0 || col == 7);
             bool isInCorner = ((row == 0 || row == 7) && (col == 0 || col == 7));
 
@@ -963,7 +951,6 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
     int fromCol = piecePos % BOARD_SIZE;
     int toRow = targetPos / BOARD_SIZE;
     int toCol = targetPos % BOARD_SIZE;
-
     int rowDiff = toRow - fromRow;
     int colDiff = toCol - fromCol;
 
@@ -1082,7 +1069,6 @@ int evaluateQueenTrapDanger(const Board& board) {
         }
         int row = i / BOARD_SIZE;
         int col = i % BOARD_SIZE;
-
         int escapeSquares = 0;
 
         int directions[8][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1},
@@ -1188,7 +1174,6 @@ int evaluateTacticalSafety(const Board& board) {
         if (piece.PieceType == ChessPieceType::QUEEN) {
             int row = i / BOARD_SIZE;
             int col = i % BOARD_SIZE;
-
             int attackers = 0;
             int defenders = 0;
 

@@ -56,17 +56,11 @@ MoveClassification classifyMove(const Board& board, const std::pair<int, int>& m
                                 const ThreadSafeHistory& history,
                                 const std::pair<int, int>& hashMove, int moveNumber) {
     MoveClassification classification;
-
     classification.moveNumber = moveNumber;
-
     classification.isHashMove = (move == hashMove);
-
     classification.isCapture = (board.squares[move.second].piece.PieceType != ChessPieceType::NONE);
-
     classification.isKiller = killers.isKiller(ply, move);
-
     classification.historyScore = history.get(move.first, move.second);
-
     ChessPieceType movingPiece = board.squares[move.first].piece.PieceType;
     if (movingPiece == ChessPieceType::PAWN) {
         int toRank = move.second / kBoardDimension;
@@ -158,15 +152,11 @@ MoveClassification classifyMove(const Board& board, const std::pair<int, int>& m
 PositionContext evaluatePosition(const Board& board, int staticEval, int previousEval,
                                  bool isPVNode) {
     PositionContext context;
-
     context.isPVNode = isPVNode;
     context.staticEval = staticEval;
-
     context.inCheck = isInCheck(board, board.turn);
-
     context.evalTrend = staticEval - previousEval;
     context.isImproving = context.evalTrend > kEvalImprovingThreshold;
-
     int totalMaterial = kZero;
     int pieceCount = kZero;
     for (int sq = kZero; sq < kBoardSquareCount; ++sq) {
@@ -214,7 +204,6 @@ PositionContext evaluatePosition(const Board& board, int staticEval, int previou
     }
 
     context.isSingular = false;
-
     return context;
 }
 

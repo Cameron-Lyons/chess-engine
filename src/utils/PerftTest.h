@@ -72,7 +72,6 @@ private:
 
                 if (IsInCheck(newBoard, newBoard.turn)) {
                     result.checks++;
-
                     std::vector<MoveContent> responseMoves;
                     GenerateAllMoves(newBoard, responseMoves);
                     bool hasLegalMove = false;
@@ -143,13 +142,11 @@ public:
 
         std::vector<MoveContent> moves;
         GenerateAllMoves(board, moves);
-
         const int numThreads = useThreads ? std::thread::hardware_concurrency() : 1;
 
         if (depth > 3 && numThreads > 1 && moves.size() > numThreads) {
             std::vector<std::future<PerftResult>> futures;
             std::vector<std::thread> threads;
-
             int movesPerThread = (moves.size() + numThreads - 1) / numThreads;
 
             for (int t = 0; t < numThreads; t++) {
@@ -226,7 +223,6 @@ public:
         for (const auto& test : positions) {
             Board board;
             board.InitializeFromFEN(test.fen);
-
             std::cout << "\n" << test.name << ":\n";
             std::cout << "FEN: " << test.fen << "\n\n";
 
@@ -234,12 +230,9 @@ public:
                 auto start = std::chrono::high_resolution_clock::now();
                 uint64_t result = perft(board, depth, true);
                 auto end = std::chrono::high_resolution_clock::now();
-
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
                 double nps = duration.count() > 0 ? (result * 1000.0 / duration.count()) : 0;
-
                 bool passed = (result == test.expected[depth - 1]);
-
                 std::cout << "Depth " << depth << ": " << std::setw(10) << result;
 
                 if (passed) {
@@ -273,9 +266,7 @@ public:
 
         std::vector<MoveContent> moves;
         GenerateAllMoves(board, moves);
-
         uint64_t total = 0;
-
         std::cout << "\nPerft divide at depth " << depth << ":\n";
         std::cout << std::string(40, '-') << "\n";
 
@@ -288,7 +279,6 @@ public:
 
             uint64_t nodes = depth == 1 ? 1 : perft(newBoard, depth - 1, false);
             total += nodes;
-
             std::cout << moveToString(move) << ": " << nodes << "\n";
         }
 

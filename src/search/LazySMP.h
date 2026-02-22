@@ -27,7 +27,6 @@ public:
         ThreadSafeHistory historyTable;
         KillerMoves killerMoves;
         ParallelSearchContext* context;
-
         int aspirationDelta;
         int depthOffset;
         bool useNullMove;
@@ -46,7 +45,6 @@ public:
         std::atomic<int> bestScore;
         std::pair<int, int> bestMove;
         std::mutex bestMoveMutex;
-
         TranspositionTableAdapter* transTable;
 
         SharedData()
@@ -60,20 +58,16 @@ private:
     std::vector<std::unique_ptr<ThreadData>> threads;
     std::unique_ptr<SharedData> shared;
     std::vector<std::thread> workers;
-
     std::mutex poolMutex;
     std::condition_variable poolCV;
     std::atomic<bool> shouldTerminate;
-
     void workerThread(ThreadData* data);
     void searchThread(ThreadData* data, int maxDepth, int timeLimit);
 
 public:
     explicit LazySMP(int threadCount = kAutoThreadCount);
     ~LazySMP();
-
     SearchResult search(const Board& board, int maxDepth, int timeLimit);
-
     void stop();
 
     int getNodesSearched() const {
@@ -96,7 +90,6 @@ private:
 
 public:
     explicit SMPTimeManager(int timeMs);
-
     bool shouldStop() const;
     void forceStop() {
         hardStop = true;

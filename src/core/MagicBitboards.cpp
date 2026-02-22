@@ -193,7 +193,6 @@ uint64_t MagicBitboards::findMagicNumber(int square, bool isRook) {
     std::random_device rd;
     std::mt19937_64 gen(rd());
     std::uniform_int_distribution<uint64_t> dist;
-
     uint64_t mask = isRook ? generateRookMask(square) : generateBishopMask(square);
     auto occupancies = generateOccupancyVariations(mask);
     std::vector<uint64_t> attacks;

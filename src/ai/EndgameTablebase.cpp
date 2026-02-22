@@ -18,7 +18,6 @@ public:
     auto operator=(const Impl&) -> Impl& = delete;
     Impl(Impl&&) = delete;
     auto operator=(Impl&&) -> Impl& = delete;
-
     std::string tablebasePath;
     TablebaseType type{TablebaseType::SYZYGY};
     std::unordered_map<std::string, TablebaseResult> cache;
@@ -177,7 +176,6 @@ auto EndgameTablebase::boardToTablebaseKey(const Board& board) -> std::string {
 
 auto EndgameTablebase::isValidEndgamePosition(const Board& board) -> bool {
     int pieces = countPieces(board);
-
     return pieces <= 7 && !board.whiteCanCastle && !board.blackCanCastle;
 }
 
@@ -194,37 +192,31 @@ auto EndgameTablebase::countPieces(const Board& board) -> int {
 
 auto EndgameKnowledge::evaluateKPK(const Board& board) -> int {
     (void)board;
-
     return 0;
 }
 
 auto EndgameKnowledge::evaluateKRK(const Board& board) -> int {
     (void)board;
-
     return 0;
 }
 
 auto EndgameKnowledge::evaluateKQK(const Board& board) -> int {
     (void)board;
-
     return 0;
 }
 
 auto EndgameKnowledge::evaluateKBNK(const Board& board) -> int {
     (void)board;
-
     return 0;
 }
 
 auto EndgameKnowledge::evaluateKBBK(const Board& board) -> int {
     (void)board;
-
     return 0;
 }
 
 auto EndgameKnowledge::evaluateEndgame(const Board& board) -> int {
     (void)board;
-
     return 0;
 }
 
@@ -239,13 +231,11 @@ auto EndgameKnowledge::getKingDistance(int king1, int king2) -> int {
 auto EndgameKnowledge::isPawnPromoting(const Board& board, int pawnSquare) -> bool {
     (void)board;
     (void)pawnSquare;
-
     return false;
 }
 
 auto EndgameKnowledge::getPawnAdvancement(const Board& board, int pawnSquare) -> int {
     (void)board;
     (void)pawnSquare;
-
     return 0;
 }

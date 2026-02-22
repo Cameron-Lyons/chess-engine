@@ -47,9 +47,7 @@ bool MovePiece(int srcCol, int srcRow, int destCol, int destRow) {
     }
 
     PrevBoard = ChessBoard;
-
     bool promotePawn = (piece.PieceType == ChessPieceType::PAWN && (destRow == 0 || destRow == 7));
-
     ChessBoard.movePiece(src, dest);
 
     if (promotePawn) {
@@ -124,9 +122,7 @@ bool MovePiece(int srcCol, int srcRow, int destCol, int destRow,
     }
 
     PrevBoard = ChessBoard;
-
     bool promotePawn = (piece.PieceType == ChessPieceType::PAWN && (destRow == 0 || destRow == 7));
-
     ChessBoard.movePiece(src, dest);
 
     if (promotePawn) {
@@ -137,7 +133,6 @@ bool MovePiece(int srcCol, int srcRow, int destCol, int destRow,
             ChessBoard.squares[dest].piece.PieceType = ChessPieceType::QUEEN;
         }
         ChessBoard.updateBitboards();
-
         const char* promotedPieceName = "Queen";
         switch (promotionPiece) {
             case ChessPieceType::QUEEN:

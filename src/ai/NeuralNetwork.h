@@ -16,10 +16,8 @@ public:
         int outputSize{1};
         float learningRate{0.001F};
         std::string modelPath{"models/chess_nn.bin"};
-
         NetworkConfig() = default;
     };
-
     NeuralNetworkEvaluator();
     NeuralNetworkEvaluator(const NetworkConfig& config);
     ~NeuralNetworkEvaluator();
@@ -27,11 +25,8 @@ public:
     auto operator=(const NeuralNetworkEvaluator&) -> NeuralNetworkEvaluator& = delete;
     NeuralNetworkEvaluator(NeuralNetworkEvaluator&&) = delete;
     auto operator=(NeuralNetworkEvaluator&&) -> NeuralNetworkEvaluator& = delete;
-
     auto evaluatePosition(const Board& board) -> float;
-
     auto encodePosition(const Board& board) -> std::vector<float>;
-
     void train(const std::vector<std::pair<Board, float>>& trainingData);
     void saveModel(const std::string& path);
     void loadModel(const std::string& path);
@@ -42,23 +37,19 @@ public:
         int patch{0};
         std::string timestamp;
         float validationLoss{0.0F};
-
         bool operator<(const ModelVersion& other) const;
         bool operator==(const ModelVersion& other) const;
         std::string toString() const;
     };
-
     ModelVersion getModelVersion() const;
     void setModelVersion(const ModelVersion& version);
     bool compareModels(const std::string& path1, const std::string& path2);
     std::vector<std::string> listModelVersions(const std::string& directory);
-
     auto hybridEvaluate(const Board& board, float nnWeight = 0.7F) -> float;
 
 private:
     class Impl;
     std::unique_ptr<Impl> m_pImpl;
-
     auto pieceToVector(const Piece& piece, int square) -> std::vector<float>;
     void updateWeights(const std::vector<float>& gradients);
 };
@@ -71,14 +62,12 @@ public:
         float gameResult{};
         int gameLength{};
     };
-
     TrainingDataGenerator();
     ~TrainingDataGenerator() = default;
     TrainingDataGenerator(const TrainingDataGenerator&) = delete;
     auto operator=(const TrainingDataGenerator&) -> TrainingDataGenerator& = delete;
     TrainingDataGenerator(TrainingDataGenerator&&) = delete;
     auto operator=(TrainingDataGenerator&&) -> TrainingDataGenerator& = delete;
-
     auto generateSelfPlayData(int numGames, int maxMoves = 200) -> std::vector<TrainingExample>;
 
     auto generateFromPositions(const std::vector<std::string>& fens,
@@ -92,10 +81,8 @@ public:
 
 private:
     std::mt19937 m_rng;
-
     auto playGame(int maxMoves) -> std::vector<TrainingExample>;
     auto evaluateGameResult(const Board& board, int gameLength) -> float;
-
     auto getMaterialScore(const Board& board) -> float;
     auto getPositionalScore(const Board& board) -> float;
 };
@@ -103,16 +90,13 @@ private:
 struct PositionFeatures {
     std::array<std::array<int, 6>, 2> materialCount{};
     float materialBalance{};
-
     std::array<int, 2> centerControl{};
     std::array<int, 2> mobility{};
     std::array<int, 2> kingSafety{};
     std::array<int, 2> pawnStructure{};
-
     std::array<int, 2> hangingPieces{};
     std::array<int, 2> pinnedPieces{};
     std::array<int, 2> discoveredAttacks{};
-
     float gamePhase{};
     std::array<int, 2> passedPawns{};
     int kingDistance{};
@@ -139,17 +123,13 @@ public:
         float earlyStoppingPatience{5};
         std::string modelPath{"models/chess_nn.bin"};
         std::string trainingDataPath{"data/training_data.bin"};
-
         TrainingConfig() = default;
     };
-
     NNTrainer(NeuralNetworkEvaluator& nn);
     NNTrainer(NeuralNetworkEvaluator& nn, const TrainingConfig& config);
-
     void trainOnSelfPlayData(int numGames);
     void trainOnFile(const std::string& dataPath);
     void validateModel(const std::vector<std::pair<Board, float>>& validationData);
-
     auto evaluateModel(const std::vector<std::pair<Board, float>>& testData) -> float;
     void generateTrainingReport(const std::string& outputPath);
 
@@ -157,7 +137,6 @@ private:
     NeuralNetworkEvaluator& m_neuralNetwork;
     TrainingDataGenerator m_dataGenerator;
     TrainingConfig m_config;
-
     std::vector<float> m_trainingLosses;
     std::vector<float> m_validationLosses;
 

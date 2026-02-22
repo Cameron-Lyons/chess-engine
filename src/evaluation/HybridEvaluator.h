@@ -13,7 +13,6 @@ public:
         bool useTraditionalEval;
         float traditionalWeight;
         std::string modelPath;
-
         float materialWeight;
         float positionalWeight;
         float tacticalWeight;
@@ -24,24 +23,17 @@ public:
               traditionalWeight(0.3F), modelPath("models/chess_nn.bin"), materialWeight(1.0F),
               positionalWeight(0.8F), tacticalWeight(0.9F), endgameWeight(1.0F) {}
     };
-
     HybridEvaluator(const EvaluationConfig& config = EvaluationConfig{});
     ~HybridEvaluator() = default;
-
     int evaluatePosition(const Board& board);
-
     int evaluateMaterial(const Board& board) const;
     int evaluatePositional(const Board& board) const;
     int evaluateTactical(const Board& board) const;
     int evaluateEndgame(const Board& board);
-
     float getNeuralNetworkEvaluation(const Board& board);
-
     float getHybridEvaluation(const Board& board);
-
     void setConfig(const EvaluationConfig& config);
     const EvaluationConfig& getConfig() const;
-
     bool loadNeuralNetwork(const std::string& path);
     bool isNeuralNetworkLoaded() const;
     NeuralNetworkEvaluator* getNeuralNetwork() const;
@@ -49,7 +41,6 @@ public:
 private:
     EvaluationConfig config;
     std::unique_ptr<NeuralNetworkEvaluator> neuralNetwork;
-
     float getGamePhase(const Board& board);
     int interpolateEvaluation(int openingEval, int endgameEval, float phase);
 };

@@ -267,7 +267,6 @@ bool Board::movePiece(int from, int to) {
     }
 
     updateOccupancy();
-
     return true;
 }
 
@@ -331,7 +330,6 @@ std::string Board::toFEN() const {
     }
 
     fen += " " + std::string(turn == ChessPieceColor::WHITE ? "w" : "b");
-
     std::string castling;
     if (whiteCanCastle) {
         castling += "K";
@@ -346,11 +344,8 @@ std::string Board::toFEN() const {
         castling += "q";
     }
     fen += " " + (castling.empty() ? "-" : castling);
-
     fen += " -";
-
     fen += " 0 1";
-
     return fen;
 }
 

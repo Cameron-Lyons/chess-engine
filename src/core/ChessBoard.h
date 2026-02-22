@@ -56,11 +56,9 @@ struct Board {
     bool whiteChecked;
     bool blackChecked;
     int LastMove;
-
     Bitboard whitePawns, whiteKnights, whiteBishops, whiteRooks, whiteQueens, whiteKings;
     Bitboard blackPawns, blackKnights, blackBishops, blackRooks, blackQueens, blackKings;
     Bitboard whitePieces, blackPieces, allPieces;
-
     ChessTimePoint lastMoveTime;
 
     Board()
@@ -136,11 +134,8 @@ struct Board {
 
     std::string toFEN() const;
     bool fromFEN(ChessString fen);
-
     void InitializeFromFEN(ChessString fen);
-
     bool movePiece(int from, int to);
-
     void clearBitboards();
     void updateBitboards();
     void updateOccupancy();

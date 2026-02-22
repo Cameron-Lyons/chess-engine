@@ -79,17 +79,14 @@ int HybridEvaluator::evaluatePositional(const Board& board) const {
     positionalScore += evaluateCenterControl(board);
     positionalScore += evaluateKingSafety(board, ChessPieceColor::WHITE);
     positionalScore -= evaluateKingSafety(board, ChessPieceColor::BLACK);
-
     return static_cast<int>(static_cast<float>(positionalScore) * config.positionalWeight);
 }
 
 int HybridEvaluator::evaluateTactical(const Board& board) const {
     int tacticalScore = 0;
-
     tacticalScore += evaluateHangingPieces(board);
     tacticalScore += evaluateQueenTrapDanger(board);
     tacticalScore += evaluateTacticalSafety(board);
-
     return static_cast<int>(static_cast<float>(tacticalScore) * config.tacticalWeight);
 }
 
@@ -103,7 +100,6 @@ int HybridEvaluator::evaluateEndgame(const Board& board) {
         endgameScore += evaluateBishopPair(board);
         endgameScore += evaluateRooksOnOpenFiles(board);
         endgameScore += ::evaluateEndgame(board);
-
         return static_cast<int>(static_cast<float>(endgameScore) * config.endgameWeight);
     }
 

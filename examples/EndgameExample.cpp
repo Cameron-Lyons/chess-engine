@@ -5,22 +5,16 @@
 int main() {
 
     EndgameTablebase tablebase("./tablebases/");
-
     Board board;
     board.InitializeEmpty();
-
     board.squares[28].piece = Piece(ChessPieceType::KING, ChessPieceColor::WHITE);
-
     board.squares[35].piece = Piece(ChessPieceType::QUEEN, ChessPieceColor::WHITE);
-
     board.squares[60].piece = Piece(ChessPieceType::KING, ChessPieceColor::BLACK);
-
     board.turn = ChessPieceColor::WHITE;
     board.updateBitboards();
 
     if (tablebase.isInTablebase(board)) {
         std::cout << "Position found in tablebase!" << std::endl;
-
         EndgameTablebase::TablebaseResult result;
         if (tablebase.probe(board, result)) {
             if (result.distanceToMate > 0) {
@@ -44,7 +38,6 @@ int main() {
         }
     } else {
         std::cout << "Position not in tablebase (or tablebase not loaded)" << std::endl;
-
         int eval = EndgameKnowledge::evaluateEndgame(board);
         std::cout << "Endgame evaluation: " << eval << std::endl;
     }

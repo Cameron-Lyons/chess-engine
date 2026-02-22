@@ -70,7 +70,6 @@ void BitboardPosition::updateOccupancy() {
 void BitboardPosition::removePiece(int square, ChessPieceColor color, ChessPieceType type) {
     int c = (color == ChessPieceColor::WHITE) ? WHITE : BLACK;
     int p = static_cast<int>(type);
-
     pieces[c][p] &= ~(1ULL << square);
     updateHash(square, color, type);
 }
@@ -78,7 +77,6 @@ void BitboardPosition::removePiece(int square, ChessPieceColor color, ChessPiece
 void BitboardPosition::placePiece(int square, ChessPieceColor color, ChessPieceType type) {
     int c = (color == ChessPieceColor::WHITE) ? WHITE : BLACK;
     int p = static_cast<int>(type);
-
     pieces[c][p] |= (1ULL << square);
     updateHash(square, color, type);
 }
@@ -86,7 +84,6 @@ void BitboardPosition::placePiece(int square, ChessPieceColor color, ChessPieceT
 void BitboardPosition::updateHash(int square, ChessPieceColor color, ChessPieceType type) {
     int c = (color == ChessPieceColor::WHITE) ? WHITE : BLACK;
     int p = static_cast<int>(type);
-
     hash ^= zobristPieces[c][p][square];
 }
 
@@ -94,7 +91,6 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
     ChessPieceType movingPiece = getPieceAt(from);
     ChessPieceColor movingColor = getColorAt(from);
     ChessPieceType capturedPiece = getPieceAt(to);
-
     removePiece(from, movingColor, movingPiece);
 
     if (capturedPiece != ChessPieceType::NONE) {
@@ -103,7 +99,6 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
     }
 
     ChessPieceType finalPiece = (promotion != ChessPieceType::NONE) ? promotion : movingPiece;
-
     placePiece(to, movingColor, finalPiece);
 
     if (movingPiece == ChessPieceType::PAWN && to == epSquare && epSquare < 64) {
@@ -165,9 +160,7 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
 
     sideToMove = 1 - sideToMove;
     hash ^= zobristSideToMove;
-
     updateOccupancy();
-
     recordMoveTime();
 }
 
@@ -176,7 +169,6 @@ void BitboardPosition::unmakeMove(int from, int to, ChessPieceType captured,
 
     ChessPieceType movedPiece = getPieceAt(to);
     ChessPieceColor movedColor = getColorAt(to);
-
     removePiece(to, movedColor, movedPiece);
 
     ChessPieceType originalPiece =
@@ -192,7 +184,6 @@ void BitboardPosition::unmakeMove(int from, int to, ChessPieceType captured,
 
     sideToMove = 1 - sideToMove;
     hash ^= zobristSideToMove;
-
     updateOccupancy();
 }
 
@@ -209,9 +200,7 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
     std::string turn;
     std::string castling;
     std::string ep;
-
     ss >> board >> turn >> castling >> ep >> halfmoveClock >> fullmoveNumber;
-
     int rank = 7;
     int file = 0;
     for (char c : board) {
@@ -254,7 +243,6 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
     }
 
     sideToMove = (turn == "w") ? WHITE : BLACK;
-
     castlingRights = 0;
     if (castling.contains('K')) {
         castlingRights |= 1;
@@ -277,7 +265,6 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
     }
 
     updateOccupancy();
-
     hash = 0;
     for (int color = 0; color < 2; ++color) {
         for (int piece = 0; piece < 6; ++piece) {
@@ -359,7 +346,6 @@ std::string BitboardPosition::toFEN() const {
     }
 
     ss << ' ' << (sideToMove == WHITE ? 'w' : 'b');
-
     ss << ' ';
     std::string castling;
     if (castlingRights & 1) {
@@ -375,7 +361,6 @@ std::string BitboardPosition::toFEN() const {
         castling += 'q';
     }
     ss << (castling.empty() ? "-" : castling);
-
     ss << ' ';
     if (epSquare < 64) {
         ss << char('a' + (epSquare & 7)) << char('1' + (epSquare >> 3));
@@ -384,13 +369,11 @@ std::string BitboardPosition::toFEN() const {
     }
 
     ss << ' ' << int(halfmoveClock) << ' ' << fullmoveNumber;
-
     return ss.str();
 }
 
 std::string BitboardPosition::toString() const {
     std::stringstream ss;
-
     ss << "  a b c d e f g h\n";
     for (int rank = 7; rank >= 0; --rank) {
         ss << (rank + 1) << ' ';
@@ -436,9 +419,7 @@ std::string BitboardPosition::toString() const {
         ss << (rank + 1) << '\n';
     }
     ss << "  a b c d e f g h\n";
-
     ss << "Turn: " << (sideToMove == WHITE ? "White" : "Black") << '\n';
     ss << "FEN: " << toFEN() << '\n';
-
     return ss.str();
 }

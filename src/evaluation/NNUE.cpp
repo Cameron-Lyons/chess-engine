@@ -123,7 +123,6 @@ void LinearLayer::forward(const void* input, void* output) const {
         __m128i sum_128 = _mm_add_epi32(sum_high, sum_low);
         __m128i sum_64 = _mm_add_epi32(sum_128, _mm_srli_si128(sum_128, 8));
         __m128i sum_32 = _mm_add_epi32(sum_64, _mm_srli_si128(sum_64, 4));
-
         out[i] = _mm_cvtsi128_si32(sum_32) + biases[i];
 #else
         int32_t sum = 0;
@@ -184,7 +183,6 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
                      static_cast<std::size_t>(L1_SIZE));
     const auto ftWeightsBytes = static_cast<std::streamsize>(ftWeights.size() * sizeof(int16_t));
     file.read(reinterpret_cast<char*>(ftWeights.data()), ftWeightsBytes);
-
     std::vector<int32_t> ftBiases32(L1_SIZE);
     const auto ftBiasesBytes = static_cast<std::streamsize>(ftBiases32.size() * sizeof(int32_t));
     file.read(reinterpret_cast<char*>(ftBiases32.data()), ftBiasesBytes);
@@ -232,14 +230,12 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
 
     accumulator[0].init(ftWeights.data(), ftBiases.data());
     accumulator[1].init(ftWeights.data(), ftBiases.data());
-
     return true;
 }
 
 void NNUEEvaluator::transformFeatures(const Board& board, ChessPieceColor perspective,
                                       int16_t* output) const {
     (void)board;
-
     const Accumulator& acc = accumulator[static_cast<int>(perspective)];
 
     if (perspective == ChessPieceColor::WHITE) {
@@ -258,15 +254,12 @@ int NNUEEvaluator::evaluate(const Board& board, ChessPieceColor sideToMove) cons
     alignas(32) int32_t hidden2_out[L3_SIZE];
     alignas(32) int16_t hidden2_relu[L3_SIZE];
     alignas(32) int32_t output[OUTPUT_SIZE];
-
     transformFeatures(board, sideToMove, input);
-
     hidden1->forward(input, hidden1_out);
     activation1->forward(hidden1_out, hidden1_relu);
     hidden2->forward(hidden1_relu, hidden2_out);
     activation2->forward(hidden2_out, hidden2_relu);
     outputLayer->forward(hidden2_relu, output);
-
     return output[0] / SCALE;
 }
 
@@ -277,7 +270,6 @@ void NNUEEvaluator::updateAccumulator(const Board& board, int from, int to) {
         int feature = FeatureIndex::index(from, movingPiece.PieceType, movingPiece.PieceColor);
         accumulator[0].removeFeature(feature);
         accumulator[1].removeFeature(feature);
-
         feature = FeatureIndex::index(to, movingPiece.PieceType, movingPiece.PieceColor);
         accumulator[0].addFeature(feature);
         accumulator[1].addFeature(feature);

@@ -330,13 +330,11 @@ void MovePicker::generateAndPartitionMoves() {
         return;
     }
     movesGenerated = true;
-
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
     goodCaptures.reserve(moves.size());
     badCaptures.reserve(moves.size());
     quietMoves.reserve(moves.size());
-
     const int colorIdx = (board.turn == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
     const int prevDest = board.LastMove;
     std::pair<int, int> counterMove = {kInvalidSquare, kInvalidSquare};
@@ -524,7 +522,6 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
     ChessPieceColor currentColor =
         maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
     bool inCheck = isInCheck(board, currentColor);
-
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, currentColor);
 
@@ -595,11 +592,8 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
         if (isCapt) {
             int victimValue = getPieceValue(board.squares[move.second].piece.PieceType);
             int attackerValue = getPieceValue(board.squares[move.first].piece.PieceType);
-
             score = (victimValue * kCaptureVictimScale) - attackerValue;
-
             int seeValue = staticExchangeEvaluation(board, move.first, move.second);
-
             int seeThreshold = kSeeThresholdBase - (ply * kSeeThresholdPerPly);
             if (seeValue < seeThreshold) {
                 continue;
@@ -628,7 +622,6 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
     }
 
     std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
-
     int bestValue = standPat;
 
     for (const auto& scoredMove : scoredMoves) {
@@ -688,7 +681,6 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     }
 
     context.nodeCount++;
-
     uint64_t zobristKey = ComputeZobrist(board);
     context.transTable.prefetch(zobristKey);
     TTEntry ttEntry;
@@ -735,7 +727,6 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     }
 
     int staticEval = evaluatePosition(board, context.contempt);
-
     int gamePhase = kZero;
     for (int sq = kZero; sq < kBoardSquareCount; ++sq) {
         switch (board.squares[sq].piece.PieceType) {
@@ -785,16 +776,13 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
 
     GenValidMoves(board);
     MovePicker picker(board, ttEntry.bestMove, context.killerMoves, ply, historyTable, context);
-
     int colorIdx = (board.turn == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
     int prevDest = board.LastMove;
     const bool sideInCheck = isInCheck(board, board.turn);
-
     int bestValue = maximizingPlayer ? -kMateScore : kMateScore;
     std::pair<int, int> bestMove = {kInvalidSquare, kInvalidSquare};
     int flag = kUpperBoundFlag;
     int movesSearched = kZero;
-
     std::pair<int, int> move;
     while ((move = picker.next()).first >= kZero) {
         if (ply == kZero) {
@@ -831,7 +819,6 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
 
         Board tempBoard = board;
         tempBoard.movePiece(move.first, move.second);
-
         ChessPieceColor movingColor = board.turn;
         if (isInCheck(tempBoard, movingColor)) {
             continue;
@@ -879,14 +866,12 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             mc.isCastling = isCastling(board, move.first, move.second);
             mc.historyScore = historyTable.get(move.first, move.second);
             mc.moveNumber = movesSearched;
-
             LMREnhanced::PositionContext pc;
             pc.inCheck = sideInCheck;
             pc.isPVNode = isPVNode;
             pc.isEndgame = (gamePhase < kLmrEndgamePhaseThreshold);
             pc.gamePhase = gamePhase;
             pc.staticEval = staticEval;
-
             int reduction = LMREnhanced::calculateReduction(searchDepth, mc, pc);
             if (reduction > kZero) {
                 searchDepth = std::max(kOne, searchDepth - reduction);
@@ -953,7 +938,6 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     }
 
     context.transTable.insert(zobristKey, TTEntry(depth, bestValue, flag, bestMove, zobristKey));
-
     return bestValue;
 }
 
@@ -973,7 +957,6 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         return kZero;
     }
     context.nodeCount.fetch_add(kOne);
-
     int extension = kZero;
     ChessPieceColor currentColor =
         maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
@@ -1230,10 +1213,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                     mc.isHashMove = (move == hashMove);
                     mc.historyScore = historyTable.get(move.first, move.second) + contHistScore;
                     mc.moveNumber = moveCount;
-
                     LMREnhanced::PositionContext pc;
                     pc.inCheck = isInCheck(board, currentColor);
-
                     int reduction = LMREnhanced::calculateReduction(depth, mc, pc);
 
                     if (reduction > kZero && !isCaptureMove && !isCheckMove) {
@@ -1363,10 +1344,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                     mc.isHashMove = (move == hashMove);
                     mc.historyScore = historyTable.get(move.first, move.second) + contHistScore;
                     mc.moveNumber = moveCount;
-
                     LMREnhanced::PositionContext pc;
                     pc.inCheck = isInCheck(board, currentColor);
-
                     int reduction = LMREnhanced::calculateReduction(depth, mc, pc);
 
                     if (reduction > kZero && !isCaptureMove && !isCheckMove) {
@@ -1454,10 +1433,8 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
     context.maxTimeMs = maxTimeMs;
     context.useSyzygy = !Syzygy::getPath().empty();
     context.transTable.newSearch();
-
     int lastScore = kZero;
     const int aspirationWindow = kAspirationWindow;
-
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {
@@ -1547,7 +1524,6 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             result.score = searchScore;
             result.depth = depth;
             result.nodes = context.nodeCount.load();
-
             uint64_t rootHash = ComputeZobrist(board);
             TTEntry rootEntry;
             if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= kZero) {
@@ -1597,7 +1573,6 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
 
             int optTime = context.optimalTimeMs > kZero ? context.optimalTimeMs : timeLimitMs;
             int maxTime = context.maxTimeMs > kZero ? context.maxTimeMs : timeLimitMs;
-
             double stabilityFactor = 1.0;
             if (bestMoveChangeCount >= kStabilityChangeThreshold &&
                 bestMoveStableCount < kStabilityLowThreshold) {
@@ -1660,7 +1635,6 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
     ParallelSearchContext context(kOne);
     context.startTime = std::chrono::steady_clock::now();
     context.timeLimitMs = kDefaultFindBestMoveTimeLimitMs;
-
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
 
@@ -1675,7 +1649,6 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
     std::vector<ScoredMove> scoredMoves =
         scoreMovesOptimized(board, moves, historyTable, context.killerMoves, kZero);
     std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
-
     int bestEval = (board.turn == ChessPieceColor::WHITE) ? -kMateScore : kMateScore;
     std::pair<int, int> bestMove = {kInvalidSquare, kInvalidSquare};
 
@@ -1711,7 +1684,6 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
                 if (eval > currentBestEval) {
                     currentBestEval = eval;
                     currentBestMove = move;
-
                     alpha = std::max(eval, alpha);
 
                     if (eval >= beta) {
@@ -1723,7 +1695,6 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
                 if (eval < currentBestEval) {
                     currentBestEval = eval;
                     currentBestMove = move;
-
                     beta = std::min(eval, beta);
 
                     if (eval <= alpha) {
@@ -1781,7 +1752,6 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
 
     int score = victim.PieceValue;
     ChessPieceColor sideToMove = attacker.PieceColor;
-
     Board tempBoard = board;
     tempBoard.squares[toSquare].piece = attacker;
     tempBoard.squares[fromSquare].piece = Piece();
@@ -1797,11 +1767,9 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
         }
 
         const Piece& currentAttacker = tempBoard.squares[smallestAttacker].piece;
-
         tempBoard.squares[toSquare].piece = currentAttacker;
         tempBoard.squares[smallestAttacker].piece = Piece();
         tempBoard.updateBitboards();
-
         score = currentAttacker.PieceValue - score;
 
         currentSide = (currentSide == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK

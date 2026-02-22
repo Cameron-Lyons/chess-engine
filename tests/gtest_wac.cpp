@@ -23,9 +23,7 @@ protected:
                    int timeLimitMs) {
         Board board;
         board.InitializeFromFEN(fen);
-
         SearchResult result = iterativeDeepeningParallel(board, depthLimit, timeLimitMs, 1, 0, 1);
-
         return result.bestMove.first == expectedFrom && result.bestMove.second == expectedTo;
     }
 };

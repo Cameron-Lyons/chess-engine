@@ -9,25 +9,18 @@ class MagicBitboards {
 public:
     static const std::array<uint64_t, 64> ROOK_MAGIC;
     static const std::array<uint64_t, 64> BISHOP_MAGIC;
-
     static std::array<std::array<uint64_t, 4096>, 64> rookAttacks;
     static std::array<std::array<uint64_t, 512>, 64> bishopAttacks;
-
     static std::array<uint64_t, 64> rookMasks;
     static std::array<uint64_t, 64> bishopMasks;
-
     static void initialize();
-
     static uint64_t getRookAttacks(int square, uint64_t occupancy);
     static uint64_t getBishopAttacks(int square, uint64_t occupancy);
     static uint64_t getQueenAttacks(int square, uint64_t occupancy);
-
     static uint64_t generateRookMask(int square);
     static uint64_t generateBishopMask(int square);
-
     static uint64_t generateRookAttacks(int square, uint64_t occupancy);
     static uint64_t generateBishopAttacks(int square, uint64_t occupancy);
-
     static uint64_t findMagicNumber(int square, bool isRook);
     static bool isMagicNumberValid(int square, uint64_t magic, bool isRook);
 

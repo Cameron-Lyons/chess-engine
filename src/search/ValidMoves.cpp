@@ -139,7 +139,6 @@ bool IsMoveLegal(Board& board, int srcPos, int destPos) {
     Board tempBoard = board;
     tempBoard.movePiece(srcPos, destPos);
     tempBoard.updateBitboards();
-
     return !IsKingInCheck(tempBoard, piece.PieceColor);
 }
 
@@ -293,7 +292,6 @@ std::vector<std::pair<int, int>> generateKnightMoves(Board& board, ChessPieceCol
     std::vector<std::pair<int, int>> moves;
     Bitboard knights = board.getPieceBitboard(ChessPieceType::KNIGHT, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
-
     Bitboard knightMovesBB = knightMoves(knights, ownPieces);
     while (knightMovesBB) {
         int dest = lsb(knightMovesBB);
@@ -316,7 +314,6 @@ std::vector<std::pair<int, int>> generateBishopMoves(Board& board, ChessPieceCol
     std::vector<std::pair<int, int>> moves;
     Bitboard bishops = board.getPieceBitboard(ChessPieceType::BISHOP, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
-
     Bitboard bishopMovesBB = bishopMoves(bishops, ownPieces, board.allPieces);
     while (bishopMovesBB) {
         int dest = lsb(bishopMovesBB);
@@ -339,7 +336,6 @@ std::vector<std::pair<int, int>> generateRookMoves(Board& board, ChessPieceColor
     std::vector<std::pair<int, int>> moves;
     Bitboard rooks = board.getPieceBitboard(ChessPieceType::ROOK, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
-
     Bitboard rookMovesBB = rookMoves(rooks, ownPieces, board.allPieces);
     while (rookMovesBB) {
         int dest = lsb(rookMovesBB);
@@ -362,7 +358,6 @@ std::vector<std::pair<int, int>> generateQueenMoves(Board& board, ChessPieceColo
     std::vector<std::pair<int, int>> moves;
     Bitboard queens = board.getPieceBitboard(ChessPieceType::QUEEN, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
-
     Bitboard queenMovesBB = queenMoves(queens, ownPieces, board.allPieces);
     while (queenMovesBB) {
         int dest = lsb(queenMovesBB);
@@ -401,21 +396,18 @@ std::vector<std::pair<int, int>> generateKingMoves(Board& board, ChessPieceColor
 
 std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color) {
     std::vector<std::pair<int, int>> moves;
-
     auto pawnMoves = generatePawnMoves(board, color);
     auto knightMoves = generateKnightMoves(board, color);
     auto bishopMoves = generateBishopMoves(board, color);
     auto rookMoves = generateRookMoves(board, color);
     auto queenMoves = generateQueenMoves(board, color);
     auto kingMoves = generateKingMoves(board, color);
-
     moves.insert(moves.end(), pawnMoves.begin(), pawnMoves.end());
     moves.insert(moves.end(), knightMoves.begin(), knightMoves.end());
     moves.insert(moves.end(), bishopMoves.begin(), bishopMoves.end());
     moves.insert(moves.end(), rookMoves.begin(), rookMoves.end());
     moves.insert(moves.end(), queenMoves.begin(), queenMoves.end());
     moves.insert(moves.end(), kingMoves.begin(), kingMoves.end());
-
     return moves;
 }
 
@@ -452,7 +444,6 @@ void GenValidMoves(Board& board) {
     }
 
     addCastlingMovesBitboard(board, board.turn);
-
     board.whiteChecked = IsKingInCheck(board, ChessPieceColor::WHITE);
     board.blackChecked = IsKingInCheck(board, ChessPieceColor::BLACK);
 }

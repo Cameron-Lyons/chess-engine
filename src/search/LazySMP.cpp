@@ -46,7 +46,6 @@ LazySMP::LazySMP(int threadCount)
     }
 
     std::cout << "Initializing Lazy SMP with " << numThreads << " threads" << '\n';
-
     shared = std::make_unique<SharedData>();
 
     for (int i = kZero; i < numThreads; ++i) {
@@ -100,13 +99,10 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit) {
     context.timeLimitMs = timeLimit;
     context.nodeCount = kZero;
     data->context = &context;
-
     int alpha = kInitialAlpha;
     int beta = kInitialBeta;
     int aspirationDelta = kDefaultAspirationDelta + data->aspirationDelta;
-
     int startDepth = std::max(kStartDepthBase, kStartDepthBase + data->depthOffset);
-
     for (int depth = startDepth; depth <= maxDepth && !data->stopFlag && !shared->globalStop;
          ++depth) {
         data->depth = depth;
@@ -119,7 +115,6 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit) {
 
         Board boardCopy = data->board;
         int score = kZero;
-
         bool aspirationFail = false;
         do {
             score = PrincipalVariationSearch(boardCopy, depth, alpha, beta,
@@ -139,13 +134,11 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit) {
 
         if (score > data->bestScore && !data->stopFlag && !shared->globalStop) {
             data->bestScore = score;
-
             TTEntry entry;
             uint64_t hash = ComputeZobrist(boardCopy);
             if (shared->transTable->find(hash, entry) &&
                 entry.bestMove.first != kInvalidMoveSquare) {
                 data->bestMove = entry.bestMove;
-
                 std::lock_guard<std::mutex> lock(shared->bestMoveMutex);
                 if (depth > shared->bestDepth ||
                     (depth == shared->bestDepth && score > shared->bestScore)) {
@@ -169,7 +162,6 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit) {
 
         shared->nodesSearched += context.nodeCount.load();
         context.nodeCount = kZero;
-
         aspirationDelta = std::min(aspirationDelta * kAspirationGrowthFactor, kMaxAspirationDelta);
     }
 
@@ -231,7 +223,6 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit) {
     result.score = shared->bestScore;
     result.depth = shared->bestDepth;
     result.nodes = shared->nodesSearched;
-
     return result;
 }
 

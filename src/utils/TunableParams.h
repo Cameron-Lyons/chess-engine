@@ -15,7 +15,6 @@ struct TunableParam {
 
 class TunableRegistry {
     std::vector<TunableParam> params;
-
     TunableRegistry() = default;
 
 public:

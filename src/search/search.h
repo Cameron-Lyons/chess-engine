@@ -175,9 +175,7 @@ struct ThreadSafeHistory {
 struct KillerMoves {
     static const int MAX_KILLER_MOVES = SearchConstants::kTwo;
     static const int MAX_PLY = SearchConstants::kBoardSquareCount;
-
     std::pair<int, int> killers[MAX_PLY][MAX_KILLER_MOVES];
-
     KillerMoves();
     void store(int ply, std::pair<int, int> move);
     bool isKiller(int ply, std::pair<int, int> move) const;
@@ -209,7 +207,6 @@ struct ParallelSearchContext {
                       [SearchConstants::kBoardSquareCount];
     int prevPieceAtPly[SearchConstants::kBoardSquareCount];
     int prevToAtPly[SearchConstants::kBoardSquareCount];
-
     ParallelSearchContext(int threads = SearchConstants::kZero);
 
     void updateContinuationHistory(int prevPiece, int prevTo, int piece, int to, int bonus) {
@@ -363,7 +360,6 @@ class MovePicker {
     int ply;
     const ThreadSafeHistory& history;
     ParallelSearchContext& context;
-
     MovePickerStage stage;
     std::vector<ScoredMove> goodCaptures;
     std::vector<ScoredMove> badCaptures;
@@ -412,15 +408,11 @@ struct SearchTechniques {
     static const int FUTILITY_MARGIN_BISHOP = 300;
     static const int FUTILITY_MARGIN_ROOK = 500;
     static const int FUTILITY_MARGIN_QUEEN = 900;
-
     static const int NULL_MOVE_R = 3;
     static const int NULL_MOVE_MARGIN = 300;
-
     static const int LMR_MIN_DEPTH = 3;
     static const int LMR_MIN_MOVE = 4;
-
     static const int STATIC_NULL_MARGIN = 900;
-
     static const int IID_MIN_DEPTH = 4;
 };
 

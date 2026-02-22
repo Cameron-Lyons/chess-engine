@@ -31,7 +31,6 @@ private:
     std::unordered_map<std::string, ProfileData> profiles;
     mutable std::mutex profileMutex;
     std::chrono::high_resolution_clock::time_point startTime;
-
     Profiler() = default;
 
 public:
@@ -56,7 +55,6 @@ public:
 
             auto& profiler = Profiler::getInstance();
             std::lock_guard<std::mutex> lock(profiler.profileMutex);
-
             profiler.profiles[name].totalTime += duration;
             profiler.profiles[name].callCount++;
             if (nodeCounter) {

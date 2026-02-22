@@ -10,7 +10,6 @@ void initKnightAttacks() {
         Bitboard attacks = 0;
         int rank = sq / 8;
         int file = sq % 8;
-
         int moves[8][2] = {{-2, -1}, {-2, 1}, {-1, -2}, {-1, 2}, {1, -2}, {1, 2}, {2, -1}, {2, 1}};
 
         for (const auto& move : moves) {

@@ -64,9 +64,7 @@ struct PositionAnalysis {
 class PositionAnalyzer {
 public:
     static PositionAnalysis analyzePosition(const Board& board);
-
     static std::string formatAnalysis(const PositionAnalysis& analysis);
-
     static void printDetailedAnalysis(const PositionAnalysis& analysis);
 
 private:

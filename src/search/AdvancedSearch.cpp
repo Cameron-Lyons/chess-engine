@@ -278,7 +278,6 @@ std::pair<int, int> AdvancedSearch::internalIterativeDeepening(Board& board, int
 
     ThreadSafeHistory historyTable;
     ParallelSearchContext context(kSingleThreadContextCount);
-
     int reducedDepth = std::max(kMinReducedDepth, depth - kIidDepthReduction);
     (void)AlphaBetaSearch(board, reducedDepth, alpha, beta, board.turn == ChessPieceColor::WHITE,
                           kRootPly, historyTable, context);
@@ -302,7 +301,6 @@ bool AdvancedSearch::singularExtension(Board& board, int depth, const std::pair<
 
     ThreadSafeHistory historyTable;
     ParallelSearchContext context(kSingleThreadContextCount);
-
     int reducedDepth = depth - kSingularDepthReduction;
     int score =
         AlphaBetaSearch(tempBoard, reducedDepth, alpha, beta,
@@ -310,7 +308,6 @@ bool AdvancedSearch::singularExtension(Board& board, int depth, const std::pair<
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
-
     int betterMoves = kZero;
     for (const auto& otherMove : moves) {
         if (otherMove == move) {
@@ -351,7 +348,6 @@ bool AdvancedSearch::historyPruning(const Board& board, int depth, const std::pa
     }
 
     int historyScore = history.getScore(move.first, move.second);
-
     return depth <= kHistoryPruningDepthLimit && historyScore < kHistoryPruningThreshold;
 }
 
@@ -392,7 +388,6 @@ bool AdvancedSearch::recaptureExtension(const Board& board, const std::pair<int,
 bool AdvancedSearch::checkExtension(const Board& board, const std::pair<int, int>& move,
                                     int depth) {
     (void)depth;
-
     Board tempBoard = board;
     if (!tempBoard.movePiece(move.first, move.second)) {
         return false;
@@ -478,7 +473,6 @@ std::vector<EnhancedMoveOrdering::MoveScore> EnhancedMoveOrdering::scoreMoves(
         score += getPositionalScore(board, move);
         score += getMobilityScore(board, move);
         score += getThreatScore(board, move);
-
         scoredMoves.emplace_back(move, score);
     }
 
@@ -511,7 +505,6 @@ int EnhancedMoveOrdering::getSEEScore(const Board& board, const std::pair<int, i
 
 int EnhancedMoveOrdering::getThreatScore(const Board& board, const std::pair<int, int>& move) {
     int score = kZero;
-
     Board tempBoard = board;
     if (!tempBoard.movePiece(move.first, move.second)) {
         return kZero;
@@ -544,7 +537,6 @@ int EnhancedMoveOrdering::getMobilityScore(const Board& board, const std::pair<i
 
     GenValidMoves(tempBoard);
     std::vector<std::pair<int, int>> moves = GetAllMoves(tempBoard, tempBoard.turn);
-
     return static_cast<int>(moves.size()) * kMobilityScorePerMove;
 }
 
@@ -552,7 +544,6 @@ int EnhancedMoveOrdering::getPositionalScore(const Board& board, const std::pair
     const Piece& piece = board.squares[move.first].piece;
     int destCol = move.second % kBoardDimension;
     int destRow = move.second / kBoardDimension;
-
     int score = kZero;
 
     switch (piece.PieceType) {
@@ -603,9 +594,7 @@ int TimeManager::allocateTime(Board& board, int depth, int nodes, bool isInCheck
 
     int baseTime = calculateBaseTime();
     int increment = calculateIncrement();
-
     double factor = getTimeFactor(depth, nodes);
-
     GamePhase phase = getGamePhase(board);
     factor *= getPhaseTimeFactor(phase);
 
@@ -900,7 +889,6 @@ void EnhancedOpeningBook::saveBook(const std::string& path) {
         size_t keyLen = key.length();
         file.write(reinterpret_cast<const char*>(&keyLen), sizeof(keyLen));
         file.write(key.c_str(), static_cast<std::streamsize>(keyLen));
-
         size_t numMoves = entries.size();
         file.write(reinterpret_cast<const char*>(&numMoves), sizeof(numMoves));
 
@@ -926,7 +914,6 @@ void EnhancedOpeningBook::loadBook(const std::string& path) {
     }
 
     book.clear();
-
     size_t numPositions{static_cast<size_t>(kZero)};
     file.read(reinterpret_cast<char*>(&numPositions), sizeof(numPositions));
 
@@ -935,10 +922,8 @@ void EnhancedOpeningBook::loadBook(const std::string& path) {
         file.read(reinterpret_cast<char*>(&keyLen), sizeof(keyLen));
         std::string key(keyLen, '\0');
         file.read(key.data(), static_cast<std::streamsize>(keyLen));
-
         auto numMoves = static_cast<size_t>(kZero);
         file.read(reinterpret_cast<char*>(&numMoves), sizeof(numMoves));
-
         std::vector<BookEntry> entries;
         entries.reserve(numMoves);
 
@@ -962,14 +947,12 @@ void EnhancedOpeningBook::loadBook(const std::string& path) {
 
 std::string EnhancedOpeningBook::boardToKey(const Board& board) {
     std::string fen = getFEN(board);
-
     std::istringstream iss(fen);
     std::string position;
     std::string activeColor;
     std::string castling;
     std::string enPassant;
     iss >> position >> activeColor >> castling >> enPassant;
-
     std::ostringstream keyStream;
     keyStream << position << " " << activeColor << " " << castling << " " << enPassant;
     return keyStream.str();

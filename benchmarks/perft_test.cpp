@@ -21,10 +21,8 @@ public:
         auto start = high_resolution_clock::now();
         uint64_t nodes = perft(board, depth);
         auto end = high_resolution_clock::now();
-
         duration<double> time = end - start;
         double nps = nodes / time.count();
-
         return {nodes, time, nps};
     }
 
@@ -33,7 +31,6 @@ public:
             return 1;
 
         uint64_t nodes = 0;
-
         GenValidMoves(board);
         std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
 
@@ -76,9 +73,7 @@ public:
 
     static SearchResult runSearchBenchmark(Board& board, int depth, int timeMs) {
         auto start = high_resolution_clock::now();
-
         auto result = iterativeDeepeningParallel(board, depth, timeMs, 1);
-
         auto end = high_resolution_clock::now();
         duration<double> time = end - start;
 
@@ -99,7 +94,6 @@ void runBenchmarkSuite() {
 
     Board testBoard;
     InitializeBoard(testBoard);
-
     std::cout << "📊 PERFT (Move Generation) Tests:\n";
     std::cout << "Position                 | Depth | Nodes      | Time(s) | NPS        \n";
     std::cout << "-------------------------|-------|------------|---------|------------\n";
@@ -125,7 +119,6 @@ void runBenchmarkSuite() {
 
     for (const auto& [name, fen] : testPositions) {
         InitializeBoard(testBoard);
-
         auto result = SearchBenchmark::runSearchBenchmark(testBoard, 6, 5000);
 
         std::cout << std::left << std::setw(18) << name.substr(0, 17) << "| " << std::setw(5) << 6

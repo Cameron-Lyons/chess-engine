@@ -8,23 +8,18 @@
 void testPosition(const std::string& fen, const std::string& description, int depth = 8) {
     std::cout << "\n=== Testing: " << description << " ===" << '\n';
     std::cout << "FEN: " << fen << '\n';
-
     Board board;
     board.InitializeFromFEN(fen);
-
     auto start = std::chrono::high_resolution_clock::now();
     SearchResult result = iterativeDeepeningParallel(board, depth, 5000, 4);
     auto end = std::chrono::high_resolution_clock::now();
-
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
     int fromSquare = result.bestMove.first;
     int toSquare = result.bestMove.second;
     char fromFile = 'a' + (fromSquare % 8);
     char fromRank = '1' + (fromSquare / 8);
     char toFile = 'a' + (toSquare % 8);
     char toRank = '1' + (toSquare / 8);
-
     std::cout << "Best move: " << fromFile << fromRank << toFile << toRank << '\n';
     std::cout << "Score: " << result.score << " (centipawns)" << '\n';
     std::cout << "Depth reached: " << result.depth << '\n';
@@ -68,11 +63,9 @@ int main() {
     for (const auto& fen : benchmarkFens) {
         Board board;
         board.InitializeFromFEN(fen);
-
         auto start = std::chrono::high_resolution_clock::now();
         SearchResult result = iterativeDeepeningParallel(board, 8, 2000, 4);
         auto end = std::chrono::high_resolution_clock::now();
-
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         totalNodes += result.nodes;
         totalTime += duration.count();
@@ -89,6 +82,5 @@ int main() {
     std::cout << "✓ Futility pruning in non-PV nodes" << '\n';
     std::cout << "✓ Enhanced move ordering with history heuristic" << '\n';
     std::cout << "✓ Aspiration windows in iterative deepening" << '\n';
-
     return 0;
 }

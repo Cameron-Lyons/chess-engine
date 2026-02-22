@@ -22,7 +22,6 @@ public:
     static int bitboardPopCount_SIMD(uint64_t bb);
     static int bitboardLSB_SIMD(uint64_t bb);
     static int bitboardMSB_SIMD(uint64_t bb);
-
     static void optimizeBoardLayout(Board& board);
     static void prefetchBoard(const Board& board);
     static void alignBoardData(Board& board);
@@ -45,7 +44,6 @@ public:
     public:
         MovePool(size_t initialSize = 1000);
         ~MovePool();
-
         std::vector<std::pair<int, int>>* allocate();
         void deallocate(std::vector<std::pair<int, int>>* moves);
         void clear();
@@ -66,7 +64,6 @@ public:
             std::pair<int, int> bestMove;
             std::atomic<int> age;
         };
-
         LockFreeTT(size_t size = 1000000);
         ~LockFreeTT();
 
@@ -88,10 +85,8 @@ public:
             int priority;
             Task(std::function<void()> f, int p = 0) : func(std::move(f)), priority(p) {}
         };
-
         WorkStealingPool(int numThreads = 0);
         ~WorkStealingPool();
-
         void submit(std::function<void()> task, int priority = 0);
         void waitForAll();
         void shutdown();
@@ -103,11 +98,9 @@ public:
             std::condition_variable cv;
             bool shutdown;
         };
-
         std::vector<std::thread> threads;
         std::vector<std::unique_ptr<ThreadData>> threadData;
         std::atomic<bool> globalShutdown;
-
         void workerThread(int threadId);
         bool stealWork(int threadId, std::function<void()>& task);
     };
@@ -118,9 +111,7 @@ public:
                                                   ChessPieceColor color);
 
         static uint64_t countMaterial_SIMD(const Board& board);
-
         static uint64_t calculateMobility_SIMD(const Board& board, ChessPieceColor color);
-
         static uint64_t detectAttacks_SIMD(const Board& board, int square, ChessPieceColor color);
 
     private:
@@ -141,7 +132,6 @@ public:
             uint8_t enPassantFile;
             uint8_t moveCount;
         };
-
         static void convertToAligned(const Board& board, AlignedBoard& aligned);
         static void convertFromAligned(const AlignedBoard& aligned, Board& board);
         static void prefetchAligned(const AlignedBoard& aligned);
@@ -166,17 +156,14 @@ public:
             double cacheHitRate;
             double nodesPerSecond;
         };
-
         PerformanceMonitor();
         ~PerformanceMonitor();
-
         void startMeasurement();
         void endMeasurement();
         void recordNode();
         void recordTTHit();
         void recordCacheMiss();
         void recordBranchMisprediction();
-
         Metrics getMetrics() const;
         void reset();
         void printReport() const;

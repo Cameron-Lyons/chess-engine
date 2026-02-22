@@ -57,16 +57,12 @@ UCIEngine::UCIEngine() : isSearching(false), isPondering(false) {
 
     initKnightAttacks();
     initKingAttacks();
-
     InitZobrist();
-
     board = Board();
     board.InitializeFromFEN(kStartingFen);
-
     nnEvaluator = std::make_unique<NeuralNetworkEvaluator>();
     tablebase = std::make_unique<EndgameTablebase>();
     openingBook = std::make_unique<EnhancedOpeningBook>();
-
     TimeManager::TimeControl tc;
     tc.baseTime = kDefaultBaseTimeMs;
     tc.increment = kDefaultIncrementMs;
@@ -127,7 +123,6 @@ void UCIEngine::processCommand(const std::string& command) {
 void UCIEngine::handleUCI() {
     std::cout << "id name ModernChess v2.0" << '\n';
     std::cout << "id author Chess Engine Team" << '\n';
-
     std::cout << "option name Hash type spin default 32 min 1 max 1024" << '\n';
     std::cout << "option name Threads type spin default 1 min 1 max 16" << '\n';
     std::cout << "option name MultiPV type spin default 1 min 1 max 10" << '\n';
@@ -264,7 +259,6 @@ void UCIEngine::handlePosition(const std::string& command) {
 
                 GenValidMoves(board);
                 std::vector<std::pair<int, int>> validMoves = GetAllMoves(board, board.turn);
-
                 bool isValid = false;
                 for (const auto& validMove : validMoves) {
                     if (validMove.first == movePos.first && validMove.second == movePos.second) {
@@ -297,7 +291,6 @@ void UCIEngine::handleGo(const std::string& command) {
     std::istringstream iss(command);
     std::string word;
     iss >> word;
-
     int wtime = kUnsetTimeValue;
     int btime = kUnsetTimeValue;
     int winc = 0;
@@ -430,19 +423,16 @@ void UCIEngine::handleQuit() {
 
 void UCIEngine::handleDebug(const std::string& command) const {
     (void)command;
-
     std::cout << "info string Debug mode: " << (options.debug ? "enabled" : "disabled") << '\n';
 }
 
 void UCIEngine::handleRegister(const std::string& command) {
     (void)command;
-
     std::cout << "info string Registration not required" << '\n';
 }
 
 void UCIEngine::handleInfo(const std::string& command) {
     (void)command;
-
     std::cout << "info string Info command received" << '\n';
 }
 
@@ -615,13 +605,11 @@ std::string UCINotation::moveToUCI(const std::pair<int, int>& move) {
     int fromRank = move.first / kBoardDimension;
     int toFile = move.second % kBoardDimension;
     int toRank = move.second / kBoardDimension;
-
     std::string result;
     result += static_cast<char>(kMinFileChar + fromFile);
     result += static_cast<char>(kMinRankChar + fromRank);
     result += static_cast<char>(kMinFileChar + toFile);
     result += static_cast<char>(kMinRankChar + toRank);
-
     return result;
 }
 
@@ -643,7 +631,6 @@ std::pair<int, int> UCINotation::uciToMove(const std::string& uciMove) {
 
     int from = (fromRank * kBoardDimension) + fromFile;
     int to = (toRank * kBoardDimension) + toFile;
-
     return {from, to};
 }
 
@@ -654,11 +641,9 @@ std::string UCINotation::squareToAlgebraic(int square) {
 
     int file = square % kBoardDimension;
     int rank = square / kBoardDimension;
-
     std::string result;
     result += static_cast<char>(kMinFileChar + file);
     result += static_cast<char>(kMinRankChar + rank);
-
     return result;
 }
 
@@ -733,7 +718,6 @@ void UCIPosition::parseMoves(const std::string& moves, Board& board) {
 
 std::string UCIPosition::generateFEN(const Board& board) {
     (void)board;
-
     return kStartingFen;
 }
 

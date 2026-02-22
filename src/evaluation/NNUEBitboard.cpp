@@ -69,10 +69,8 @@ void Accumulator::refresh(const BitboardPosition& pos) {
             while (pieceBB) {
                 int square = std::countr_zero(pieceBB);
                 int featureIdx = FeatureTransformer::makeIndex(square, pt, color, kingBucket);
-
                 addFeature(WHITE_PERSPECTIVE, featureIdx);
                 addFeature(BLACK_PERSPECTIVE, featureIdx);
-
                 pieceBB &= pieceBB - ONE;
             }
         }
@@ -122,10 +120,8 @@ void Accumulator::moveFeature(int color, int fromIdx, int toIdx) {
         __m256i acc_vec = _mm256_load_si256((__m256i*)(acc + i));
         __m256i from_vec = _mm256_load_si256((__m256i*)(fromWeights + i));
         __m256i to_vec = _mm256_load_si256((__m256i*)(toWeights + i));
-
         acc_vec = _mm256_sub_epi16(acc_vec, from_vec);
         acc_vec = _mm256_add_epi16(acc_vec, to_vec);
-
         _mm256_store_si256((__m256i*)(acc + i), acc_vec);
     }
 
@@ -177,12 +173,10 @@ void LinearLayer::forward_avx512(const int8_t* input, int32_t* output) const {
         for (int j = NO_INDEX; j < inputSize; j += kAvx512DotProductStride) {
             __m512i in_vec = _mm512_load_si512((__m512i*)(input + j));
             __m512i w_vec = _mm512_load_si512((__m512i*)(w + j));
-
             __m512i in_lo = _mm512_unpacklo_epi8(in_vec, _mm512_setzero_si512());
             __m512i in_hi = _mm512_unpackhi_epi8(in_vec, _mm512_setzero_si512());
             __m512i w_lo = _mm512_unpacklo_epi8(w_vec, _mm512_setzero_si512());
             __m512i w_hi = _mm512_unpackhi_epi8(w_vec, _mm512_setzero_si512());
-
             sum = _mm512_add_epi32(sum, _mm512_madd_epi16(in_lo, w_lo));
             sum = _mm512_add_epi32(sum, _mm512_madd_epi16(in_hi, w_hi));
         }
@@ -237,17 +231,13 @@ void ClippedReLU::forward_avx2(const int32_t* input, int8_t* output) const {
 
     for (int i = NO_INDEX; i < size; i += kAvx2ReluStride) {
         __m256i val = _mm256_load_si256((__m256i*)(input + i));
-
         val = _mm256_max_epi32(val, zero);
         val = _mm256_min_epi32(val, max_val);
-
         val = _mm256_srai_epi32(val, SHIFT);
-
         __m128i val_lo = _mm256_castsi256_si128(val);
         __m128i val_hi = _mm256_extracti128_si256(val, ONE);
         __m128i packed = _mm_packs_epi32(val_lo, val_hi);
         packed = _mm_packs_epi16(packed, packed);
-
         _mm_storel_epi64((__m128i*)(output + i), packed);
     }
 }
@@ -259,12 +249,9 @@ void ClippedReLU::forward_avx512(const int32_t* input, int8_t* output) const {
 
     for (int i = NO_INDEX; i < size; i += kAvx512ReluStride) {
         __m512i val = _mm512_load_si512((__m512i*)(input + i));
-
         val = _mm512_max_epi32(val, zero);
         val = _mm512_min_epi32(val, max_val);
-
         val = _mm512_srai_epi32(val, SHIFT);
-
         __m128i packed = _mm512_cvtepi32_epi8(val);
         _mm_store_si128((__m128i*)(output + i), packed);
     }
@@ -291,7 +278,6 @@ NNUEEvaluator::NNUEEvaluator() {
     ac2 = std::make_unique<ClippedReLU>(L3_SIZE);
     fc3 = std::make_unique<LinearLayer>(L3_SIZE, L3_SIZE);
     fc4 = std::make_unique<LinearLayer>(L3_SIZE, OUTPUT_SIZE);
-
     featureWeights.resize(static_cast<size_t>(INPUT_DIMENSIONS) * static_cast<size_t>(L1_SIZE));
 }
 
@@ -314,7 +300,6 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
               static_cast<std::streamsize>(featureWeights.size() * sizeof(int16_t)));
 
     accumulator.init(featureWeights.data());
-
     return true;
 }
 
@@ -344,15 +329,11 @@ int NNUEEvaluator::evaluate(const BitboardPosition& pos) const {
     alignas(SIMD_ALIGN) int32_t hidden3[L3_SIZE];
     alignas(SIMD_ALIGN) int8_t hidden3_relu[L3_SIZE];
     alignas(SIMD_ALIGN) int32_t output[OUTPUT_SIZE];
-
     transformInput(pos, input);
-
     fc1->forward(input, hidden1);
     ac1->forward(hidden1, hidden1_relu);
-
     fc2->forward(hidden1_relu, hidden2);
     ac2->forward(hidden2, hidden2_relu);
-
     fc3->forward(hidden2_relu, hidden3);
 
     for (int i = NO_INDEX; i < L3_SIZE; ++i) {
@@ -361,7 +342,6 @@ int NNUEEvaluator::evaluate(const BitboardPosition& pos) const {
     }
 
     fc4->forward(hidden3_relu, output);
-
     return output[NO_INDEX] * kScoreScale / QAB;
 }
 
@@ -399,7 +379,6 @@ void NNUEEvaluator::updateAfterMove(const BitboardPosition& pos, int from, int t
         ChessPieceType::KING,
         color == WHITE_PERSPECTIVE ? ChessPieceColor::WHITE : ChessPieceColor::BLACK));
     int kingBucket = FeatureTransformer::getKingBucket(kingSquare);
-
     ChessPieceType finalPiece = promotion != ChessPieceType::NONE ? promotion : piece;
     int toFeature = FeatureTransformer::makeIndex(
         to, static_cast<int>(finalPiece) - PIECE_TYPE_OFFSET, color, kingBucket);

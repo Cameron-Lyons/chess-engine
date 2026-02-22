@@ -93,7 +93,6 @@ class TexelTuner {
     std::vector<TuningPosition> positions;
     std::vector<int> params;
     double scalingK = 1.13;
-
     double sigmoid(double eval) const;
     double computeError(const std::vector<int>& p) const;
     int evaluateWithParams(const Board& board, const std::vector<int>& p) const;
@@ -103,7 +102,6 @@ public:
     bool loadPositions(const std::string& filename);
     void optimize(int iterations);
     void exportParams(const std::string& filename) const;
-
     void initParams();
     double getError() const {
         return computeError(params);

@@ -130,13 +130,11 @@ PositionAnalysis PositionAnalyzer::analyzePosition(const Board& board) {
     analysis.bestMoveScore = kNoMoveScore;
     analysis.secondBestMoveScore = kNoMoveScore;
     analysis.moveQualityGap = kNoMoveScore;
-
     return analysis;
 }
 
 std::string PositionAnalyzer::formatAnalysis(const PositionAnalysis& analysis) {
     std::ostringstream oss;
-
     oss << "=== Position Analysis ===\n\n";
 
     // Material
@@ -299,14 +297,11 @@ int PositionAnalyzer::evaluatePawnStructure(const Board& board) {
 
 int PositionAnalyzer::evaluatePieceActivity(const Board& board) {
     int activity = 0;
-
     Board mutableBoard = board;
     GenValidMoves(mutableBoard);
     std::vector<std::pair<int, int>> whiteMoves = GetAllMoves(mutableBoard, ChessPieceColor::WHITE);
     std::vector<std::pair<int, int>> blackMoves = GetAllMoves(mutableBoard, ChessPieceColor::BLACK);
-
     activity = static_cast<int>(whiteMoves.size() - blackMoves.size());
-
     return activity * kPieceActivityScale;
 }
 
@@ -405,7 +400,6 @@ int PositionAnalyzer::findDiscoveredAttacks(const Board& board) {
 
 std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
     std::vector<std::string> threats;
-
     ChessPieceColor currentColor = board.turn;
     ChessPieceColor enemyColor =
         (currentColor == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
@@ -434,7 +428,6 @@ std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
 
 std::vector<std::string> PositionAnalyzer::identifyOpportunities(const Board& board) {
     std::vector<std::string> opportunities;
-
     Board mutableBoard = board;
     GenValidMoves(mutableBoard);
     std::vector<std::pair<int, int>> moves = GetAllMoves(mutableBoard, board.turn);
@@ -453,7 +446,6 @@ std::vector<std::string> PositionAnalyzer::identifyOpportunities(const Board& bo
 
 std::vector<std::string> PositionAnalyzer::identifyWeaknesses(const Board& board) {
     std::vector<std::string> weaknesses;
-
     int hanging = findHangingPieces(board);
     if (hanging > 0) {
         weaknesses.push_back(std::to_string(hanging) + " hanging piece(s)");

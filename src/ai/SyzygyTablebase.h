@@ -53,7 +53,6 @@ struct Position {
     uint8_t ep;
     uint8_t rule50;
     bool turn;
-
     static Position fromBoard(const Board& board);
 };
 

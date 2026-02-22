@@ -67,17 +67,14 @@ struct LMRParams {
     static constexpr int VERIFY_SCORE_MARGIN = 50;
     static constexpr int FAIL_COUNT_THRESHOLD = 2;
     static constexpr int REDUCTION_STEP = 1;
-
     static constexpr double CAPTURE_FACTOR = 0.5;
     static constexpr double CHECK_FACTOR = 0.3;
     static constexpr double KILLER_FACTOR = 0.6;
     static constexpr double COUNTER_FACTOR = 0.7;
     static constexpr double HISTORY_FACTOR = 0.8;
-
     static constexpr double ENDGAME_FACTOR = 0.8;
     static constexpr double TACTICAL_FACTOR = 0.5;
     static constexpr double PV_FACTOR = 0.7;
-
     static constexpr double IMPROVING_FACTOR = 0.8;
     static constexpr double SINGULAR_FACTOR = 0.6;
 };
@@ -85,7 +82,6 @@ struct LMRParams {
 struct MoveClassification {
     static constexpr int DEFAULT_HISTORY_SCORE = 0;
     static constexpr int INITIAL_MOVE_NUMBER = 0;
-
     bool isCapture;
     bool givesCheck;
     bool isKiller;
@@ -108,7 +104,6 @@ struct PositionContext {
     static constexpr int INITIAL_GAME_PHASE = 0;
     static constexpr int INITIAL_STATIC_EVAL = 0;
     static constexpr int INITIAL_EVAL_TREND = 0;
-
     bool inCheck;
     bool isPVNode;
     bool isEndgame;
@@ -189,10 +184,8 @@ inline int calculateReduction(int depth, const MoveClassification& move,
         LMRParams::BASE_PHASE_FACTOR -
         ((position.gamePhase / LMRParams::PHASE_NORMALIZATION) * LMRParams::PHASE_REDUCTION_SCALE);
     reduction = static_cast<int>(reduction * phaseFactor);
-
     reduction = std::max(LMRParams::NO_REDUCTION, std::min(reduction, LMRParams::MAX_REDUCTION));
     reduction = std::min(reduction, depth - LMRParams::MIN_DEPTH_REMAINING);
-
     return reduction;
 }
 
