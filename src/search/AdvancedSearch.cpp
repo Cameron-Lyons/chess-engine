@@ -11,17 +11,133 @@
 #include <sstream>
 #include <unordered_map>
 
+namespace {
+constexpr int kZero = 0;
+constexpr int kOne = 1;
+constexpr int kBoardSquareCount = 64;
+constexpr int kBoardDimension = 8;
+constexpr int kInvalidSquare = -1;
+constexpr int kCenterStart = 2;
+constexpr int kCenterEnd = 5;
+constexpr int kRookPromotionRank = 6;
+constexpr int kRookDevelopmentRank = 1;
+
+constexpr int kFutilityMarginPerDepth = 150;
+constexpr int kShallowDepthLimit = 3;
+constexpr int kTacticalBonusPerMissingPly = 50;
+constexpr int kDeltaMarginBase = 975;
+constexpr int kDeltaMarginPerDepth = 50;
+
+constexpr int kStaticNullDepthLimit = 4;
+constexpr int kStaticNullMarginBase = 900;
+constexpr int kStaticNullMarginPerDepth = 50;
+
+constexpr int kNullMoveMinDepth = 3;
+constexpr int kNullMoveMinMaterialCount = 3;
+constexpr int kNullMoveMinTotalMaterial = 300;
+constexpr int kNullMoveMaxMaterialCount = 4;
+
+constexpr int kLmrMinDepth = 3;
+constexpr int kLmrMinMoveNumber = 4;
+constexpr int kLmrSecondReductionMove = 8;
+constexpr int kLmrThirdReductionMove = 12;
+constexpr int kLmrSecondReduction = 2;
+constexpr int kLmrThirdReduction = 3;
+
+constexpr int kMultiCutMinDepth = 4;
+constexpr int kMultiCutMinMoves = 8;
+constexpr int kMultiCutDepthReduction = 3;
+constexpr int kMultiCutCutoffCount = 2;
+
+constexpr int kIidMinDepth = 4;
+constexpr int kIidDepthReduction = 2;
+
+constexpr int kSingularMinDepth = 6;
+constexpr int kSingularDepthReduction = 1;
+constexpr int kSingularOtherMoveReduction = 2;
+constexpr int kSingularBetterMoveCutoff = 2;
+
+constexpr int kHistoryPruningDepthLimit = 3;
+constexpr int kHistoryPruningThreshold = -1000;
+constexpr int kLateMovePruningMoveThreshold = 4;
+constexpr int kRecaptureMaxLastMove = kBoardSquareCount - 1;
+constexpr int kPawnPushWhiteAdvancedRank = 5;
+constexpr int kPawnPushBlackAdvancedRank = 2;
+
+constexpr int kHashMoveScore = 10000;
+constexpr int kSeeVictimScale = 10;
+constexpr int kSeeUndervaluedCaptureBonus = 50;
+constexpr int kSeeCenterBonus = 10;
+constexpr int kThreatValueDivisor = 10;
+constexpr int kMobilityScorePerMove = 2;
+constexpr int kPawnAdvanceBonus = 5;
+constexpr int kCenterMinorBonus = 10;
+constexpr int kRookRankBonus = 15;
+constexpr int kCenterQueenBonus = 5;
+
+constexpr int kDefaultTotalMoves = 30;
+constexpr double kInCheckTimeFactor = 1.5;
+constexpr int kLowMobilityMoveThreshold = 10;
+constexpr int kHighMobilityMoveThreshold = 25;
+constexpr double kLowMobilityTimeFactor = 1.2;
+constexpr double kHighMobilityTimeFactor = 0.8;
+constexpr int kMinAllocatedTimeMs = 50;
+constexpr int kMaxBaseTimeMultiplier = 2;
+constexpr int kInfiniteBaseTimeMs = 30000;
+constexpr int kMinMovesRemaining = 10;
+constexpr int kMaxDepthBeforeStop = 20;
+constexpr double kEmergencyTimeFraction = 0.8;
+constexpr int kDeepSearchDepth = 10;
+constexpr double kDeepSearchTimeFactor = 1.2;
+constexpr double kShallowSearchTimeFactor = 0.8;
+constexpr int kLargeNodeThreshold = 1000000;
+constexpr double kLargeNodeTimeFactor = 1.1;
+
+constexpr int kQueenMaterialValue = 900;
+constexpr int kRookMaterialValue = 500;
+constexpr int kMinorMaterialValue = 300;
+constexpr int kPawnMaterialValue = 100;
+constexpr int kOpeningMaterialThreshold = 6000;
+constexpr int kOpeningPieceCountThreshold = 20;
+constexpr int kEndgameMaterialThreshold = 2000;
+constexpr int kEndgamePieceCountThreshold = 10;
+constexpr int kEndgameRookCountThreshold = 1;
+constexpr int kEndgameMinorPieceCountThreshold = 2;
+constexpr double kOpeningPhaseTimeFactor = 0.7;
+constexpr double kMiddlegamePhaseTimeFactor = 1.0;
+constexpr double kEndgamePhaseTimeFactor = 1.3;
+
+constexpr int kMinBookMoveLength = 4;
+constexpr int kSingleThreadContextCount = 1;
+constexpr int kRootPly = 0;
+constexpr int kFirstMoveIndex = 0;
+constexpr int kNarrowWindowWidth = 1;
+constexpr int kMinReducedDepth = 1;
+constexpr int kNoBetterMoves = 0;
+constexpr int kMoveSourceFileIndex = 0;
+constexpr int kMoveSourceRankIndex = 1;
+constexpr int kMoveDestFileIndex = 2;
+constexpr int kMoveDestRankIndex = 3;
+constexpr char kBookFileOffset = 'a';
+constexpr char kBookRankOffset = '1';
+constexpr int kOpeningMinQueenCount = 1;
+constexpr int kNormalizedWeightTotal = 1000;
+constexpr int kFallbackWeight = 1;
+constexpr double kDefaultTimeFactor = 1.0;
+constexpr float kZeroFloat = 0.0F;
+} // namespace
+
 bool AdvancedSearch::futilityPruning(const Board& board, int depth, int alpha, int beta,
                                      int staticEval) {
 
-    if (isInCheck(board, board.turn) || depth == 0) {
+    if (isInCheck(board, board.turn) || depth == kZero) {
         return false;
     }
 
-    int futilityMargin = 150 * depth;
+    int futilityMargin = kFutilityMarginPerDepth * depth;
 
-    if (depth <= 3) {
-        int tacticalBonus = 50 * (3 - depth);
+    if (depth <= kShallowDepthLimit) {
+        int tacticalBonus = kTacticalBonusPerMissingPly * (kShallowDepthLimit - depth);
         futilityMargin += tacticalBonus;
     }
 
@@ -29,8 +145,8 @@ bool AdvancedSearch::futilityPruning(const Board& board, int depth, int alpha, i
         return true;
     }
 
-    if (depth <= 3) {
-        int deltaMargin = 975 + 50 * depth;
+    if (depth <= kShallowDepthLimit) {
+        int deltaMargin = kDeltaMarginBase + (kDeltaMarginPerDepth * depth);
         if (staticEval + deltaMargin < alpha) {
             return true;
         }
@@ -43,13 +159,13 @@ bool AdvancedSearch::staticNullMovePruning(const Board& board, int depth, int al
                                            int staticEval) {
     (void)alpha;
 
-    if (isInCheck(board, board.turn) || depth == 0) {
+    if (isInCheck(board, board.turn) || depth == kZero) {
         return false;
     }
 
-    if (depth <= 4) {
+    if (depth <= kStaticNullDepthLimit) {
 
-        int margin = 900 + 50 * depth;
+        int margin = kStaticNullMarginBase + (kStaticNullMarginPerDepth * depth);
         int eval = staticEval - margin;
 
         if (eval >= beta) {
@@ -64,14 +180,14 @@ bool AdvancedSearch::nullMovePruning(const Board& board, int depth, int alpha, i
     (void)alpha;
     (void)beta;
 
-    if (isInCheck(board, board.turn) || depth < 3) {
+    if (isInCheck(board, board.turn) || depth < kNullMoveMinDepth) {
         return false;
     }
 
-    int materialCount = 0;
-    int totalMaterial = 0;
+    int materialCount = kZero;
+    int totalMaterial = kZero;
 
-    for (int i = 0; i < 64; i++) {
+    for (int i = kZero; i < kBoardSquareCount; i++) {
         const Piece& piece = board.squares[i].piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
             materialCount++;
@@ -79,11 +195,11 @@ bool AdvancedSearch::nullMovePruning(const Board& board, int depth, int alpha, i
         }
     }
 
-    if (materialCount < 3 || totalMaterial < 300) {
+    if (materialCount < kNullMoveMinMaterialCount || totalMaterial < kNullMoveMinTotalMaterial) {
         return false;
     }
 
-    if (materialCount <= 4) {
+    if (materialCount <= kNullMoveMaxMaterialCount) {
         return false;
     }
 
@@ -95,21 +211,23 @@ bool AdvancedSearch::lateMoveReduction(const Board& board, int depth, int moveNu
     (void)alpha;
     (void)beta;
 
-    if (isInCheck(board, board.turn) || depth < 3 || moveNumber < 4) {
+    if (isInCheck(board, board.turn) || depth < kLmrMinDepth || moveNumber < kLmrMinMoveNumber) {
         return false;
     }
 
-    if (depth <= 3) {
+    if (depth <= kShallowDepthLimit) {
         return false;
     }
 
-    int reduction = 1;
-    if (moveNumber >= 8)
-        reduction = 2;
-    if (moveNumber >= 12)
-        reduction = 3;
+    int reduction = kMinReducedDepth;
+    if (moveNumber >= kLmrSecondReductionMove) {
+        reduction = kLmrSecondReduction;
+    }
+    if (moveNumber >= kLmrThirdReductionMove) {
+        reduction = kLmrThirdReduction;
+    }
 
-    if (depth - reduction < 1) {
+    if (depth - reduction < kMinReducedDepth) {
         return false;
     }
 
@@ -119,59 +237,59 @@ bool AdvancedSearch::lateMoveReduction(const Board& board, int depth, int moveNu
 bool AdvancedSearch::multiCutPruning(Board& board, int depth, int alpha, int beta, int r) {
     (void)alpha;
 
-    if (isInCheck(board, board.turn) || depth < 4) {
+    if (isInCheck(board, board.turn) || depth < kMultiCutMinDepth) {
         return false;
     }
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
 
-    if (moves.size() < 8) {
+    if (moves.size() < kMultiCutMinMoves) {
         return false;
     }
 
-    int nullMoveCount = 0;
-    for (int i = 0; i < r && i < static_cast<int>(moves.size()); i++) {
+    int nullMoveCount = kZero;
+    for (int i = kZero; i < r && i < static_cast<int>(moves.size()); i++) {
 
         Board tempBoard = board;
         tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                     : ChessPieceColor::WHITE;
 
         ThreadSafeHistory historyTable;
-        ParallelSearchContext context(1);
-        int nullScore =
-            -AlphaBetaSearch(tempBoard, depth - 3, -beta, -beta + 1,
-                             !(board.turn == ChessPieceColor::WHITE), 0, historyTable, context);
+        ParallelSearchContext context(kSingleThreadContextCount);
+        int nullScore = -AlphaBetaSearch(
+            tempBoard, depth - kMultiCutDepthReduction, -beta, -beta + kNarrowWindowWidth,
+            !(board.turn == ChessPieceColor::WHITE), kRootPly, historyTable, context);
 
         if (nullScore >= beta) {
             nullMoveCount++;
         }
     }
 
-    return nullMoveCount >= 2;
+    return nullMoveCount >= kMultiCutCutoffCount;
 }
 
 std::pair<int, int> AdvancedSearch::internalIterativeDeepening(Board& board, int depth, int alpha,
                                                                int beta) {
 
-    if (depth < 4) {
-        return {-1, -1};
+    if (depth < kIidMinDepth) {
+        return {kInvalidSquare, kInvalidSquare};
     }
 
     ThreadSafeHistory historyTable;
-    ParallelSearchContext context(1);
+    ParallelSearchContext context(kSingleThreadContextCount);
 
-    int reducedDepth = std::max(1, depth - 2);
-    (void)AlphaBetaSearch(board, reducedDepth, alpha, beta, board.turn == ChessPieceColor::WHITE, 0,
-                          historyTable, context);
+    int reducedDepth = std::max(kMinReducedDepth, depth - kIidDepthReduction);
+    (void)AlphaBetaSearch(board, reducedDepth, alpha, beta, board.turn == ChessPieceColor::WHITE,
+                          kRootPly, historyTable, context);
 
-    return {-1, -1};
+    return {kInvalidSquare, kInvalidSquare};
 }
 
 bool AdvancedSearch::singularExtension(Board& board, int depth, const std::pair<int, int>& move,
                                        int alpha, int beta) {
 
-    if (depth < 6) {
+    if (depth < kSingularMinDepth) {
         return false;
     }
 
@@ -183,44 +301,48 @@ bool AdvancedSearch::singularExtension(Board& board, int depth, const std::pair<
                                                                 : ChessPieceColor::WHITE;
 
     ThreadSafeHistory historyTable;
-    ParallelSearchContext context(1);
+    ParallelSearchContext context(kSingleThreadContextCount);
 
-    int reducedDepth = depth - 1;
-    int score = AlphaBetaSearch(tempBoard, reducedDepth, alpha, beta,
-                                !(board.turn == ChessPieceColor::WHITE), 0, historyTable, context);
+    int reducedDepth = depth - kSingularDepthReduction;
+    int score =
+        AlphaBetaSearch(tempBoard, reducedDepth, alpha, beta,
+                        !(board.turn == ChessPieceColor::WHITE), kRootPly, historyTable, context);
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
 
-    int betterMoves = 0;
+    int betterMoves = kZero;
     for (const auto& otherMove : moves) {
-        if (otherMove == move)
+        if (otherMove == move) {
             continue;
+        }
 
         Board otherBoard = board;
-        if (!otherBoard.movePiece(otherMove.first, otherMove.second))
+        if (!otherBoard.movePiece(otherMove.first, otherMove.second)) {
             continue;
+        }
         otherBoard.turn = (otherBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                       : ChessPieceColor::WHITE;
 
-        int otherScore =
-            AlphaBetaSearch(otherBoard, reducedDepth - 2, alpha, beta,
-                            !(board.turn == ChessPieceColor::WHITE), 0, historyTable, context);
+        int otherScore = AlphaBetaSearch(otherBoard, reducedDepth - kSingularOtherMoveReduction,
+                                         alpha, beta, !(board.turn == ChessPieceColor::WHITE),
+                                         kRootPly, historyTable, context);
 
         if (otherScore >= score) {
             betterMoves++;
-            if (betterMoves >= 2)
+            if (betterMoves >= kSingularBetterMoveCutoff) {
                 break;
+            }
         }
     }
 
-    return betterMoves == 0;
+    return betterMoves == kNoBetterMoves;
 }
 
 bool AdvancedSearch::historyPruning(const Board& board, int depth, const std::pair<int, int>& move,
                                     const ThreadSafeHistory& history) {
 
-    if (isInCheck(board, board.turn) || depth == 0) {
+    if (isInCheck(board, board.turn) || depth == kZero) {
         return false;
     }
 
@@ -230,11 +352,7 @@ bool AdvancedSearch::historyPruning(const Board& board, int depth, const std::pa
 
     int historyScore = history.getScore(move.first, move.second);
 
-    if (depth <= 3 && historyScore < -1000) {
-        return true;
-    }
-
-    return false;
+    return depth <= kHistoryPruningDepthLimit && historyScore < kHistoryPruningThreshold;
 }
 
 bool AdvancedSearch::lateMovePruning(const Board& board, int depth, int moveNumber, bool inCheck) {
@@ -244,11 +362,11 @@ bool AdvancedSearch::lateMovePruning(const Board& board, int depth, int moveNumb
         return false;
     }
 
-    if (depth == 0 || depth > 3) {
+    if (depth == kZero || depth > kShallowDepthLimit) {
         return false;
     }
 
-    if (moveNumber >= 4 && depth <= 3) {
+    if (moveNumber >= kLateMovePruningMoveThreshold && depth <= kShallowDepthLimit) {
         return true;
     }
 
@@ -259,7 +377,7 @@ bool AdvancedSearch::recaptureExtension(const Board& board, const std::pair<int,
                                         int depth) {
     (void)depth;
 
-    if (board.LastMove < 0 || board.LastMove >= 64) {
+    if (board.LastMove < kZero || board.LastMove > kRecaptureMaxLastMove) {
         return false;
     }
 
@@ -298,11 +416,11 @@ bool AdvancedSearch::pawnPushExtension(const Board& board, const std::pair<int, 
         return false;
     }
 
-    int destRow = move.second / 8;
-    if (piece.PieceColor == ChessPieceColor::WHITE && destRow >= 5) {
+    int destRow = move.second / kBoardDimension;
+    if (piece.PieceColor == ChessPieceColor::WHITE && destRow >= kPawnPushWhiteAdvancedRank) {
         return true;
     }
-    if (piece.PieceColor == ChessPieceColor::BLACK && destRow <= 2) {
+    if (piece.PieceColor == ChessPieceColor::BLACK && destRow <= kPawnPushBlackAdvancedRank) {
         return true;
     }
 
@@ -318,13 +436,13 @@ bool AdvancedSearch::passedPawnExtension(const Board& board, const std::pair<int
         return false;
     }
 
-    int srcRow = move.first / 8;
-    int destRow = move.second / 8;
+    int srcRow = move.first / kBoardDimension;
+    int destRow = move.second / kBoardDimension;
 
-    if (piece.PieceColor == ChessPieceColor::WHITE && destRow - srcRow > 0) {
+    if (piece.PieceColor == ChessPieceColor::WHITE && destRow - srcRow > kZero) {
         return true;
     }
-    if (piece.PieceColor == ChessPieceColor::BLACK && srcRow - destRow > 0) {
+    if (piece.PieceColor == ChessPieceColor::BLACK && srcRow - destRow > kZero) {
         return true;
     }
 
@@ -339,10 +457,10 @@ std::vector<EnhancedMoveOrdering::MoveScore> EnhancedMoveOrdering::scoreMoves(
     std::vector<MoveScore> scoredMoves;
 
     for (const auto& move : moves) {
-        int score = 0;
+        int score = kZero;
 
         if (move == hashMove) {
-            score = 10000;
+            score = kHashMoveScore;
         }
 
         else if (board.squares[move.second].piece.PieceType != ChessPieceType::NONE) {
@@ -371,30 +489,32 @@ int EnhancedMoveOrdering::getSEEScore(const Board& board, const std::pair<int, i
     const Piece& attacker = board.squares[move.first].piece;
     const Piece& victim = board.squares[move.second].piece;
 
-    if (victim.PieceType == ChessPieceType::NONE)
-        return 0;
-
-    int score = victim.PieceValue * 10 - attacker.PieceValue;
-
-    if (attacker.PieceValue < victim.PieceValue) {
-        score += 50;
+    if (victim.PieceType == ChessPieceType::NONE) {
+        return kZero;
     }
 
-    int destCol = move.second % 8;
-    int destRow = move.second / 8;
-    if ((destCol >= 2 && destCol <= 5) && (destRow >= 2 && destRow <= 5)) {
-        score += 10;
+    int score = (victim.PieceValue * kSeeVictimScale) - attacker.PieceValue;
+
+    if (attacker.PieceValue < victim.PieceValue) {
+        score += kSeeUndervaluedCaptureBonus;
+    }
+
+    int destCol = move.second % kBoardDimension;
+    int destRow = move.second / kBoardDimension;
+    if ((destCol >= kCenterStart && destCol <= kCenterEnd) &&
+        (destRow >= kCenterStart && destRow <= kCenterEnd)) {
+        score += kSeeCenterBonus;
     }
 
     return score;
 }
 
 int EnhancedMoveOrdering::getThreatScore(const Board& board, const std::pair<int, int>& move) {
-    int score = 0;
+    int score = kZero;
 
     Board tempBoard = board;
     if (!tempBoard.movePiece(move.first, move.second)) {
-        return 0;
+        return kZero;
     }
     tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                 : ChessPieceColor::WHITE;
@@ -406,7 +526,7 @@ int EnhancedMoveOrdering::getThreatScore(const Board& board, const std::pair<int
         const Piece& threatenedPiece = board.squares[oppMove.second].piece;
         if (threatenedPiece.PieceType != ChessPieceType::NONE &&
             threatenedPiece.PieceColor == board.turn) {
-            score += threatenedPiece.PieceValue / 10;
+            score += threatenedPiece.PieceValue / kThreatValueDivisor;
         }
     }
 
@@ -417,7 +537,7 @@ int EnhancedMoveOrdering::getMobilityScore(const Board& board, const std::pair<i
 
     Board tempBoard = board;
     if (!tempBoard.movePiece(move.first, move.second)) {
-        return 0;
+        return kZero;
     }
     tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                 : ChessPieceColor::WHITE;
@@ -425,45 +545,47 @@ int EnhancedMoveOrdering::getMobilityScore(const Board& board, const std::pair<i
     GenValidMoves(tempBoard);
     std::vector<std::pair<int, int>> moves = GetAllMoves(tempBoard, tempBoard.turn);
 
-    return moves.size() * 2;
+    return static_cast<int>(moves.size()) * kMobilityScorePerMove;
 }
 
 int EnhancedMoveOrdering::getPositionalScore(const Board& board, const std::pair<int, int>& move) {
     const Piece& piece = board.squares[move.first].piece;
-    int destCol = move.second % 8;
-    int destRow = move.second / 8;
+    int destCol = move.second % kBoardDimension;
+    int destRow = move.second / kBoardDimension;
 
-    int score = 0;
+    int score = kZero;
 
     switch (piece.PieceType) {
         case ChessPieceType::PAWN:
 
             if (piece.PieceColor == ChessPieceColor::WHITE) {
-                score += destRow * 5;
+                score += destRow * kPawnAdvanceBonus;
             } else {
-                score += (7 - destRow) * 5;
+                score += ((kBoardDimension - kOne) - destRow) * kPawnAdvanceBonus;
             }
             break;
 
         case ChessPieceType::KNIGHT:
         case ChessPieceType::BISHOP:
 
-            if ((destCol >= 2 && destCol <= 5) && (destRow >= 2 && destRow <= 5)) {
-                score += 10;
+            if ((destCol >= kCenterStart && destCol <= kCenterEnd) &&
+                (destRow >= kCenterStart && destRow <= kCenterEnd)) {
+                score += kCenterMinorBonus;
             }
             break;
 
         case ChessPieceType::ROOK:
 
-            if (destRow == 6 || destRow == 1) {
-                score += 15;
+            if (destRow == kRookPromotionRank || destRow == kRookDevelopmentRank) {
+                score += kRookRankBonus;
             }
             break;
 
         case ChessPieceType::QUEEN:
 
-            if ((destCol >= 2 && destCol <= 5) && (destRow >= 2 && destRow <= 5)) {
-                score += 5;
+            if ((destCol >= kCenterStart && destCol <= kCenterEnd) &&
+                (destRow >= kCenterStart && destRow <= kCenterEnd)) {
+                score += kCenterQueenBonus;
             }
             break;
 
@@ -474,7 +596,8 @@ int EnhancedMoveOrdering::getPositionalScore(const Board& board, const std::pair
     return score;
 }
 
-TimeManager::TimeManager(const TimeControl& tc) : timeControl(tc), moveNumber(0), totalMoves(30) {}
+TimeManager::TimeManager(const TimeControl& tc)
+    : timeControl(tc), moveNumber(kZero), totalMoves(kDefaultTotalMoves) {}
 
 int TimeManager::allocateTime(Board& board, int depth, int nodes, bool isInCheck) {
 
@@ -487,39 +610,40 @@ int TimeManager::allocateTime(Board& board, int depth, int nodes, bool isInCheck
     factor *= getPhaseTimeFactor(phase);
 
     if (isInCheck) {
-        factor *= 1.5;
+        factor *= kInCheckTimeFactor;
     }
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
 
-    if (moves.size() < 10) {
-        factor *= 1.2;
-    } else if (moves.size() > 25) {
-        factor *= 0.8;
+    if (moves.size() < kLowMobilityMoveThreshold) {
+        factor *= kLowMobilityTimeFactor;
+    } else if (moves.size() > kHighMobilityMoveThreshold) {
+        factor *= kHighMobilityTimeFactor;
     }
 
     int allocatedTime = static_cast<int>((baseTime + increment) * factor);
 
-    allocatedTime = std::max(50, std::min(allocatedTime, baseTime * 2));
+    allocatedTime =
+        std::max(kMinAllocatedTimeMs, std::min(allocatedTime, baseTime * kMaxBaseTimeMultiplier));
 
     return allocatedTime;
 }
 
-int TimeManager::calculateBaseTime() {
+int TimeManager::calculateBaseTime() const {
     if (timeControl.isInfinite) {
-        return 30000;
+        return kInfiniteBaseTimeMs;
     }
 
-    if (timeControl.movesToGo > 0) {
+    if (timeControl.movesToGo > kZero) {
         return timeControl.baseTime / timeControl.movesToGo;
     }
 
-    int movesRemaining = std::max(10, totalMoves - moveNumber);
+    int movesRemaining = std::max(kMinMovesRemaining, totalMoves - moveNumber);
     return timeControl.baseTime / movesRemaining;
 }
 
-int TimeManager::calculateIncrement() {
+int TimeManager::calculateIncrement() const {
     return timeControl.increment;
 }
 
@@ -534,7 +658,7 @@ bool TimeManager::shouldStop(int elapsedTime, int allocatedTime, int depth, int 
         return true;
     }
 
-    if (depth >= 20) {
+    if (depth >= kMaxDepthBeforeStop) {
         return true;
     }
 
@@ -548,53 +672,53 @@ void TimeManager::updateGameProgress(int moveNumber, int totalMoves) {
 
 bool TimeManager::isEmergencyTime(int remainingTime, int allocatedTime) {
 
-    return allocatedTime > remainingTime * 0.8;
+    return allocatedTime > remainingTime * kEmergencyTimeFraction;
 }
 
 double TimeManager::getTimeFactor(int depth, int nodes) {
 
-    double factor = 1.0;
+    double factor = kDefaultTimeFactor;
 
-    if (depth >= 10) {
-        factor *= 1.2;
-    } else if (depth <= 3) {
-        factor *= 0.8;
+    if (depth >= kDeepSearchDepth) {
+        factor *= kDeepSearchTimeFactor;
+    } else if (depth <= kShallowDepthLimit) {
+        factor *= kShallowSearchTimeFactor;
     }
 
-    if (nodes > 1000000) {
-        factor *= 1.1;
+    if (nodes > kLargeNodeThreshold) {
+        factor *= kLargeNodeTimeFactor;
     }
 
     return factor;
 }
 
 GamePhase TimeManager::getGamePhase(const Board& board) const {
-    int totalMaterial = 0;
-    int pieceCount = 0;
-    int queenCount = 0;
-    int rookCount = 0;
-    int minorPieceCount = 0;
+    int totalMaterial = kZero;
+    int pieceCount = kZero;
+    int queenCount = kZero;
+    int rookCount = kZero;
+    int minorPieceCount = kZero;
 
-    for (int sq = 0; sq < 64; ++sq) {
+    for (int sq = kZero; sq < kBoardSquareCount; ++sq) {
         const Piece& piece = board.squares[sq].piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
             pieceCount++;
             switch (piece.PieceType) {
                 case ChessPieceType::QUEEN:
-                    totalMaterial += 900;
+                    totalMaterial += kQueenMaterialValue;
                     queenCount++;
                     break;
                 case ChessPieceType::ROOK:
-                    totalMaterial += 500;
+                    totalMaterial += kRookMaterialValue;
                     rookCount++;
                     break;
                 case ChessPieceType::BISHOP:
                 case ChessPieceType::KNIGHT:
-                    totalMaterial += 300;
+                    totalMaterial += kMinorMaterialValue;
                     minorPieceCount++;
                     break;
                 case ChessPieceType::PAWN:
-                    totalMaterial += 100;
+                    totalMaterial += kPawnMaterialValue;
                     break;
                 default:
                     break;
@@ -602,12 +726,14 @@ GamePhase TimeManager::getGamePhase(const Board& board) const {
         }
     }
 
-    if (totalMaterial > 6000 && queenCount >= 1 && pieceCount > 20) {
+    if (totalMaterial > kOpeningMaterialThreshold && queenCount >= kOpeningMinQueenCount &&
+        pieceCount > kOpeningPieceCountThreshold) {
         return GamePhase::OPENING;
     }
 
-    if (totalMaterial < 2000 || pieceCount <= 10 ||
-        (queenCount == 0 && rookCount <= 1 && minorPieceCount <= 2)) {
+    if (totalMaterial < kEndgameMaterialThreshold || pieceCount <= kEndgamePieceCountThreshold ||
+        (queenCount == kZero && rookCount <= kEndgameRookCountThreshold &&
+         minorPieceCount <= kEndgameMinorPieceCountThreshold)) {
         return GamePhase::ENDGAME;
     }
 
@@ -617,17 +743,17 @@ GamePhase TimeManager::getGamePhase(const Board& board) const {
 double TimeManager::getPhaseTimeFactor(GamePhase phase) const {
     switch (phase) {
         case GamePhase::OPENING:
-            return 0.7;
+            return kOpeningPhaseTimeFactor;
         case GamePhase::MIDDLEGAME:
-            return 1.0;
+            return kMiddlegamePhaseTimeFactor;
         case GamePhase::ENDGAME:
-            return 1.3;
+            return kEndgamePhaseTimeFactor;
         default:
-            return 1.0;
+            return kMiddlegamePhaseTimeFactor;
     }
 }
 
-EnhancedOpeningBook::EnhancedOpeningBook(const std::string& bookPath) : book(), bookPath(bookPath) {
+EnhancedOpeningBook::EnhancedOpeningBook(const std::string& bookPath) : bookPath(bookPath) {
     loadBook(bookPath);
 }
 
@@ -646,16 +772,16 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
     if (it != book.end() && !it->second.empty()) {
         const auto& entries = it->second;
         if (randomize) {
-            int totalWeight = 0;
+            int totalWeight = kZero;
             for (const auto& entry : entries) {
                 totalWeight += entry.weight;
             }
-            if (totalWeight > 0) {
+            if (totalWeight > kZero) {
                 static std::random_device rd;
                 static std::mt19937 gen(rd());
-                std::uniform_int_distribution<> dis(0, totalWeight - 1);
+                std::uniform_int_distribution<> dis(kZero, totalWeight - kOne);
                 int random = dis(gen);
-                int cumulative = 0;
+                int cumulative = kZero;
                 for (const auto& entry : entries) {
                     cumulative += entry.weight;
                     if (random < cumulative) {
@@ -663,7 +789,7 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
                     }
                 }
             }
-            return entries[0].move;
+            return entries[kFirstMoveIndex].move;
         } else {
             auto bestIt =
                 std::ranges::max_element(entries, [](const BookEntry& a, const BookEntry& b) {
@@ -684,11 +810,12 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
             if (randomize) {
                 static std::random_device rd;
                 static std::mt19937 gen(rd());
-                std::uniform_int_distribution<> dis(0, options.size() - 1);
+                std::uniform_int_distribution<int> dis(kZero,
+                                                       static_cast<int>(options.size() - kOne));
                 std::string move = options[dis(gen)];
                 return parseMove(move);
             } else {
-                return parseMove(options[0]);
+                return parseMove(options[kFirstMoveIndex]);
             }
         }
     }
@@ -698,25 +825,27 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
         return parseMove(legacyIt->second);
     }
 
-    return {-1, -1};
+    return {kInvalidSquare, kInvalidSquare};
 }
 
 std::pair<int, int> EnhancedOpeningBook::parseMove(const std::string& move) {
 
-    if (move.length() < 4)
-        return {-1, -1};
-
-    int srcCol = move[0] - 'a';
-    int srcRow = move[1] - '1';
-    int destCol = move[2] - 'a';
-    int destRow = move[3] - '1';
-
-    if (srcCol < 0 || srcCol > 7 || srcRow < 0 || srcRow > 7 || destCol < 0 || destCol > 7 ||
-        destRow < 0 || destRow > 7) {
-        return {-1, -1};
+    if (move.length() < kMinBookMoveLength) {
+        return {kInvalidSquare, kInvalidSquare};
     }
 
-    return {(srcRow * 8) + srcCol, (destRow * 8) + destCol};
+    int srcCol = move[kMoveSourceFileIndex] - kBookFileOffset;
+    int srcRow = move[kMoveSourceRankIndex] - kBookRankOffset;
+    int destCol = move[kMoveDestFileIndex] - kBookFileOffset;
+    int destRow = move[kMoveDestRankIndex] - kBookRankOffset;
+
+    if (srcCol < kZero || srcCol >= kBoardDimension || srcRow < kZero ||
+        srcRow >= kBoardDimension || destCol < kZero || destCol >= kBoardDimension ||
+        destRow < kZero || destRow >= kBoardDimension) {
+        return {kInvalidSquare, kInvalidSquare};
+    }
+
+    return {(srcRow * kBoardDimension) + srcCol, (destRow * kBoardDimension) + destCol};
 }
 
 bool EnhancedOpeningBook::isInBook(const Board& board) {
@@ -732,13 +861,19 @@ void EnhancedOpeningBook::addMove(const Board& board, const BookEntry& entry) {
         for (auto& existingEntry : it->second) {
             if (existingEntry.move == entry.move) {
                 existingEntry.weight = std::max(existingEntry.weight, entry.weight);
+                const auto existingGames = static_cast<float>(existingEntry.games);
+                const auto incomingGames = static_cast<float>(entry.games);
+                const float totalGames = existingGames + incomingGames;
+                if (totalGames > kZeroFloat) {
+                    existingEntry.winRate = ((existingEntry.winRate * existingGames) +
+                                             (entry.winRate * incomingGames)) /
+                                            totalGames;
+                    existingEntry.averageRating = static_cast<int>(
+                        ((static_cast<float>(existingEntry.averageRating) * existingGames) +
+                         (static_cast<float>(entry.averageRating) * incomingGames)) /
+                        totalGames);
+                }
                 existingEntry.games += entry.games;
-                existingEntry.winRate = ((existingEntry.winRate * existingEntry.games) +
-                                         (entry.winRate * entry.games)) /
-                                        (existingEntry.games + entry.games);
-                existingEntry.averageRating = ((existingEntry.averageRating * existingEntry.games) +
-                                               (entry.averageRating * entry.games)) /
-                                              (existingEntry.games + entry.games);
                 found = true;
                 break;
             }
@@ -764,7 +899,7 @@ void EnhancedOpeningBook::saveBook(const std::string& path) {
     for (const auto& [key, entries] : book) {
         size_t keyLen = key.length();
         file.write(reinterpret_cast<const char*>(&keyLen), sizeof(keyLen));
-        file.write(key.c_str(), keyLen);
+        file.write(key.c_str(), static_cast<std::streamsize>(keyLen));
 
         size_t numMoves = entries.size();
         file.write(reinterpret_cast<const char*>(&numMoves), sizeof(numMoves));
@@ -792,22 +927,22 @@ void EnhancedOpeningBook::loadBook(const std::string& path) {
 
     book.clear();
 
-    size_t numPositions{0};
+    size_t numPositions{static_cast<size_t>(kZero)};
     file.read(reinterpret_cast<char*>(&numPositions), sizeof(numPositions));
 
-    for (size_t i = 0; i < numPositions; ++i) {
-        size_t keyLen = 0;
+    for (auto i = static_cast<size_t>(kZero); i < numPositions; ++i) {
+        auto keyLen = static_cast<size_t>(kZero);
         file.read(reinterpret_cast<char*>(&keyLen), sizeof(keyLen));
         std::string key(keyLen, '\0');
         file.read(key.data(), static_cast<std::streamsize>(keyLen));
 
-        size_t numMoves = 0;
+        auto numMoves = static_cast<size_t>(kZero);
         file.read(reinterpret_cast<char*>(&numMoves), sizeof(numMoves));
 
         std::vector<BookEntry> entries;
         entries.reserve(numMoves);
 
-        for (size_t j = 0; j < numMoves; ++j) {
+        for (auto j = static_cast<size_t>(kZero); j < numMoves; ++j) {
             BookEntry entry;
             file.read(reinterpret_cast<char*>(&entry.move.first), sizeof(entry.move.first));
             file.read(reinterpret_cast<char*>(&entry.move.second), sizeof(entry.move.second));
@@ -829,7 +964,10 @@ std::string EnhancedOpeningBook::boardToKey(const Board& board) {
     std::string fen = getFEN(board);
 
     std::istringstream iss(fen);
-    std::string position, activeColor, castling, enPassant;
+    std::string position;
+    std::string activeColor;
+    std::string castling;
+    std::string enPassant;
     iss >> position >> activeColor >> castling >> enPassant;
 
     std::ostringstream keyStream;
@@ -842,25 +980,24 @@ void EnhancedOpeningBook::normalizeWeights(std::vector<BookEntry>& entries) {
         return;
     }
 
-    int totalWeight = 0;
+    int totalWeight = kZero;
     for (const auto& entry : entries) {
         totalWeight += entry.weight;
     }
 
-    if (totalWeight == 0) {
+    if (totalWeight == kZero) {
         for (auto& entry : entries) {
-            entry.weight = entry.games > 0 ? entry.games : 1;
+            entry.weight = entry.games > kZero ? entry.games : kFallbackWeight;
         }
-        totalWeight = 0;
+        totalWeight = kZero;
         for (const auto& entry : entries) {
             totalWeight += entry.weight;
         }
     }
 
-    if (totalWeight > 0) {
-        const int TARGET_SUM = 1000;
+    if (totalWeight > kZero) {
         for (auto& entry : entries) {
-            entry.weight = (entry.weight * TARGET_SUM) / totalWeight;
+            entry.weight = (entry.weight * kNormalizedWeightTotal) / totalWeight;
         }
     }
 }
@@ -868,30 +1005,30 @@ void EnhancedOpeningBook::normalizeWeights(std::vector<BookEntry>& entries) {
 EnhancedOpeningBook::BookStats EnhancedOpeningBook::getStats() const {
     BookStats stats{};
     stats.totalPositions = book.size();
-    stats.totalMoves = 0;
-    stats.totalGames = 0;
-    float totalWinRate = 0.0f;
-    float totalRating = 0.0f;
-    int moveCount = 0;
+    stats.totalMoves = kZero;
+    stats.totalGames = kZero;
+    float totalWinRate = kZeroFloat;
+    float totalRating = kZeroFloat;
+    int moveCount = kZero;
 
     for (const auto& [key, entries] : book) {
         stats.totalMoves += entries.size();
         for (const auto& entry : entries) {
             stats.totalGames += entry.games;
             totalWinRate += entry.winRate;
-            totalRating += entry.averageRating;
+            totalRating += static_cast<float>(entry.averageRating);
             moveCount++;
         }
     }
 
-    if (moveCount > 0) {
-        stats.averageWinRate = totalWinRate / moveCount;
-        stats.averageRating = totalRating / moveCount;
+    if (moveCount > kZero) {
+        stats.averageWinRate = totalWinRate / static_cast<float>(moveCount);
+        stats.averageRating = totalRating / static_cast<float>(moveCount);
     }
 
     return stats;
 }
 
-void EnhancedOpeningBook::analyzeBook() {
+void EnhancedOpeningBook::analyzeBook() const {
     (void)getStats();
 }

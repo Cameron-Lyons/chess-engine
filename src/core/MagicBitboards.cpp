@@ -1,6 +1,4 @@
 #include "MagicBitboards.h"
-
-#include <algorithm>
 #include <random>
 
 std::array<std::array<uint64_t, 4096>, 64> MagicBitboards::rookAttacks;
@@ -87,24 +85,27 @@ uint64_t MagicBitboards::generateRookMask(int square) {
 
     for (int r = 0; r < 8; ++r) {
         if (r != rank) {
-            set_bit(mask, r * 8 + file);
+            set_bit(mask, (r * 8) + file);
         }
     }
     for (int f = 0; f < 8; ++f) {
         if (f != file) {
-            set_bit(mask, rank * 8 + f);
+            set_bit(mask, (rank * 8) + f);
         }
     }
 
-    if (rank != 0)
+    if (rank != 0) {
         clear_bit(mask, file);
-    if (rank != 7)
+    }
+    if (rank != 7) {
         clear_bit(mask, 56 + file);
-    if (file != 0)
+    }
+    if (file != 0) {
         clear_bit(mask, rank * 8);
-    if (file != 7)
-        clear_bit(mask, rank * 8 + 7);
-
+    }
+    if (file != 7) {
+        clear_bit(mask, (rank * 8) + 7);
+    }
     return mask;
 }
 
@@ -117,7 +118,7 @@ uint64_t MagicBitboards::generateBishopMask(int square) {
         for (int f = 0; f < 8; ++f) {
             if (r != rank && f != file && abs(r - rank) == abs(f - file)) {
                 if (r > 0 && r < 7 && f > 0 && f < 7) {
-                    set_bit(mask, r * 8 + f);
+                    set_bit(mask, (r * 8) + f);
                 }
             }
         }
@@ -148,7 +149,7 @@ uint64_t MagicBitboards::generateSlidingAttacks(int square,
         int f = file + df;
 
         while (r >= 0 && r < 8 && f >= 0 && f < 8) {
-            int targetSquare = r * 8 + f;
+            int targetSquare = (r * 8) + f;
             set_bit(attacks, targetSquare);
 
             if (get_bit(occupancy, targetSquare)) {

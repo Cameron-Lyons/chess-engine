@@ -23,6 +23,22 @@
 #include <unordered_map>
 #include <vector>
 
+namespace SearchConstants {
+constexpr int kZero = 0;
+constexpr int kOne = 1;
+constexpr int kTwo = 2;
+constexpr int kThree = 3;
+constexpr int kFour = 4;
+constexpr int kInvalidSquare = -1;
+constexpr int kDefaultTranspositionTableMb = 32;
+constexpr int kBoardSquareCount = 64;
+constexpr int kPieceTypeCount = 6;
+constexpr int kPieceTypeOffset = 1;
+constexpr int kContinuationDecayDivisor = 16384;
+constexpr std::size_t kMoveMaskDimension = 64ULL;
+constexpr std::size_t kMoveMaskSize = kMoveMaskDimension * kMoveMaskDimension;
+} // namespace SearchConstants
+
 std::string getFEN(const Board& board);
 bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& srcRow, int& destCol,
                         int& destRow);
@@ -34,8 +50,15 @@ struct TTEntry {
     std::pair<int, int> bestMove;
     uint64_t zobristKey;
 
-    TTEntry() : depth(-1), value(0), flag(0), bestMove({-1, -1}), zobristKey(0) {}
-    TTEntry(int d, int v, int f, std::pair<int, int> move = {-1, -1}, uint64_t key = 0)
+    TTEntry()
+        : depth(SearchConstants::kInvalidSquare), value(SearchConstants::kZero),
+          flag(SearchConstants::kZero),
+          bestMove({SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare}),
+          zobristKey(SearchConstants::kZero) {}
+    TTEntry(int d, int v, int f,
+            std::pair<int, int> move = {SearchConstants::kInvalidSquare,
+                                        SearchConstants::kInvalidSquare},
+            uint64_t key = SearchConstants::kZero)
         : depth(d), value(v), flag(f), bestMove(move), zobristKey(key) {}
 };
 
@@ -43,13 +66,13 @@ class TranspositionTableAdapter {
     TTv2::TranspositionTable tt;
 
     static TTv2::Bound flagToBound(int flag) {
-        if (flag == 0) {
+        if (flag == SearchConstants::kZero) {
             return TTv2::BOUND_EXACT;
         }
-        if (flag == -1) {
+        if (flag == SearchConstants::kInvalidSquare) {
             return TTv2::BOUND_UPPER;
         }
-        if (flag == 1) {
+        if (flag == SearchConstants::kOne) {
             return TTv2::BOUND_LOWER;
         }
         return TTv2::BOUND_NONE;
@@ -57,33 +80,38 @@ class TranspositionTableAdapter {
 
     static int boundToFlag(TTv2::Bound b) {
         if (b == TTv2::BOUND_EXACT) {
-            return 0;
+            return SearchConstants::kZero;
         }
         if (b == TTv2::BOUND_UPPER) {
-            return -1;
+            return SearchConstants::kInvalidSquare;
         }
         if (b == TTv2::BOUND_LOWER) {
-            return 1;
+            return SearchConstants::kOne;
         }
-        return 0;
+        return SearchConstants::kZero;
     }
 
 public:
     TranspositionTableAdapter() {
-        tt.resize(32);
+        tt.resize(SearchConstants::kDefaultTranspositionTableMb);
     }
 
     void insert(uint64_t hash, const TTEntry& entry) {
         bool found = false;
         TTv2::TTEntry* tte = tt.probe(hash, found);
-        TTv2::PackedMove pm =
-            TTv2::packMove(entry.bestMove.first >= 0 ? entry.bestMove.first : 0,
-                           entry.bestMove.second >= 0 ? entry.bestMove.second : 0);
-        if (entry.bestMove.first < 0) {
-            pm = 0;
+        TTv2::PackedMove pm = TTv2::packMove(
+            entry.bestMove.first >= SearchConstants::kZero ? entry.bestMove.first
+                                                           : SearchConstants::kZero,
+            entry.bestMove.second >= SearchConstants::kZero ? entry.bestMove.second
+                                                            : SearchConstants::kZero);
+        if (entry.bestMove.first < SearchConstants::kZero) {
+            pm = SearchConstants::kZero;
         }
         tte->save(hash, static_cast<int16_t>(entry.value), static_cast<int16_t>(entry.value),
-                  flagToBound(entry.flag), static_cast<int8_t>(std::clamp(entry.depth, -127, 127)),
+                  flagToBound(entry.flag),
+                  static_cast<int8_t>(
+                      std::clamp(entry.depth, static_cast<int>(std::numeric_limits<int8_t>::min()),
+                                 static_cast<int>(std::numeric_limits<int8_t>::max()))),
                   pm, tt.generation());
     }
 
@@ -97,13 +125,13 @@ public:
         entry.value = tte->value;
         entry.flag = boundToFlag(tte->bound());
         if (tte->move) {
-            int from = 0;
-            int to = 0;
-            int promo = 0;
+            int from = SearchConstants::kZero;
+            int to = SearchConstants::kZero;
+            int promo = SearchConstants::kZero;
             TTv2::unpackMove(tte->move, from, to, promo);
             entry.bestMove = {from, to};
         } else {
-            entry.bestMove = {-1, -1};
+            entry.bestMove = {SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare};
         }
         entry.zobristKey = hash;
         return true;
@@ -145,8 +173,8 @@ struct ThreadSafeHistory {
 };
 
 struct KillerMoves {
-    static const int MAX_KILLER_MOVES = 2;
-    static const int MAX_PLY = 64;
+    static const int MAX_KILLER_MOVES = SearchConstants::kTwo;
+    static const int MAX_PLY = SearchConstants::kBoardSquareCount;
 
     std::pair<int, int> killers[MAX_PLY][MAX_KILLER_MOVES];
 
@@ -166,60 +194,68 @@ struct ParallelSearchContext {
     int timeLimitMs;
     int numThreads;
     int ply;
-    std::pair<int, int> counterMoves[2][64];
-    int contempt = 0;
-    int multiPV = 1;
+    std::pair<int, int> counterMoves[SearchConstants::kTwo][SearchConstants::kBoardSquareCount];
+    int contempt = SearchConstants::kZero;
+    int multiPV = SearchConstants::kOne;
     std::vector<std::pair<int, int>> excludedRootMoves;
-    int optimalTimeMs = 0;
-    int maxTimeMs = 0;
-    std::atomic<int> tbHits{0};
+    int optimalTimeMs = SearchConstants::kZero;
+    int maxTimeMs = SearchConstants::kZero;
+    std::atomic<int> tbHits{SearchConstants::kZero};
     bool useSyzygy = false;
 
-    int continuationHistory[6][64][6][64];
-    int captureHistory[6][6][64];
-    int prevPieceAtPly[64];
-    int prevToAtPly[64];
+    int continuationHistory[SearchConstants::kPieceTypeCount][SearchConstants::kBoardSquareCount]
+                           [SearchConstants::kPieceTypeCount][SearchConstants::kBoardSquareCount];
+    int captureHistory[SearchConstants::kPieceTypeCount][SearchConstants::kPieceTypeCount]
+                      [SearchConstants::kBoardSquareCount];
+    int prevPieceAtPly[SearchConstants::kBoardSquareCount];
+    int prevToAtPly[SearchConstants::kBoardSquareCount];
 
-    ParallelSearchContext(int threads = 0);
+    ParallelSearchContext(int threads = SearchConstants::kZero);
 
     void updateContinuationHistory(int prevPiece, int prevTo, int piece, int to, int bonus) {
-        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64) {
+        if (prevPiece < SearchConstants::kZero || prevPiece >= SearchConstants::kPieceTypeCount ||
+            prevTo < SearchConstants::kZero || prevTo >= SearchConstants::kBoardSquareCount) {
             return;
         }
-        if (piece < 0 || piece >= 6 || to < 0 || to >= 64) {
+        if (piece < SearchConstants::kZero || piece >= SearchConstants::kPieceTypeCount ||
+            to < SearchConstants::kZero || to >= SearchConstants::kBoardSquareCount) {
             return;
         }
         int& entry = continuationHistory[prevPiece][prevTo][piece][to];
-        entry += bonus - (entry * std::abs(bonus) / 16384);
+        entry += bonus - (entry * std::abs(bonus) / SearchConstants::kContinuationDecayDivisor);
     }
 
     int getContinuationHistory(int prevPiece, int prevTo, int piece, int to) const {
-        if (prevPiece < 0 || prevPiece >= 6 || prevTo < 0 || prevTo >= 64) {
-            return 0;
+        if (prevPiece < SearchConstants::kZero || prevPiece >= SearchConstants::kPieceTypeCount ||
+            prevTo < SearchConstants::kZero || prevTo >= SearchConstants::kBoardSquareCount) {
+            return SearchConstants::kZero;
         }
-        if (piece < 0 || piece >= 6 || to < 0 || to >= 64) {
-            return 0;
+        if (piece < SearchConstants::kZero || piece >= SearchConstants::kPieceTypeCount ||
+            to < SearchConstants::kZero || to >= SearchConstants::kBoardSquareCount) {
+            return SearchConstants::kZero;
         }
         return continuationHistory[prevPiece][prevTo][piece][to];
     }
 
     void updateCaptureHistory(int attacker, int victim, int to, int bonus) {
-        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6) {
+        if (attacker < SearchConstants::kZero || attacker >= SearchConstants::kPieceTypeCount ||
+            victim < SearchConstants::kZero || victim >= SearchConstants::kPieceTypeCount) {
             return;
         }
-        if (to < 0 || to >= 64) {
+        if (to < SearchConstants::kZero || to >= SearchConstants::kBoardSquareCount) {
             return;
         }
         int& entry = captureHistory[attacker][victim][to];
-        entry += bonus - (entry * std::abs(bonus) / 16384);
+        entry += bonus - (entry * std::abs(bonus) / SearchConstants::kContinuationDecayDivisor);
     }
 
     int getCaptureHistory(int attacker, int victim, int to) const {
-        if (attacker < 0 || attacker >= 6 || victim < 0 || victim >= 6) {
-            return 0;
+        if (attacker < SearchConstants::kZero || attacker >= SearchConstants::kPieceTypeCount ||
+            victim < SearchConstants::kZero || victim >= SearchConstants::kPieceTypeCount) {
+            return SearchConstants::kZero;
         }
-        if (to < 0 || to >= 64) {
-            return 0;
+        if (to < SearchConstants::kZero || to >= SearchConstants::kBoardSquareCount) {
+            return SearchConstants::kZero;
         }
         return captureHistory[attacker][victim][to];
     }
@@ -259,19 +295,19 @@ bool isCapture(const Board& board, int srcPos, int destPos);
 inline int pieceTypeIndex(ChessPieceType pt) {
     switch (pt) {
         case ChessPieceType::PAWN:
-            return 0;
+            return SearchConstants::kZero;
         case ChessPieceType::KNIGHT:
-            return 1;
+            return SearchConstants::kOne;
         case ChessPieceType::BISHOP:
-            return 2;
+            return SearchConstants::kTwo;
         case ChessPieceType::ROOK:
-            return 3;
+            return SearchConstants::kThree;
         case ChessPieceType::QUEEN:
-            return 4;
+            return SearchConstants::kFour;
         case ChessPieceType::KING:
-            return 5;
+            return SearchConstants::kPieceTypeCount - SearchConstants::kOne;
         default:
-            return -1;
+            return SearchConstants::kInvalidSquare;
     }
 }
 bool givesCheck(const Board& board, int srcPos, int destPos);
@@ -285,8 +321,11 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
 std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color);
 std::string getBookMove(const std::string& fen);
 SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs,
-                                        int numThreads = 0, int contempt = 0, int multiPV = 1,
-                                        int optimalTimeMs = 0, int maxTimeMs = 0);
+                                        int numThreads = SearchConstants::kZero,
+                                        int contempt = SearchConstants::kZero,
+                                        int multiPV = SearchConstants::kOne,
+                                        int optimalTimeMs = SearchConstants::kZero,
+                                        int maxTimeMs = SearchConstants::kZero);
 std::pair<int, int> findBestMove(Board& board, int depth);
 int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer,
                              int ply, ThreadSafeHistory& historyTable,
@@ -297,12 +336,13 @@ int getSmallestAttacker(const Board& board, int targetSquare, ChessPieceColor co
 
 bool isPromotion(const Board& board, int from, int to);
 bool isCastling(const Board& board, int from, int to);
-std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
-                                            const std::vector<std::pair<int, int>>& moves,
-                                            const ThreadSafeHistory& historyTable,
-                                            const KillerMoves& killerMoves, int ply,
-                                            const std::pair<int, int>& ttMove = {-1, -1},
-                                            const std::pair<int, int>& counterMove = {-1, -1});
+std::vector<ScoredMove> scoreMovesOptimized(
+    const Board& board, const std::vector<std::pair<int, int>>& moves,
+    const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply,
+    const std::pair<int, int>& ttMove = {SearchConstants::kInvalidSquare,
+                                         SearchConstants::kInvalidSquare},
+    const std::pair<int, int>& counterMove = {SearchConstants::kInvalidSquare,
+                                              SearchConstants::kInvalidSquare});
 
 enum class MovePickerStage : std::uint8_t {
     HASH_MOVE,
@@ -332,23 +372,26 @@ class MovePicker {
     size_t quietIdx = 0;
     size_t badCaptureIdx = 0;
     bool movesGenerated = false;
-    static constexpr std::size_t MOVE_MASK_SIZE = 64ULL * 64ULL;
+    static constexpr std::size_t MOVE_MASK_SIZE = SearchConstants::kMoveMaskSize;
     std::array<bool, MOVE_MASK_SIZE> returnedMask{};
 
     static constexpr std::size_t moveIndex(const std::pair<int, int>& m) {
-        return (static_cast<std::size_t>(m.first) * static_cast<std::size_t>(64)) +
+        return (static_cast<std::size_t>(m.first) *
+                static_cast<std::size_t>(SearchConstants::kMoveMaskDimension)) +
                static_cast<std::size_t>(m.second);
     }
 
     bool alreadyReturned(const std::pair<int, int>& m) const {
-        if (m.first < 0 || m.first >= 64 || m.second < 0 || m.second >= 64) {
+        if (m.first < SearchConstants::kZero || m.first >= SearchConstants::kBoardSquareCount ||
+            m.second < SearchConstants::kZero || m.second >= SearchConstants::kBoardSquareCount) {
             return false;
         }
         return returnedMask[moveIndex(m)];
     }
 
     void markReturned(const std::pair<int, int>& m) {
-        if (m.first < 0 || m.first >= 64 || m.second < 0 || m.second >= 64) {
+        if (m.first < SearchConstants::kZero || m.first >= SearchConstants::kBoardSquareCount ||
+            m.second < SearchConstants::kZero || m.second >= SearchConstants::kBoardSquareCount) {
             return;
         }
         returnedMask[moveIndex(m)] = true;

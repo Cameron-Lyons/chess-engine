@@ -1,29 +1,52 @@
-#include "NNUEOptimized.h"
+#include "NNUEBitboard.h"
 
 #include <algorithm>
 #include <bit>
 #include <cpuid.h>
+#include <cstddef>
 #include <cstring>
 #include <fstream>
 
-namespace NNUEOptimized {
+namespace NNUEBitboard {
 
 std::unique_ptr<NNUEEvaluator> globalEvaluator;
 
+namespace {
+constexpr unsigned int kCpuidBaseLeaf = 0;
+constexpr unsigned int kCpuidFeatureLeaf = 7;
+constexpr unsigned int kCpuidFeatureSubLeaf = 0;
+constexpr int kAvx2FeatureStride = 16;
+constexpr int kAvx2DotProductStride = 32;
+constexpr int kAvx512DotProductStride = 64;
+constexpr int kAvx2ReluStride = 8;
+constexpr int kAvx512ReluStride = 16;
+constexpr int kActivationShiftBits = 6;
+constexpr int kMaxOutputActivation = 127;
+constexpr int kScoreScale = 100;
+constexpr uint32_t kNetworkMagic = 0x4E4E5545;
+constexpr uint32_t kNetworkVersion = 2;
+} // namespace
+
 static bool hasAVX512() {
-    unsigned int eax, ebx, ecx, edx;
-    if (__get_cpuid_max(0, nullptr) >= 7) {
-        __cpuid_count(7, 0, eax, ebx, ecx, edx);
-        return (ebx & bit_AVX512F) != 0;
+    unsigned int eax = kCpuidBaseLeaf;
+    unsigned int ebx = kCpuidBaseLeaf;
+    unsigned int ecx = kCpuidBaseLeaf;
+    unsigned int edx = kCpuidBaseLeaf;
+    if (__get_cpuid_max(kCpuidBaseLeaf, nullptr) >= kCpuidFeatureLeaf) {
+        __cpuid_count(kCpuidFeatureLeaf, kCpuidFeatureSubLeaf, eax, ebx, ecx, edx);
+        return (ebx & bit_AVX512F) != kCpuidBaseLeaf;
     }
     return false;
 }
 
 static bool hasAVX512VNNI() {
-    unsigned int eax, ebx, ecx, edx;
-    if (__get_cpuid_max(0, nullptr) >= 7) {
-        __cpuid_count(7, 0, eax, ebx, ecx, edx);
-        return (ecx & bit_AVX512VNNI) != 0;
+    unsigned int eax = kCpuidBaseLeaf;
+    unsigned int ebx = kCpuidBaseLeaf;
+    unsigned int ecx = kCpuidBaseLeaf;
+    unsigned int edx = kCpuidBaseLeaf;
+    if (__get_cpuid_max(kCpuidBaseLeaf, nullptr) >= kCpuidFeatureLeaf) {
+        __cpuid_count(kCpuidFeatureLeaf, kCpuidFeatureSubLeaf, eax, ebx, ecx, edx);
+        return (ecx & bit_AVX512VNNI) != kCpuidBaseLeaf;
     }
     return false;
 }
@@ -31,37 +54,39 @@ static bool hasAVX512VNNI() {
 void Accumulator::refresh(const BitboardPosition& pos) {
     reset();
 
-    for (int color = 0; color < 2; ++color) {
-        ChessPieceColor c = color == 0 ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
+    for (int color = WHITE_PERSPECTIVE; color < COLOR_COUNT; ++color) {
+        ChessPieceColor c =
+            color == WHITE_PERSPECTIVE ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
 
         Bitboard kingBB = pos.getPieceBitboard(ChessPieceType::KING, c);
         int kingSquare = std::countr_zero(kingBB);
         int kingBucket = FeatureTransformer::getKingBucket(kingSquare);
 
-        for (int pt = 0; pt < 6; ++pt) {
-            ChessPieceType pieceType = static_cast<ChessPieceType>(pt);
+        for (int pt = NO_INDEX; pt < FeatureTransformer::PIECE_TYPES; ++pt) {
+            auto pieceType = static_cast<ChessPieceType>(pt);
             Bitboard pieceBB = pos.getPieceBitboard(pieceType, c);
 
             while (pieceBB) {
                 int square = std::countr_zero(pieceBB);
                 int featureIdx = FeatureTransformer::makeIndex(square, pt, color, kingBucket);
 
-                addFeature(0, featureIdx);
-                addFeature(1, featureIdx);
+                addFeature(WHITE_PERSPECTIVE, featureIdx);
+                addFeature(BLACK_PERSPECTIVE, featureIdx);
 
-                pieceBB &= pieceBB - 1;
+                pieceBB &= pieceBB - ONE;
             }
         }
     }
 
-    computed[0] = computed[1] = true;
+    computed[WHITE_PERSPECTIVE] = computed[BLACK_PERSPECTIVE] = true;
 }
 
 void Accumulator::addFeature(int color, int featureIdx) {
-    const int16_t* featureWeights = weights + featureIdx * L1_SIZE;
-    int16_t* acc = perspective[color].data();
+    const auto* featureWeights =
+        weights + (static_cast<std::ptrdiff_t>(featureIdx) * static_cast<std::ptrdiff_t>(L1_SIZE));
+    auto* acc = perspective[color].data();
 
-    for (int i = 0; i < L1_SIZE; i += 16) {
+    for (int i = NO_INDEX; i < L1_SIZE; i += kAvx2FeatureStride) {
         __m256i acc_vec = _mm256_load_si256((__m256i*)(acc + i));
         __m256i weight_vec = _mm256_load_si256((__m256i*)(featureWeights + i));
         __m256i sum = _mm256_add_epi16(acc_vec, weight_vec);
@@ -72,10 +97,11 @@ void Accumulator::addFeature(int color, int featureIdx) {
 }
 
 void Accumulator::removeFeature(int color, int featureIdx) {
-    const int16_t* featureWeights = weights + featureIdx * L1_SIZE;
-    int16_t* acc = perspective[color].data();
+    const auto* featureWeights =
+        weights + (static_cast<std::ptrdiff_t>(featureIdx) * static_cast<std::ptrdiff_t>(L1_SIZE));
+    auto* acc = perspective[color].data();
 
-    for (int i = 0; i < L1_SIZE; i += 16) {
+    for (int i = NO_INDEX; i < L1_SIZE; i += kAvx2FeatureStride) {
         __m256i acc_vec = _mm256_load_si256((__m256i*)(acc + i));
         __m256i weight_vec = _mm256_load_si256((__m256i*)(featureWeights + i));
         __m256i diff = _mm256_sub_epi16(acc_vec, weight_vec);
@@ -86,11 +112,13 @@ void Accumulator::removeFeature(int color, int featureIdx) {
 }
 
 void Accumulator::moveFeature(int color, int fromIdx, int toIdx) {
-    const int16_t* fromWeights = weights + fromIdx * L1_SIZE;
-    const int16_t* toWeights = weights + toIdx * L1_SIZE;
-    int16_t* acc = perspective[color].data();
+    const auto* fromWeights =
+        weights + (static_cast<std::ptrdiff_t>(fromIdx) * static_cast<std::ptrdiff_t>(L1_SIZE));
+    const auto* toWeights =
+        weights + (static_cast<std::ptrdiff_t>(toIdx) * static_cast<std::ptrdiff_t>(L1_SIZE));
+    auto* acc = perspective[color].data();
 
-    for (int i = 0; i < L1_SIZE; i += 16) {
+    for (int i = NO_INDEX; i < L1_SIZE; i += kAvx2FeatureStride) {
         __m256i acc_vec = _mm256_load_si256((__m256i*)(acc + i));
         __m256i from_vec = _mm256_load_si256((__m256i*)(fromWeights + i));
         __m256i to_vec = _mm256_load_si256((__m256i*)(toWeights + i));
@@ -105,17 +133,18 @@ void Accumulator::moveFeature(int color, int fromIdx, int toIdx) {
 }
 
 LinearLayer::SIMDType LinearLayer::detectSIMD() {
-    if (hasAVX512VNNI())
+    if (hasAVX512VNNI()) {
         return AVX512_VNNI;
-    if (hasAVX512())
+    }
+    if (hasAVX512()) {
         return AVX512;
+    }
     return AVX2;
 }
 
 LinearLayer::LinearLayer(int in, int out)
-    : inputSize(in), outputSize(out), weights(in * out), biases(out) {
-    simdType = detectSIMD();
-}
+    : inputSize(in), outputSize(out), weights(static_cast<size_t>(in) * static_cast<size_t>(out)),
+      biases(out), simdType(detectSIMD()) {}
 
 void LinearLayer::loadWeights(const int8_t* w, const int32_t* b) {
     std::copy(w, w + weights.size(), weights.begin());
@@ -123,11 +152,12 @@ void LinearLayer::loadWeights(const int8_t* w, const int32_t* b) {
 }
 
 void LinearLayer::forward_avx2(const int8_t* input, int32_t* output) const {
-    for (int i = 0; i < outputSize; ++i) {
+    for (int i = NO_INDEX; i < outputSize; ++i) {
         __m256i sum = _mm256_setzero_si256();
-        const int8_t* w = weights.data() + i * inputSize;
+        const auto* w = weights.data() +
+                        (static_cast<std::ptrdiff_t>(i) * static_cast<std::ptrdiff_t>(inputSize));
 
-        for (int j = 0; j < inputSize; j += 32) {
+        for (int j = NO_INDEX; j < inputSize; j += kAvx2DotProductStride) {
             __m256i in_vec = _mm256_load_si256((__m256i*)(input + j));
             __m256i w_vec = _mm256_load_si256((__m256i*)(w + j));
             sum = SIMDOps::dpbusd_epi32(sum, in_vec, w_vec);
@@ -139,11 +169,12 @@ void LinearLayer::forward_avx2(const int8_t* input, int32_t* output) const {
 
 void LinearLayer::forward_avx512(const int8_t* input, int32_t* output) const {
 #ifdef __AVX512F__
-    for (int i = 0; i < outputSize; ++i) {
+    for (int i = NO_INDEX; i < outputSize; ++i) {
         __m512i sum = _mm512_setzero_si512();
-        const int8_t* w = weights.data() + i * inputSize;
+        const auto* w = weights.data() +
+                        (static_cast<std::ptrdiff_t>(i) * static_cast<std::ptrdiff_t>(inputSize));
 
-        for (int j = 0; j < inputSize; j += 64) {
+        for (int j = NO_INDEX; j < inputSize; j += kAvx512DotProductStride) {
             __m512i in_vec = _mm512_load_si512((__m512i*)(input + j));
             __m512i w_vec = _mm512_load_si512((__m512i*)(w + j));
 
@@ -165,11 +196,12 @@ void LinearLayer::forward_avx512(const int8_t* input, int32_t* output) const {
 
 void LinearLayer::forward_avx512_vnni(const int8_t* input, int32_t* output) const {
 #ifdef __AVX512VNNI__
-    for (int i = 0; i < outputSize; ++i) {
+    for (int i = NO_INDEX; i < outputSize; ++i) {
         __m512i sum = _mm512_setzero_si512();
-        const int8_t* w = weights.data() + i * inputSize;
+        const auto* w = weights.data() +
+                        (static_cast<std::ptrdiff_t>(i) * static_cast<std::ptrdiff_t>(inputSize));
 
-        for (int j = 0; j < inputSize; j += 64) {
+        for (int j = NO_INDEX; j < inputSize; j += kAvx512DotProductStride) {
             __m512i in_vec = _mm512_load_si512((__m512i*)(input + j));
             __m512i w_vec = _mm512_load_si512((__m512i*)(w + j));
             sum = _mm512_dpbusd_epi32(sum, in_vec, w_vec);
@@ -183,8 +215,8 @@ void LinearLayer::forward_avx512_vnni(const int8_t* input, int32_t* output) cons
 }
 
 void LinearLayer::forward(const void* input, void* output) const {
-    const int8_t* in = static_cast<const int8_t*>(input);
-    int32_t* out = static_cast<int32_t*>(output);
+    const auto* in = static_cast<const int8_t*>(input);
+    auto* out = static_cast<int32_t*>(output);
 
     switch (simdType) {
         case AVX512_VNNI:
@@ -203,7 +235,7 @@ void ClippedReLU::forward_avx2(const int32_t* input, int8_t* output) const {
     const __m256i zero = _mm256_setzero_si256();
     const __m256i max_val = _mm256_set1_epi32(QA);
 
-    for (int i = 0; i < size; i += 8) {
+    for (int i = NO_INDEX; i < size; i += kAvx2ReluStride) {
         __m256i val = _mm256_load_si256((__m256i*)(input + i));
 
         val = _mm256_max_epi32(val, zero);
@@ -212,7 +244,7 @@ void ClippedReLU::forward_avx2(const int32_t* input, int8_t* output) const {
         val = _mm256_srai_epi32(val, SHIFT);
 
         __m128i val_lo = _mm256_castsi256_si128(val);
-        __m128i val_hi = _mm256_extracti128_si256(val, 1);
+        __m128i val_hi = _mm256_extracti128_si256(val, ONE);
         __m128i packed = _mm_packs_epi32(val_lo, val_hi);
         packed = _mm_packs_epi16(packed, packed);
 
@@ -225,7 +257,7 @@ void ClippedReLU::forward_avx512(const int32_t* input, int8_t* output) const {
     const __m512i zero = _mm512_setzero_si512();
     const __m512i max_val = _mm512_set1_epi32(QA);
 
-    for (int i = 0; i < size; i += 16) {
+    for (int i = NO_INDEX; i < size; i += kAvx512ReluStride) {
         __m512i val = _mm512_load_si512((__m512i*)(input + i));
 
         val = _mm512_max_epi32(val, zero);
@@ -242,8 +274,8 @@ void ClippedReLU::forward_avx512(const int32_t* input, int8_t* output) const {
 }
 
 void ClippedReLU::forward(const void* input, void* output) const {
-    const int32_t* in = static_cast<const int32_t*>(input);
-    int8_t* out = static_cast<int8_t*>(output);
+    const auto* in = static_cast<const int32_t*>(input);
+    auto* out = static_cast<int8_t*>(output);
 
     if (hasAVX512()) {
         forward_avx512(in, out);
@@ -253,33 +285,33 @@ void ClippedReLU::forward(const void* input, void* output) const {
 }
 
 NNUEEvaluator::NNUEEvaluator() {
-    fc1 = std::make_unique<LinearLayer>(2 * L1_SIZE, L2_SIZE);
+    fc1 = std::make_unique<LinearLayer>(COLOR_COUNT * L1_SIZE, L2_SIZE);
     ac1 = std::make_unique<ClippedReLU>(L2_SIZE);
     fc2 = std::make_unique<LinearLayer>(L2_SIZE, L3_SIZE);
     ac2 = std::make_unique<ClippedReLU>(L3_SIZE);
     fc3 = std::make_unique<LinearLayer>(L3_SIZE, L3_SIZE);
     fc4 = std::make_unique<LinearLayer>(L3_SIZE, OUTPUT_SIZE);
 
-    featureWeights.resize(INPUT_DIMENSIONS * L1_SIZE);
+    featureWeights.resize(static_cast<size_t>(INPUT_DIMENSIONS) * static_cast<size_t>(L1_SIZE));
 }
-
-NNUEEvaluator::~NNUEEvaluator() = default;
 
 bool NNUEEvaluator::loadNetwork(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);
-    if (!file)
+    if (!file) {
         return false;
+    }
 
-    uint32_t magic, version;
+    uint32_t magic = kCpuidBaseLeaf;
+    uint32_t version = kCpuidBaseLeaf;
     file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
     file.read(reinterpret_cast<char*>(&version), sizeof(version));
 
-    if (magic != 0x4E4E5545 || version != 2) {
+    if (magic != kNetworkMagic || version != kNetworkVersion) {
         return false;
     }
 
     file.read(reinterpret_cast<char*>(featureWeights.data()),
-              featureWeights.size() * sizeof(int16_t));
+              static_cast<std::streamsize>(featureWeights.size() * sizeof(int16_t)));
 
     accumulator.init(featureWeights.data());
 
@@ -287,25 +319,24 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
 }
 
 void NNUEEvaluator::transformInput(const BitboardPosition& pos, int8_t* output) const {
-
-    int perspective = pos.getSideToMove() == ChessPieceColor::WHITE ? 0 : 1;
+    int perspective =
+        pos.getSideToMove() == ChessPieceColor::WHITE ? WHITE_PERSPECTIVE : BLACK_PERSPECTIVE;
 
     if (!accumulator.isComputed(perspective)) {
         accumulator.refresh(pos);
     }
 
-    const int16_t* acc = accumulator.getAccumulation(perspective);
+    const auto* acc = accumulator.getAccumulation(perspective);
 
-    const int SHIFT_BITS = 6;
-    for (int i = 0; i < 2 * L1_SIZE; ++i) {
+    for (int i = NO_INDEX; i < COLOR_COUNT * L1_SIZE; ++i) {
         int32_t val = acc[i];
-        val = std::max(0, std::min(QA, val));
-        output[i] = static_cast<int8_t>(val >> SHIFT_BITS);
+        val = std::max(NO_INDEX, std::min(QA, val));
+        output[i] = static_cast<int8_t>(val >> kActivationShiftBits);
     }
 }
 
 int NNUEEvaluator::evaluate(const BitboardPosition& pos) const {
-    alignas(SIMD_ALIGN) int8_t input[2 * L1_SIZE];
+    alignas(SIMD_ALIGN) int8_t input[COLOR_COUNT * L1_SIZE];
     alignas(SIMD_ALIGN) int32_t hidden1[L2_SIZE];
     alignas(SIMD_ALIGN) int8_t hidden1_relu[L2_SIZE];
     alignas(SIMD_ALIGN) int32_t hidden2[L3_SIZE];
@@ -324,35 +355,37 @@ int NNUEEvaluator::evaluate(const BitboardPosition& pos) const {
 
     fc3->forward(hidden2_relu, hidden3);
 
-    const int SHIFT_BITS = 6;
-    for (int i = 0; i < L3_SIZE; ++i) {
-        hidden3_relu[i] = static_cast<int8_t>(std::max(0, std::min(127, hidden3[i] >> SHIFT_BITS)));
+    for (int i = NO_INDEX; i < L3_SIZE; ++i) {
+        hidden3_relu[i] = static_cast<int8_t>(
+            std::max(NO_INDEX, std::min(kMaxOutputActivation, hidden3[i] >> kActivationShiftBits)));
     }
 
     fc4->forward(hidden3_relu, output);
 
-    return output[0] * 100 / QAB;
+    return output[NO_INDEX] * kScoreScale / QAB;
 }
 
 void NNUEEvaluator::updateBeforeMove(const BitboardPosition& pos, int from, int to,
                                      ChessPieceType piece, ChessPieceType captured) {
 
-    int color = pos.getColorAt(from) == ChessPieceColor::WHITE ? 0 : 1;
+    int color =
+        pos.getColorAt(from) == ChessPieceColor::WHITE ? WHITE_PERSPECTIVE : BLACK_PERSPECTIVE;
     int kingSquare = std::countr_zero(pos.getPieceBitboard(
-        ChessPieceType::KING, color == 0 ? ChessPieceColor::WHITE : ChessPieceColor::BLACK));
+        ChessPieceType::KING,
+        color == WHITE_PERSPECTIVE ? ChessPieceColor::WHITE : ChessPieceColor::BLACK));
     int kingBucket = FeatureTransformer::getKingBucket(kingSquare);
 
-    int fromFeature =
-        FeatureTransformer::makeIndex(from, static_cast<int>(piece) - 1, color, kingBucket);
-    accumulator.removeFeature(0, fromFeature);
-    accumulator.removeFeature(1, fromFeature);
+    int fromFeature = FeatureTransformer::makeIndex(
+        from, static_cast<int>(piece) - PIECE_TYPE_OFFSET, color, kingBucket);
+    accumulator.removeFeature(WHITE_PERSPECTIVE, fromFeature);
+    accumulator.removeFeature(BLACK_PERSPECTIVE, fromFeature);
 
     if (captured != ChessPieceType::NONE) {
-        int capturedColor = 1 - color;
-        int capturedFeature = FeatureTransformer::makeIndex(to, static_cast<int>(captured) - 1,
-                                                            capturedColor, kingBucket);
-        accumulator.removeFeature(0, capturedFeature);
-        accumulator.removeFeature(1, capturedFeature);
+        int capturedColor = ONE - color;
+        int capturedFeature = FeatureTransformer::makeIndex(
+            to, static_cast<int>(captured) - PIECE_TYPE_OFFSET, capturedColor, kingBucket);
+        accumulator.removeFeature(WHITE_PERSPECTIVE, capturedFeature);
+        accumulator.removeFeature(BLACK_PERSPECTIVE, capturedFeature);
     }
 }
 
@@ -360,16 +393,18 @@ void NNUEEvaluator::updateAfterMove(const BitboardPosition& pos, int from, int t
                                     ChessPieceType piece, ChessPieceType promotion) {
     (void)from;
 
-    int color = pos.getColorAt(to) == ChessPieceColor::WHITE ? 0 : 1;
+    int color =
+        pos.getColorAt(to) == ChessPieceColor::WHITE ? WHITE_PERSPECTIVE : BLACK_PERSPECTIVE;
     int kingSquare = std::countr_zero(pos.getPieceBitboard(
-        ChessPieceType::KING, color == 0 ? ChessPieceColor::WHITE : ChessPieceColor::BLACK));
+        ChessPieceType::KING,
+        color == WHITE_PERSPECTIVE ? ChessPieceColor::WHITE : ChessPieceColor::BLACK));
     int kingBucket = FeatureTransformer::getKingBucket(kingSquare);
 
     ChessPieceType finalPiece = promotion != ChessPieceType::NONE ? promotion : piece;
-    int toFeature =
-        FeatureTransformer::makeIndex(to, static_cast<int>(finalPiece) - 1, color, kingBucket);
-    accumulator.addFeature(0, toFeature);
-    accumulator.addFeature(1, toFeature);
+    int toFeature = FeatureTransformer::makeIndex(
+        to, static_cast<int>(finalPiece) - PIECE_TYPE_OFFSET, color, kingBucket);
+    accumulator.addFeature(WHITE_PERSPECTIVE, toFeature);
+    accumulator.addFeature(BLACK_PERSPECTIVE, toFeature);
 }
 
 bool init(const std::string& networkPath) {
@@ -378,9 +413,10 @@ bool init(const std::string& networkPath) {
 }
 
 int evaluate(const BitboardPosition& pos) {
-    if (!globalEvaluator)
-        return 0;
+    if (!globalEvaluator) {
+        return NO_INDEX;
+    }
     return globalEvaluator->evaluate(pos);
 }
 
-} // namespace NNUEOptimized
+} // namespace NNUEBitboard

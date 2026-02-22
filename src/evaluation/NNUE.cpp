@@ -97,8 +97,7 @@ void Accumulator::removeFeature(int feature) {
 }
 
 LinearLayer::LinearLayer(int in, int out)
-    : inputSize(in),
-      outputSize(out),
+    : inputSize(in), outputSize(out),
       weights(static_cast<std::size_t>(in) * static_cast<std::size_t>(out)),
       biases(static_cast<std::size_t>(out)) {}
 
@@ -109,8 +108,7 @@ void LinearLayer::forward(const void* input, void* output) const {
     for (int i = 0; i < outputSize; ++i) {
 #ifdef __AVX2__
         __m256i sum = _mm256_setzero_si256();
-        const auto rowOffset =
-            static_cast<std::size_t>(i) * static_cast<std::size_t>(inputSize);
+        const auto rowOffset = static_cast<std::size_t>(i) * static_cast<std::size_t>(inputSize);
         const int16_t* wRow = weights.data() + rowOffset;
 
         for (int j = 0; j < inputSize; j += 16) {
@@ -129,8 +127,7 @@ void LinearLayer::forward(const void* input, void* output) const {
         out[i] = _mm_cvtsi128_si32(sum_32) + biases[i];
 #else
         int32_t sum = 0;
-        const auto rowOffset =
-            static_cast<std::size_t>(i) * static_cast<std::size_t>(inputSize);
+        const auto rowOffset = static_cast<std::size_t>(i) * static_cast<std::size_t>(inputSize);
         const int16_t* w = weights.data() + rowOffset;
         for (int j = 0; j < inputSize; ++j) {
             sum += static_cast<int32_t>(w[j]) * static_cast<int32_t>(in[j]);
@@ -183,14 +180,13 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
         return false;
     }
 
-    ftWeights.resize(static_cast<std::size_t>(INPUT_DIMENSIONS) * static_cast<std::size_t>(L1_SIZE));
-    const auto ftWeightsBytes =
-        static_cast<std::streamsize>(ftWeights.size() * sizeof(int16_t));
+    ftWeights.resize(static_cast<std::size_t>(INPUT_DIMENSIONS) *
+                     static_cast<std::size_t>(L1_SIZE));
+    const auto ftWeightsBytes = static_cast<std::streamsize>(ftWeights.size() * sizeof(int16_t));
     file.read(reinterpret_cast<char*>(ftWeights.data()), ftWeightsBytes);
 
     std::vector<int32_t> ftBiases32(L1_SIZE);
-    const auto ftBiasesBytes =
-        static_cast<std::streamsize>(ftBiases32.size() * sizeof(int32_t));
+    const auto ftBiasesBytes = static_cast<std::streamsize>(ftBiases32.size() * sizeof(int32_t));
     file.read(reinterpret_cast<char*>(ftBiases32.data()), ftBiasesBytes);
     ftBiases.resize(L1_SIZE);
     for (int i = 0; i < L1_SIZE; ++i) {
@@ -209,7 +205,8 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
     }
 
     {
-        std::vector<int16_t> w(static_cast<std::size_t>(L2_SIZE) * static_cast<std::size_t>(L3_SIZE));
+        std::vector<int16_t> w(static_cast<std::size_t>(L2_SIZE) *
+                               static_cast<std::size_t>(L3_SIZE));
         std::vector<int32_t> b(L3_SIZE);
         const auto wBytes = static_cast<std::streamsize>(w.size() * sizeof(int16_t));
         const auto bBytes = static_cast<std::streamsize>(b.size() * sizeof(int32_t));

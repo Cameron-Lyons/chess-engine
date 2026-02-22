@@ -12,28 +12,39 @@ class ReductionTable {
 private:
     static constexpr int MAX_DEPTH = 64;
     static constexpr int MAX_MOVES = 64;
+    static constexpr int ZERO_VALUE = 0;
+    static constexpr int ONE_STEP = 1;
+    static constexpr int MIN_DEPTH_FOR_REDUCTION = 3;
+    static constexpr int MIN_MOVES_FOR_REDUCTION = 2;
+    static constexpr double REDUCTION_BASE_OFFSET = 0.7;
+    static constexpr double REDUCTION_LOG_DIVISOR = 2.25;
+    static constexpr int DEPTH_REDUCTION_OFFSET = 2;
     int table[MAX_DEPTH][MAX_MOVES];
 
 public:
     ReductionTable() {
 
-        for (int depth = 0; depth < MAX_DEPTH; ++depth) {
-            for (int moves = 0; moves < MAX_MOVES; ++moves) {
-                if (depth < 3 || moves < 2) {
-                    table[depth][moves] = 0;
+        for (int depth = ZERO_VALUE; depth < MAX_DEPTH; ++depth) {
+            for (int moves = ZERO_VALUE; moves < MAX_MOVES; ++moves) {
+                if (depth < MIN_DEPTH_FOR_REDUCTION || moves < MIN_MOVES_FOR_REDUCTION) {
+                    table[depth][moves] = ZERO_VALUE;
                 } else {
 
-                    double base = 0.7 + std::log(depth) * std::log(moves + 1) / 2.25;
+                    double base =
+                        REDUCTION_BASE_OFFSET +
+                        (std::log(depth) * std::log(moves + ONE_STEP) / REDUCTION_LOG_DIVISOR);
                     table[depth][moves] = static_cast<int>(base);
 
-                    table[depth][moves] = std::min(table[depth][moves], depth - 2);
+                    table[depth][moves] =
+                        std::min(table[depth][moves], depth - DEPTH_REDUCTION_OFFSET);
                 }
             }
         }
     }
 
     int getReduction(int depth, int moveNumber) const {
-        return table[std::min(depth, MAX_DEPTH - 1)][std::min(moveNumber, MAX_MOVES - 1)];
+        return table[std::min(depth, MAX_DEPTH - ONE_STEP)]
+                    [std::min(moveNumber, MAX_MOVES - ONE_STEP)];
     }
 };
 
@@ -43,7 +54,19 @@ struct LMRParams {
 
     static constexpr int MIN_DEPTH = 2;
     static constexpr int MIN_MOVE_COUNT = 2;
+    static constexpr int NO_REDUCTION = 0;
+    static constexpr int HISTORY_POSITIVE_THRESHOLD = 0;
+    static constexpr int MIN_DEPTH_REMAINING = 1;
     static constexpr int MAX_REDUCTION = 6;
+    static constexpr int MAX_HISTORY_SCORE = 2000;
+    static constexpr double HISTORY_SCORE_SCALE = 4000.0;
+    static constexpr double BASE_PHASE_FACTOR = 1.0;
+    static constexpr double PHASE_NORMALIZATION = 512.0;
+    static constexpr double PHASE_REDUCTION_SCALE = 0.2;
+    static constexpr int VERIFY_REDUCTION_THRESHOLD = 2;
+    static constexpr int VERIFY_SCORE_MARGIN = 50;
+    static constexpr int FAIL_COUNT_THRESHOLD = 2;
+    static constexpr int REDUCTION_STEP = 1;
 
     static constexpr double CAPTURE_FACTOR = 0.5;
     static constexpr double CHECK_FACTOR = 0.3;
@@ -60,6 +83,9 @@ struct LMRParams {
 };
 
 struct MoveClassification {
+    static constexpr int DEFAULT_HISTORY_SCORE = 0;
+    static constexpr int INITIAL_MOVE_NUMBER = 0;
+
     bool isCapture;
     bool givesCheck;
     bool isKiller;
@@ -75,10 +101,14 @@ struct MoveClassification {
     MoveClassification()
         : isCapture(false), givesCheck(false), isKiller(false), isCounter(false), isHashMove(false),
           isPromotion(false), isCastling(false), isPassed(false), isTactical(false),
-          historyScore(0), moveNumber(0) {}
+          historyScore(DEFAULT_HISTORY_SCORE), moveNumber(INITIAL_MOVE_NUMBER) {}
 };
 
 struct PositionContext {
+    static constexpr int INITIAL_GAME_PHASE = 0;
+    static constexpr int INITIAL_STATIC_EVAL = 0;
+    static constexpr int INITIAL_EVAL_TREND = 0;
+
     bool inCheck;
     bool isPVNode;
     bool isEndgame;
@@ -91,18 +121,19 @@ struct PositionContext {
 
     PositionContext()
         : inCheck(false), isPVNode(false), isEndgame(false), isTactical(false), isImproving(false),
-          isSingular(false), gamePhase(0), staticEval(0), evalTrend(0) {}
+          isSingular(false), gamePhase(INITIAL_GAME_PHASE), staticEval(INITIAL_STATIC_EVAL),
+          evalTrend(INITIAL_EVAL_TREND) {}
 };
 
 inline int calculateReduction(int depth, const MoveClassification& move,
                               const PositionContext& position) {
 
     if (depth < LMRParams::MIN_DEPTH || move.moveNumber < LMRParams::MIN_MOVE_COUNT) {
-        return 0;
+        return LMRParams::NO_REDUCTION;
     }
 
     if (position.inCheck || move.isHashMove) {
-        return 0;
+        return LMRParams::NO_REDUCTION;
     }
 
     int reduction = reductionTable.getReduction(depth, move.moveNumber);
@@ -124,11 +155,13 @@ inline int calculateReduction(int depth, const MoveClassification& move,
     }
 
     if (move.isPromotion || move.isCastling) {
-        return 0;
+        return LMRParams::NO_REDUCTION;
     }
 
-    if (move.historyScore > 0) {
-        double historyFactor = 1.0 - (std::min(move.historyScore, 2000) / 4000.0);
+    if (move.historyScore > LMRParams::HISTORY_POSITIVE_THRESHOLD) {
+        double historyFactor = LMRParams::BASE_PHASE_FACTOR -
+                               (std::min(move.historyScore, LMRParams::MAX_HISTORY_SCORE) /
+                                LMRParams::HISTORY_SCORE_SCALE);
         reduction = static_cast<int>(reduction * historyFactor);
     }
 
@@ -152,11 +185,13 @@ inline int calculateReduction(int depth, const MoveClassification& move,
         reduction = static_cast<int>(reduction * LMRParams::SINGULAR_FACTOR);
     }
 
-    double phaseFactor = 1.0 - (position.gamePhase / 512.0) * 0.2;
+    double phaseFactor =
+        LMRParams::BASE_PHASE_FACTOR -
+        ((position.gamePhase / LMRParams::PHASE_NORMALIZATION) * LMRParams::PHASE_REDUCTION_SCALE);
     reduction = static_cast<int>(reduction * phaseFactor);
 
-    reduction = std::max(0, std::min(reduction, LMRParams::MAX_REDUCTION));
-    reduction = std::min(reduction, depth - 1);
+    reduction = std::max(LMRParams::NO_REDUCTION, std::min(reduction, LMRParams::MAX_REDUCTION));
+    reduction = std::min(reduction, depth - LMRParams::MIN_DEPTH_REMAINING);
 
     return reduction;
 }
@@ -171,17 +206,19 @@ PositionContext evaluatePosition(const Board& board, int staticEval, int previou
 
 inline bool shouldVerifyReduction(int reduction, int score, int alpha, int beta) {
 
-    return reduction >= 2 && (score > alpha - 50 || score < beta + 50);
+    return reduction >= LMRParams::VERIFY_REDUCTION_THRESHOLD &&
+           (score > alpha - LMRParams::VERIFY_SCORE_MARGIN ||
+            score < beta + LMRParams::VERIFY_SCORE_MARGIN);
 }
 
 inline int adjustReduction(int baseReduction, int failCount, bool improving) {
 
-    if (failCount > 2) {
-        return baseReduction + 1;
+    if (failCount > LMRParams::FAIL_COUNT_THRESHOLD) {
+        return baseReduction + LMRParams::REDUCTION_STEP;
     }
 
     if (improving) {
-        return std::max(0, baseReduction - 1);
+        return std::max(LMRParams::NO_REDUCTION, baseReduction - LMRParams::REDUCTION_STEP);
     }
 
     return baseReduction;

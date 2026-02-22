@@ -4,6 +4,69 @@
 #include <sstream>
 #include <vector>
 
+namespace {
+constexpr int kBoardSquares = BOARD_SIZE * BOARD_SIZE;
+constexpr int kZobristPieceStates = 12;
+constexpr int kBottomRank = 0;
+constexpr int kTopRank = BOARD_SIZE - 1;
+constexpr int kLeftFile = 0;
+constexpr int kRightFile = BOARD_SIZE - 1;
+constexpr int kKingStartFile = 4;
+constexpr int kKingsideCastleFile = 6;
+constexpr int kQueensideCastleFile = 2;
+constexpr int kPieceNotationPrefixLength = 1;
+constexpr int kDestinationLength = 2;
+constexpr int kPawnCaptureNotationLength = 4;
+constexpr int kPromotionCaptureNotationLength = 6;
+constexpr int kWhitePawnStartRank = 1;
+constexpr int kWhitePawnIntermediateRank = 2;
+constexpr int kWhiteDoublePushDestinationRank = 3;
+constexpr int kBlackPawnDoublePushDestinationRank = 4;
+constexpr int kBlackPawnIntermediateRank = 5;
+constexpr int kBlackPawnStartRank = 6;
+constexpr int kWhitePromotionRank = kTopRank;
+constexpr int kBlackPromotionRank = kBottomRank;
+constexpr int kWhiteCaptureLeftOffset = 7;
+constexpr int kWhiteCaptureRightOffset = 9;
+constexpr int kBlackCaptureLeftOffset = -9;
+constexpr int kBlackCaptureRightOffset = -7;
+constexpr int kKnightLongStep = 2;
+constexpr int kKnightShortStep = 1;
+constexpr int kKingReach = 1;
+constexpr int kFirstCandidateIndex = 0;
+constexpr char kFileCharOffset = 'a';
+constexpr char kRankCharOffset = '1';
+constexpr char kCaptureMarker = 'x';
+constexpr char kPromotionMarker = '=';
+constexpr char kCheckMarker = '+';
+constexpr char kMateMarker = '#';
+constexpr char kRankSeparator = '/';
+constexpr char kEmptySquareSymbol = '.';
+constexpr const char* kWhiteTurnFenToken = " w";
+constexpr const char* kBlackTurnFenToken = " b";
+constexpr const char* kFenSuffix = " KQkq - 0 1";
+constexpr const char* kKingsideCastleNotation = "O-O";
+constexpr const char* kKingsideCastleNotationAlt = "0-0";
+constexpr const char* kQueensideCastleNotation = "O-O-O";
+constexpr const char* kQueensideCastleNotationAlt = "0-0-0";
+
+int toBoardIndex(const int row, const int col) {
+    return (row * BOARD_SIZE) + col;
+}
+
+int parseFile(const char fileChar) {
+    return fileChar - kFileCharOffset;
+}
+
+int parseRank(const char rankChar) {
+    return rankChar - kRankCharOffset;
+}
+
+bool isWithinBoard(const int col, const int row) {
+    return col >= kLeftFile && col <= kRightFile && row >= kBottomRank && row <= kTopRank;
+}
+} // namespace
+
 std::unordered_map<std::string, std::vector<std::string>> OpeningBookOptions = {
 
     {"rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", {"e5", "c5", "e6", "c6", "Nf6"}},
@@ -71,25 +134,25 @@ std::unordered_map<std::string, std::vector<std::string>> OpeningBookOptions = {
 
 std::unordered_map<std::string, std::string> OpeningBook;
 
-uint64_t ZobristTable[64][12];
+uint64_t ZobristTable[kBoardSquares][kZobristPieceStates];
 uint64_t ZobristBlackToMove;
 TranspositionTableAdapter TransTable;
 
 std::string getFEN(const Board& board) {
     std::string fen;
-    for (int row = 7; row >= 0; --row) {
-        int emptyCount = 0;
+    for (int row = kTopRank; row >= kBottomRank; --row) {
+        int emptyCount = kBottomRank;
         for (int col = 0; col < BOARD_SIZE; ++col) {
-            int pos = row * BOARD_SIZE + col;
+            int pos = toBoardIndex(row, col);
             const Piece& piece = board.squares[pos].piece;
             if (piece.PieceType == ChessPieceType::NONE) {
                 emptyCount++;
             } else {
-                if (emptyCount > 0) {
+                if (emptyCount > kBottomRank) {
                     fen += std::to_string(emptyCount);
-                    emptyCount = 0;
+                    emptyCount = kBottomRank;
                 }
-                char symbol = '.';
+                char symbol = kEmptySquareSymbol;
                 switch (piece.PieceType) {
                     case ChessPieceType::PAWN:
                         symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'P' : 'p';
@@ -110,112 +173,114 @@ std::string getFEN(const Board& board) {
                         symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'K' : 'k';
                         break;
                     default:
-                        symbol = '.';
+                        symbol = kEmptySquareSymbol;
                         break;
                 }
                 fen += symbol;
             }
         }
-        if (emptyCount > 0) {
+        if (emptyCount > kBottomRank) {
             fen += std::to_string(emptyCount);
         }
-        if (row > 0)
-            fen += '/';
+        if (row > kBottomRank) {
+            fen += kRankSeparator;
+        }
     }
-    fen += board.turn == ChessPieceColor::WHITE ? " w" : " b";
-    fen += " KQkq - 0 1";
+    fen += board.turn == ChessPieceColor::WHITE ? kWhiteTurnFenToken : kBlackTurnFenToken;
+    fen += kFenSuffix;
     return fen;
 }
 
 bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& srcRow, int& destCol,
                         int& destRow) {
     std::string cleanMove(move);
-    if (!cleanMove.empty() && (cleanMove.back() == '+' || cleanMove.back() == '#')) {
+    if (!cleanMove.empty() &&
+        (cleanMove.back() == kCheckMarker || cleanMove.back() == kMateMarker)) {
         cleanMove.pop_back();
     }
 
-    if (cleanMove == "O-O" || cleanMove == "0-0") {
+    if (cleanMove == kKingsideCastleNotation || cleanMove == kKingsideCastleNotationAlt) {
         if (board.turn == ChessPieceColor::WHITE) {
-            srcCol = 4;
-            srcRow = 0;
-            destCol = 6;
-            destRow = 0;
+            srcCol = kKingStartFile;
+            srcRow = kBottomRank;
+            destCol = kKingsideCastleFile;
+            destRow = kBottomRank;
         } else {
-            srcCol = 4;
-            srcRow = 7;
-            destCol = 6;
-            destRow = 7;
+            srcCol = kKingStartFile;
+            srcRow = kTopRank;
+            destCol = kKingsideCastleFile;
+            destRow = kTopRank;
         }
         return true;
     }
-    if (cleanMove == "O-O-O" || cleanMove == "0-0-0") {
+    if (cleanMove == kQueensideCastleNotation || cleanMove == kQueensideCastleNotationAlt) {
         if (board.turn == ChessPieceColor::WHITE) {
-            srcCol = 4;
-            srcRow = 0;
-            destCol = 2;
-            destRow = 0;
+            srcCol = kKingStartFile;
+            srcRow = kBottomRank;
+            destCol = kQueensideCastleFile;
+            destRow = kBottomRank;
         } else {
-            srcCol = 4;
-            srcRow = 7;
-            destCol = 2;
-            destRow = 7;
+            srcCol = kKingStartFile;
+            srcRow = kTopRank;
+            destCol = kQueensideCastleFile;
+            destRow = kTopRank;
         }
         return true;
     }
 
     ChessPieceType pieceType = ChessPieceType::PAWN;
-    size_t startPos = 0;
+    size_t startPos = kBottomRank;
     bool isCapture = false;
-    if (cleanMove.length() > 0) {
-        switch (cleanMove[0]) {
+    if (!cleanMove.empty()) {
+        switch (cleanMove[kBottomRank]) {
             case 'N':
                 pieceType = ChessPieceType::KNIGHT;
-                startPos = 1;
+                startPos = kPieceNotationPrefixLength;
                 break;
             case 'B':
                 pieceType = ChessPieceType::BISHOP;
-                startPos = 1;
+                startPos = kPieceNotationPrefixLength;
                 break;
             case 'R':
                 pieceType = ChessPieceType::ROOK;
-                startPos = 1;
+                startPos = kPieceNotationPrefixLength;
                 break;
             case 'Q':
                 pieceType = ChessPieceType::QUEEN;
-                startPos = 1;
+                startPos = kPieceNotationPrefixLength;
                 break;
             case 'K':
                 pieceType = ChessPieceType::KING;
-                startPos = 1;
+                startPos = kPieceNotationPrefixLength;
                 break;
             default:
                 pieceType = ChessPieceType::PAWN;
-                startPos = 0;
+                startPos = kBottomRank;
                 break;
         }
     }
 
-    size_t xPos = cleanMove.find('x');
+    size_t xPos = cleanMove.find(kCaptureMarker);
     if (xPos != std::string::npos) {
         isCapture = true;
     }
 
-    if (cleanMove.length() == 2 && pieceType == ChessPieceType::PAWN) {
-        destCol = cleanMove[0] - 'a';
-        destRow = cleanMove[1] - '1';
+    if (cleanMove.length() == kDestinationLength && pieceType == ChessPieceType::PAWN) {
+        destCol = parseFile(cleanMove[kBottomRank]);
+        destRow = parseRank(cleanMove[kPieceNotationPrefixLength]);
 
-        if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE) {
+        if (!isWithinBoard(destCol, destRow)) {
             return false;
         }
 
         if (board.turn == ChessPieceColor::WHITE) {
-            if (destRow > 0) {
+            if (destRow > kBottomRank) {
                 int checkRow = destRow - 1;
-                int pos = checkRow * BOARD_SIZE + destCol;
+                int pos = toBoardIndex(checkRow, destCol);
                 const Piece& piece = board.squares[pos].piece;
                 if (piece.PieceType == ChessPieceType::PAWN &&
                     piece.PieceColor == ChessPieceColor::WHITE) {
-                    int destPos = destRow * BOARD_SIZE + destCol;
+                    int destPos = toBoardIndex(destRow, destCol);
                     if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE) {
                         srcCol = destCol;
                         srcRow = checkRow;
@@ -224,14 +289,14 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                 }
             }
 
-            if (destRow == 3) {
-                int checkRow = 1;
-                int pos = checkRow * BOARD_SIZE + destCol;
+            if (destRow == kWhiteDoublePushDestinationRank) {
+                int checkRow = kWhitePawnStartRank;
+                int pos = toBoardIndex(checkRow, destCol);
                 const Piece& piece = board.squares[pos].piece;
                 if (piece.PieceType == ChessPieceType::PAWN &&
                     piece.PieceColor == ChessPieceColor::WHITE) {
-                    int destPos = destRow * BOARD_SIZE + destCol;
-                    int intermediatPos = 2 * BOARD_SIZE + destCol;
+                    int destPos = toBoardIndex(destRow, destCol);
+                    int intermediatPos = toBoardIndex(kWhitePawnIntermediateRank, destCol);
                     if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE &&
                         board.squares[intermediatPos].piece.PieceType == ChessPieceType::NONE) {
                         srcCol = destCol;
@@ -241,13 +306,13 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                 }
             }
         } else {
-            if (destRow < 7) {
+            if (destRow < kTopRank) {
                 int checkRow = destRow + 1;
-                int pos = checkRow * BOARD_SIZE + destCol;
+                int pos = toBoardIndex(checkRow, destCol);
                 const Piece& piece = board.squares[pos].piece;
                 if (piece.PieceType == ChessPieceType::PAWN &&
                     piece.PieceColor == ChessPieceColor::BLACK) {
-                    int destPos = destRow * BOARD_SIZE + destCol;
+                    int destPos = toBoardIndex(destRow, destCol);
                     if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE) {
                         srcCol = destCol;
                         srcRow = checkRow;
@@ -256,14 +321,14 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                 }
             }
 
-            if (destRow == 4) {
-                int checkRow = 6;
-                int pos = checkRow * BOARD_SIZE + destCol;
+            if (destRow == kBlackPawnDoublePushDestinationRank) {
+                int checkRow = kBlackPawnStartRank;
+                int pos = toBoardIndex(checkRow, destCol);
                 const Piece& piece = board.squares[pos].piece;
                 if (piece.PieceType == ChessPieceType::PAWN &&
                     piece.PieceColor == ChessPieceColor::BLACK) {
-                    int destPos = destRow * BOARD_SIZE + destCol;
-                    int intermediatPos = 5 * BOARD_SIZE + destCol;
+                    int destPos = toBoardIndex(destRow, destCol);
+                    int intermediatPos = toBoardIndex(kBlackPawnIntermediateRank, destCol);
                     if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE &&
                         board.squares[intermediatPos].piece.PieceType == ChessPieceType::NONE) {
                         srcCol = destCol;
@@ -276,22 +341,24 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         return false;
     }
 
-    if (pieceType == ChessPieceType::PAWN && cleanMove.length() >= 4 && cleanMove[1] == 'x') {
-        destCol = cleanMove[2] - 'a';
-        destRow = cleanMove[3] - '1';
-        srcCol = cleanMove[0] - 'a';
-        if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE ||
-            srcCol < 0 || srcCol >= BOARD_SIZE)
+    if (pieceType == ChessPieceType::PAWN && cleanMove.length() >= kPawnCaptureNotationLength &&
+        cleanMove[kPieceNotationPrefixLength] == kCaptureMarker) {
+        destCol = parseFile(cleanMove[kKnightLongStep]);
+        destRow = parseRank(cleanMove[kWhiteDoublePushDestinationRank]);
+        srcCol = parseFile(cleanMove[kBottomRank]);
+        if (!isWithinBoard(destCol, destRow) || srcCol < kLeftFile || srcCol > kRightFile) {
             return false;
+        }
 
-        for (int row = 0; row < BOARD_SIZE; row++) {
-            int pos = row * BOARD_SIZE + srcCol;
+        for (int row = kBottomRank; row < BOARD_SIZE; row++) {
+            int pos = toBoardIndex(row, srcCol);
             const Piece& piece = board.squares[pos].piece;
             if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == board.turn) {
                 int from = pos;
-                int to = destRow * BOARD_SIZE + destCol;
+                int to = toBoardIndex(destRow, destCol);
                 if (board.turn == ChessPieceColor::WHITE) {
-                    if ((to == from + 7 && srcCol > 0) || (to == from + 9 && srcCol < 7)) {
+                    if ((to == from + kWhiteCaptureLeftOffset && srcCol > kLeftFile) ||
+                        (to == from + kWhiteCaptureRightOffset && srcCol < kRightFile)) {
                         if (board.squares[to].piece.PieceType != ChessPieceType::NONE &&
                             board.squares[to].piece.PieceColor == ChessPieceColor::BLACK) {
                             srcRow = row;
@@ -299,7 +366,8 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                         }
                     }
                 } else {
-                    if ((to == from - 9 && srcCol > 0) || (to == from - 7 && srcCol < 7)) {
+                    if ((to == from + kBlackCaptureLeftOffset && srcCol > kLeftFile) ||
+                        (to == from + kBlackCaptureRightOffset && srcCol < kRightFile)) {
                         if (board.squares[to].piece.PieceType != ChessPieceType::NONE &&
                             board.squares[to].piece.PieceColor == ChessPieceColor::WHITE) {
                             srcRow = row;
@@ -312,32 +380,32 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
         return false;
     }
 
-    if (pieceType == ChessPieceType::PAWN && cleanMove.length() >= 4) {
-        size_t equalPos = cleanMove.find('=');
-        if (equalPos != std::string::npos && equalPos >= 2) {
+    if (pieceType == ChessPieceType::PAWN && cleanMove.length() >= kPawnCaptureNotationLength) {
+        size_t equalPos = cleanMove.find(kPromotionMarker);
+        if (equalPos != std::string::npos && equalPos >= kDestinationLength) {
+            destCol = parseFile(cleanMove[equalPos - kDestinationLength]);
+            destRow = parseRank(cleanMove[equalPos - kPieceNotationPrefixLength]);
 
-            destCol = cleanMove[equalPos - 2] - 'a';
-            destRow = cleanMove[equalPos - 1] - '1';
-
-            if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE) {
+            if (!isWithinBoard(destCol, destRow)) {
                 return false;
             }
 
-            bool isPromotionRank = (destRow == 7 && board.turn == ChessPieceColor::WHITE) ||
-                                   (destRow == 0 && board.turn == ChessPieceColor::BLACK);
+            bool isPromotionRank =
+                (destRow == kWhitePromotionRank && board.turn == ChessPieceColor::WHITE) ||
+                (destRow == kBlackPromotionRank && board.turn == ChessPieceColor::BLACK);
 
             if (!isPromotionRank) {
                 return false;
             }
 
             if (board.turn == ChessPieceColor::WHITE) {
-                if (destRow > 0) {
+                if (destRow > kBottomRank) {
                     int checkRow = destRow - 1;
-                    int pos = checkRow * BOARD_SIZE + destCol;
+                    int pos = toBoardIndex(checkRow, destCol);
                     const Piece& piece = board.squares[pos].piece;
                     if (piece.PieceType == ChessPieceType::PAWN &&
                         piece.PieceColor == ChessPieceColor::WHITE) {
-                        int destPos = destRow * BOARD_SIZE + destCol;
+                        int destPos = toBoardIndex(destRow, destCol);
                         if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE) {
                             srcCol = destCol;
                             srcRow = checkRow;
@@ -346,13 +414,13 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                     }
                 }
             } else {
-                if (destRow < 7) {
+                if (destRow < kTopRank) {
                     int checkRow = destRow + 1;
-                    int pos = checkRow * BOARD_SIZE + destCol;
+                    int pos = toBoardIndex(checkRow, destCol);
                     const Piece& piece = board.squares[pos].piece;
                     if (piece.PieceType == ChessPieceType::PAWN &&
                         piece.PieceColor == ChessPieceColor::BLACK) {
-                        int destPos = destRow * BOARD_SIZE + destCol;
+                        int destPos = toBoardIndex(destRow, destCol);
                         if (board.squares[destPos].piece.PieceType == ChessPieceType::NONE) {
                             srcCol = destCol;
                             srcRow = checkRow;
@@ -364,30 +432,34 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
             return false;
         }
 
-        if (cleanMove.length() >= 6 && cleanMove[1] == 'x' && equalPos != std::string::npos) {
-            destCol = cleanMove[2] - 'a';
-            destRow = cleanMove[3] - '1';
-            srcCol = cleanMove[0] - 'a';
+        if (cleanMove.length() >= kPromotionCaptureNotationLength &&
+            cleanMove[kPieceNotationPrefixLength] == kCaptureMarker &&
+            equalPos != std::string::npos) {
+            destCol = parseFile(cleanMove[kKnightLongStep]);
+            destRow = parseRank(cleanMove[kWhiteDoublePushDestinationRank]);
+            srcCol = parseFile(cleanMove[kBottomRank]);
 
-            if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE ||
-                srcCol < 0 || srcCol >= BOARD_SIZE)
+            if (!isWithinBoard(destCol, destRow) || srcCol < kLeftFile || srcCol > kRightFile) {
                 return false;
+            }
 
-            bool isPromotionRank = (destRow == 7 && board.turn == ChessPieceColor::WHITE) ||
-                                   (destRow == 0 && board.turn == ChessPieceColor::BLACK);
+            bool isPromotionRank =
+                (destRow == kWhitePromotionRank && board.turn == ChessPieceColor::WHITE) ||
+                (destRow == kBlackPromotionRank && board.turn == ChessPieceColor::BLACK);
 
             if (!isPromotionRank) {
                 return false;
             }
 
-            for (int row = 0; row < BOARD_SIZE; row++) {
-                int pos = row * BOARD_SIZE + srcCol;
+            for (int row = kBottomRank; row < BOARD_SIZE; row++) {
+                int pos = toBoardIndex(row, srcCol);
                 const Piece& piece = board.squares[pos].piece;
                 if (piece.PieceType == ChessPieceType::PAWN && piece.PieceColor == board.turn) {
                     int from = pos;
-                    int to = destRow * BOARD_SIZE + destCol;
+                    int to = toBoardIndex(destRow, destCol);
                     if (board.turn == ChessPieceColor::WHITE) {
-                        if ((to == from + 7 && srcCol > 0) || (to == from + 9 && srcCol < 7)) {
+                        if ((to == from + kWhiteCaptureLeftOffset && srcCol > kLeftFile) ||
+                            (to == from + kWhiteCaptureRightOffset && srcCol < kRightFile)) {
                             if (board.squares[to].piece.PieceType != ChessPieceType::NONE &&
                                 board.squares[to].piece.PieceColor == ChessPieceColor::BLACK) {
                                 srcRow = row;
@@ -395,7 +467,8 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                             }
                         }
                     } else {
-                        if ((to == from - 9 && srcCol > 0) || (to == from - 7 && srcCol < 7)) {
+                        if ((to == from + kBlackCaptureLeftOffset && srcCol > kLeftFile) ||
+                            (to == from + kBlackCaptureRightOffset && srcCol < kRightFile)) {
                             if (board.squares[to].piece.PieceType != ChessPieceType::NONE &&
                                 board.squares[to].piece.PieceColor == ChessPieceColor::WHITE) {
                                 srcRow = row;
@@ -410,24 +483,27 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
     }
 
     if (pieceType != ChessPieceType::PAWN) {
-        if (cleanMove.length() < startPos + 2)
+        if (cleanMove.length() < startPos + kDestinationLength) {
             return false;
-
-        if (isCapture) {
-            size_t destStart = xPos + 1;
-            if (destStart + 1 >= cleanMove.length())
-                return false;
-            destCol = cleanMove[destStart] - 'a';
-            destRow = cleanMove[destStart + 1] - '1';
-        } else {
-            destCol = cleanMove[startPos] - 'a';
-            destRow = cleanMove[startPos + 1] - '1';
         }
 
-        if (destCol < 0 || destCol >= BOARD_SIZE || destRow < 0 || destRow >= BOARD_SIZE)
-            return false;
+        if (isCapture) {
+            size_t destStart = xPos + kPieceNotationPrefixLength;
+            if (destStart + kPieceNotationPrefixLength >= cleanMove.length()) {
+                return false;
+            }
+            destCol = parseFile(cleanMove[destStart]);
+            destRow = parseRank(cleanMove[destStart + kPieceNotationPrefixLength]);
+        } else {
+            destCol = parseFile(cleanMove[startPos]);
+            destRow = parseRank(cleanMove[startPos + kPieceNotationPrefixLength]);
+        }
 
-        int destPos = destRow * BOARD_SIZE + destCol;
+        if (!isWithinBoard(destCol, destRow)) {
+            return false;
+        }
+
+        int destPos = toBoardIndex(destRow, destCol);
         const Piece& destPiece = board.squares[destPos].piece;
 
         if (isCapture) {
@@ -442,9 +518,9 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
 
         std::vector<std::pair<int, int>> candidates;
 
-        for (int row = 0; row < BOARD_SIZE; row++) {
-            for (int col = 0; col < BOARD_SIZE; col++) {
-                int pos = row * BOARD_SIZE + col;
+        for (int row = kBottomRank; row < BOARD_SIZE; row++) {
+            for (int col = kLeftFile; col < BOARD_SIZE; col++) {
+                int pos = toBoardIndex(row, col);
                 const Piece& piece = board.squares[pos].piece;
 
                 if (piece.PieceType == pieceType && piece.PieceColor == board.turn) {
@@ -455,20 +531,23 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                             int rowDiff = abs(destRow - row);
                             int colDiff = abs(destCol - col);
                             canReach =
-                                (rowDiff == 2 && colDiff == 1) || (rowDiff == 1 && colDiff == 2);
+                                (rowDiff == kKnightLongStep && colDiff == kKnightShortStep) ||
+                                (rowDiff == kKnightShortStep && colDiff == kKnightLongStep);
                             break;
                         }
                         case ChessPieceType::BISHOP: {
                             int rowDiff = abs(destRow - row);
                             int colDiff = abs(destCol - col);
-                            if (rowDiff == colDiff && rowDiff > 0) {
+                            if (rowDiff == colDiff && rowDiff > kBottomRank) {
 
-                                int rowStep = (destRow > row) ? 1 : -1;
-                                int colStep = (destCol > col) ? 1 : -1;
+                                int rowStep = (destRow > row) ? kPieceNotationPrefixLength
+                                                              : -kPieceNotationPrefixLength;
+                                int colStep = (destCol > col) ? kPieceNotationPrefixLength
+                                                              : -kPieceNotationPrefixLength;
                                 canReach = true;
-                                for (int i = 1; i < rowDiff; i++) {
+                                for (int i = kPieceNotationPrefixLength; i < rowDiff; i++) {
                                     int checkPos =
-                                        (row + i * rowStep) * BOARD_SIZE + (col + i * colStep);
+                                        toBoardIndex(row + (i * rowStep), col + (i * colStep));
                                     if (board.squares[checkPos].piece.PieceType !=
                                         ChessPieceType::NONE) {
                                         canReach = false;
@@ -483,20 +562,20 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
 
                                 canReach = true;
                                 if (row == destRow) {
-                                    int start = std::min(col, destCol) + 1;
+                                    int start = std::min(col, destCol) + kPieceNotationPrefixLength;
                                     int end = std::max(col, destCol);
                                     for (int c = start; c < end; c++) {
-                                        if (board.squares[row * BOARD_SIZE + c].piece.PieceType !=
+                                        if (board.squares[toBoardIndex(row, c)].piece.PieceType !=
                                             ChessPieceType::NONE) {
                                             canReach = false;
                                             break;
                                         }
                                     }
                                 } else {
-                                    int start = std::min(row, destRow) + 1;
+                                    int start = std::min(row, destRow) + kPieceNotationPrefixLength;
                                     int end = std::max(row, destRow);
                                     for (int r = start; r < end; r++) {
-                                        if (board.squares[r * BOARD_SIZE + col].piece.PieceType !=
+                                        if (board.squares[toBoardIndex(r, col)].piece.PieceType !=
                                             ChessPieceType::NONE) {
                                             canReach = false;
                                             break;
@@ -514,31 +593,33 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                                 canReach = true;
 
                                 if (row == destRow) {
-                                    int start = std::min(col, destCol) + 1;
+                                    int start = std::min(col, destCol) + kPieceNotationPrefixLength;
                                     int end = std::max(col, destCol);
                                     for (int c = start; c < end; c++) {
-                                        if (board.squares[row * BOARD_SIZE + c].piece.PieceType !=
+                                        if (board.squares[toBoardIndex(row, c)].piece.PieceType !=
                                             ChessPieceType::NONE) {
                                             canReach = false;
                                             break;
                                         }
                                     }
                                 } else if (col == destCol) {
-                                    int start = std::min(row, destRow) + 1;
+                                    int start = std::min(row, destRow) + kPieceNotationPrefixLength;
                                     int end = std::max(row, destRow);
                                     for (int r = start; r < end; r++) {
-                                        if (board.squares[r * BOARD_SIZE + col].piece.PieceType !=
+                                        if (board.squares[toBoardIndex(r, col)].piece.PieceType !=
                                             ChessPieceType::NONE) {
                                             canReach = false;
                                             break;
                                         }
                                     }
                                 } else if (rowDiff == colDiff) {
-                                    int rowStep = (destRow > row) ? 1 : -1;
-                                    int colStep = (destCol > col) ? 1 : -1;
-                                    for (int i = 1; i < rowDiff; i++) {
+                                    int rowStep = (destRow > row) ? kPieceNotationPrefixLength
+                                                                  : -kPieceNotationPrefixLength;
+                                    int colStep = (destCol > col) ? kPieceNotationPrefixLength
+                                                                  : -kPieceNotationPrefixLength;
+                                    for (int i = kPieceNotationPrefixLength; i < rowDiff; i++) {
                                         int checkPos =
-                                            (row + i * rowStep) * BOARD_SIZE + (col + i * colStep);
+                                            toBoardIndex(row + (i * rowStep), col + (i * colStep));
                                         if (board.squares[checkPos].piece.PieceType !=
                                             ChessPieceType::NONE) {
                                             canReach = false;
@@ -552,7 +633,8 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                         case ChessPieceType::KING: {
                             int rowDiff = abs(destRow - row);
                             int colDiff = abs(destCol - col);
-                            canReach = rowDiff <= 1 && colDiff <= 1 && (rowDiff + colDiff) > 0;
+                            canReach = rowDiff <= kKingReach && colDiff <= kKingReach &&
+                                       (rowDiff + colDiff) > kBottomRank;
                             break;
                         }
                         default:
@@ -560,19 +642,15 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
                     }
 
                     if (canReach) {
-                        candidates.push_back({col, row});
+                        candidates.emplace_back(col, row);
                     }
                 }
             }
         }
 
-        if (candidates.size() == 1) {
-            srcCol = candidates[0].first;
-            srcRow = candidates[0].second;
-            return true;
-        } else if (candidates.size() > 1) {
-            srcCol = candidates[0].first;
-            srcRow = candidates[0].second;
+        if (!candidates.empty()) {
+            srcCol = candidates[kFirstCandidateIndex].first;
+            srcRow = candidates[kFirstCandidateIndex].second;
             return true;
         }
     }
@@ -582,13 +660,15 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
 
 ChessPieceType getPromotionPiece(std::string_view move) {
     std::string cleanMove(move);
-    if (!cleanMove.empty() && (cleanMove.back() == '+' || cleanMove.back() == '#')) {
+    if (!cleanMove.empty() &&
+        (cleanMove.back() == kCheckMarker || cleanMove.back() == kMateMarker)) {
         cleanMove.pop_back();
     }
 
-    size_t equalPos = cleanMove.find('=');
-    if (equalPos != std::string::npos && equalPos + 1 < cleanMove.length()) {
-        char promotionChar = cleanMove[equalPos + 1];
+    size_t equalPos = cleanMove.find(kPromotionMarker);
+    if (equalPos != std::string::npos &&
+        equalPos + kPieceNotationPrefixLength < cleanMove.length()) {
+        char promotionChar = cleanMove[equalPos + kPieceNotationPrefixLength];
         switch (promotionChar) {
             case 'Q':
             case 'q':

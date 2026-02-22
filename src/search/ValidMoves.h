@@ -5,8 +5,10 @@
 
 #include <vector>
 
-extern bool BlackAttackBoard[64];
-extern bool WhiteAttackBoard[64];
+constexpr int kValidMovesBoardSquareCount = 64;
+
+extern bool BlackAttackBoard[kValidMovesBoardSquareCount];
+extern bool WhiteAttackBoard[kValidMovesBoardSquareCount];
 extern int BlackKingPosition;
 extern int WhiteKingPosition;
 
@@ -27,10 +29,4 @@ std::vector<std::pair<int, int>> generateQueenMoves(Board& board, ChessPieceColo
 std::vector<std::pair<int, int>> generateKingMoves(Board& board, ChessPieceColor color);
 std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color);
 
-bool IsKingInCheck(const Board& board, ChessPieceColor color);
-
-bool IsMoveLegal(Board& board, int srcPos, int destPos);
-
 void addCastlingMovesBitboard(Board& board, ChessPieceColor color);
-
-void GenValidMoves(Board& board);

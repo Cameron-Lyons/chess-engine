@@ -1,8 +1,5 @@
 #include "ChessBoard.h"
 
-#include <algorithm>
-#include <ranges>
-
 void Board::clearBitboards() {
     whitePawns = whiteKnights = whiteBishops = whiteRooks = whiteQueens = whiteKings = 0;
     blackPawns = blackKnights = blackBishops = blackRooks = blackQueens = blackKings = 0;
@@ -317,7 +314,8 @@ std::string Board::toFEN() const {
                 char pieceChar = pieceChars[static_cast<int>(piece.PieceType)];
 
                 if (piece.PieceColor == ChessPieceColor::BLACK) {
-                    pieceChar = tolower(pieceChar);
+                    pieceChar =
+                        static_cast<char>(std::tolower(static_cast<unsigned char>(pieceChar)));
                 }
                 fen += pieceChar;
             }
@@ -382,7 +380,7 @@ void Board::InitializeFromFEN(ChessString fen) {
             ChessPieceType type = ChessPieceType::NONE;
             ChessPieceColor color = ChessPieceColor::WHITE;
 
-            switch (tolower(c)) {
+            switch (std::tolower(static_cast<unsigned char>(c))) {
                 case 'p':
                     type = ChessPieceType::PAWN;
                     break;
@@ -400,6 +398,8 @@ void Board::InitializeFromFEN(ChessString fen) {
                     break;
                 case 'k':
                     type = ChessPieceType::KING;
+                    break;
+                default:
                     break;
             }
 

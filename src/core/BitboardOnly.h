@@ -37,7 +37,7 @@ public:
     void setFromFEN(const std::string& fen);
     std::string toFEN() const;
 
-    inline ChessPieceType getPieceAt(int square) const {
+    ChessPieceType getPieceAt(int square) const {
         Bitboard mask = 1ULL << square;
 
         if (occupancy[WHITE] & mask) {
@@ -85,7 +85,7 @@ public:
         return ChessPieceType::NONE;
     }
 
-    inline ChessPieceColor getColorAt(int square) const {
+    ChessPieceColor getColorAt(int square) const {
         Bitboard mask = 1ULL << square;
         if (occupancy[WHITE] & mask) {
             return ChessPieceColor::WHITE;
@@ -96,19 +96,19 @@ public:
         return ChessPieceColor::WHITE;
     }
 
-    inline bool isEmpty(int square) const {
+    bool isEmpty(int square) const {
         return !(occupancy[2] & (1ULL << square));
     }
 
-    inline Bitboard getPieceBitboard(ChessPieceType type, ChessPieceColor color) const {
+    Bitboard getPieceBitboard(ChessPieceType type, ChessPieceColor color) const {
         return pieces[color == ChessPieceColor::WHITE ? WHITE : BLACK][static_cast<int>(type)];
     }
 
-    inline Bitboard getColorBitboard(ChessPieceColor color) const {
+    Bitboard getColorBitboard(ChessPieceColor color) const {
         return occupancy[color == ChessPieceColor::WHITE ? WHITE : BLACK];
     }
 
-    inline Bitboard getAllPieces() const {
+    Bitboard getAllPieces() const {
         return occupancy[2];
     }
 
@@ -116,39 +116,39 @@ public:
     void unmakeMove(int from, int to, ChessPieceType captured,
                     ChessPieceType promotion = ChessPieceType::NONE);
 
-    inline ChessPieceColor getSideToMove() const {
+    ChessPieceColor getSideToMove() const {
         return sideToMove == WHITE ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
     }
 
-    inline void setSideToMove(ChessPieceColor color) {
+    void setSideToMove(ChessPieceColor color) {
         sideToMove = (color == ChessPieceColor::WHITE) ? WHITE : BLACK;
     }
 
-    inline bool canCastle(ChessPieceColor color, bool kingside) const {
+    bool canCastle(ChessPieceColor color, bool kingside) const {
         int shift = (color == ChessPieceColor::WHITE ? 0 : 2) + (kingside ? 0 : 1);
         return (castlingRights >> shift) & 1;
     }
 
-    inline void setCastlingRights(bool whiteKingside, bool whiteQueenside, bool blackKingside,
-                                  bool blackQueenside) {
+    void setCastlingRights(bool whiteKingside, bool whiteQueenside, bool blackKingside,
+                           bool blackQueenside) {
         castlingRights = (whiteKingside ? 1 : 0) | (whiteQueenside ? 2 : 0) |
                          (blackKingside ? 4 : 0) | (blackQueenside ? 8 : 0);
     }
 
-    inline int getEnPassantSquare() const {
+    int getEnPassantSquare() const {
         return epSquare < 64 ? epSquare : -1;
     }
 
-    inline void setEnPassantSquare(int square) {
+    void setEnPassantSquare(int square) {
         epSquare = (square >= 0 && square < 64) ? square : 64;
     }
 
-    inline uint64_t getHash() const {
+    uint64_t getHash() const {
         return hash;
     }
 
     template <typename Func>
-    inline void forEachPiece(ChessPieceColor color, ChessPieceType type, Func&& func) const {
+    void forEachPiece(ChessPieceColor color, ChessPieceType type, Func&& func) const {
         Bitboard bb = getPieceBitboard(type, color);
         while (bb) {
             int square = std::countr_zero(bb);
@@ -157,15 +157,15 @@ public:
         }
     }
 
-    inline ChessTimePoint getCurrentTime() const {
+    ChessTimePoint getCurrentTime() const {
         return ChessClock::now();
     }
 
-    inline ChessDuration getTimeSinceLastMove() const {
+    ChessDuration getTimeSinceLastMove() const {
         return std::chrono::duration_cast<ChessDuration>(ChessClock::now() - lastMoveTime);
     }
 
-    inline void recordMoveTime() {
+    void recordMoveTime() {
         lastMoveTime = ChessClock::now();
     }
 
@@ -183,49 +183,50 @@ private:
     BitboardPosition position;
 
 public:
-    inline ChessPieceType getPieceType(int pos) const {
+    ChessPieceType getPieceType(int pos) const {
         return position.getPieceAt(pos);
     }
 
-    inline ChessPieceColor getPieceColor(int pos) const {
+    ChessPieceColor getPieceColor(int pos) const {
         return position.getColorAt(pos);
     }
 
-    inline Bitboard getPieceBitboard(ChessPieceType type, ChessPieceColor color) const {
+    Bitboard getPieceBitboard(ChessPieceType type, ChessPieceColor color) const {
         return position.getPieceBitboard(type, color);
     }
 
-    inline ChessPieceColor getTurn() const {
+    ChessPieceColor getTurn() const {
         return position.getSideToMove();
     }
 
-    inline void setTurn(ChessPieceColor color) {
+    void setTurn(ChessPieceColor color) {
         position.setSideToMove(color);
     }
 
-    inline bool movePiece(int from, int to) {
+    bool movePiece(int from, int to) {
         ChessPieceType movingPiece = position.getPieceAt(from);
-        if (movingPiece == ChessPieceType::NONE)
+        if (movingPiece == ChessPieceType::NONE) {
             return false;
+        }
 
         position.makeMove(from, to);
         return true;
     }
 
-    inline void updateBitboards() {}
+    void updateBitboards() {}
 
-    inline std::string toFEN() const {
+    std::string toFEN() const {
         return position.toFEN();
     }
 
-    inline void InitializeFromFEN(const std::string& fen) {
+    void InitializeFromFEN(const std::string& fen) {
         position.setFromFEN(fen);
     }
 
-    inline BitboardPosition& getPosition() {
+    BitboardPosition& getPosition() {
         return position;
     }
-    inline const BitboardPosition& getPosition() const {
+    const BitboardPosition& getPosition() const {
         return position;
     }
 };

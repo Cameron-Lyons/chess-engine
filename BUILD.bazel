@@ -7,10 +7,10 @@ x86_avx2_copts = select({
     "//conditions:default": [],
 })
 
-nnue_optimized_srcs = select({
-    "@bazel_tools//src/conditions:darwin_x86_64": ["src/evaluation/NNUEOptimized.cpp"],
-    "@bazel_tools//src/conditions:linux_x86_64": ["src/evaluation/NNUEOptimized.cpp"],
-    "@bazel_tools//src/conditions:windows_x64": ["src/evaluation/NNUEOptimized.cpp"],
+nnue_bitboard_srcs = select({
+    "@bazel_tools//src/conditions:darwin_x86_64": ["src/evaluation/NNUEBitboard.cpp"],
+    "@bazel_tools//src/conditions:linux_x86_64": ["src/evaluation/NNUEBitboard.cpp"],
+    "@bazel_tools//src/conditions:windows_x64": ["src/evaluation/NNUEBitboard.cpp"],
     "//conditions:default": [],
 })
 
@@ -25,19 +25,19 @@ cc_library(
         "src/core/ChessBoard.cpp",
         "src/core/MagicBitboards.cpp",
         "src/evaluation/Evaluation.cpp",
-        "src/evaluation/EvaluationEnhanced.cpp",
+        "src/evaluation/HybridEvaluator.cpp",
         "src/evaluation/EvaluationTuning.cpp",
         "src/evaluation/NNUE.cpp",
         "src/evaluation/PositionAnalysis.cpp",
         "src/protocol/uci.cpp",
         "src/search/AdvancedSearch.cpp",
-        "src/search/LMREnhanced.cpp",
+        "src/search/LMR.cpp",
         "src/search/LazySMP.cpp",
         "src/search/TranspositionTableV2.cpp",
         "src/search/ValidMoves.cpp",
         "src/search/search.cpp",
         "src/utils/engine_globals.cpp",
-    ] + nnue_optimized_srcs,
+    ] + nnue_bitboard_srcs,
     copts = ["-Werror"] + x86_avx2_copts,
     hdrs = glob(["src/**/*.h"]),
     includes = ["src", "src/core"],

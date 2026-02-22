@@ -4,6 +4,7 @@
 #include "../search/search.h"
 
 #include <array>
+#include <utility>
 #include <vector>
 #ifdef __x86_64__
 #include <immintrin.h>
@@ -85,7 +86,7 @@ public:
         struct Task {
             std::function<void()> func;
             int priority;
-            Task(std::function<void()> f, int p = 0) : func(f), priority(p) {}
+            Task(std::function<void()> f, int p = 0) : func(std::move(f)), priority(p) {}
         };
 
         WorkStealingPool(int numThreads = 0);

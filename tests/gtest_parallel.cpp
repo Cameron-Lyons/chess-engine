@@ -5,6 +5,13 @@
 
 #include <thread>
 
+namespace {
+int getThreadCount() {
+    const auto hardwareThreads = std::thread::hardware_concurrency();
+    return (hardwareThreads == 0U) ? 4 : static_cast<int>(hardwareThreads);
+}
+} // namespace
+
 TEST(ParallelSearch, Speedup) {
     InitZobrist();
 
@@ -13,9 +20,7 @@ TEST(ParallelSearch, Speedup) {
 
     SearchResult result1 = iterativeDeepeningParallel(board, 4, 5000, 1);
 
-    int numThreads = std::thread::hardware_concurrency();
-    if (numThreads == 0)
-        numThreads = 4;
+    int numThreads = getThreadCount();
 
     SearchResult result2 = iterativeDeepeningParallel(board, 4, 5000, numThreads);
 
@@ -29,9 +34,7 @@ TEST(ParallelSearch, ComplexPosition) {
     complexBoard.InitializeFromFEN(
         "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3");
 
-    int numThreads = std::thread::hardware_concurrency();
-    if (numThreads == 0)
-        numThreads = 4;
+    int numThreads = getThreadCount();
 
     SearchResult result = iterativeDeepeningParallel(complexBoard, 5, 3000, numThreads);
 

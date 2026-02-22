@@ -7,8 +7,8 @@
 #include "../utils/TunableParams.h"
 #include "../utils/engine_globals.h"
 
-#include <chrono>
 #include <cctype>
+#include <chrono>
 #include <future>
 #include <iostream>
 #include <sstream>
@@ -16,6 +16,42 @@
 
 extern Board ChessBoard;
 extern Board PrevBoard;
+
+namespace {
+constexpr int kDefaultBaseTimeMs = 300000;
+constexpr int kDefaultIncrementMs = 0;
+constexpr int kDefaultMovesToGo = 0;
+constexpr int kNameTokenLength = 5;
+constexpr int kValueTokenLength = 7;
+constexpr int kFenFieldCount = 6;
+constexpr int kInvalidSquare = -1;
+constexpr int kUnsetTimeValue = -1;
+constexpr int kDefaultSearchDepth = 64;
+constexpr int kDefaultMoveTimeMs = 5000;
+constexpr int kInfiniteTimeMs = 999999999;
+constexpr int kSearchThreads = 1;
+constexpr int kEstimatedMovesToGo = 30;
+constexpr double kIncrementUsageFactor = 0.75;
+constexpr double kMaxTimeFraction = 0.5;
+constexpr int kMaxTimeMultiplier = 5;
+constexpr int kNpsMillisScale = 1000;
+constexpr int kMateScoreThreshold = 30000;
+constexpr int kMatePlyDivisor = 2;
+constexpr int kMatePlyOffset = 1;
+constexpr int kBoardDimension = 8;
+constexpr int kBoardSquareCount = kBoardDimension * kBoardDimension;
+constexpr int kMaxSquareIndex = kBoardSquareCount - 1;
+constexpr int kUciMoveLength = 4;
+constexpr int kAlgebraicSquareLength = 2;
+constexpr int kEnPassantTokenLength = 2;
+constexpr char kMinFileChar = 'a';
+constexpr char kMaxFileChar = 'h';
+constexpr char kMinRankChar = '1';
+constexpr char kEnPassantWhiteRankChar = '3';
+constexpr char kEnPassantBlackRankChar = '6';
+constexpr int kTablebaseMateScore = 30000;
+constexpr const char* kStartingFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+} // namespace
 
 UCIEngine::UCIEngine() : isSearching(false), isPondering(false) {
 
@@ -25,16 +61,16 @@ UCIEngine::UCIEngine() : isSearching(false), isPondering(false) {
     InitZobrist();
 
     board = Board();
-    board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    board.InitializeFromFEN(kStartingFen);
 
     nnEvaluator = std::make_unique<NeuralNetworkEvaluator>();
     tablebase = std::make_unique<EndgameTablebase>();
     openingBook = std::make_unique<EnhancedOpeningBook>();
 
     TimeManager::TimeControl tc;
-    tc.baseTime = 300000;
-    tc.increment = 0;
-    tc.movesToGo = 0;
+    tc.baseTime = kDefaultBaseTimeMs;
+    tc.increment = kDefaultIncrementMs;
+    tc.movesToGo = kDefaultMovesToGo;
     tc.isInfinite = false;
     timeManager = std::make_unique<TimeManager>(tc);
 }
@@ -98,11 +134,9 @@ void UCIEngine::handleUCI() {
     std::cout << "option name Ponder type check default false" << '\n';
     std::cout << "option name OwnBook type check default true" << '\n';
     std::cout << "option name Move Overhead type spin default 10 min 0 max 5000" << '\n';
-    std::cout << "option name Minimum Thinking Time type spin default 20 min 0 max 5000"
-              << '\n';
+    std::cout << "option name Minimum Thinking Time type spin default 20 min 0 max 5000" << '\n';
     std::cout << "option name Use Neural Network type check default true" << '\n';
-    std::cout << "option name Neural Network Weight type spin default 70 min 0 max 100"
-              << '\n';
+    std::cout << "option name Neural Network Weight type spin default 70 min 0 max 100" << '\n';
     std::cout << "option name Use Tablebases type check default true" << '\n';
     std::cout << "option name SyzygyPath type string default " << '\n';
     std::cout << "option name Debug type check default false" << '\n';
@@ -128,11 +162,11 @@ void UCIEngine::handleSetOption(const std::string& command) {
     auto valuePos = command.find(" value ");
     if (namePos == std::string::npos) {
         return;
-}
-    namePos += 5;
+    }
+    namePos += kNameTokenLength;
     if (valuePos != std::string::npos) {
         name = command.substr(namePos, valuePos - namePos);
-        value = command.substr(valuePos + 7);
+        value = command.substr(valuePos + kValueTokenLength);
     } else {
         name = command.substr(namePos);
     }
@@ -176,7 +210,7 @@ void UCIEngine::handleSetOption(const std::string& command) {
 void UCIEngine::handleNewGame() {
 
     board = Board();
-    board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    board.InitializeFromFEN(kStartingFen);
     TransTable.clear();
     std::cout << "info string New game started" << '\n';
 }
@@ -194,16 +228,16 @@ void UCIEngine::handlePosition(const std::string& command) {
     if (word == "startpos") {
 
         board = Board();
-        board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        board.InitializeFromFEN(kStartingFen);
     } else if (word == "fen") {
 
         std::string fen;
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < kFenFieldCount; i++) {
             std::string part;
             if (iss >> part) {
                 if (i > 0) {
                     fen += " ";
-}
+                }
                 fen += part;
             }
         }
@@ -264,13 +298,13 @@ void UCIEngine::handleGo(const std::string& command) {
     std::string word;
     iss >> word;
 
-    int wtime = -1;
-    int btime = -1;
+    int wtime = kUnsetTimeValue;
+    int btime = kUnsetTimeValue;
     int winc = 0;
     int binc = 0;
-    int movestogo = -1;
-    int searchDepth = 64;
-    int movetime = -1;
+    int movestogo = kUnsetTimeValue;
+    int searchDepth = kDefaultSearchDepth;
+    int movetime = kUnsetTimeValue;
     bool isPonder = false;
     bool isInfinite = false;
 
@@ -296,14 +330,14 @@ void UCIEngine::handleGo(const std::string& command) {
         }
     }
 
-    int timeForMove = 5000;
-    int optimalTime = 5000;
-    int maxTime = 5000;
+    int timeForMove = kDefaultMoveTimeMs;
+    int optimalTime = kDefaultMoveTimeMs;
+    int maxTime = kDefaultMoveTimeMs;
 
     if (isPonder || isInfinite) {
-        timeForMove = 999999999;
-        optimalTime = 999999999;
-        maxTime = 999999999;
+        timeForMove = kInfiniteTimeMs;
+        optimalTime = kInfiniteTimeMs;
+        maxTime = kInfiniteTimeMs;
     } else if (movetime > 0) {
         timeForMove = movetime;
         optimalTime = movetime;
@@ -317,10 +351,12 @@ void UCIEngine::handleGo(const std::string& command) {
             if (movestogo > 0) {
                 baseTime = currentTime / movestogo;
             } else {
-                baseTime = currentTime / 30;
+                baseTime = currentTime / kEstimatedMovesToGo;
             }
-            optimalTime = baseTime + static_cast<int>(increment * 0.75) - options.moveOverhead;
-            maxTime = std::min(static_cast<int>(currentTime * 0.5), optimalTime * 5) -
+            optimalTime = baseTime + static_cast<int>(increment * kIncrementUsageFactor) -
+                          options.moveOverhead;
+            maxTime = std::min(static_cast<int>(currentTime * kMaxTimeFraction),
+                               optimalTime * kMaxTimeMultiplier) -
                       options.moveOverhead;
             optimalTime = std::max(optimalTime, options.minimumThinkingTime);
             maxTime = std::max(maxTime, optimalTime);
@@ -344,7 +380,7 @@ void UCIEngine::handleGo(const std::string& command) {
                 performSearch(board, searchDepth, timeForMove, optimalTime, maxTime);
 
             if (isSearching) {
-                std::pair<int, int> ponderMove = {-1, -1};
+                std::pair<int, int> ponderMove = {kInvalidSquare, kInvalidSquare};
                 if (result.bestMove.first >= 0) {
                     Board tempBoard = board;
                     tempBoard.movePiece(result.bestMove.first, result.bestMove.second);
@@ -358,7 +394,7 @@ void UCIEngine::handleGo(const std::string& command) {
                     }
                 }
                 reportBestMove(result.bestMove, ponderMove);
-                int nps = result.timeMs > 0 ? result.nodes * 1000 / result.timeMs : 0;
+                int nps = result.timeMs > 0 ? result.nodes * kNpsMillisScale / result.timeMs : 0;
                 reportInfo(result.depth, result.depth, result.timeMs, result.nodes, nps, {},
                            result.score, 0);
             }
@@ -395,8 +431,7 @@ void UCIEngine::handleQuit() {
 void UCIEngine::handleDebug(const std::string& command) const {
     (void)command;
 
-    std::cout << "info string Debug mode: " << (options.debug ? "enabled" : "disabled")
-              << '\n';
+    std::cout << "info string Debug mode: " << (options.debug ? "enabled" : "disabled") << '\n';
 }
 
 void UCIEngine::handleRegister(const std::string& command) {
@@ -430,7 +465,7 @@ void UCIEngine::reportBestMove(const std::pair<int, int>& move,
                                const std::pair<int, int>& ponderMove) {
     std::string moveStr = UCINotation::moveToUCI(move);
     std::string ponderStr =
-        (ponderMove.first != -1) ? " ponder " + UCINotation::moveToUCI(ponderMove) : "";
+        (ponderMove.first != kInvalidSquare) ? " ponder " + UCINotation::moveToUCI(ponderMove) : "";
     std::cout << "bestmove " << moveStr << ponderStr << '\n';
 }
 
@@ -439,25 +474,27 @@ void UCIEngine::reportInfo(int depth, int seldepth, int time, int nodes, int nps
     std::cout << "info depth " << depth;
     if (seldepth > 0) {
         std::cout << " seldepth " << seldepth;
-}
+    }
     if (time > 0) {
         std::cout << " time " << time;
-}
+    }
     if (nodes > 0) {
         std::cout << " nodes " << nodes;
-}
+    }
     if (nps > 0) {
         std::cout << " nps " << nps;
-}
+    }
     if (hashfull > 0) {
         std::cout << " hashfull " << hashfull;
-}
+    }
     if (score != 0) {
         std::cout << " score ";
-        if (score > 30000) {
-            std::cout << "mate " << (30000 - score + 1) / 2;
-        } else if (score < -30000) {
-            std::cout << "mate " << -(30000 + score + 1) / 2;
+        if (score > kMateScoreThreshold) {
+            std::cout << "mate "
+                      << (kMateScoreThreshold - score + kMatePlyOffset) / kMatePlyDivisor;
+        } else if (score < -kMateScoreThreshold) {
+            std::cout << "mate "
+                      << -(kMateScoreThreshold + score + kMatePlyOffset) / kMatePlyDivisor;
         } else {
             std::cout << "cp " << score;
         }
@@ -485,7 +522,8 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
             if (!tbResult.bestMoves.empty()) {
                 result.bestMove = tbResult.bestMoves[0];
                 if (tbResult.isExact) {
-                    result.score = (tbResult.distanceToMate > 0) ? 30000 : -30000;
+                    result.score =
+                        (tbResult.distanceToMate > 0) ? kTablebaseMateScore : -kTablebaseMateScore;
                 } else {
                     result.score = 0;
                 }
@@ -500,7 +538,7 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
     if (options.ownBook && openingBook) {
         if (openingBook->isInBook(board)) {
             std::pair<int, int> bookMove = openingBook->getBestMove(board, false);
-            if (bookMove.first != -1 && bookMove.second != -1) {
+            if (bookMove.first != kInvalidSquare && bookMove.second != kInvalidSquare) {
                 result.bestMove = bookMove;
                 result.score = 0;
                 result.depth = 0;
@@ -513,8 +551,8 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
 
     Board searchBoard = board;
 
-    result = iterativeDeepeningParallel(searchBoard, depth, timeLimit, 1, options.contempt,
-                                        options.multiPV, optimalTime, maxTime);
+    result = iterativeDeepeningParallel(searchBoard, depth, timeLimit, kSearchThreads,
+                                        options.contempt, options.multiPV, optimalTime, maxTime);
 
     return result;
 }
@@ -569,77 +607,78 @@ void UCIEngine::setShowCurrLine(bool enabled) {
 }
 
 std::string UCINotation::moveToUCI(const std::pair<int, int>& move) {
-    if (move.first == -1 || move.second == -1) {
+    if (move.first == kInvalidSquare || move.second == kInvalidSquare) {
         return "0000";
     }
 
-    int fromFile = move.first % 8;
-    int fromRank = move.first / 8;
-    int toFile = move.second % 8;
-    int toRank = move.second / 8;
+    int fromFile = move.first % kBoardDimension;
+    int fromRank = move.first / kBoardDimension;
+    int toFile = move.second % kBoardDimension;
+    int toRank = move.second / kBoardDimension;
 
     std::string result;
-    result += static_cast<char>('a' + fromFile);
-    result += static_cast<char>('1' + fromRank);
-    result += static_cast<char>('a' + toFile);
-    result += static_cast<char>('1' + toRank);
+    result += static_cast<char>(kMinFileChar + fromFile);
+    result += static_cast<char>(kMinRankChar + fromRank);
+    result += static_cast<char>(kMinFileChar + toFile);
+    result += static_cast<char>(kMinRankChar + toRank);
 
     return result;
 }
 
 std::pair<int, int> UCINotation::uciToMove(const std::string& uciMove) {
-    if (uciMove.length() != 4) {
-        return {-1, -1};
+    if (uciMove.length() != kUciMoveLength) {
+        return {kInvalidSquare, kInvalidSquare};
     }
 
-    int fromFile = uciMove[0] - 'a';
-    int fromRank = uciMove[1] - '1';
-    int toFile = uciMove[2] - 'a';
-    int toRank = uciMove[3] - '1';
+    int fromFile = uciMove[0] - kMinFileChar;
+    int fromRank = uciMove[1] - kMinRankChar;
+    int toFile = uciMove[2] - kMinFileChar;
+    int toRank = uciMove[3] - kMinRankChar;
 
-    if (fromFile < 0 || fromFile > 7 || fromRank < 0 || fromRank > 7 || toFile < 0 || toFile > 7 ||
-        toRank < 0 || toRank > 7) {
-        return {-1, -1};
+    if (fromFile < 0 || fromFile >= kBoardDimension || fromRank < 0 ||
+        fromRank >= kBoardDimension || toFile < 0 || toFile >= kBoardDimension || toRank < 0 ||
+        toRank >= kBoardDimension) {
+        return {kInvalidSquare, kInvalidSquare};
     }
 
-    int from = (fromRank * 8) + fromFile;
-    int to = (toRank * 8) + toFile;
+    int from = (fromRank * kBoardDimension) + fromFile;
+    int to = (toRank * kBoardDimension) + toFile;
 
     return {from, to};
 }
 
 std::string UCINotation::squareToAlgebraic(int square) {
-    if (square < 0 || square > 63) {
+    if (square < 0 || square > kMaxSquareIndex) {
         return "";
-}
+    }
 
-    int file = square % 8;
-    int rank = square / 8;
+    int file = square % kBoardDimension;
+    int rank = square / kBoardDimension;
 
     std::string result;
-    result += static_cast<char>('a' + file);
-    result += static_cast<char>('1' + rank);
+    result += static_cast<char>(kMinFileChar + file);
+    result += static_cast<char>(kMinRankChar + rank);
 
     return result;
 }
 
 int UCINotation::algebraicToSquare(const std::string& algebraic) {
-    if (algebraic.length() != 2) {
-        return -1;
-}
+    if (algebraic.length() != kAlgebraicSquareLength) {
+        return kInvalidSquare;
+    }
 
-    int file = algebraic[0] - 'a';
-    int rank = algebraic[1] - '1';
+    int file = algebraic[0] - kMinFileChar;
+    int rank = algebraic[1] - kMinRankChar;
 
-    if (file < 0 || file > 7 || rank < 0 || rank > 7) {
-        return -1;
-}
+    if (file < 0 || file >= kBoardDimension || rank < 0 || rank >= kBoardDimension) {
+        return kInvalidSquare;
+    }
 
-    return (rank * 8) + file;
+    return (rank * kBoardDimension) + file;
 }
 
 bool UCINotation::isValidUCIMove(const std::string& uciMove) {
-    return uciMove.length() == 4 && uciToMove(uciMove).first != -1;
+    return uciMove.length() == kUciMoveLength && uciToMove(uciMove).first != kInvalidSquare;
 }
 
 std::string UCINotation::getMoveType(const Board& board, const std::pair<int, int>& move) {
@@ -651,22 +690,22 @@ std::string UCINotation::getMoveType(const Board& board, const std::pair<int, in
     }
 
     if (piece.PieceType == ChessPieceType::KING) {
-        int fileDiff = abs((move.second % 8) - (move.first % 8));
+        int fileDiff = abs((move.second % kBoardDimension) - (move.first % kBoardDimension));
         if (fileDiff == 2) {
             return "castling";
         }
     }
 
     if (piece.PieceType == ChessPieceType::PAWN) {
-        int rank = move.second / 8;
-        if ((piece.PieceColor == ChessPieceColor::WHITE && rank == 7) ||
+        int rank = move.second / kBoardDimension;
+        if ((piece.PieceColor == ChessPieceColor::WHITE && rank == kBoardDimension - 1) ||
             (piece.PieceColor == ChessPieceColor::BLACK && rank == 0)) {
             return "promotion";
         }
     }
 
     if (piece.PieceType == ChessPieceType::PAWN) {
-        int fileDiff = abs((move.second % 8) - (move.first % 8));
+        int fileDiff = abs((move.second % kBoardDimension) - (move.first % kBoardDimension));
         if (fileDiff == 1 && target.PieceType == ChessPieceType::NONE) {
             return "enpassant";
         }
@@ -684,7 +723,7 @@ void UCIPosition::parseMoves(const std::string& moves, Board& board) {
     std::string move;
     while (iss >> move) {
         std::pair<int, int> movePos = UCINotation::uciToMove(move);
-        if (movePos.first != -1 && movePos.second != -1) {
+        if (movePos.first != kInvalidSquare && movePos.second != kInvalidSquare) {
             board.movePiece(movePos.first, movePos.second);
             board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                 : ChessPieceColor::WHITE;
@@ -695,43 +734,43 @@ void UCIPosition::parseMoves(const std::string& moves, Board& board) {
 std::string UCIPosition::generateFEN(const Board& board) {
     (void)board;
 
-    return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    return kStartingFen;
 }
 
 bool UCIPosition::isValidFEN(const std::string& fen) {
     if (fen.empty()) {
         return false;
-}
+    }
 
     std::istringstream iss(fen);
     std::string token;
 
     if (!(iss >> token)) {
         return false;
-}
+    }
 
-    int rank = 7;
+    int rank = kBoardDimension - 1;
     int file = 0;
     for (char c : token) {
         if (c == '/') {
-            if (file != 8) {
+            if (file != kBoardDimension) {
                 return false;
-}
+            }
             rank--;
             file = 0;
             if (rank < 0) {
                 return false;
-}
+            }
         } else if (isdigit(c)) {
             int count = c - '0';
-            if (count == 0 || file + count > 8) {
+            if (count == 0 || file + count > kBoardDimension) {
                 return false;
-}
+            }
             file += count;
         } else if (isalpha(c)) {
-            if (file >= 8) {
+            if (file >= kBoardDimension) {
                 return false;
-}
+            }
             char piece = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             if (piece != 'p' && piece != 'n' && piece != 'b' && piece != 'r' && piece != 'q' &&
                 piece != 'k') {
@@ -743,20 +782,20 @@ bool UCIPosition::isValidFEN(const std::string& fen) {
         }
     }
 
-    if (rank != 0 || file != 8) {
+    if (rank != 0 || file != kBoardDimension) {
         return false;
-}
+    }
 
     if (!(iss >> token)) {
         return false;
-}
+    }
     if (token != "w" && token != "b") {
         return false;
-}
+    }
 
     if (!(iss >> token)) {
         return false;
-}
+    }
     for (char c : token) {
         if (c != 'K' && c != 'Q' && c != 'k' && c != 'q' && c != '-') {
             return false;
@@ -765,30 +804,30 @@ bool UCIPosition::isValidFEN(const std::string& fen) {
 
     if (!(iss >> token)) {
         return false;
-}
+    }
     if (token != "-") {
-        if (token.length() != 2) {
+        if (token.length() != kEnPassantTokenLength) {
             return false;
-}
-        if (token[0] < 'a' || token[0] > 'h') {
+        }
+        if (token[0] < kMinFileChar || token[0] > kMaxFileChar) {
             return false;
-}
-        if (token[1] != '3' && token[1] != '6') {
+        }
+        if (token[1] != kEnPassantWhiteRankChar && token[1] != kEnPassantBlackRankChar) {
             return false;
-}
+        }
     }
 
     if (!(iss >> token)) {
         return false;
-}
+    }
     if (!isdigit(token[0])) {
         return false;
-}
+    }
 
     if (iss >> token) {
         if (!isdigit(token[0])) {
             return false;
-}
+        }
     }
 
     return true;
@@ -805,25 +844,25 @@ std::string UCISearchInfo::formatInfo(int depth, int seldepth, int time, int nod
     oss << "info depth " << depth;
     if (seldepth > 0) {
         oss << " seldepth " << seldepth;
-}
+    }
     if (time > 0) {
         oss << " time " << time;
-}
+    }
     if (nodes > 0) {
         oss << " nodes " << nodes;
-}
+    }
     if (nps > 0) {
         oss << " nps " << nps;
-}
+    }
     if (hashfull > 0) {
         oss << " hashfull " << hashfull;
-}
+    }
     if (score != 0) {
         oss << " " << formatScore(score);
-}
+    }
     if (!pv.empty()) {
         oss << " pv" << formatPV(pv);
-}
+    }
     return oss.str();
 }
 
@@ -831,10 +870,10 @@ std::string UCISearchInfo::formatScore(int score, bool isMate) {
     (void)isMate;
     std::ostringstream oss;
     oss << "score ";
-    if (score > 30000) {
-        oss << "mate " << (30000 - score + 1) / 2;
-    } else if (score < -30000) {
-        oss << "mate " << -(30000 + score + 1) / 2;
+    if (score > kMateScoreThreshold) {
+        oss << "mate " << (kMateScoreThreshold - score + kMatePlyOffset) / kMatePlyDivisor;
+    } else if (score < -kMateScoreThreshold) {
+        oss << "mate " << -(kMateScoreThreshold + score + kMatePlyOffset) / kMatePlyDivisor;
     } else {
         oss << "cp " << score;
     }
@@ -856,8 +895,8 @@ std::string UCISearchInfo::formatTime(int timeMs) {
 std::string UCISearchInfo::formatNPS(int nodes, int timeMs) {
     if (timeMs == 0) {
         return "0";
-}
-    return std::to_string(nodes * 1000 / timeMs);
+    }
+    return std::to_string(nodes * kNpsMillisScale / timeMs);
 }
 
 int runUCIEngine() {

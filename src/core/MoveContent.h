@@ -2,9 +2,10 @@
 
 #include "ChessPiece.h"
 
+#include <cstdint>
 #include <string>
 
-enum class MoveType { NORMAL, CASTLE_KING, CASTLE_QUEEN, EN_PASSANT, PROMOTION };
+enum class MoveType : std::uint8_t { NORMAL, CASTLE_KING, CASTLE_QUEEN, EN_PASSANT, PROMOTION };
 
 struct MoveContent {
     int src;
@@ -35,21 +36,11 @@ struct PieceMoving {
     ChessPieceType pieceType;
     ChessPieceColor pieceColor;
 
-    PieceMoving(ChessPieceColor pieceColor, ChessPieceType pieceType, bool moved) {
-        this->dest = 0;
-        this->src = 0;
-        this->moved = moved;
-        this->pieceType = pieceType;
-        this->pieceColor = pieceColor;
-    }
+    PieceMoving(ChessPieceColor pieceColor, ChessPieceType pieceType, bool moved)
+        : dest(0), src(0), moved(moved), pieceType(pieceType), pieceColor(pieceColor) {}
 
-    PieceMoving(ChessPieceType pieceType) {
-        this->pieceType = pieceType;
-        this->pieceColor = ChessPieceColor::WHITE;
-        this->src = 0;
-        this->dest = 0;
-        this->moved = false;
-    }
+    PieceMoving(ChessPieceType pieceType)
+        : dest(0), src(0), moved(false), pieceType(pieceType), pieceColor(ChessPieceColor::WHITE) {}
 };
 
 struct PieceTaken {
@@ -58,19 +49,11 @@ struct PieceTaken {
     ChessPieceColor pieceColor;
     int position;
 
-    PieceTaken(ChessPieceColor pieceColor, ChessPieceType pieceType, bool moved) {
-        this->moved = moved;
-        this->pieceType = pieceType;
-        this->pieceColor = pieceColor;
-        this->position = 0;
-    }
+    PieceTaken(ChessPieceColor pieceColor, ChessPieceType pieceType, bool moved)
+        : moved(moved), pieceType(pieceType), pieceColor(pieceColor), position(0) {}
 
-    PieceTaken(ChessPieceType pieceType) {
-        this->pieceType = pieceType;
-        this->pieceColor = ChessPieceColor::WHITE;
-        this->position = 0;
-        this->moved = false;
-    }
+    PieceTaken(ChessPieceType pieceType)
+        : moved(false), pieceType(pieceType), pieceColor(ChessPieceColor::WHITE), position(0) {}
 };
 
 extern PieceMoving MovingPiece;
@@ -142,21 +125,9 @@ std::string PortableGameNotation() {
         pgn += GetPgnMove(MovingPiece.pieceType);
         switch (MovingPiece.pieceType) {
             case ChessPieceType::KNIGHT:
-                pgn += GetColumnFromInt(srcCol);
-                pgn += std::to_string(srcRow + 1);
-                break;
             case ChessPieceType::ROOK:
-                pgn += GetColumnFromInt(srcCol);
-                pgn += std::to_string(srcRow + 1);
-                break;
             case ChessPieceType::BISHOP:
-                pgn += GetColumnFromInt(srcCol);
-                pgn += std::to_string(srcRow + 1);
-                break;
             case ChessPieceType::QUEEN:
-                pgn += GetColumnFromInt(srcCol);
-                pgn += std::to_string(srcRow + 1);
-                break;
             case ChessPieceType::KING:
                 pgn += GetColumnFromInt(srcCol);
                 pgn += std::to_string(srcRow + 1);

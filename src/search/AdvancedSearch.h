@@ -42,6 +42,8 @@ public:
 };
 
 namespace EnhancedMoveOrdering {
+constexpr int INVALID_MOVE_SQUARE = -1;
+
 struct MoveScore {
     std::pair<int, int> move;
     int score;
@@ -53,7 +55,9 @@ struct MoveScore {
 
 std::vector<MoveScore> scoreMoves(const Board& board, const std::vector<std::pair<int, int>>& moves,
                                   const ThreadSafeHistory& history, const KillerMoves& killers,
-                                  int ply, const std::pair<int, int>& hashMove = {-1, -1});
+                                  int ply,
+                                  const std::pair<int, int>& hashMove = {INVALID_MOVE_SQUARE,
+                                                                         INVALID_MOVE_SQUARE});
 
 int getSEEScore(const Board& board, const std::pair<int, int>& move);
 
@@ -92,8 +96,8 @@ private:
     int moveNumber;
     int totalMoves;
 
-    int calculateBaseTime();
-    int calculateIncrement();
+    int calculateBaseTime() const;
+    int calculateIncrement() const;
     double getTimeFactor(int depth, int nodes);
     double getPhaseTimeFactor(GamePhase phase) const;
 };
@@ -132,7 +136,7 @@ public:
 
     BookStats getStats() const;
 
-    void analyzeBook();
+    void analyzeBook() const;
 
 private:
     std::unordered_map<std::string, std::vector<BookEntry>> book;

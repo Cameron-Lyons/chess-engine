@@ -3,6 +3,7 @@
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -40,7 +41,7 @@ struct PositionAnalysis {
     int discoveredAttacks;
 
     // Game phase
-    enum GamePhase { OPENING, MIDDLEGAME, ENDGAME } gamePhase;
+    enum GamePhase : std::uint8_t { OPENING, MIDDLEGAME, ENDGAME } gamePhase;
 
     // Evaluation breakdown
     int staticEvaluation;

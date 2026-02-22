@@ -8,13 +8,19 @@
 #include <memory>
 #include <vector>
 
-namespace NNUEOptimized {
+namespace NNUEBitboard {
 
 constexpr int INPUT_DIMENSIONS = 768;
 constexpr int L1_SIZE = 256;
 constexpr int L2_SIZE = 32;
 constexpr int L3_SIZE = 32;
 constexpr int OUTPUT_SIZE = 1;
+constexpr int COLOR_COUNT = 2;
+constexpr int WHITE_PERSPECTIVE = 0;
+constexpr int BLACK_PERSPECTIVE = 1;
+constexpr int NO_INDEX = 0;
+constexpr int ONE = 1;
+constexpr int PIECE_TYPE_OFFSET = 1;
 
 constexpr int QA = 255;
 constexpr int QB = 64;
@@ -24,28 +30,38 @@ constexpr size_t SIMD_ALIGN = 64;
 
 struct FeatureTransformer {
     static constexpr int KING_BUCKETS = 32;
+    static constexpr int SQUARES_PER_PIECE = 64;
+    static constexpr int PIECE_TYPES = 6;
+    static constexpr int FILE_MASK = 7;
+    static constexpr int RANK_SHIFT = 3;
+    static constexpr int MIRROR_FILE_THRESHOLD = 4;
+    static constexpr int MIRROR_FILE_BASE = 7;
+    static constexpr int FILE_BUCKET_COUNT = 4;
 
     static int getKingBucket(int kingSquare) {
+        int file = kingSquare & FILE_MASK;
+        int rank = kingSquare >> RANK_SHIFT;
 
-        int file = kingSquare & 7;
-        int rank = kingSquare >> 3;
+        if (file >= MIRROR_FILE_THRESHOLD) {
+            file = MIRROR_FILE_BASE - file;
+        }
 
-        if (file >= 4)
-            file = 7 - file;
-
-        return (rank * 4 + file);
+        return (rank * FILE_BUCKET_COUNT) + file;
     }
 
     static int makeIndex(int square, int piece, int color, int kingBucket) {
-        return square + 64 * piece + 64 * 6 * color + 64 * 12 * kingBucket;
+        constexpr int kSquaresPerColor = SQUARES_PER_PIECE * PIECE_TYPES;
+        constexpr int kSquaresPerKingBucket = kSquaresPerColor * COLOR_COUNT;
+        return square + (SQUARES_PER_PIECE * piece) + (kSquaresPerColor * color) +
+               (kSquaresPerKingBucket * kingBucket);
     }
 };
 
 class alignas(SIMD_ALIGN) Accumulator {
 private:
-    alignas(SIMD_ALIGN) std::array<int16_t, L1_SIZE> perspective[2];
+    alignas(SIMD_ALIGN) std::array<int16_t, L1_SIZE> perspective[COLOR_COUNT];
 
-    bool computed[2] = {false, false};
+    bool computed[COLOR_COUNT] = {false, false};
 
     const int16_t* weights = nullptr;
 
@@ -56,9 +72,11 @@ public:
     }
 
     void reset() {
-        computed[0] = computed[1] = false;
-        std::fill(perspective[0].begin(), perspective[0].end(), 0);
-        std::fill(perspective[1].begin(), perspective[1].end(), 0);
+        computed[WHITE_PERSPECTIVE] = computed[BLACK_PERSPECTIVE] = false;
+        std::fill(perspective[WHITE_PERSPECTIVE].begin(), perspective[WHITE_PERSPECTIVE].end(),
+                  NO_INDEX);
+        std::fill(perspective[BLACK_PERSPECTIVE].begin(), perspective[BLACK_PERSPECTIVE].end(),
+                  NO_INDEX);
     }
 
     void refresh(const BitboardPosition& pos);
@@ -87,7 +105,7 @@ private:
     alignas(SIMD_ALIGN) std::vector<int8_t> weights;
     alignas(SIMD_ALIGN) std::vector<int32_t> biases;
 
-    enum SIMDType { AVX2, AVX512, AVX512_VNNI };
+    enum SIMDType : std::uint8_t { AVX2, AVX512, AVX512_VNNI };
     static SIMDType detectSIMD();
     SIMDType simdType;
 
@@ -133,7 +151,7 @@ private:
 
 public:
     NNUEEvaluator();
-    ~NNUEEvaluator();
+    ~NNUEEvaluator() = default;
 
     bool loadNetwork(const std::string& filename);
 
@@ -190,4 +208,4 @@ bool init(const std::string& networkPath);
 
 int evaluate(const BitboardPosition& pos);
 
-} // namespace NNUEOptimized
+} // namespace NNUEBitboard

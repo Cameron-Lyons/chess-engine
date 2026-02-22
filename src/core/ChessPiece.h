@@ -1,11 +1,12 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
-enum class ChessPieceColor { WHITE, BLACK };
+enum class ChessPieceColor : std::uint8_t { WHITE, BLACK };
 
-enum class ChessPieceType { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
+enum class ChessPieceType : std::uint8_t { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
 
 class Piece {
 public:
@@ -27,10 +28,10 @@ public:
     }
 
     Piece(ChessPieceColor color, ChessPieceType type)
-        : PieceColor(color), PieceType(type), AttackedValue(0), DefendedValue(0), selected(false),
+        : PieceColor(color), PieceType(type), PieceValue(getPieceValue(type)), AttackedValue(0),
+          DefendedValue(0), PieceActionValue(getPieceActionValue(type)), selected(false),
           moved(false) {
-        PieceValue = getPieceValue(type);
-        PieceActionValue = getPieceActionValue(type);
+
         ValidMoves.clear();
     }
 

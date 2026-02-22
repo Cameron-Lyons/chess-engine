@@ -48,8 +48,9 @@ public:
 
     const TunableParam* find(const std::string& name) const {
         for (const auto& p : params) {
-            if (p.name == name)
+            if (p.name == name) {
                 return &p;
+            }
         }
         return nullptr;
     }

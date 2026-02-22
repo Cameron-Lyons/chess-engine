@@ -13,20 +13,41 @@ namespace TTv2 {
 
 using PackedMove = uint16_t;
 
-inline PackedMove packMove(int from, int to, int promotion = 0) {
-    return static_cast<PackedMove>((from & 0x3F) | ((to & 0x3F) << 6) | ((promotion & 0x7) << 12));
+constexpr int kZero = 0;
+constexpr int kOne = 1;
+constexpr int kToShift = 6;
+constexpr int kPromotionShift = 12;
+constexpr int kSquareMask = 0x3F;
+constexpr int kPromotionMask = 0x7;
+constexpr int kBoundShift = 6;
+constexpr int kBoundUpper = 1;
+constexpr int kBoundLower = 2;
+constexpr int kGenBoundMask = 0x3F;
+constexpr int kBoundBitsMask = 0xC0;
+constexpr int kGenerationIncrement = 4;
+constexpr int kDepthReplacementMargin = 4;
+constexpr int kReplacementAgeBonus = 8;
+constexpr int kClusterBytes = 64;
+constexpr int kClusterPaddingBytes = 28;
+constexpr int kKeyHighShift = 32;
+constexpr int kMulHiShift = 64;
+constexpr int kHashfullSample = 1000;
+
+inline PackedMove packMove(int from, int to, int promotion = kZero) {
+    return static_cast<PackedMove>((from & kSquareMask) | ((to & kSquareMask) << kToShift) |
+                                   ((promotion & kPromotionMask) << kPromotionShift));
 }
 
 inline void unpackMove(PackedMove move, int& from, int& to, int& promotion) {
-    from = move & 0x3F;
-    to = (move >> 6) & 0x3F;
-    promotion = (move >> 12) & 0x7;
+    from = move & kSquareMask;
+    to = (move >> kToShift) & kSquareMask;
+    promotion = (move >> kPromotionShift) & kPromotionMask;
 }
 
 enum Bound : uint8_t {
-    BOUND_NONE = 0,
-    BOUND_UPPER = 1,
-    BOUND_LOWER = 2,
+    BOUND_NONE = kZero,
+    BOUND_UPPER = kBoundUpper,
+    BOUND_LOWER = kBoundLower,
     BOUND_EXACT = BOUND_UPPER | BOUND_LOWER
 };
 
@@ -40,21 +61,22 @@ struct TTEntry {
 
     void save(uint64_t k, int16_t v, int16_t ev, Bound b, int8_t d, PackedMove m, uint8_t gen) {
 
-        if ((d - ((genBound & 0x3F) == gen ? 0 : 4)) > depth - 4) {
-            key32 = static_cast<uint32_t>(k >> 32);
+        if ((d - ((genBound & kGenBoundMask) == gen ? kZero : kDepthReplacementMargin)) >
+            depth - kDepthReplacementMargin) {
+            key32 = static_cast<uint32_t>(k >> kKeyHighShift);
             move = m;
             value = v;
             eval = ev;
-            genBound = static_cast<uint8_t>((gen & 0x3F) | (b << 6));
+            genBound = static_cast<uint8_t>((gen & kGenBoundMask) | (b << kBoundShift));
             depth = d;
         }
     }
 
     uint8_t generation() const {
-        return genBound & 0x3F;
+        return genBound & kGenBoundMask;
     }
     Bound bound() const {
-        return static_cast<Bound>(genBound >> 6);
+        return static_cast<Bound>(genBound >> kBoundShift);
     }
 };
 
@@ -62,19 +84,19 @@ static constexpr int CLUSTER_SIZE = 3;
 
 struct TTCluster {
     TTEntry entry[CLUSTER_SIZE];
-    uint8_t padding[28];
+    uint8_t padding[kClusterPaddingBytes];
 
     void clear() {
-        std::memset(this, 0, sizeof(TTCluster));
+        std::memset(this, kZero, sizeof(TTCluster));
     }
 };
 
-static_assert(sizeof(TTCluster) == 64, "TTCluster must be 64 bytes");
+static_assert(sizeof(TTCluster) == kClusterBytes, "TTCluster must be 64 bytes");
 
 class TranspositionTable {
 private:
-    size_t clusterCount = 0;
-    uint8_t generation8 = 0;
+    size_t clusterCount = kZero;
+    uint8_t generation8 = kZero;
     std::unique_ptr<TTCluster[]> table;
 
 public:
@@ -92,27 +114,26 @@ public:
 
     void clear() {
         if (table) {
-            std::memset(table.get(), 0, clusterCount * sizeof(TTCluster));
+            std::memset(table.get(), kZero, clusterCount * sizeof(TTCluster));
         }
-        generation8 = 0;
+        generation8 = kZero;
     }
 
     TTEntry* probe(uint64_t key, bool& found) const {
         TTCluster* cluster = &table[mulhi64(key, clusterCount)];
-        uint32_t key32 = static_cast<uint32_t>(key >> 32);
+        auto key32 = static_cast<uint32_t>(key >> kKeyHighShift);
 
-        for (int i = 0; i < CLUSTER_SIZE; ++i) {
-            if (cluster->entry[i].key32 == key32 || !cluster->entry[i].depth) {
-                cluster->entry[i].genBound =
-                    static_cast<uint8_t>(generation8 | (cluster->entry[i].genBound & 0xC0));
+        for (auto& i : cluster->entry) {
+            if (i.key32 == key32 || !i.depth) {
+                i.genBound = static_cast<uint8_t>(generation8 | (i.genBound & kBoundBitsMask));
 
-                found = cluster->entry[i].depth && cluster->entry[i].key32 == key32;
-                return &cluster->entry[i];
+                found = i.depth && i.key32 == key32;
+                return &i;
             }
         }
 
-        TTEntry* replace = &cluster->entry[0];
-        for (int i = 1; i < CLUSTER_SIZE; ++i) {
+        TTEntry* replace = &cluster->entry[kZero];
+        for (int i = kOne; i < CLUSTER_SIZE; ++i) {
             if (replaceValue(cluster->entry[i]) < replaceValue(*replace)) {
                 replace = &cluster->entry[i];
             }
@@ -127,7 +148,7 @@ public:
     }
 
     void newSearch() {
-        generation8 += 4;
+        generation8 += kGenerationIncrement;
     }
 
     void prefetch(uint64_t key) const {
@@ -140,38 +161,38 @@ public:
     }
 
     int hashfull() const {
-        int cnt = 0;
-        for (int i = 0; i < 1000 / CLUSTER_SIZE; ++i) {
-            for (int j = 0; j < CLUSTER_SIZE; ++j) {
-                if (table[i].entry[j].depth && table[i].entry[j].generation() == generation8) {
+        int cnt = kZero;
+        for (int i = kZero; i < kHashfullSample / CLUSTER_SIZE; ++i) {
+            for (auto& j : table[i].entry) {
+                if (j.depth && j.generation() == generation8) {
                     ++cnt;
                 }
             }
         }
-        return cnt * 1000 / (1000 / CLUSTER_SIZE * CLUSTER_SIZE);
+        return cnt * kHashfullSample / (kHashfullSample / CLUSTER_SIZE * CLUSTER_SIZE);
     }
 
 private:
     static uint64_t mulhi64(uint64_t a, uint64_t b) {
 #ifdef __SIZEOF_INT128__
-        return static_cast<uint64_t>((static_cast<__uint128_t>(a) * b) >> 64);
+        return static_cast<uint64_t>((static_cast<__uint128_t>(a) * b) >> kMulHiShift);
 #else
 
         uint64_t aLo = static_cast<uint32_t>(a);
-        uint64_t aHi = a >> 32;
+        uint64_t aHi = a >> kKeyHighShift;
         uint64_t bLo = static_cast<uint32_t>(b);
-        uint64_t bHi = b >> 32;
+        uint64_t bHi = b >> kKeyHighShift;
 
-        uint64_t c1 = (aLo * bLo) >> 32;
+        uint64_t c1 = (aLo * bLo) >> kKeyHighShift;
         uint64_t c2 = aHi * bLo + c1;
         uint64_t c3 = aLo * bHi + static_cast<uint32_t>(c2);
 
-        return aHi * bHi + (c2 >> 32) + (c3 >> 32);
+        return aHi * bHi + (c2 >> kKeyHighShift) + (c3 >> kKeyHighShift);
 #endif
     }
 
     int replaceValue(const TTEntry& e) const {
-        return e.depth - 8 * (e.generation() == generation8);
+        return e.depth - (kReplacementAgeBonus * (e.generation() == generation8));
     }
 };
 

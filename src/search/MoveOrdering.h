@@ -10,51 +10,78 @@
 
 class MoveOrdering {
 private:
+    static constexpr int ZERO = 0;
+    static constexpr int ONE = 1;
+    static constexpr int TWO = 2;
+    static constexpr int BOARD_SQUARES = 64;
+    static constexpr int PIECE_TYPE_COUNT = 6;
+    static constexpr int WHITE_INDEX = 0;
+    static constexpr int BLACK_INDEX = 1;
+
     static constexpr int KILLER_MOVE_BONUS = 900000;
     static constexpr int FIRST_KILLER_BONUS = 950000;
     static constexpr int SECOND_KILLER_BONUS = 940000;
     static constexpr int COUNTER_MOVE_BONUS = 850000;
+    static constexpr int PV_MOVE_BONUS = 10000000;
+    static constexpr int CAPTURE_SCORE_BASE = 1000000;
+    static constexpr int CAPTURE_VICTIM_SCALE = 100;
+    static constexpr int PROMOTION_SCORE_BASE = 800000;
     static constexpr int HISTORY_MAX = 8192;
     static constexpr int HISTORY_DIVISOR = 2;
 
+    static constexpr int PAWN_VALUE = 100;
+    static constexpr int KNIGHT_VALUE = 320;
+    static constexpr int BISHOP_VALUE = 330;
+    static constexpr int ROOK_VALUE = 500;
+    static constexpr int QUEEN_VALUE = 900;
+    static constexpr int KING_VALUE = 20000;
+
+    static int colorIndex(ChessPieceColor side) {
+        return side == ChessPieceColor::WHITE ? WHITE_INDEX : BLACK_INDEX;
+    }
+
     struct KillerMoves {
-        MoveContent killers[2];
-        int count = 0;
+        MoveContent killers[TWO];
+        int count = ZERO;
 
         void add(const MoveContent& move) {
-            if (move.capture != ChessPieceType::NONE)
+            if (move.capture != ChessPieceType::NONE) {
                 return;
-
-            if (count > 0 && killers[0] == move)
-                return;
-
-            if (count > 0) {
-                killers[1] = killers[0];
             }
-            killers[0] = move;
-            count = std::min(2, count + 1);
+
+            if (count > ZERO && killers[ZERO] == move) {
+                return;
+            }
+
+            if (count > ZERO) {
+                killers[ONE] = killers[ZERO];
+            }
+            killers[ZERO] = move;
+            count = std::min(TWO, count + ONE);
         }
 
         bool isKiller(const MoveContent& move) const {
-            return count > 0 && (killers[0] == move || (count > 1 && killers[1] == move));
+            return count > ZERO && (killers[ZERO] == move || (count > ONE && killers[ONE] == move));
         }
 
         int getKillerScore(const MoveContent& move) const {
-            if (count > 0 && killers[0] == move)
+            if (count > ZERO && killers[ZERO] == move) {
                 return FIRST_KILLER_BONUS;
-            if (count > 1 && killers[1] == move)
+            }
+            if (count > ONE && killers[ONE] == move) {
                 return SECOND_KILLER_BONUS;
-            return 0;
+            }
+            return ZERO;
         }
     };
 
-    KillerMoves killers[64];
+    KillerMoves killers[BOARD_SQUARES];
 
-    int historyTable[2][64][64];
-    int butterflyHistory[2][64][64];
-    int counterMoveHistory[6][64][6][64];
+    int historyTable[TWO][BOARD_SQUARES][BOARD_SQUARES];
+    int butterflyHistory[TWO][BOARD_SQUARES][BOARD_SQUARES];
+    int counterMoveHistory[PIECE_TYPE_COUNT][BOARD_SQUARES][PIECE_TYPE_COUNT][BOARD_SQUARES];
 
-    MoveContent counterMoves[2][64];
+    MoveContent counterMoves[TWO][BOARD_SQUARES];
 
     MoveContent pvMove;
     bool hasPV = false;
@@ -65,22 +92,22 @@ public:
     }
 
     void clear() {
-        std::memset(killers, 0, sizeof(killers));
-        std::memset(historyTable, 0, sizeof(historyTable));
-        std::memset(butterflyHistory, 0, sizeof(butterflyHistory));
-        std::memset(counterMoveHistory, 0, sizeof(counterMoveHistory));
-        std::memset(counterMoves, 0, sizeof(counterMoves));
+        std::memset(killers, ZERO, sizeof(killers));
+        std::memset(historyTable, ZERO, sizeof(historyTable));
+        std::memset(butterflyHistory, ZERO, sizeof(butterflyHistory));
+        std::memset(counterMoveHistory, ZERO, sizeof(counterMoveHistory));
+        std::memset(counterMoves, ZERO, sizeof(counterMoves));
         hasPV = false;
     }
 
     void updateKillers(const MoveContent& move, int ply) {
-        if (ply < 64 && move.capture == ChessPieceType::NONE) {
+        if (ply < BOARD_SQUARES && move.capture == ChessPieceType::NONE) {
             killers[ply].add(move);
         }
     }
 
     void updateHistory(const MoveContent& move, int depth, ChessPieceColor side, bool good) {
-        int& histValue = historyTable[side == ChessPieceColor::WHITE ? 0 : 1][move.src][move.dest];
+        int& histValue = historyTable[colorIndex(side)][move.src][move.dest];
         int bonus = depth * depth;
 
         if (good) {
@@ -97,14 +124,14 @@ public:
     }
 
     void updateButterflyHistory(const MoveContent& move, int depth, ChessPieceColor side) {
-        int& value = butterflyHistory[side == ChessPieceColor::WHITE ? 0 : 1][move.src][move.dest];
+        int& value = butterflyHistory[colorIndex(side)][move.src][move.dest];
         value += depth * depth;
 
         if (value > HISTORY_MAX) {
-            for (int from = 0; from < 64; from++) {
-                for (int to = 0; to < 64; to++) {
-                    butterflyHistory[0][from][to] /= 2;
-                    butterflyHistory[1][from][to] /= 2;
+            for (int from = ZERO; from < BOARD_SQUARES; from++) {
+                for (int to = ZERO; to < BOARD_SQUARES; to++) {
+                    butterflyHistory[WHITE_INDEX][from][to] /= HISTORY_DIVISOR;
+                    butterflyHistory[BLACK_INDEX][from][to] /= HISTORY_DIVISOR;
                 }
             }
         }
@@ -112,32 +139,32 @@ public:
 
     void updateCounterMove(const MoveContent& previousMove, const MoveContent& move,
                            ChessPieceColor side) {
-        if (previousMove.src >= 0 && previousMove.src < 64 && previousMove.dest >= 0 &&
-            previousMove.dest < 64) {
-            counterMoves[side == ChessPieceColor::WHITE ? 0 : 1][previousMove.dest] = move;
+        if (previousMove.src >= ZERO && previousMove.src < BOARD_SQUARES &&
+            previousMove.dest >= ZERO && previousMove.dest < BOARD_SQUARES) {
+            counterMoves[colorIndex(side)][previousMove.dest] = move;
         }
     }
 
     void updateCounterMoveHistory(ChessPieceType piece, int from, ChessPieceType prevPiece,
                                   int prevTo, int depth, bool good) {
-        if (piece == ChessPieceType::NONE || prevPiece == ChessPieceType::NONE)
+        if (piece == ChessPieceType::NONE || prevPiece == ChessPieceType::NONE) {
             return;
+        }
 
-        int pieceIdx = static_cast<int>(piece) - 1;
-        int prevPieceIdx = static_cast<int>(prevPiece) - 1;
+        int pieceIdx = static_cast<int>(piece) - ONE;
+        int prevPieceIdx = static_cast<int>(prevPiece) - ONE;
 
-        if (pieceIdx >= 0 && pieceIdx < 6 && prevPieceIdx >= 0 && prevPieceIdx < 6) {
+        if (pieceIdx >= ZERO && pieceIdx < PIECE_TYPE_COUNT && prevPieceIdx >= ZERO &&
+            prevPieceIdx < PIECE_TYPE_COUNT) {
             int& value = counterMoveHistory[pieceIdx][from][prevPieceIdx][prevTo];
             int delta = depth * depth;
 
             if (good) {
                 value += delta;
-                if (value > HISTORY_MAX)
-                    value = HISTORY_MAX;
+                value = std::min(value, HISTORY_MAX);
             } else {
                 value -= delta;
-                if (value < -HISTORY_MAX)
-                    value = -HISTORY_MAX;
+                value = std::max(value, -HISTORY_MAX);
             }
         }
     }
@@ -154,48 +181,48 @@ public:
     int scoreMove(const MoveContent& move, const Board& board, int ply,
                   const MoveContent* previousMove = nullptr) const {
         if (hasPV && move == pvMove) {
-            return 10000000;
+            return PV_MOVE_BONUS;
         }
 
-        int score = 0;
+        int score = ZERO;
 
         if (move.capture != ChessPieceType::NONE) {
             int victimValue = getPieceValue(move.capture);
             int attackerValue = getPieceValue(move.piece);
-            score = 1000000 + victimValue * 100 - attackerValue;
+            score = CAPTURE_SCORE_BASE + (victimValue * CAPTURE_VICTIM_SCALE) - attackerValue;
         }
 
         if (move.promotion != ChessPieceType::NONE) {
-            score += 800000 + getPieceValue(move.promotion);
+            score += PROMOTION_SCORE_BASE + getPieceValue(move.promotion);
         }
 
-        if (score == 0 && ply < 64) {
+        if (score == ZERO && ply < BOARD_SQUARES) {
             int killerScore = killers[ply].getKillerScore(move);
-            if (killerScore > 0) {
+            if (killerScore > ZERO) {
                 return killerScore;
             }
         }
 
-        if (score == 0 && previousMove != nullptr && previousMove->dest >= 0 &&
-            previousMove->dest < 64) {
+        if (score == ZERO && previousMove != nullptr && previousMove->dest >= ZERO &&
+            previousMove->dest < BOARD_SQUARES) {
             ChessPieceColor side = board.turn;
-            const MoveContent& counter =
-                counterMoves[side == ChessPieceColor::WHITE ? 0 : 1][previousMove->dest];
+            const MoveContent& counter = counterMoves[colorIndex(side)][previousMove->dest];
             if (counter == move) {
                 return COUNTER_MOVE_BONUS;
             }
         }
 
-        if (score == 0) {
+        if (score == ZERO) {
             ChessPieceColor side = board.turn;
-            score = historyTable[side == ChessPieceColor::WHITE ? 0 : 1][move.src][move.dest];
+            score = historyTable[colorIndex(side)][move.src][move.dest];
 
             if (previousMove != nullptr && previousMove->piece != ChessPieceType::NONE) {
-                int pieceIdx = static_cast<int>(move.piece) - 1;
-                int prevPieceIdx = static_cast<int>(previousMove->piece) - 1;
+                int pieceIdx = static_cast<int>(move.piece) - ONE;
+                int prevPieceIdx = static_cast<int>(previousMove->piece) - ONE;
 
-                if (pieceIdx >= 0 && pieceIdx < 6 && prevPieceIdx >= 0 && prevPieceIdx < 6 &&
-                    previousMove->dest >= 0 && previousMove->dest < 64) {
+                if (pieceIdx >= ZERO && pieceIdx < PIECE_TYPE_COUNT && prevPieceIdx >= ZERO &&
+                    prevPieceIdx < PIECE_TYPE_COUNT && previousMove->dest >= ZERO &&
+                    previousMove->dest < BOARD_SQUARES) {
                     score +=
                         counterMoveHistory[pieceIdx][move.src][prevPieceIdx][previousMove->dest];
                 }
@@ -206,7 +233,7 @@ public:
     }
 
     void orderMoves(std::vector<MoveContent>& moves, const Board& board, int ply,
-                    const MoveContent* previousMove = nullptr) {
+                    const MoveContent* previousMove = nullptr) const {
         struct ScoredMove {
             MoveContent move;
             int score;
@@ -231,20 +258,20 @@ public:
     }
 
     void ageHistory() {
-        for (int c = 0; c < 2; c++) {
-            for (int from = 0; from < 64; from++) {
-                for (int to = 0; to < 64; to++) {
-                    historyTable[c][from][to] /= 2;
-                    butterflyHistory[c][from][to] /= 2;
+        for (int c = ZERO; c < TWO; c++) {
+            for (int from = ZERO; from < BOARD_SQUARES; from++) {
+                for (int to = ZERO; to < BOARD_SQUARES; to++) {
+                    historyTable[c][from][to] /= HISTORY_DIVISOR;
+                    butterflyHistory[c][from][to] /= HISTORY_DIVISOR;
                 }
             }
         }
 
-        for (int p1 = 0; p1 < 6; p1++) {
-            for (int from = 0; from < 64; from++) {
-                for (int p2 = 0; p2 < 6; p2++) {
-                    for (int to = 0; to < 64; to++) {
-                        counterMoveHistory[p1][from][p2][to] /= 2;
+        for (auto& p1 : counterMoveHistory) {
+            for (auto& from : p1) {
+                for (auto& p2 : from) {
+                    for (int to = ZERO; to < BOARD_SQUARES; to++) {
+                        p2[to] /= HISTORY_DIVISOR;
                     }
                 }
             }
@@ -255,19 +282,19 @@ private:
     static int getPieceValue(ChessPieceType piece) {
         switch (piece) {
             case ChessPieceType::PAWN:
-                return 100;
+                return PAWN_VALUE;
             case ChessPieceType::KNIGHT:
-                return 320;
+                return KNIGHT_VALUE;
             case ChessPieceType::BISHOP:
-                return 330;
+                return BISHOP_VALUE;
             case ChessPieceType::ROOK:
-                return 500;
+                return ROOK_VALUE;
             case ChessPieceType::QUEEN:
-                return 900;
+                return QUEEN_VALUE;
             case ChessPieceType::KING:
-                return 20000;
+                return KING_VALUE;
             default:
-                return 0;
+                return ZERO;
         }
     }
 };

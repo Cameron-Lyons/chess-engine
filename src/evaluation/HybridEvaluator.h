@@ -5,7 +5,7 @@
 
 #include <memory>
 
-class EnhancedEvaluator {
+class HybridEvaluator {
 public:
     struct EvaluationConfig {
         bool useNeuralNetwork;
@@ -20,19 +20,19 @@ public:
         float endgameWeight;
 
         EvaluationConfig()
-            : useNeuralNetwork(true), nnWeight(0.7f), useTraditionalEval(true),
-              traditionalWeight(0.3f), modelPath("models/chess_nn.bin"), materialWeight(1.0f),
-              positionalWeight(0.8f), tacticalWeight(0.9f), endgameWeight(1.0f) {}
+            : useNeuralNetwork(true), nnWeight(0.7F), useTraditionalEval(true),
+              traditionalWeight(0.3F), modelPath("models/chess_nn.bin"), materialWeight(1.0F),
+              positionalWeight(0.8F), tacticalWeight(0.9F), endgameWeight(1.0F) {}
     };
 
-    EnhancedEvaluator(const EvaluationConfig& config = EvaluationConfig{});
-    ~EnhancedEvaluator() = default;
+    HybridEvaluator(const EvaluationConfig& config = EvaluationConfig{});
+    ~HybridEvaluator() = default;
 
     int evaluatePosition(const Board& board);
 
-    int evaluateMaterial(const Board& board);
-    int evaluatePositional(const Board& board);
-    int evaluateTactical(const Board& board);
+    int evaluateMaterial(const Board& board) const;
+    int evaluatePositional(const Board& board) const;
+    int evaluateTactical(const Board& board) const;
     int evaluateEndgame(const Board& board);
 
     float getNeuralNetworkEvaluation(const Board& board);
@@ -54,18 +54,18 @@ private:
     int interpolateEvaluation(int openingEval, int endgameEval, float phase);
 };
 
-extern std::unique_ptr<EnhancedEvaluator> g_enhancedEvaluator;
+extern std::unique_ptr<HybridEvaluator> g_hybridEvaluator;
 
-void initializeEnhancedEvaluator(
-    const EnhancedEvaluator::EvaluationConfig& config = EnhancedEvaluator::EvaluationConfig{});
+void initializeHybridEvaluator(
+    const HybridEvaluator::EvaluationConfig& config = HybridEvaluator::EvaluationConfig{});
 
-EnhancedEvaluator* getEnhancedEvaluator();
+HybridEvaluator* getHybridEvaluator();
 
-int evaluateEnhancedPosition(const Board& board);
-int evaluateEnhancedMaterial(const Board& board);
-int evaluateEnhancedPositional(const Board& board);
-int evaluateEnhancedTactical(const Board& board);
-int evaluateEnhancedEndgame(const Board& board);
+int evaluateHybridPosition(const Board& board);
+int evaluateHybridMaterial(const Board& board);
+int evaluateHybridPositional(const Board& board);
+int evaluateHybridTactical(const Board& board);
+int evaluateHybridEndgame(const Board& board);
 
 float evaluateWithNeuralNetwork(const Board& board);
-float evaluateHybrid(const Board& board, float nnWeight = 0.7f);
+float evaluateHybrid(const Board& board, float nnWeight = 0.7F);

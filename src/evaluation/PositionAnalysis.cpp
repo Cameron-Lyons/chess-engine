@@ -8,6 +8,24 @@
 #include <iostream>
 #include <sstream>
 
+namespace {
+constexpr int kBoardSquareCount = 64;
+constexpr int kMaterialWeightQueen = 900;
+constexpr int kMaterialWeightRook = 500;
+constexpr int kMaterialWeightMinor = 300;
+constexpr int kMaterialWeightPawn = 100;
+constexpr int kOpeningMaterialThreshold = 6000;
+constexpr int kOpeningPieceCountThreshold = 20;
+constexpr int kEndgameMaterialThreshold = 2000;
+constexpr int kEndgamePieceCountThreshold = 10;
+constexpr int kHangingPiecePenalty = 100;
+constexpr int kPinPenalty = 50;
+constexpr int kPieceActivityScale = 5;
+constexpr int kHangingPieceNormalization = 100;
+constexpr int kForkTargetThreshold = 2;
+constexpr int kNoMoveScore = 0;
+} // namespace
+
 PositionAnalysis PositionAnalyzer::analyzePosition(const Board& board) {
     PositionAnalysis analysis;
 
@@ -30,7 +48,7 @@ PositionAnalysis PositionAnalyzer::analyzePosition(const Board& board) {
     analysis.whiteQueens = 0;
     analysis.blackQueens = 0;
 
-    for (int sq = 0; sq < 64; ++sq) {
+    for (int sq = 0; sq < kBoardSquareCount; ++sq) {
         const Piece& piece = board.squares[sq].piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
@@ -99,7 +117,8 @@ PositionAnalysis PositionAnalyzer::analyzePosition(const Board& board) {
     analysis.staticEvaluation = evaluatePosition(board);
     analysis.materialScore = analysis.materialBalance;
     analysis.positionalScore = analysis.centerControl + analysis.mobility + analysis.pawnStructure;
-    analysis.tacticalScore = -analysis.hangingPieces * 100 - analysis.pins * 50;
+    analysis.tacticalScore =
+        (-analysis.hangingPieces * kHangingPiecePenalty) - (analysis.pins * kPinPenalty);
     analysis.endgameScore = evaluateEndgame(board);
 
     // Identify threats, opportunities, and weaknesses
@@ -108,9 +127,9 @@ PositionAnalysis PositionAnalyzer::analyzePosition(const Board& board) {
     analysis.weaknesses = identifyWeaknesses(board);
 
     // Move quality (simplified - would need search for actual best moves)
-    analysis.bestMoveScore = 0;
-    analysis.secondBestMoveScore = 0;
-    analysis.moveQualityGap = 0;
+    analysis.bestMoveScore = kNoMoveScore;
+    analysis.secondBestMoveScore = kNoMoveScore;
+    analysis.moveQualityGap = kNoMoveScore;
 
     return analysis;
 }
@@ -211,24 +230,24 @@ PositionAnalysis::GamePhase PositionAnalyzer::determineGamePhase(const Board& bo
     int pieceCount = 0;
     int queenCount = 0;
 
-    for (int sq = 0; sq < 64; ++sq) {
+    for (int sq = 0; sq < kBoardSquareCount; ++sq) {
         const Piece& piece = board.squares[sq].piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
             pieceCount++;
             switch (piece.PieceType) {
                 case ChessPieceType::QUEEN:
-                    totalMaterial += 900;
+                    totalMaterial += kMaterialWeightQueen;
                     queenCount++;
                     break;
                 case ChessPieceType::ROOK:
-                    totalMaterial += 500;
+                    totalMaterial += kMaterialWeightRook;
                     break;
                 case ChessPieceType::BISHOP:
                 case ChessPieceType::KNIGHT:
-                    totalMaterial += 300;
+                    totalMaterial += kMaterialWeightMinor;
                     break;
                 case ChessPieceType::PAWN:
-                    totalMaterial += 100;
+                    totalMaterial += kMaterialWeightPawn;
                     break;
                 default:
                     break;
@@ -236,11 +255,12 @@ PositionAnalysis::GamePhase PositionAnalyzer::determineGamePhase(const Board& bo
         }
     }
 
-    if (totalMaterial > 6000 && queenCount >= 1 && pieceCount > 20) {
+    if (totalMaterial > kOpeningMaterialThreshold && queenCount >= 1 &&
+        pieceCount > kOpeningPieceCountThreshold) {
         return PositionAnalysis::OPENING;
     }
 
-    if (totalMaterial < 2000 || pieceCount <= 10) {
+    if (totalMaterial < kEndgameMaterialThreshold || pieceCount <= kEndgamePieceCountThreshold) {
         return PositionAnalysis::ENDGAME;
     }
 
@@ -249,7 +269,7 @@ PositionAnalysis::GamePhase PositionAnalyzer::determineGamePhase(const Board& bo
 
 int PositionAnalyzer::countMaterial(const Board& board, ChessPieceColor color) {
     int material = 0;
-    for (int sq = 0; sq < 64; ++sq) {
+    for (int sq = 0; sq < kBoardSquareCount; ++sq) {
         const Piece& piece = board.squares[sq].piece;
         if (piece.PieceColor == color && piece.PieceType != ChessPieceType::NONE &&
             piece.PieceType != ChessPieceType::KING) {
@@ -287,24 +307,24 @@ int PositionAnalyzer::evaluatePieceActivity(const Board& board) {
 
     activity = static_cast<int>(whiteMoves.size() - blackMoves.size());
 
-    return activity * 5;
+    return activity * kPieceActivityScale;
 }
 
 int PositionAnalyzer::findHangingPieces(const Board& board) {
-    return ::evaluateHangingPieces(board) / 100;
+    return ::evaluateHangingPieces(board) / kHangingPieceNormalization;
 }
 
 int PositionAnalyzer::findPins(const Board& board) {
     int pins = 0;
 
-    for (int sq = 0; sq < 64; ++sq) {
+    for (int sq = 0; sq < kBoardSquareCount; ++sq) {
         const Piece& piece = board.squares[sq].piece;
         if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
             ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE)
                                              ? ChessPieceColor::BLACK
                                              : ChessPieceColor::WHITE;
 
-            for (int attackerSq = 0; attackerSq < 64; ++attackerSq) {
+            for (int attackerSq = 0; attackerSq < kBoardSquareCount; ++attackerSq) {
                 const Piece& attacker = board.squares[attackerSq].piece;
                 if (attacker.PieceColor == enemyColor &&
                     canPieceAttackSquare(board, attackerSq, sq)) {
@@ -321,7 +341,7 @@ int PositionAnalyzer::findPins(const Board& board) {
 int PositionAnalyzer::findForks(const Board& board) {
     int forks = 0;
 
-    for (int sq = 0; sq < 64; ++sq) {
+    for (int sq = 0; sq < kBoardSquareCount; ++sq) {
         const Piece& piece = board.squares[sq].piece;
         if (piece.PieceType == ChessPieceType::KNIGHT || piece.PieceType == ChessPieceType::PAWN) {
             int attackCount = 0;
@@ -329,7 +349,7 @@ int PositionAnalyzer::findForks(const Board& board) {
                                              ? ChessPieceColor::BLACK
                                              : ChessPieceColor::WHITE;
 
-            for (int targetSq = 0; targetSq < 64; ++targetSq) {
+            for (int targetSq = 0; targetSq < kBoardSquareCount; ++targetSq) {
                 const Piece& target = board.squares[targetSq].piece;
                 if (target.PieceColor == enemyColor && target.PieceType != ChessPieceType::NONE &&
                     target.PieceType != ChessPieceType::KING) {
@@ -339,7 +359,7 @@ int PositionAnalyzer::findForks(const Board& board) {
                 }
             }
 
-            if (attackCount >= 2) {
+            if (attackCount >= kForkTargetThreshold) {
                 forks++;
             }
         }
@@ -351,19 +371,19 @@ int PositionAnalyzer::findForks(const Board& board) {
 int PositionAnalyzer::findDiscoveredAttacks(const Board& board) {
     int discovered = 0;
 
-    for (int sq = 0; sq < 64; ++sq) {
+    for (int sq = 0; sq < kBoardSquareCount; ++sq) {
         const Piece& piece = board.squares[sq].piece;
         if (piece.PieceType == ChessPieceType::PAWN || piece.PieceType == ChessPieceType::KNIGHT) {
             ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE)
                                              ? ChessPieceColor::BLACK
                                              : ChessPieceColor::WHITE;
 
-            for (int targetSq = 0; targetSq < 64; ++targetSq) {
+            for (int targetSq = 0; targetSq < kBoardSquareCount; ++targetSq) {
                 const Piece& target = board.squares[targetSq].piece;
                 if (target.PieceColor == enemyColor && target.PieceType != ChessPieceType::NONE) {
                     Board testBoard = board;
                     if (testBoard.movePiece(sq, targetSq)) {
-                        for (int behindSq = 0; behindSq < 64; ++behindSq) {
+                        for (int behindSq = 0; behindSq < kBoardSquareCount; ++behindSq) {
                             const Piece& behind = testBoard.squares[behindSq].piece;
                             if (behind.PieceColor == piece.PieceColor &&
                                 behind.PieceType != ChessPieceType::NONE &&
@@ -398,7 +418,7 @@ std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
         Board testBoard = board;
         if (testBoard.movePiece(move.first, move.second)) {
             if (IsKingInCheck(testBoard, currentColor)) {
-                threats.push_back("King in check threat");
+                threats.emplace_back("King in check threat");
                 break;
             }
 

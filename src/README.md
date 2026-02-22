@@ -20,7 +20,7 @@ Contains all search-related functionality:
 - `ValidMoves.h/cpp` - Legal move generation and validation
 - `AdvancedSearch.h/cpp` - Advanced search techniques (futility pruning, null move, extensions)
 - `LazySMP.h/cpp` - Lazy SMP (Symmetric Multi-Processing) parallel search
-- `LMREnhanced.h/cpp` - Enhanced Late Move Reductions
+- `LMR.h/cpp` - Enhanced Late Move Reductions
 - `MoveOrdering.h` - Move ordering heuristics
 - `SearchEnhancements.h` - Additional search enhancements
 - `TranspositionTableV2.h/cpp` - Advanced transposition table implementation
@@ -28,11 +28,11 @@ Contains all search-related functionality:
 ### `evaluation/` - Position Evaluation
 Contains position evaluation functions:
 - `Evaluation.h/cpp` - Basic position evaluation
-- `EvaluationEnhanced.h/cpp` - Enhanced evaluation with advanced features
+- `HybridEvaluator.h/cpp` - Hybrid evaluation with advanced features
 - `EvaluationTuning.h/cpp` - Tunable evaluation parameters
 - `NNUE.h` - NNUE (Efficiently Updatable Neural Network) evaluation
 - `NNUEEvaluation.h` - NNUE evaluation interface
-- `NNUEOptimized.h/cpp` - Optimized NNUE implementation
+- `NNUEBitboard.h/cpp` - Bitboard NNUE implementation
 - `PositionAnalysis.h/cpp` - Position analysis utilities
 
 ### `protocol/` - Communication Protocols

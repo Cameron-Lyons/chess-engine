@@ -11,6 +11,11 @@
 
 class LazySMP {
 public:
+    static constexpr int kAutoThreadCount = 0;
+    static constexpr int kInitialDepth = 0;
+    static constexpr int kInitialScore = -999999;
+    static constexpr int kInvalidMoveSquare = -1;
+
     struct ThreadData {
         int id;
         Board board;
@@ -28,8 +33,9 @@ public:
         bool useNullMove;
 
         ThreadData(int threadId)
-            : id(threadId), searching(false), stopFlag(false), depth(0), bestScore(-999999),
-              bestMove({-1, -1}), context(nullptr), aspirationDelta(0), depthOffset(0),
+            : id(threadId), searching(false), stopFlag(false), depth(kInitialDepth),
+              bestScore(kInitialScore), bestMove({kInvalidMoveSquare, kInvalidMoveSquare}),
+              context(nullptr), aspirationDelta(kInitialDepth), depthOffset(kInitialDepth),
               useNullMove(true) {}
     };
 
@@ -44,8 +50,9 @@ public:
         TranspositionTableAdapter* transTable;
 
         SharedData()
-            : globalStop(false), nodesSearched(0), bestDepth(0), bestScore(-999999),
-              bestMove({-1, -1}), transTable(&TransTable) {}
+            : globalStop(false), nodesSearched(kInitialDepth), bestDepth(kInitialDepth),
+              bestScore(kInitialScore), bestMove({kInvalidMoveSquare, kInvalidMoveSquare}),
+              transTable(&TransTable) {}
     };
 
 private:
@@ -62,7 +69,7 @@ private:
     void searchThread(ThreadData* data, int maxDepth, int timeLimit);
 
 public:
-    explicit LazySMP(int threadCount = 0);
+    explicit LazySMP(int threadCount = kAutoThreadCount);
     ~LazySMP();
 
     SearchResult search(const Board& board, int maxDepth, int timeLimit);

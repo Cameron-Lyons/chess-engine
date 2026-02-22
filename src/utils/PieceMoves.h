@@ -11,7 +11,7 @@ struct PieceMoveSet {
 };
 
 int Position(int rank, int file) {
-    return rank * 8 + file;
+    return (rank * 8) + file;
 };
 
 struct {

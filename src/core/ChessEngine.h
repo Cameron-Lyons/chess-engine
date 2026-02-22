@@ -7,6 +7,7 @@
 #include <iostream>
 #include <stack>
 #include <string>
+#include <utility>
 
 extern Board ChessBoard;
 extern Board PrevBoard;
@@ -19,13 +20,13 @@ void Engine() {
 }
 
 void RegisterPiece(int col, int row, Piece piece) {
-    int position = col + row * 8;
-    ChessBoard.squares[position].piece = piece;
+    int position = col + (row * 8);
+    ChessBoard.squares[position].piece = std::move(piece);
 }
 
 bool MovePiece(int srcCol, int srcRow, int destCol, int destRow) {
-    int src = srcCol + srcRow * 8;
-    int dest = destCol + destRow * 8;
+    int src = srcCol + (srcRow * 8);
+    int dest = destCol + (destRow * 8);
 
     if (src < 0 || src >= 64 || dest < 0 || dest >= 64) {
         return false;
@@ -101,8 +102,8 @@ bool MovePiece(int srcCol, int srcRow, int destCol, int destRow) {
 
 bool MovePiece(int srcCol, int srcRow, int destCol, int destRow,
                ChessPieceType promotionPiece = ChessPieceType::QUEEN) {
-    int src = srcCol + srcRow * 8;
-    int dest = destCol + destRow * 8;
+    int src = srcCol + (srcRow * 8);
+    int dest = destCol + (destRow * 8);
 
     if (src < 0 || src >= 64 || dest < 0 || dest >= 64) {
         return false;
@@ -137,13 +138,25 @@ bool MovePiece(int srcCol, int srcRow, int destCol, int destRow,
         }
         ChessBoard.updateBitboards();
 
-        std::cout << "Pawn promoted to "
-                  << ((promotionPiece == ChessPieceType::QUEEN)    ? "Queen"
-                      : (promotionPiece == ChessPieceType::ROOK)   ? "Rook"
-                      : (promotionPiece == ChessPieceType::BISHOP) ? "Bishop"
-                      : (promotionPiece == ChessPieceType::KNIGHT) ? "Knight"
-                                                                   : "Queen")
-                  << "!\n";
+        const char* promotedPieceName = "Queen";
+        switch (promotionPiece) {
+            case ChessPieceType::QUEEN:
+                promotedPieceName = "Queen";
+                break;
+            case ChessPieceType::ROOK:
+                promotedPieceName = "Rook";
+                break;
+            case ChessPieceType::BISHOP:
+                promotedPieceName = "Bishop";
+                break;
+            case ChessPieceType::KNIGHT:
+                promotedPieceName = "Knight";
+                break;
+            default:
+                promotedPieceName = "Queen";
+                break;
+        }
+        std::cout << "Pawn promoted to " << promotedPieceName << "!\n";
     }
 
     if (piece.PieceType == ChessPieceType::KING) {

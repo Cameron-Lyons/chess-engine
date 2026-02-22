@@ -2,7 +2,7 @@
 #include "../ai/SyzygyTablebase.h"
 #include "../utils/engine_globals.h"
 #include "AdvancedSearch.h"
-#include "LMREnhanced.h"
+#include "LMR.h"
 
 #include <algorithm>
 #include <chrono>
@@ -12,7 +12,118 @@
 #include <ranges>
 #include <thread>
 
-ThreadSafeHistory::ThreadSafeHistory() : table(64, std::vector<int>(64, 0)) {}
+namespace {
+constexpr int kZero = SearchConstants::kZero;
+constexpr int kOne = SearchConstants::kOne;
+constexpr int kTwo = SearchConstants::kTwo;
+constexpr int kThree = 3;
+constexpr int kFour = 4;
+constexpr int kNegativeOne = SearchConstants::kInvalidSquare;
+constexpr int kWhiteIndex = SearchConstants::kZero;
+constexpr int kBlackIndex = SearchConstants::kOne;
+constexpr int kExactFlag = SearchConstants::kZero;
+constexpr int kUpperBoundFlag = SearchConstants::kInvalidSquare;
+constexpr int kLowerBoundFlag = SearchConstants::kOne;
+constexpr int kMvvLvaVictimPawn = 50;
+constexpr int kMvvLvaVictimKnight = 52;
+constexpr int kMvvLvaVictimBishop = 54;
+constexpr int kMvvLvaVictimRook = 53;
+
+constexpr int kBoardDimension = 8;
+constexpr int kBoardSquareCount = kBoardDimension * kBoardDimension;
+constexpr int kPieceTypePerColorCount = 6;
+constexpr int kInvalidSquare = -1;
+
+constexpr int kKillerBaseScore = 5000;
+constexpr int kKillerSlotPenalty = 100;
+constexpr int kDefaultThreadFallback = 4;
+constexpr std::uint64_t kZobristSeed = 202406ULL;
+
+constexpr int kPawnValue = 100;
+constexpr int kMinorPieceValue = 300;
+constexpr int kRookValue = 500;
+constexpr int kQueenValue = 975;
+constexpr int kKingValue = 10000;
+
+constexpr int kCounterMoveScore = 850000;
+constexpr int kMvvLvaScale = 1000;
+constexpr int kCaptureHistoryDivisor = 8;
+constexpr int kContinuationHistoryDivisor = 4;
+
+constexpr int kMaxSearchPly = 50;
+constexpr int kMaxPvDepth = 20;
+constexpr int kMateScore = 10000;
+constexpr int kSyzygyWinScore = 9000;
+constexpr int kNullMoveDepthReduction = 3;
+constexpr int kMultiCutReductionMoves = 3;
+constexpr int kSingularDepthThreshold = 8;
+constexpr int kSingularTtDepthMargin = 3;
+constexpr int kSingularMarginPerDepth = 2;
+constexpr int kSingularReducedDepthDivisor = 2;
+constexpr int kExtensionPlyLimit = 16;
+constexpr int kLateMoveCountThreshold = 2;
+constexpr int kLmrEndgamePhaseThreshold = 10;
+constexpr int kCounterMoveArrayLimit = kBoardSquareCount;
+
+constexpr int kSeePruningDepthLimit = 6;
+constexpr int kSeePruningScale = 80;
+constexpr int kHistoryPruningDepthLimit = 4;
+constexpr int kHistoryPruningBaseThreshold = -1000;
+constexpr int kQuietHistoryPruningMoveThreshold = 0;
+constexpr int kFutilityDepthLimit = 3;
+constexpr int kFutilityMarginDepth1 = 200;
+constexpr int kFutilityMarginDepth2 = 400;
+constexpr int kFutilityMarginDepth3 = 600;
+
+constexpr int kNullMoveMinDepth = 3;
+constexpr int kNullMoveMaxDepth = 10;
+constexpr int kNullMovePlyLimit = 30;
+constexpr int kNullMoveReduction = 3;
+constexpr int kNullMoveFailMargin = 300;
+constexpr int kLateDepthReductionThreshold = 4;
+
+constexpr int kAspirationWindow = 50;
+constexpr int kMaxSearchAttempts = 4;
+constexpr int kEarlyDepthNoAspirationLimit = 3;
+constexpr long long kNpsMillisScaleLl = 1000LL;
+constexpr int kStabilityChangeThreshold = 2;
+constexpr int kStabilityLowThreshold = 2;
+constexpr int kStabilityHighThreshold = 4;
+constexpr double kUnstableStabilityFactor = 1.5;
+constexpr double kStableStabilityFactor = 0.6;
+constexpr int kScoreInstabilityDepth = 5;
+constexpr int kScoreRiseThreshold = 50;
+constexpr int kScoreDropThreshold = 20;
+constexpr double kScoreRiseFactor = 1.5;
+constexpr double kScoreDropFactor = 0.7;
+constexpr int kSoftLimitDepthThreshold = 5;
+constexpr int kDefaultFindBestMoveTimeLimitMs = 30000;
+constexpr int kInitialAspirationWindow = 50;
+constexpr int kMaxAspirationWindow = 400;
+constexpr int kAspirationShrinkDivisor = 2;
+
+constexpr int kSeeThresholdBase = -25;
+constexpr int kSeeThresholdPerPly = 15;
+constexpr int kDeltaPruneMargin = 150;
+constexpr int kBigDeltaMargin = 1200;
+constexpr int kSeeCaptureBonus = 50;
+constexpr int kWinningSeeBonus = 200;
+constexpr int kCaptureVictimScale = 100;
+constexpr int kQueenGamePhaseIncrement = 4;
+constexpr int kFutilityMarginTableSize = 4;
+
+constexpr int kAttackerInitValue = 10000;
+constexpr int kCastlingDistance = 2;
+constexpr int kPromotionWhiteRank = 7;
+constexpr int kPromotionBlackRank = 0;
+constexpr int kPositionalScoreDivisor = 10;
+
+constexpr int kContinuationPlyLimit = 64;
+constexpr int kZeroWindowOffset = 1;
+} // namespace
+
+ThreadSafeHistory::ThreadSafeHistory()
+    : table(kBoardSquareCount, std::vector<int>(kBoardSquareCount, kZero)) {}
 void ThreadSafeHistory::update(int srcPos, int destPos, int depth) {
     std::lock_guard<std::mutex> lock(mutex);
     table[srcPos][destPos] += depth * depth;
@@ -25,32 +136,32 @@ int ThreadSafeHistory::get(int srcPos, int destPos) const {
 KillerMoves::KillerMoves() {
     for (auto& killersForPly : killers) {
         for (auto& killerMove : killersForPly) {
-            killerMove = {-1, -1};
+            killerMove = {kInvalidSquare, kInvalidSquare};
         }
     }
 }
 
 void KillerMoves::store(int ply, std::pair<int, int> move) {
-    if (ply < 0 || ply >= MAX_PLY) {
+    if (ply < kZero || ply >= MAX_PLY) {
         return;
-}
+    }
 
     if (isKiller(ply, move)) {
         return;
-}
-
-    for (int i = MAX_KILLER_MOVES - 1; i > 0; i--) {
-        killers[ply][i] = killers[ply][i - 1];
     }
-    killers[ply][0] = move;
+
+    for (int i = MAX_KILLER_MOVES - kOne; i > kZero; i--) {
+        killers[ply][i] = killers[ply][i - kOne];
+    }
+    killers[ply][kZero] = move;
 }
 
 bool KillerMoves::isKiller(int ply, std::pair<int, int> move) const {
-    if (ply < 0 || ply >= MAX_PLY) {
+    if (ply < kZero || ply >= MAX_PLY) {
         return false;
-}
+    }
 
-    for (int i = 0; i < MAX_KILLER_MOVES; i++) {
+    for (int i = kZero; i < MAX_KILLER_MOVES; i++) {
         if (killers[ply][i] == move) {
             return true;
         }
@@ -59,43 +170,45 @@ bool KillerMoves::isKiller(int ply, std::pair<int, int> move) const {
 }
 
 int KillerMoves::getKillerScore(int ply, std::pair<int, int> move) const {
-    if (ply < 0 || ply >= MAX_PLY) {
-        return 0;
-}
+    if (ply < kZero || ply >= MAX_PLY) {
+        return kZero;
+    }
 
-    for (int i = 0; i < MAX_KILLER_MOVES; i++) {
+    for (int i = kZero; i < MAX_KILLER_MOVES; i++) {
         if (killers[ply][i] == move) {
-            return 5000 - (i * 100);
+            return kKillerBaseScore - (i * kKillerSlotPenalty);
         }
     }
-    return 0;
+    return kZero;
 }
 
 ParallelSearchContext::ParallelSearchContext(int threads)
-    : stopSearch(false), nodeCount(0), numThreads(threads), ply(0), contempt(0), multiPV(1),
-      continuationHistory{}, captureHistory{}, prevPieceAtPly{}, prevToAtPly{} {
-    if (numThreads == 0) {
+    : stopSearch(false), nodeCount(kZero), numThreads(threads), ply(kZero), contempt(kZero),
+      multiPV(kOne), continuationHistory{}, captureHistory{}, prevPieceAtPly{}, prevToAtPly{} {
+    if (numThreads == kZero) {
         numThreads = static_cast<int>(std::thread::hardware_concurrency());
     }
-    if (numThreads == 0) {
-        numThreads = 4;
+    if (numThreads == kZero) {
+        numThreads = kDefaultThreadFallback;
     }
     for (auto& movesBySquare : counterMoves) {
         for (auto& counterMove : movesBySquare) {
-            counterMove = {-1, -1};
+            counterMove = {kInvalidSquare, kInvalidSquare};
         }
     }
 }
 
-SearchResult::SearchResult() : bestMove({-1, -1}), score(0), depth(0), nodes(0), timeMs(0) {}
+SearchResult::SearchResult()
+    : bestMove({kInvalidSquare, kInvalidSquare}), score(kZero), depth(kZero), nodes(kZero),
+      timeMs(kZero) {}
 
 void InitZobrist() {
     static bool initialized = false;
     if (initialized) {
         return;
-}
+    }
     initialized = true;
-    std::mt19937_64 rng(202406);
+    std::mt19937_64 rng(kZobristSeed);
     std::uniform_int_distribution<uint64_t> dist;
     for (auto& squareKeys : ZobristTable) {
         for (auto& pieceKey : squareKeys) {
@@ -107,22 +220,23 @@ void InitZobrist() {
 
 int pieceToZobristIndex(const Piece& p) {
     if (p.PieceType == ChessPieceType::NONE) {
-        return -1;
-}
-    return (static_cast<int>(p.PieceType) - 1) + (p.PieceColor == ChessPieceColor::BLACK ? 6 : 0);
+        return kNegativeOne;
+    }
+    return (static_cast<int>(p.PieceType) - kOne) +
+           (p.PieceColor == ChessPieceColor::BLACK ? kPieceTypePerColorCount : kZero);
 }
 
 uint64_t ComputeZobrist(const Board& board) {
-    uint64_t h = 0;
-    for (int sq = 0; sq < 64; ++sq) {
+    uint64_t h = kZero;
+    for (int sq = kZero; sq < kBoardSquareCount; ++sq) {
         int idx = pieceToZobristIndex(board.squares[sq].piece);
-        if (idx >= 0) {
+        if (idx >= kZero) {
             h ^= ZobristTable[sq][idx];
-}
+        }
     }
     if (board.turn == ChessPieceColor::BLACK) {
         h ^= ZobristBlackToMove;
-}
+    }
     return h;
 }
 
@@ -147,18 +261,18 @@ bool isInCheck(const Board& board, ChessPieceColor color) {
 int getPieceValue(ChessPieceType pieceType) {
     switch (pieceType) {
         case ChessPieceType::PAWN:
-            return 100;
+            return kPawnValue;
         case ChessPieceType::KNIGHT:
         case ChessPieceType::BISHOP:
-            return 300;
+            return kMinorPieceValue;
         case ChessPieceType::ROOK:
-            return 500;
+            return kRookValue;
         case ChessPieceType::QUEEN:
-            return 975;
+            return kQueenValue;
         case ChessPieceType::KING:
-            return 10000;
+            return kKingValue;
         default:
-            return 0;
+            return kZero;
     }
 }
 
@@ -172,7 +286,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
     scoredMoves.reserve(moves.size());
 
     for (const auto& move : moves) {
-        int score = 0;
+        int score = kZero;
 
         if (move == ttMove) {
             score = EnhancedMoveOrdering::HASH_MOVE_SCORE;
@@ -181,7 +295,7 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
         else if (board.squares[move.second].piece.PieceType != ChessPieceType::NONE) {
             int mvvLva = EnhancedMoveOrdering::getMVVLVA_Score(board, move.first, move.second);
             int see = staticExchangeEvaluation(board, move.first, move.second);
-            score = EnhancedMoveOrdering::CAPTURE_SCORE_BASE + (mvvLva * 1000) + see;
+            score = EnhancedMoveOrdering::CAPTURE_SCORE_BASE + (mvvLva * kMvvLvaScale) + see;
         }
 
         else if (killerMoves.isKiller(ply, move)) {
@@ -189,8 +303,8 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
                     EnhancedMoveOrdering::getKillerScore(killerMoves, ply, move.first, move.second);
         }
 
-        else if (counterMove.first >= 0 && move == counterMove) {
-            score = 850000;
+        else if (counterMove.first >= kZero && move == counterMove) {
+            score = kCounterMoveScore;
         }
 
         else {
@@ -223,10 +337,10 @@ void MovePicker::generateAndPartitionMoves() {
     badCaptures.reserve(moves.size());
     quietMoves.reserve(moves.size());
 
-    const int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
+    const int colorIdx = (board.turn == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
     const int prevDest = board.LastMove;
-    std::pair<int, int> counterMove = {-1, -1};
-    if (prevDest >= 0 && prevDest < 64) {
+    std::pair<int, int> counterMove = {kInvalidSquare, kInvalidSquare};
+    if (prevDest >= kZero && prevDest < kCounterMoveArrayLimit) {
         counterMove = context.counterMoves[colorIdx][prevDest];
     }
 
@@ -237,7 +351,7 @@ void MovePicker::generateAndPartitionMoves() {
         if (killerMoves.isKiller(ply, move)) {
             continue;
         }
-        if (counterMove.first >= 0 && move == counterMove) {
+        if (counterMove.first >= kZero && move == counterMove) {
             continue;
         }
 
@@ -248,8 +362,8 @@ void MovePicker::generateAndPartitionMoves() {
             int see = staticExchangeEvaluation(board, move.first, move.second);
             int victimIdx = pieceTypeIndex(board.squares[move.second].piece.PieceType);
             int capHist = context.getCaptureHistory(movingPieceIdx, victimIdx, move.second);
-            int score = (mvvLva * 1000) + see + (capHist / 8);
-            if (see >= 0) {
+            int score = (mvvLva * kMvvLvaScale) + see + (capHist / kCaptureHistoryDivisor);
+            if (see >= kZero) {
                 goodCaptures.emplace_back(move, score);
             } else {
                 badCaptures.emplace_back(move, score);
@@ -257,9 +371,10 @@ void MovePicker::generateAndPartitionMoves() {
         } else {
             int score = EnhancedMoveOrdering::getHistoryScore(history, move.first, move.second);
             score += EnhancedMoveOrdering::getPositionalScore(board, move.first, move.second);
-            int pp = context.prevPieceAtPly[std::min(ply, 63)];
-            int pt = context.prevToAtPly[std::min(ply, 63)];
-            score += context.getContinuationHistory(pp, pt, movingPieceIdx, move.second) / 4;
+            int pp = context.prevPieceAtPly[std::min(ply, kBoardSquareCount - kOne)];
+            int pt = context.prevToAtPly[std::min(ply, kBoardSquareCount - kOne)];
+            score += context.getContinuationHistory(pp, pt, movingPieceIdx, move.second) /
+                     kContinuationHistoryDivisor;
             quietMoves.emplace_back(move, score);
         }
     }
@@ -274,7 +389,7 @@ std::pair<int, int> MovePicker::next() {
         switch (stage) {
             case MovePickerStage::HASH_MOVE:
                 stage = MovePickerStage::GEN_CAPTURES;
-                if (hashMove.first >= 0 && hashMove.second >= 0) {
+                if (hashMove.first >= kZero && hashMove.second >= kZero) {
                     markReturned(hashMove);
                     return hashMove;
                 }
@@ -282,7 +397,7 @@ std::pair<int, int> MovePicker::next() {
 
             case MovePickerStage::GEN_CAPTURES:
                 generateAndPartitionMoves();
-                captureIdx = 0;
+                captureIdx = kZero;
                 stage = MovePickerStage::GOOD_CAPTURES;
                 break;
 
@@ -300,9 +415,9 @@ std::pair<int, int> MovePicker::next() {
 
             case MovePickerStage::KILLERS:
                 stage = MovePickerStage::COUNTERMOVE;
-                for (int i = 0; i < KillerMoves::MAX_KILLER_MOVES; ++i) {
+                for (int i = kZero; i < KillerMoves::MAX_KILLER_MOVES; ++i) {
                     auto k = killerMoves.killers[ply][i];
-                    if (k.first >= 0 && !alreadyReturned(k)) {
+                    if (k.first >= kZero && !alreadyReturned(k)) {
                         markReturned(k);
                         stage = MovePickerStage::KILLERS;
                         return k;
@@ -312,11 +427,11 @@ std::pair<int, int> MovePicker::next() {
 
             case MovePickerStage::COUNTERMOVE: {
                 stage = MovePickerStage::GEN_QUIETS;
-                int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
+                int colorIdx = (board.turn == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
                 int prevDest = board.LastMove;
-                if (prevDest >= 0 && prevDest < 64) {
+                if (prevDest >= kZero && prevDest < kCounterMoveArrayLimit) {
                     auto cm = context.counterMoves[colorIdx][prevDest];
-                    if (cm.first >= 0 && !alreadyReturned(cm)) {
+                    if (cm.first >= kZero && !alreadyReturned(cm)) {
                         markReturned(cm);
                         return cm;
                     }
@@ -325,7 +440,7 @@ std::pair<int, int> MovePicker::next() {
             }
 
             case MovePickerStage::GEN_QUIETS:
-                quietIdx = 0;
+                quietIdx = kZero;
                 stage = MovePickerStage::QUIETS;
                 break;
 
@@ -338,7 +453,7 @@ std::pair<int, int> MovePicker::next() {
                     }
                     break;
                 }
-                badCaptureIdx = 0;
+                badCaptureIdx = kZero;
                 stage = MovePickerStage::BAD_CAPTURES;
                 break;
 
@@ -355,7 +470,7 @@ std::pair<int, int> MovePicker::next() {
                 break;
 
             case MovePickerStage::DONE:
-                return {-1, -1};
+                return {kInvalidSquare, kInvalidSquare};
         }
     }
 }
@@ -365,9 +480,9 @@ void updateHistoryTable(ThreadSafeHistory& historyTable, int fromSquare, int toS
 }
 
 bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLimitMs) {
-    if (timeLimitMs <= 0) {
+    if (timeLimitMs <= kZero) {
         return false;
-}
+    }
 
     auto currentTime = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime);
@@ -382,7 +497,7 @@ std::string getBookMove(const std::string& fen) {
         if (!options.empty()) {
             static std::random_device rd;
             static std::mt19937 gen(rd());
-            std::uniform_int_distribution<std::size_t> dis(0, options.size() - 1);
+            std::uniform_int_distribution<std::size_t> dis(kZero, options.size() - kOne);
             return options[dis(gen)];
         }
     }
@@ -390,21 +505,21 @@ std::string getBookMove(const std::string& fen) {
     auto it = OpeningBook.find(fen);
     if (it != OpeningBook.end()) {
         return it->second;
-}
+    }
     return "";
 }
 
 int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
                      ThreadSafeHistory& historyTable, ParallelSearchContext& context, int ply) {
     if (context.stopSearch.load()) {
-        return 0;
-}
+        return kZero;
+    }
 
-    if (ply < 0 || ply >= 50) {
+    if (ply < kZero || ply >= kMaxSearchPly) {
         return evaluatePosition(board, context.contempt);
     }
 
-    context.nodeCount.fetch_add(1);
+    context.nodeCount.fetch_add(kOne);
 
     ChessPieceColor currentColor =
         maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
@@ -415,7 +530,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
 
     if (moves.empty()) {
         if (inCheck) {
-            int mateScore = maximizingPlayer ? -10000 + ply : 10000 - ply;
+            int mateScore = maximizingPlayer ? -kMateScore + ply : kMateScore - ply;
             return mateScore;
         }
         return -context.contempt;
@@ -424,37 +539,34 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
     int standPat = evaluatePosition(board, context.contempt);
 
     if (inCheck) {
-        standPat = maximizingPlayer ? -10000 : 10000;
+        standPat = maximizingPlayer ? -kMateScore : kMateScore;
     }
 
     if (maximizingPlayer) {
         if (standPat >= beta) {
             return beta;
-}
+        }
         alpha = std::max(alpha, standPat);
     } else {
         if (standPat <= alpha) {
             return alpha;
-}
+        }
         beta = std::min(beta, standPat);
     }
 
     if (!inCheck) {
-        const int DELTA_MARGIN = 975;
-        const int BIG_DELTA_MARGIN = 1200;
-
         if (maximizingPlayer) {
-            if (standPat + DELTA_MARGIN < alpha) {
+            if (standPat + kQueenValue < alpha) {
                 return alpha;
             }
-            if (standPat + BIG_DELTA_MARGIN < alpha) {
+            if (standPat + kBigDeltaMargin < alpha) {
                 return standPat;
             }
         } else {
-            if (standPat - DELTA_MARGIN > beta) {
+            if (standPat - kQueenValue > beta) {
                 return beta;
             }
-            if (standPat - BIG_DELTA_MARGIN > beta) {
+            if (standPat - kBigDeltaMargin > beta) {
                 return standPat;
             }
         }
@@ -477,38 +589,38 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
 
     std::vector<ScoredMove> scoredMoves;
     for (const auto& move : tacticalMoves) {
-        int score = 0;
+        int score = kZero;
         bool isCapt = isCapture(board, move.first, move.second);
 
         if (isCapt) {
             int victimValue = getPieceValue(board.squares[move.second].piece.PieceType);
             int attackerValue = getPieceValue(board.squares[move.first].piece.PieceType);
 
-            score = (victimValue * 100) - attackerValue;
+            score = (victimValue * kCaptureVictimScale) - attackerValue;
 
             int seeValue = staticExchangeEvaluation(board, move.first, move.second);
 
-            int seeThreshold = -25 - (ply * 15);
+            int seeThreshold = kSeeThresholdBase - (ply * kSeeThresholdPerPly);
             if (seeValue < seeThreshold) {
                 continue;
             }
 
             int expectedGain = std::max(seeValue, victimValue);
-            if (maximizingPlayer && standPat + expectedGain + 150 < alpha) {
+            if (maximizingPlayer && standPat + expectedGain + kDeltaPruneMargin < alpha) {
                 continue;
             }
-            if (!maximizingPlayer && standPat - expectedGain - 150 > beta) {
+            if (!maximizingPlayer && standPat - expectedGain - kDeltaPruneMargin > beta) {
                 continue;
             }
 
             score += seeValue;
 
             if (seeValue > victimValue) {
-                score += 50;
+                score += kSeeCaptureBonus;
             }
 
-            if (seeValue >= 0) {
-                score += 200;
+            if (seeValue >= kZero) {
+                score += kWinningSeeBonus;
             }
         }
 
@@ -521,8 +633,8 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
 
     for (const auto& scoredMove : scoredMoves) {
         if (context.stopSearch.load()) {
-            return 0;
-}
+            return kZero;
+        }
 
         const auto& move = scoredMove.move;
         Board newBoard = board;
@@ -533,10 +645,10 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
         }
 
         int eval = QuiescenceSearch(newBoard, alpha, beta, !maximizingPlayer, historyTable, context,
-                                    ply + 1);
+                                    ply + kOne);
         if (context.stopSearch.load()) {
-            return 0;
-}
+            return kZero;
+        }
 
         if (maximizingPlayer) {
             bestValue = std::max(bestValue, eval);
@@ -558,20 +670,20 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                              int ply, ThreadSafeHistory& historyTable,
                              ParallelSearchContext& context, bool isPVNode) {
 
-    if (depth < 0 || depth > 20) {
-        return 0;
+    if (depth < kZero || depth > kMaxPvDepth) {
+        return kZero;
     }
 
-    if (ply < 0 || ply >= 50) {
-        return 0;
+    if (ply < kZero || ply >= kMaxSearchPly) {
+        return kZero;
     }
 
     if (isTimeUp(context.startTime, context.timeLimitMs)) {
         context.stopSearch = true;
-        return 0;
+        return kZero;
     }
 
-    if (depth == 0) {
+    if (depth == kZero) {
         return QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context, ply);
     }
 
@@ -582,59 +694,60 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     TTEntry ttEntry;
     bool ttHit = context.transTable.find(zobristKey, ttEntry);
     if (ttHit && ttEntry.depth >= depth) {
-        if (ttEntry.flag == 0) {
+        if (ttEntry.flag == kExactFlag) {
             return ttEntry.value;
-        } else if (ttEntry.flag == -1 && ttEntry.value <= alpha) {
+        } else if (ttEntry.flag == kUpperBoundFlag && ttEntry.value <= alpha) {
             return alpha;
-        } else if (ttEntry.flag == 1 && ttEntry.value >= beta) {
+        } else if (ttEntry.flag == kLowerBoundFlag && ttEntry.value >= beta) {
             return beta;
         }
     }
 
-    if (context.useSyzygy && !isPVNode && ply > 0 && Syzygy::canProbe(board)) {
-        int success = 0;
+    if (context.useSyzygy && !isPVNode && ply > kZero && Syzygy::canProbe(board)) {
+        int success = kZero;
         Syzygy::ProbeResult wdl = Syzygy::probeWDL(board, &success);
         if (success) {
             context.tbHits++;
-            int tbScore = 0;
-            int tbBound = 0;
+            int tbScore = kZero;
+            int tbBound = kZero;
             if (wdl == Syzygy::PROBE_WIN || wdl == Syzygy::PROBE_CURSED_WIN) {
-                tbScore = 9000 - ply;
-                tbBound = 1;
+                tbScore = kSyzygyWinScore - ply;
+                tbBound = kLowerBoundFlag;
             } else if (wdl == Syzygy::PROBE_LOSS || wdl == Syzygy::PROBE_BLESSED_LOSS) {
-                tbScore = -9000 + ply;
-                tbBound = -1;
+                tbScore = -kSyzygyWinScore + ply;
+                tbBound = kUpperBoundFlag;
             } else {
-                tbScore = 0;
-                tbBound = 0;
+                tbScore = kZero;
+                tbBound = kZero;
             }
-            if (tbBound == 0 || (tbBound == 1 && tbScore >= beta) ||
-                (tbBound == -1 && tbScore <= alpha)) {
-                context.transTable.insert(zobristKey,
-                                          TTEntry(depth, tbScore, tbBound, {-1, -1}, zobristKey));
+            if (tbBound == kZero || (tbBound == kLowerBoundFlag && tbScore >= beta) ||
+                (tbBound == kUpperBoundFlag && tbScore <= alpha)) {
+                context.transTable.insert(
+                    zobristKey,
+                    TTEntry(depth, tbScore, tbBound, {kInvalidSquare, kInvalidSquare}, zobristKey));
                 return tbScore;
             }
         }
     }
 
-    if (depth >= 4 && (!ttHit || ttEntry.bestMove.first < 0)) {
-        depth -= 1;
+    if (depth >= kLateDepthReductionThreshold && (!ttHit || ttEntry.bestMove.first < kZero)) {
+        depth -= kOne;
     }
 
     int staticEval = evaluatePosition(board, context.contempt);
 
-    int gamePhase = 0;
-    for (int sq = 0; sq < 64; ++sq) {
+    int gamePhase = kZero;
+    for (int sq = kZero; sq < kBoardSquareCount; ++sq) {
         switch (board.squares[sq].piece.PieceType) {
             case ChessPieceType::KNIGHT:
             case ChessPieceType::BISHOP:
-                gamePhase += 1;
+                gamePhase += kOne;
                 break;
             case ChessPieceType::ROOK:
-                gamePhase += 2;
+                gamePhase += kTwo;
                 break;
             case ChessPieceType::QUEEN:
-                gamePhase += 4;
+                gamePhase += kQueenGamePhaseIncrement;
                 break;
             default:
                 break;
@@ -654,9 +767,9 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         if (AdvancedSearch::nullMovePruning(board, depth, alpha, beta)) {
             board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                 : ChessPieceColor::WHITE;
-            int nullScore =
-                -PrincipalVariationSearch(board, depth - 3, -beta, -beta + 1, !maximizingPlayer,
-                                          ply + 1, historyTable, context, false);
+            int nullScore = -PrincipalVariationSearch(board, depth - kNullMoveDepthReduction, -beta,
+                                                      -beta + kZeroWindowOffset, !maximizingPlayer,
+                                                      ply + kOne, historyTable, context, false);
             board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                 : ChessPieceColor::WHITE;
 
@@ -665,7 +778,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             }
         }
 
-        if (AdvancedSearch::multiCutPruning(board, depth, alpha, beta, 3)) {
+        if (AdvancedSearch::multiCutPruning(board, depth, alpha, beta, kMultiCutReductionMoves)) {
             return beta;
         }
     }
@@ -673,18 +786,18 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     GenValidMoves(board);
     MovePicker picker(board, ttEntry.bestMove, context.killerMoves, ply, historyTable, context);
 
-    int colorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
+    int colorIdx = (board.turn == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
     int prevDest = board.LastMove;
     const bool sideInCheck = isInCheck(board, board.turn);
 
-    int bestValue = maximizingPlayer ? -10000 : 10000;
-    std::pair<int, int> bestMove = {-1, -1};
-    int flag = -1;
-    int movesSearched = 0;
+    int bestValue = maximizingPlayer ? -kMateScore : kMateScore;
+    std::pair<int, int> bestMove = {kInvalidSquare, kInvalidSquare};
+    int flag = kUpperBoundFlag;
+    int movesSearched = kZero;
 
     std::pair<int, int> move;
-    while ((move = picker.next()).first >= 0) {
-        if (ply == 0) {
+    while ((move = picker.next()).first >= kZero) {
+        if (ply == kZero) {
             bool excluded = false;
             for (const auto& ex : context.excludedRootMoves) {
                 if (ex == move) {
@@ -694,15 +807,15 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             }
             if (excluded) {
                 continue;
-}
+            }
         }
 
         bool isCaptureMove = isCapture(board, move.first, move.second);
 
-        if (!isPVNode && movesSearched > 0) {
-            if (depth <= 6) {
+        if (!isPVNode && movesSearched > kZero) {
+            if (depth <= kSeePruningDepthLimit) {
                 int seeVal = staticExchangeEvaluation(board, move.first, move.second);
-                if (seeVal < -depth * 80) {
+                if (seeVal < -depth * kSeePruningScale) {
                     continue;
                 }
             }
@@ -711,8 +824,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                 continue;
             }
 
-            if (AdvancedSearch::lateMovePruning(board, depth, movesSearched,
-                                                sideInCheck)) {
+            if (AdvancedSearch::lateMovePruning(board, depth, movesSearched, sideInCheck)) {
                 continue;
             }
         }
@@ -728,35 +840,36 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                     : ChessPieceColor::WHITE;
 
-        int extension = 0;
+        int extension = kZero;
         const bool basicExtension = AdvancedSearch::checkExtension(board, move, depth) ||
                                     AdvancedSearch::recaptureExtension(board, move, depth) ||
                                     AdvancedSearch::pawnPushExtension(board, move, depth) ||
                                     AdvancedSearch::passedPawnExtension(board, move, depth);
         if (basicExtension) {
-            extension = 1;
-        } else if (depth >= 8 && move == ttEntry.bestMove && ttEntry.depth >= depth - 3 &&
-                   ttEntry.value > alpha && ttEntry.value < beta) {
-            int seMargin = 2 * depth;
+            extension = kOne;
+        } else if (depth >= kSingularDepthThreshold && move == ttEntry.bestMove &&
+                   ttEntry.depth >= depth - kSingularTtDepthMargin && ttEntry.value > alpha &&
+                   ttEntry.value < beta) {
+            int seMargin = kSingularMarginPerDepth * depth;
             int seBeta = ttEntry.value - seMargin;
             Board seBoard = board;
-            int seVal =
-                PrincipalVariationSearch(seBoard, depth / 2, seBeta - 1, seBeta, maximizingPlayer,
-                                         ply + 1, historyTable, context, false);
+            int seVal = PrincipalVariationSearch(
+                seBoard, depth / kSingularReducedDepthDivisor, seBeta - kZeroWindowOffset, seBeta,
+                maximizingPlayer, ply + kOne, historyTable, context, false);
             if (seVal < seBeta) {
-                extension = 1;
+                extension = kOne;
             } else if (seVal >= beta) {
                 return seVal;
             }
         }
 
-        if (ply >= 16) {
-            extension = 0;
+        if (ply >= kExtensionPlyLimit) {
+            extension = kZero;
         }
 
-        int searchDepth = std::max(0, depth - 1 + extension);
+        int searchDepth = std::max(kZero, depth - kOne + extension);
 
-        if (movesSearched >= 2 && searchDepth >= 2) {
+        if (movesSearched >= kLateMoveCountThreshold && searchDepth >= kLateMoveCountThreshold) {
             LMREnhanced::MoveClassification mc;
             mc.isCapture = isCaptureMove;
             mc.givesCheck = givesCheck(board, move.first, move.second);
@@ -770,29 +883,29 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             LMREnhanced::PositionContext pc;
             pc.inCheck = sideInCheck;
             pc.isPVNode = isPVNode;
-            pc.isEndgame = (gamePhase < 10);
+            pc.isEndgame = (gamePhase < kLmrEndgamePhaseThreshold);
             pc.gamePhase = gamePhase;
             pc.staticEval = staticEval;
 
             int reduction = LMREnhanced::calculateReduction(searchDepth, mc, pc);
-            if (reduction > 0) {
-                searchDepth = std::max(1, searchDepth - reduction);
+            if (reduction > kZero) {
+                searchDepth = std::max(kOne, searchDepth - reduction);
             }
         }
 
-        int score = 0;
-        if (movesSearched == 0 || isPVNode) {
+        int score = kZero;
+        if (movesSearched == kZero || isPVNode) {
             score =
                 -PrincipalVariationSearch(tempBoard, searchDepth, -beta, -alpha, !maximizingPlayer,
-                                          ply + 1, historyTable, context, isPVNode);
+                                          ply + kOne, historyTable, context, isPVNode);
         } else {
-            score =
-                -PrincipalVariationSearch(tempBoard, searchDepth, -alpha - 1, -alpha,
-                                          !maximizingPlayer, ply + 1, historyTable, context, false);
+            score = -PrincipalVariationSearch(tempBoard, searchDepth, -alpha - kOne, -alpha,
+                                              !maximizingPlayer, ply + kOne, historyTable, context,
+                                              false);
             if (score > alpha && score < beta) {
                 score = -PrincipalVariationSearch(tempBoard, searchDepth, -beta, -alpha,
-                                                  !maximizingPlayer, ply + 1, historyTable, context,
-                                                  true);
+                                                  !maximizingPlayer, ply + kOne, historyTable,
+                                                  context, true);
             }
         }
 
@@ -804,7 +917,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                 bestMove = move;
                 if (score > alpha) {
                     alpha = score;
-                    flag = 0;
+                    flag = kExactFlag;
                 }
             }
         } else {
@@ -813,16 +926,16 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                 bestMove = move;
                 if (score < beta) {
                     beta = score;
-                    flag = 0;
+                    flag = kExactFlag;
                 }
             }
         }
 
         if (alpha >= beta) {
-            flag = 1;
+            flag = kLowerBoundFlag;
             if (!isCaptureMove) {
                 context.killerMoves.store(ply, move);
-                if (prevDest >= 0 && prevDest < 64) {
+                if (prevDest >= kZero && prevDest < kCounterMoveArrayLimit) {
                     context.counterMoves[colorIdx][prevDest] = move;
                 }
             }
@@ -831,9 +944,9 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         }
     }
 
-    if (movesSearched == 0) {
+    if (movesSearched == kZero) {
         if (sideInCheck) {
-            return maximizingPlayer ? -10000 + ply : 10000 - ply;
+            return maximizingPlayer ? -kMateScore + ply : kMateScore - ply;
         } else {
             return -context.contempt;
         }
@@ -847,45 +960,48 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
 int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, int ply,
                     ThreadSafeHistory& historyTable, ParallelSearchContext& context) {
 
-    if (depth < 0 || depth > 20) {
-        return 0;
+    if (depth < kZero || depth > kMaxPvDepth) {
+        return kZero;
     }
 
-    if (ply < 0 || ply >= 50) {
-        return 0;
+    if (ply < kZero || ply >= kMaxSearchPly) {
+        return kZero;
     }
 
     if (context.stopSearch.load() || isTimeUp(context.startTime, context.timeLimitMs)) {
         context.stopSearch.store(true);
-        return 0;
+        return kZero;
     }
-    context.nodeCount.fetch_add(1);
+    context.nodeCount.fetch_add(kOne);
 
-    int extension = 0;
+    int extension = kZero;
     ChessPieceColor currentColor =
         maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
 
-    if (depth == 1 && ply < 10 && isInCheck(board, currentColor)) {
-        extension = 1;
+    if (depth == kOne && ply < kLmrEndgamePhaseThreshold && isInCheck(board, currentColor)) {
+        extension = kOne;
     }
 
-    else if (depth >= 8 && ply < 10) {
+    else if (depth >= kSingularDepthThreshold && ply < kLmrEndgamePhaseThreshold) {
         TTEntry ttEntry;
         uint64_t hash = ComputeZobrist(board);
-        if (context.transTable.find(hash, ttEntry) && ttEntry.depth >= depth - 3) {
-            if (ttEntry.bestMove.first != -1 && ttEntry.value > alpha && ttEntry.value < beta) {
+        if (context.transTable.find(hash, ttEntry) &&
+            ttEntry.depth >= depth - kSingularTtDepthMargin) {
+            if (ttEntry.bestMove.first != kInvalidSquare && ttEntry.value > alpha &&
+                ttEntry.value < beta) {
 
-                int singularMargin = 2 * depth;
+                int singularMargin = kSingularMarginPerDepth * depth;
                 int singularBeta = ttEntry.value - singularMargin;
                 if (singularBeta > alpha) {
 
                     Board testBoard = board;
                     int singularValue =
-                        AlphaBetaSearch(testBoard, depth / 2, singularBeta - 1, singularBeta,
-                                        maximizingPlayer, ply + 1, historyTable, context);
+                        AlphaBetaSearch(testBoard, depth / kSingularReducedDepthDivisor,
+                                        singularBeta - kZeroWindowOffset, singularBeta,
+                                        maximizingPlayer, ply + kOne, historyTable, context);
 
                     if (singularValue < singularBeta) {
-                        extension = 1;
+                        extension = kOne;
                     } else if (singularValue >= beta) {
                         return singularValue;
                     }
@@ -896,59 +1012,61 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 
     depth += extension;
 
-    if (depth > 20 || ply >= 50) {
-        return 0;
+    if (depth > kMaxPvDepth || ply >= kMaxSearchPly) {
+        return kZero;
     }
 
     uint64_t hash = ComputeZobrist(board);
     context.transTable.prefetch(hash);
     TTEntry entry;
-    std::pair<int, int> hashMove = {-1, -1};
+    std::pair<int, int> hashMove = {kInvalidSquare, kInvalidSquare};
     if (context.transTable.find(hash, entry)) {
         if (entry.depth >= depth) {
-            if (entry.flag == 0) {
+            if (entry.flag == kExactFlag) {
                 return entry.value;
-}
-            if (entry.flag == -1 && entry.value <= alpha) {
+            }
+            if (entry.flag == kUpperBoundFlag && entry.value <= alpha) {
                 return alpha;
-}
-            if (entry.flag == 1 && entry.value >= beta) {
+            }
+            if (entry.flag == kLowerBoundFlag && entry.value >= beta) {
                 return beta;
-}
+            }
         }
 
-        if (entry.bestMove.first != -1 && entry.bestMove.second != -1) {
+        if (entry.bestMove.first != kInvalidSquare && entry.bestMove.second != kInvalidSquare) {
             hashMove = entry.bestMove;
         }
     }
 
-    if (context.useSyzygy && ply > 0 && Syzygy::canProbe(board)) {
-        int success = 0;
+    if (context.useSyzygy && ply > kZero && Syzygy::canProbe(board)) {
+        int success = kZero;
         Syzygy::ProbeResult wdl = Syzygy::probeWDL(board, &success);
         if (success) {
             context.tbHits++;
-            int tbScore = 0;
+            int tbScore = kZero;
             if (wdl == Syzygy::PROBE_WIN || wdl == Syzygy::PROBE_CURSED_WIN) {
-                tbScore = 9000 - ply;
+                tbScore = kSyzygyWinScore - ply;
             } else if (wdl == Syzygy::PROBE_LOSS || wdl == Syzygy::PROBE_BLESSED_LOSS) {
-                tbScore = -9000 + ply;
+                tbScore = -kSyzygyWinScore + ply;
             }
             if (!maximizingPlayer) {
                 tbScore = -tbScore;
-}
-            context.transTable.insert(hash, TTEntry(depth, tbScore, 0, {-1, -1}, hash));
+            }
+            context.transTable.insert(
+                hash, TTEntry(depth, tbScore, kExactFlag, {kInvalidSquare, kInvalidSquare}, hash));
             return tbScore;
         }
     }
 
-    if (depth >= 4 && hashMove.first < 0) {
-        depth -= 1;
+    if (depth >= kLateDepthReductionThreshold && hashMove.first < kZero) {
+        depth -= kOne;
     }
 
-    if (depth == 0) {
+    if (depth == kZero) {
         int eval =
             QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context, ply);
-        context.transTable.insert(hash, TTEntry(depth, eval, 0, {-1, -1}, hash));
+        context.transTable.insert(
+            hash, TTEntry(depth, eval, kExactFlag, {kInvalidSquare, kInvalidSquare}, hash));
         return eval;
     }
     GenValidMoves(board);
@@ -956,40 +1074,42 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         GetAllMoves(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK);
     if (moves.empty()) {
         if (isInCheck(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK)) {
-            int mateScore = maximizingPlayer ? -10000 + ply : 10000 - ply;
-            context.transTable.insert(hash, TTEntry(depth, mateScore, 0, {-1, -1}, hash));
+            int mateScore = maximizingPlayer ? -kMateScore + ply : kMateScore - ply;
+            context.transTable.insert(hash, TTEntry(depth, mateScore, kExactFlag,
+                                                    {kInvalidSquare, kInvalidSquare}, hash));
             return mateScore;
         }
         int drawScore = -context.contempt;
-        context.transTable.insert(hash, TTEntry(depth, drawScore, 0, {-1, -1}, hash));
+        context.transTable.insert(
+            hash, TTEntry(depth, drawScore, kExactFlag, {kInvalidSquare, kInvalidSquare}, hash));
         return drawScore;
     }
 
-    if (depth >= 3 && depth <= 10 && ply < 30 && !isInCheck(board, currentColor)) {
+    if (depth >= kNullMoveMinDepth && depth <= kNullMoveMaxDepth && ply < kNullMovePlyLimit &&
+        !isInCheck(board, currentColor)) {
         Board nullBoard = board;
         nullBoard.turn = (nullBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                     : ChessPieceColor::WHITE;
-        int R = 3;
-        int reducedDepth = depth - 1 - R;
-        if (reducedDepth > 0 && reducedDepth <= 10) {
+        int reducedDepth = depth - kOne - kNullMoveReduction;
+        if (reducedDepth > kZero && reducedDepth <= kNullMoveMaxDepth) {
             int nullValue = AlphaBetaSearch(nullBoard, reducedDepth, alpha, beta, !maximizingPlayer,
-                                            ply + 1, historyTable, context);
+                                            ply + kOne, historyTable, context);
             if (context.stopSearch.load()) {
-                return 0;
-}
+                return kZero;
+            }
             if (maximizingPlayer) {
                 if (nullValue >= beta) {
-                    if (nullValue >= beta + 300) {
+                    if (nullValue >= beta + kNullMoveFailMargin) {
                         return beta;
                     }
 
-                    if (depth - 1 <= 10 && ply + 1 < 30) {
+                    if (depth - kOne <= kNullMoveMaxDepth && ply + kOne < kNullMovePlyLimit) {
                         int verificationValue =
-                            AlphaBetaSearch(nullBoard, depth - 1, alpha, beta, !maximizingPlayer,
-                                            ply + 1, historyTable, context);
+                            AlphaBetaSearch(nullBoard, depth - kOne, alpha, beta, !maximizingPlayer,
+                                            ply + kOne, historyTable, context);
                         if (context.stopSearch.load()) {
-                            return 0;
-}
+                            return kZero;
+                        }
                         if (verificationValue >= beta) {
                             return beta;
                         }
@@ -997,17 +1117,17 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 }
             } else {
                 if (nullValue <= alpha) {
-                    if (nullValue <= alpha - 300) {
+                    if (nullValue <= alpha - kNullMoveFailMargin) {
                         return alpha;
                     }
 
-                    if (depth - 1 <= 10 && ply + 1 < 30) {
+                    if (depth - kOne <= kNullMoveMaxDepth && ply + kOne < kNullMovePlyLimit) {
                         int verificationValue =
-                            AlphaBetaSearch(nullBoard, depth - 1, alpha, beta, !maximizingPlayer,
-                                            ply + 1, historyTable, context);
+                            AlphaBetaSearch(nullBoard, depth - kOne, alpha, beta, !maximizingPlayer,
+                                            ply + kOne, historyTable, context);
                         if (context.stopSearch.load()) {
-                            return 0;
-}
+                            return kZero;
+                        }
                         if (verificationValue <= alpha) {
                             return alpha;
                         }
@@ -1016,27 +1136,27 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             }
         }
     }
-    int abColorIdx = (board.turn == ChessPieceColor::WHITE) ? 0 : 1;
+    int abColorIdx = (board.turn == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
     int abPrevDest = board.LastMove;
-    std::pair<int, int> abCounterMove = {-1, -1};
-    if (abPrevDest >= 0 && abPrevDest < 64) {
+    std::pair<int, int> abCounterMove = {kInvalidSquare, kInvalidSquare};
+    if (abPrevDest >= kZero && abPrevDest < kCounterMoveArrayLimit) {
         abCounterMove = context.counterMoves[abColorIdx][abPrevDest];
     }
     std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
         board, moves, historyTable, context.killerMoves, ply, hashMove, abCounterMove);
     std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
     int origAlpha = alpha;
-    int bestValue = maximizingPlayer ? -10000 : 10000;
-    int flag = 0;
+    int bestValue = maximizingPlayer ? -kMateScore : kMateScore;
+    int flag = kExactFlag;
     bool foundPV = false;
-    std::pair<int, int> bestMoveFound = {-1, -1};
+    std::pair<int, int> bestMoveFound = {kInvalidSquare, kInvalidSquare};
 
     if (maximizingPlayer) {
-        int moveCount = 0;
+        int moveCount = kZero;
         for (const auto& scoredMove : scoredMoves) {
             if (context.stopSearch.load()) {
-                return 0;
-}
+                return kZero;
+            }
             const auto& move = scoredMove.move;
             Board newBoard = board;
             newBoard.movePiece(move.first, move.second);
@@ -1045,16 +1165,17 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 continue;
             }
 
-            int eval = 0;
+            int eval = kZero;
             bool isCaptureMove = isCapture(board, move.first, move.second);
             bool isCheckMove = givesCheck(board, move.first, move.second);
 
-            if (depth <= 3 && !foundPV && !isCaptureMove && !isCheckMove &&
+            if (depth <= kFutilityDepthLimit && !foundPV && !isCaptureMove && !isCheckMove &&
                 !isInCheck(board, currentColor)) {
 
                 int staticEval = evaluatePosition(board, context.contempt);
 
-                const int futilityMargins[4] = {0, 200, 400, 600};
+                const int futilityMargins[kFutilityMarginTableSize] = {
+                    kZero, kFutilityMarginDepth1, kFutilityMarginDepth2, kFutilityMarginDepth3};
                 int futilityValue = staticEval + futilityMargins[depth];
 
                 if (futilityValue <= alpha) {
@@ -1063,39 +1184,41 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 }
             }
 
-            if (depth <= 6 && isCaptureMove && !isCheckMove && !isInCheck(board, currentColor)) {
+            if (depth <= kSeePruningDepthLimit && isCaptureMove && !isCheckMove &&
+                !isInCheck(board, currentColor)) {
                 int seeValue = staticExchangeEvaluation(board, move.first, move.second);
-                if (seeValue < -depth * 80) {
+                if (seeValue < -depth * kSeePruningScale) {
                     moveCount++;
                     continue;
                 }
             }
 
-            if (depth <= 4 && !isCaptureMove && !isCheckMove && !isInCheck(board, currentColor) &&
-                !context.killerMoves.isKiller(ply, move) && moveCount > 0) {
+            if (depth <= kHistoryPruningDepthLimit && !isCaptureMove && !isCheckMove &&
+                !isInCheck(board, currentColor) && !context.killerMoves.isKiller(ply, move) &&
+                moveCount > kQuietHistoryPruningMoveThreshold) {
                 int histScore = historyTable.get(move.first, move.second);
-                if (histScore < -1000 * depth) {
+                if (histScore < kHistoryPruningBaseThreshold * depth) {
                     moveCount++;
                     continue;
                 }
             }
 
             int movingPiece = pieceTypeIndex(board.squares[move.first].piece.PieceType);
-            if (ply + 1 < 64) {
-                context.prevPieceAtPly[ply + 1] = movingPiece;
-                context.prevToAtPly[ply + 1] = move.second;
+            if (ply + kOne < kContinuationPlyLimit) {
+                context.prevPieceAtPly[ply + kOne] = movingPiece;
+                context.prevToAtPly[ply + kOne] = move.second;
             }
 
-            int contHistScore = 0;
-            if (ply > 0) {
+            int contHistScore = kZero;
+            if (ply > kZero) {
                 int pp = context.prevPieceAtPly[ply];
                 int pt = context.prevToAtPly[ply];
                 contHistScore = context.getContinuationHistory(pp, pt, movingPiece, move.second);
             }
 
-            if (moveCount == 0 || foundPV) {
+            if (moveCount == kZero || foundPV) {
 
-                eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1,
+                eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, false, ply + kOne,
                                        historyTable, context);
             } else {
 
@@ -1113,24 +1236,25 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 
                     int reduction = LMREnhanced::calculateReduction(depth, mc, pc);
 
-                    if (reduction > 0 && !isCaptureMove && !isCheckMove) {
-                        int reducedDepth = std::max(0, depth - 1 - reduction);
-                        int reducedEval = AlphaBetaSearch(newBoard, reducedDepth, alpha, alpha + 1,
-                                                          false, ply + 1, historyTable, context);
+                    if (reduction > kZero && !isCaptureMove && !isCheckMove) {
+                        int reducedDepth = std::max(kZero, depth - kOne - reduction);
+                        int reducedEval =
+                            AlphaBetaSearch(newBoard, reducedDepth, alpha, alpha + kOne, false,
+                                            ply + kOne, historyTable, context);
 
                         if (reducedEval > alpha) {
-                            eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1,
-                                                   historyTable, context);
+                            eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, false,
+                                                   ply + kOne, historyTable, context);
                         } else {
                             eval = reducedEval;
                         }
                     } else {
-                        eval = AlphaBetaSearch(newBoard, depth - 1, alpha, alpha + 1, false,
-                                               ply + 1, historyTable, context);
+                        eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, alpha + kOne, false,
+                                               ply + kOne, historyTable, context);
 
                         if (eval > alpha && eval < beta) {
-                            eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, false, ply + 1,
-                                                   historyTable, context);
+                            eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, false,
+                                                   ply + kOne, historyTable, context);
                         }
                     }
                 }
@@ -1138,8 +1262,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 
             moveCount++;
             if (context.stopSearch.load()) {
-                return 0;
-}
+                return kZero;
+            }
             if (eval > bestValue) {
                 bestValue = eval;
                 bestMoveFound = move;
@@ -1153,10 +1277,10 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 int bonus = depth * depth;
                 if (!isCaptureMove) {
                     context.killerMoves.store(ply, move);
-                    if (abPrevDest >= 0 && abPrevDest < 64) {
+                    if (abPrevDest >= kZero && abPrevDest < kCounterMoveArrayLimit) {
                         context.counterMoves[abColorIdx][abPrevDest] = move;
                     }
-                    if (ply > 0) {
+                    if (ply > kZero) {
                         int pp = context.prevPieceAtPly[ply];
                         int pt = context.prevToAtPly[ply];
                         context.updateContinuationHistory(pp, pt, movingPiece, move.second, bonus);
@@ -1169,18 +1293,18 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             }
         }
         if (bestValue <= origAlpha) {
-            flag = -1;
+            flag = kUpperBoundFlag;
         } else if (bestValue >= beta) {
-            flag = 1;
+            flag = kLowerBoundFlag;
         } else {
-            flag = 0;
-}
+            flag = kExactFlag;
+        }
     } else {
-        int moveCount = 0;
+        int moveCount = kZero;
         for (const auto& scoredMove : scoredMoves) {
             if (context.stopSearch.load()) {
-                return 0;
-}
+                return kZero;
+            }
             const auto& move = scoredMove.move;
             Board newBoard = board;
             newBoard.movePiece(move.first, move.second);
@@ -1189,43 +1313,45 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 continue;
             }
 
-            int eval = 0;
+            int eval = kZero;
             bool isCaptureMove = isCapture(board, move.first, move.second);
             bool isCheckMove = givesCheck(board, move.first, move.second);
 
-            if (depth <= 6 && isCaptureMove && !isCheckMove && !isInCheck(board, currentColor)) {
+            if (depth <= kSeePruningDepthLimit && isCaptureMove && !isCheckMove &&
+                !isInCheck(board, currentColor)) {
                 int seeValue = staticExchangeEvaluation(board, move.first, move.second);
-                if (seeValue < -depth * 80) {
+                if (seeValue < -depth * kSeePruningScale) {
                     moveCount++;
                     continue;
                 }
             }
 
-            if (depth <= 4 && !isCaptureMove && !isCheckMove && !isInCheck(board, currentColor) &&
-                !context.killerMoves.isKiller(ply, move) && moveCount > 0) {
+            if (depth <= kHistoryPruningDepthLimit && !isCaptureMove && !isCheckMove &&
+                !isInCheck(board, currentColor) && !context.killerMoves.isKiller(ply, move) &&
+                moveCount > kQuietHistoryPruningMoveThreshold) {
                 int histScore = historyTable.get(move.first, move.second);
-                if (histScore < -1000 * depth) {
+                if (histScore < kHistoryPruningBaseThreshold * depth) {
                     moveCount++;
                     continue;
                 }
             }
 
             int movingPiece = pieceTypeIndex(board.squares[move.first].piece.PieceType);
-            if (ply + 1 < 64) {
-                context.prevPieceAtPly[ply + 1] = movingPiece;
-                context.prevToAtPly[ply + 1] = move.second;
+            if (ply + kOne < kContinuationPlyLimit) {
+                context.prevPieceAtPly[ply + kOne] = movingPiece;
+                context.prevToAtPly[ply + kOne] = move.second;
             }
 
-            int contHistScore = 0;
-            if (ply > 0) {
+            int contHistScore = kZero;
+            if (ply > kZero) {
                 int pp = context.prevPieceAtPly[ply];
                 int pt = context.prevToAtPly[ply];
                 contHistScore = context.getContinuationHistory(pp, pt, movingPiece, move.second);
             }
 
-            if (moveCount == 0 || foundPV) {
+            if (moveCount == kZero || foundPV) {
 
-                eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1,
+                eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, true, ply + kOne,
                                        historyTable, context);
             } else {
 
@@ -1243,24 +1369,24 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 
                     int reduction = LMREnhanced::calculateReduction(depth, mc, pc);
 
-                    if (reduction > 0 && !isCaptureMove && !isCheckMove) {
-                        int reducedDepth = std::max(0, depth - 1 - reduction);
-                        int reducedEval = AlphaBetaSearch(newBoard, reducedDepth, beta - 1, beta,
-                                                          true, ply + 1, historyTable, context);
+                    if (reduction > kZero && !isCaptureMove && !isCheckMove) {
+                        int reducedDepth = std::max(kZero, depth - kOne - reduction);
+                        int reducedEval = AlphaBetaSearch(newBoard, reducedDepth, beta - kOne, beta,
+                                                          true, ply + kOne, historyTable, context);
 
                         if (reducedEval < beta) {
-                            eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1,
-                                                   historyTable, context);
+                            eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, true,
+                                                   ply + kOne, historyTable, context);
                         } else {
                             eval = reducedEval;
                         }
                     } else {
-                        eval = AlphaBetaSearch(newBoard, depth - 1, beta - 1, beta, true, ply + 1,
-                                               historyTable, context);
+                        eval = AlphaBetaSearch(newBoard, depth - kOne, beta - kOne, beta, true,
+                                               ply + kOne, historyTable, context);
 
                         if (eval < beta && eval > alpha) {
-                            eval = AlphaBetaSearch(newBoard, depth - 1, alpha, beta, true, ply + 1,
-                                                   historyTable, context);
+                            eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, true,
+                                                   ply + kOne, historyTable, context);
                         }
                     }
                 }
@@ -1268,8 +1394,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 
             moveCount++;
             if (context.stopSearch.load()) {
-                return 0;
-}
+                return kZero;
+            }
             if (eval < bestValue) {
                 bestValue = eval;
                 bestMoveFound = move;
@@ -1283,10 +1409,10 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 int bonus = depth * depth;
                 if (!isCaptureMove) {
                     context.killerMoves.store(ply, move);
-                    if (abPrevDest >= 0 && abPrevDest < 64) {
+                    if (abPrevDest >= kZero && abPrevDest < kCounterMoveArrayLimit) {
                         context.counterMoves[abColorIdx][abPrevDest] = move;
                     }
-                    if (ply > 0) {
+                    if (ply > kZero) {
                         int pp = context.prevPieceAtPly[ply];
                         int pt = context.prevToAtPly[ply];
                         context.updateContinuationHistory(pp, pt, movingPiece, move.second, bonus);
@@ -1299,12 +1425,12 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             }
         }
         if (bestValue >= beta) {
-            flag = 1;
+            flag = kLowerBoundFlag;
         } else if (bestValue <= origAlpha) {
-            flag = -1;
+            flag = kUpperBoundFlag;
         } else {
-            flag = 0;
-}
+            flag = kExactFlag;
+        }
     }
 
     context.transTable.insert(hash, TTEntry(depth, bestValue, flag, bestMoveFound, hash));
@@ -1329,58 +1455,59 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
     context.useSyzygy = !Syzygy::getPath().empty();
     context.transTable.newSearch();
 
-    int lastScore = 0;
-    const int ASPIRATION_WINDOW = 50;
+    int lastScore = kZero;
+    const int aspirationWindow = kAspirationWindow;
 
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {
-        int srcCol = 0;
-        int srcRow = 0;
-        int destCol = 0;
-        int destRow = 0;
+        int srcCol = kZero;
+        int srcRow = kZero;
+        int destCol = kZero;
+        int destRow = kZero;
         if (parseAlgebraicMove(bookMove, board, srcCol, srcRow, destCol, destRow)) {
-            result.bestMove = {(srcRow * 8) + srcCol, (destRow * 8) + destCol};
-            result.score = 0;
-            result.depth = 1;
-            result.nodes = 1;
-            result.timeMs = 0;
+            result.bestMove = {(srcRow * kBoardDimension) + srcCol,
+                               (destRow * kBoardDimension) + destCol};
+            result.score = kZero;
+            result.depth = kOne;
+            result.nodes = kOne;
+            result.timeMs = kZero;
             return result;
         }
     }
 
-    std::pair<int, int> previousBestMove = {-1, -1};
-    int bestMoveStableCount = 0;
-    int bestMoveChangeCount = 0;
+    std::pair<int, int> previousBestMove = {kInvalidSquare, kInvalidSquare};
+    int bestMoveStableCount = kZero;
+    int bestMoveChangeCount = kZero;
 
-    for (int pvIdx = 0; pvIdx < context.multiPV; ++pvIdx) {
+    for (int pvIdx = kZero; pvIdx < context.multiPV; ++pvIdx) {
 
-        lastScore = 0;
+        lastScore = kZero;
         context.stopSearch = false;
 
-        for (int depth = 1; depth <= maxDepth; depth++) {
-            int alpha = -10000;
-            int beta = 10000;
+        for (int depth = kOne; depth <= maxDepth; depth++) {
+            int alpha = -kMateScore;
+            int beta = kMateScore;
 
-            if (depth <= 3) {
+            if (depth <= kEarlyDepthNoAspirationLimit) {
 
-                alpha = -10000;
-                beta = 10000;
+                alpha = -kMateScore;
+                beta = kMateScore;
             } else {
 
-                alpha = lastScore - ASPIRATION_WINDOW;
-                beta = lastScore + ASPIRATION_WINDOW;
+                alpha = lastScore - aspirationWindow;
+                beta = lastScore + aspirationWindow;
             }
 
-            int searchScore = 0;
+            int searchScore = kZero;
             bool failedHigh = false;
             bool failedLow = false;
-            int searchAttempts = 0;
-            const int MAX_SEARCH_ATTEMPTS = 4;
+            int searchAttempts = kZero;
+            const int maxSearchAttempts = kMaxSearchAttempts;
 
             do {
                 searchScore = PrincipalVariationSearch(board, depth, alpha, beta,
-                                                       board.turn == ChessPieceColor::WHITE, 0,
+                                                       board.turn == ChessPieceColor::WHITE, kZero,
                                                        context.historyTable, context, true);
                 searchAttempts++;
 
@@ -1390,26 +1517,26 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
 
                 if (searchScore <= alpha) {
 
-                    alpha = alpha - (ASPIRATION_WINDOW * (1 << searchAttempts));
+                    alpha = alpha - (aspirationWindow * (kOne << searchAttempts));
                     failedLow = true;
-                    alpha = std::max(alpha, -10000);
+                    alpha = std::max(alpha, -kMateScore);
                 } else if (searchScore >= beta) {
 
-                    beta = beta + (ASPIRATION_WINDOW * (1 << searchAttempts));
+                    beta = beta + (aspirationWindow * (kOne << searchAttempts));
                     failedHigh = true;
-                    beta = std::min(beta, 10000);
+                    beta = std::min(beta, kMateScore);
                 } else {
 
                     break;
                 }
 
-                if (searchAttempts >= MAX_SEARCH_ATTEMPTS) {
+                if (searchAttempts >= maxSearchAttempts) {
 
-                    alpha = -10000;
-                    beta = 10000;
+                    alpha = -kMateScore;
+                    beta = kMateScore;
                 }
 
-            } while ((failedHigh || failedLow) && searchAttempts < MAX_SEARCH_ATTEMPTS &&
+            } while ((failedHigh || failedLow) && searchAttempts < maxSearchAttempts &&
                      !context.stopSearch.load());
 
             if (context.stopSearch.load()) {
@@ -1423,40 +1550,42 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
 
             uint64_t rootHash = ComputeZobrist(board);
             TTEntry rootEntry;
-            if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= 0) {
+            if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= kZero) {
                 result.bestMove = rootEntry.bestMove;
             } else {
                 GenValidMoves(board);
                 std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
                 if (!moves.empty()) {
                     std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
-                        board, moves, context.historyTable, context.killerMoves, 0);
+                        board, moves, context.historyTable, context.killerMoves, kZero);
                     std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
-                    result.bestMove = scoredMoves[0].move;
+                    result.bestMove = scoredMoves[kZero].move;
                 }
             }
 
-            if (pvIdx == 0) {
+            if (pvIdx == kZero) {
                 if (result.bestMove == previousBestMove) {
                     bestMoveStableCount++;
                 } else {
                     bestMoveChangeCount++;
-                    bestMoveStableCount = 0;
+                    bestMoveStableCount = kZero;
                 }
                 previousBestMove = result.bestMove;
             }
 
-            if (context.multiPV > 1) {
+            if (context.multiPV > kOne) {
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                                    std::chrono::steady_clock::now() - context.startTime)
                                    .count();
                 const auto nodesPerSecond =
-                    elapsed > 0 ? ((static_cast<long long>(result.nodes) * 1000LL) / elapsed) : 0LL;
+                    elapsed > kZero
+                        ? ((static_cast<long long>(result.nodes) * kNpsMillisScaleLl) / elapsed)
+                        : 0LL;
                 int nps = static_cast<int>(nodesPerSecond);
-                std::cout << "info depth " << depth << " multipv " << (pvIdx + 1) << " score cp "
+                std::cout << "info depth " << depth << " multipv " << (pvIdx + kOne) << " score cp "
                           << result.score << " nodes " << result.nodes << " nps " << nps
                           << " hashfull " << context.transTable.hashfull();
-                if (context.tbHits.load() > 0) {
+                if (context.tbHits.load() > kZero) {
                     std::cout << " tbhits " << context.tbHits.load();
                 }
                 std::cout << '\n';
@@ -1466,51 +1595,53 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
                                std::chrono::steady_clock::now() - context.startTime)
                                .count();
 
-            int optTime = context.optimalTimeMs > 0 ? context.optimalTimeMs : timeLimitMs;
-            int maxTime = context.maxTimeMs > 0 ? context.maxTimeMs : timeLimitMs;
+            int optTime = context.optimalTimeMs > kZero ? context.optimalTimeMs : timeLimitMs;
+            int maxTime = context.maxTimeMs > kZero ? context.maxTimeMs : timeLimitMs;
 
             double stabilityFactor = 1.0;
-            if (bestMoveChangeCount >= 2 && bestMoveStableCount < 2) {
-                stabilityFactor = 1.5;
-            } else if (bestMoveStableCount >= 4) {
-                stabilityFactor = 0.6;
+            if (bestMoveChangeCount >= kStabilityChangeThreshold &&
+                bestMoveStableCount < kStabilityLowThreshold) {
+                stabilityFactor = kUnstableStabilityFactor;
+            } else if (bestMoveStableCount >= kStabilityHighThreshold) {
+                stabilityFactor = kStableStabilityFactor;
             }
 
             double scoreFactor = 1.0;
-            if (depth >= 5 && pvIdx == 0) {
-                if (lastScore < result.score - 50) {
-                    scoreFactor = 1.5;
-                } else if (lastScore > result.score + 20) {
-                    scoreFactor = 0.7;
+            if (depth >= kScoreInstabilityDepth && pvIdx == kZero) {
+                if (lastScore < result.score - kScoreRiseThreshold) {
+                    scoreFactor = kScoreRiseFactor;
+                } else if (lastScore > result.score + kScoreDropThreshold) {
+                    scoreFactor = kScoreDropFactor;
                 }
             }
 
             int softLimit = static_cast<int>(optTime * stabilityFactor * scoreFactor);
-            bool timeToStop = (elapsed >= maxTime) || (depth >= 5 && elapsed >= softLimit);
+            bool timeToStop =
+                (elapsed >= maxTime) || (depth >= kSoftLimitDepthThreshold && elapsed >= softLimit);
 
             if (timeToStop) {
                 break;
             }
         }
 
-        if (result.bestMove.first < 0) {
+        if (result.bestMove.first < kZero) {
             uint64_t rootHash = ComputeZobrist(board);
             TTEntry rootEntry;
-            if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= 0) {
+            if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= kZero) {
                 result.bestMove = rootEntry.bestMove;
             } else {
                 GenValidMoves(board);
                 std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
                 if (!moves.empty()) {
                     std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
-                        board, moves, context.historyTable, context.killerMoves, 0);
+                        board, moves, context.historyTable, context.killerMoves, kZero);
                     std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
-                    result.bestMove = scoredMoves[0].move;
+                    result.bestMove = scoredMoves[kZero].move;
                 }
             }
         }
 
-        if (pvIdx < context.multiPV - 1 && result.bestMove.first >= 0) {
+        if (pvIdx < context.multiPV - kOne && result.bestMove.first >= kZero) {
             context.excludedRootMoves.push_back(result.bestMove);
         }
     }
@@ -1518,46 +1649,45 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
     auto endTime = std::chrono::steady_clock::now();
     const auto elapsedMs =
         std::chrono::duration_cast<std::chrono::milliseconds>(endTime - context.startTime).count();
-    result.timeMs = (elapsedMs > std::numeric_limits<int>::max())
-                        ? std::numeric_limits<int>::max()
-                        : static_cast<int>(elapsedMs);
+    result.timeMs = (elapsedMs > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max()
+                                                                  : static_cast<int>(elapsedMs);
 
     return result;
 }
 
 std::pair<int, int> findBestMove(Board& board, int depth) {
     ThreadSafeHistory historyTable;
-    ParallelSearchContext context(1);
+    ParallelSearchContext context(kOne);
     context.startTime = std::chrono::steady_clock::now();
-    context.timeLimitMs = 30000;
+    context.timeLimitMs = kDefaultFindBestMoveTimeLimitMs;
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
 
     if (moves.empty()) {
-        return {-1, -1};
+        return {kInvalidSquare, kInvalidSquare};
     }
 
-    int previousScore = 0;
-    int aspirationWindow = 50;
-    int maxAspirationWindow = 400;
+    int previousScore = kZero;
+    int aspirationWindow = kInitialAspirationWindow;
+    int maxAspirationWindow = kMaxAspirationWindow;
 
     std::vector<ScoredMove> scoredMoves =
-        scoreMovesOptimized(board, moves, historyTable, context.killerMoves, 0);
+        scoreMovesOptimized(board, moves, historyTable, context.killerMoves, kZero);
     std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
 
-    int bestEval = (board.turn == ChessPieceColor::WHITE) ? -10000 : 10000;
-    std::pair<int, int> bestMove = {-1, -1};
+    int bestEval = (board.turn == ChessPieceColor::WHITE) ? -kMateScore : kMateScore;
+    std::pair<int, int> bestMove = {kInvalidSquare, kInvalidSquare};
 
-    for (int currentDepth = 1; currentDepth <= depth; currentDepth++) {
+    for (int currentDepth = kOne; currentDepth <= depth; currentDepth++) {
 
-        int alpha = -10000;
-        int beta = 10000;
+        int alpha = -kMateScore;
+        int beta = kMateScore;
 
-        if (currentDepth == 1) {
+        if (currentDepth == kOne) {
 
-            alpha = -10000;
-            beta = 10000;
+            alpha = -kMateScore;
+            beta = kMateScore;
         } else {
 
             alpha = previousScore - aspirationWindow;
@@ -1573,9 +1703,9 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
             Board newBoard = board;
             newBoard.movePiece(move.first, move.second);
 
-            int eval =
-                AlphaBetaSearch(newBoard, currentDepth - 1, alpha, beta,
-                                (board.turn == ChessPieceColor::BLACK), 0, historyTable, context);
+            int eval = AlphaBetaSearch(newBoard, currentDepth - kOne, alpha, beta,
+                                       (board.turn == ChessPieceColor::BLACK), kZero, historyTable,
+                                       context);
 
             if (board.turn == ChessPieceColor::WHITE) {
                 if (eval > currentBestEval) {
@@ -1604,20 +1734,21 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
             }
         }
 
-        if (searchFailed && currentDepth > 1) {
+        if (searchFailed && currentDepth > kOne) {
 
-            aspirationWindow = std::min(aspirationWindow * 2, maxAspirationWindow);
+            aspirationWindow =
+                std::min(aspirationWindow * kAspirationShrinkDivisor, maxAspirationWindow);
 
             if (board.turn == ChessPieceColor::WHITE && currentBestEval >= beta) {
 
-                beta = 10000;
+                beta = kMateScore;
             } else if (board.turn == ChessPieceColor::BLACK && currentBestEval <= alpha) {
 
-                alpha = -10000;
+                alpha = -kMateScore;
             } else {
 
-                alpha = -10000;
-                beta = 10000;
+                alpha = -kMateScore;
+                beta = kMateScore;
             }
 
             currentDepth--;
@@ -1628,22 +1759,24 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
         bestMove = currentBestMove;
         previousScore = bestEval;
 
-        aspirationWindow = std::max(50, aspirationWindow / 2);
+        aspirationWindow =
+            std::max(kInitialAspirationWindow, aspirationWindow / kAspirationShrinkDivisor);
     }
 
     return bestMove;
 }
 
 int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
-    if (fromSquare < 0 || fromSquare >= 64 || toSquare < 0 || toSquare >= 64) {
-        return 0;
+    if (fromSquare < kZero || fromSquare >= kBoardSquareCount || toSquare < kZero ||
+        toSquare >= kBoardSquareCount) {
+        return kZero;
     }
 
     const Piece& victim = board.squares[toSquare].piece;
     const Piece& attacker = board.squares[fromSquare].piece;
 
     if (victim.PieceType == ChessPieceType::NONE || attacker.PieceType == ChessPieceType::NONE) {
-        return 0;
+        return kZero;
     }
 
     int score = victim.PieceValue;
@@ -1659,7 +1792,7 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
 
     while (true) {
         int smallestAttacker = getSmallestAttacker(tempBoard, toSquare, currentSide);
-        if (smallestAttacker == -1) {
+        if (smallestAttacker == kInvalidSquare) {
             break;
         }
 
@@ -1679,10 +1812,10 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
 }
 
 int getSmallestAttacker(const Board& board, int targetSquare, ChessPieceColor color) {
-    int smallestValue = 10000;
-    int smallestAttacker = -1;
+    int smallestValue = kAttackerInitValue;
+    int smallestAttacker = kInvalidSquare;
 
-    for (int i = 0; i < 64; i++) {
+    for (int i = kZero; i < kBoardSquareCount; i++) {
         const Piece& piece = board.squares[i].piece;
         if (piece.PieceType == ChessPieceType::NONE || piece.PieceColor != color) {
             continue;
@@ -1705,39 +1838,44 @@ bool isPromotion(const Board& board, int from, int to) {
 
     if (piece != ChessPieceType::PAWN) {
         return false;
-}
+    }
 
-    int destRow = to / 8;
-    return (color == ChessPieceColor::WHITE && destRow == 7) ||
-           (color == ChessPieceColor::BLACK && destRow == 0);
+    int destRow = to / kBoardDimension;
+    return (color == ChessPieceColor::WHITE && destRow == kPromotionWhiteRank) ||
+           (color == ChessPieceColor::BLACK && destRow == kPromotionBlackRank);
 }
 
 bool isCastling(const Board& board, int from, int to) {
     ChessPieceType piece = board.squares[from].piece.PieceType;
     if (piece != ChessPieceType::KING) {
         return false;
+    }
+
+    return std::abs(to - from) == kCastlingDistance;
 }
 
-    return std::abs(to - from) == 2;
-}
-
-const int EnhancedMoveOrdering::MVV_LVA_SCORES[6][6] = {{0, 0, 0, 0, 0, 0},  {50, 0, 0, 0, 0, 0},
-                                                        {50, 0, 0, 0, 0, 0}, {52, 2, 2, 0, 0, 0},
-                                                        {54, 4, 4, 2, 0, 0}, {53, 3, 3, 1, 1, 0}};
+const int EnhancedMoveOrdering::MVV_LVA_SCORES[6][6] = {
+    {kZero, kZero, kZero, kZero, kZero, kZero},
+    {kMvvLvaVictimPawn, kZero, kZero, kZero, kZero, kZero},
+    {kMvvLvaVictimPawn, kZero, kZero, kZero, kZero, kZero},
+    {kMvvLvaVictimKnight, kTwo, kTwo, kZero, kZero, kZero},
+    {kMvvLvaVictimBishop, kFour, kFour, kTwo, kZero, kZero},
+    {kMvvLvaVictimRook, kThree, kThree, kOne, kOne, kZero}};
 
 int EnhancedMoveOrdering::getMVVLVA_Score(const Board& board, int fromSquare, int toSquare) {
     const Piece& attacker = board.squares[fromSquare].piece;
     const Piece& victim = board.squares[toSquare].piece;
 
     if (victim.PieceType == ChessPieceType::NONE) {
-        return 0;
-}
+        return kZero;
+    }
 
-    int attackerIndex = static_cast<int>(attacker.PieceType) - 1;
-    int victimIndex = static_cast<int>(victim.PieceType) - 1;
+    int attackerIndex = static_cast<int>(attacker.PieceType) - kOne;
+    int victimIndex = static_cast<int>(victim.PieceType) - kOne;
 
-    if (attackerIndex < 0 || attackerIndex >= 6 || victimIndex < 0 || victimIndex >= 6) {
-        return 0;
+    if (attackerIndex < kZero || attackerIndex >= kPieceTypePerColorCount || victimIndex < kZero ||
+        victimIndex >= kPieceTypePerColorCount) {
+        return kZero;
     }
 
     return MVV_LVA_SCORES[attackerIndex][victimIndex];
@@ -1754,15 +1892,18 @@ int EnhancedMoveOrdering::getKillerScore(const KillerMoves& killers, int ply, in
     if (killers.isKiller(ply, move)) {
         return killers.getKillerScore(ply, move);
     }
-    return 0;
+    return kZero;
 }
 
 int EnhancedMoveOrdering::getPositionalScore(const Board& board, int fromSquare, int toSquare) {
     const Piece& piece = board.squares[fromSquare].piece;
     if (piece.PieceType == ChessPieceType::NONE) {
-        return 0;
-}
+        return kZero;
+    }
 
-    int toSquareAdjusted = (piece.PieceColor == ChessPieceColor::WHITE) ? toSquare : 63 - toSquare;
-    return getPieceSquareValue(piece.PieceType, toSquareAdjusted, piece.PieceColor) / 10;
+    int toSquareAdjusted = (piece.PieceColor == ChessPieceColor::WHITE)
+                               ? toSquare
+                               : (kBoardSquareCount - kOne) - toSquare;
+    return getPieceSquareValue(piece.PieceType, toSquareAdjusted, piece.PieceColor) /
+           kPositionalScoreDivisor;
 }

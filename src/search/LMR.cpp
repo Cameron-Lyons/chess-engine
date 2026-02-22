@@ -1,26 +1,51 @@
-#include "LMREnhanced.h"
+#include "LMR.h"
 #include "../evaluation/Evaluation.h"
 #include "ValidMoves.h"
 #include "search.h"
 
 namespace LMREnhanced {
 
+namespace {
+constexpr int kZero = 0;
+constexpr int kOne = 1;
+constexpr int kPawnValue = 100;
+constexpr int kKnightValue = 320;
+constexpr int kBishopValue = 330;
+constexpr int kRookValue = 500;
+constexpr int kQueenValue = 900;
+constexpr int kKingValue = 20000;
+constexpr int kBoardDimension = 8;
+constexpr int kTopRank = kBoardDimension - 1;
+constexpr int kPromotionWhiteRank = kTopRank;
+constexpr int kPromotionBlackRank = kZero;
+constexpr int kPassedPawnWhiteRankThreshold = 4;
+constexpr int kPassedPawnBlackRankThreshold = 3;
+constexpr int kCastlingFileDelta = 2;
+constexpr int kEvalImprovingThreshold = 20;
+constexpr int kBoardSquareCount = 64;
+constexpr int kStartingMaterial = 7800;
+constexpr int kGamePhaseScale = 256;
+constexpr int kEndgamePhaseThreshold = 200;
+constexpr int kEndgamePieceCountThreshold = 6;
+constexpr int kPawnAttackFileWindow = 1;
+} // namespace
+
 static int getPieceValue(ChessPieceType type) {
     switch (type) {
         case ChessPieceType::PAWN:
-            return 100;
+            return kPawnValue;
         case ChessPieceType::KNIGHT:
-            return 320;
+            return kKnightValue;
         case ChessPieceType::BISHOP:
-            return 330;
+            return kBishopValue;
         case ChessPieceType::ROOK:
-            return 500;
+            return kRookValue;
         case ChessPieceType::QUEEN:
-            return 900;
+            return kQueenValue;
         case ChessPieceType::KING:
-            return 20000;
+            return kKingValue;
         default:
-            return 0;
+            return kZero;
     }
 }
 
@@ -44,19 +69,20 @@ MoveClassification classifyMove(const Board& board, const std::pair<int, int>& m
 
     ChessPieceType movingPiece = board.squares[move.first].piece.PieceType;
     if (movingPiece == ChessPieceType::PAWN) {
-        int toRank = move.second / 8;
-        if ((board.turn == ChessPieceColor::WHITE && toRank == 7) ||
-            (board.turn == ChessPieceColor::BLACK && toRank == 0)) {
+        int toRank = move.second / kBoardDimension;
+        if ((board.turn == ChessPieceColor::WHITE && toRank == kPromotionWhiteRank) ||
+            (board.turn == ChessPieceColor::BLACK && toRank == kPromotionBlackRank)) {
             classification.isPromotion = true;
         }
 
-        int toFile = move.second % 8;
+        int toFile = move.second % kBoardDimension;
         bool isPassed = true;
 
         if (board.turn == ChessPieceColor::WHITE) {
-            for (int r = toRank + 1; r < 8; ++r) {
-                for (int f = std::max(0, toFile - 1); f <= std::min(7, toFile + 1); ++f) {
-                    int sq = r * 8 + f;
+            for (int r = toRank + kOne; r < kBoardDimension; ++r) {
+                for (int f = std::max(kZero, toFile - kPawnAttackFileWindow);
+                     f <= std::min(kTopRank, toFile + kPawnAttackFileWindow); ++f) {
+                    int sq = (r * kBoardDimension) + f;
                     if (board.squares[sq].piece.PieceType == ChessPieceType::PAWN &&
                         board.squares[sq].piece.PieceColor == ChessPieceColor::BLACK) {
                         isPassed = false;
@@ -65,9 +91,10 @@ MoveClassification classifyMove(const Board& board, const std::pair<int, int>& m
                 }
             }
         } else {
-            for (int r = toRank - 1; r >= 0; --r) {
-                for (int f = std::max(0, toFile - 1); f <= std::min(7, toFile + 1); ++f) {
-                    int sq = r * 8 + f;
+            for (int r = toRank - kOne; r >= kZero; --r) {
+                for (int f = std::max(kZero, toFile - kPawnAttackFileWindow);
+                     f <= std::min(kTopRank, toFile + kPawnAttackFileWindow); ++f) {
+                    int sq = (r * kBoardDimension) + f;
                     if (board.squares[sq].piece.PieceType == ChessPieceType::PAWN &&
                         board.squares[sq].piece.PieceColor == ChessPieceColor::WHITE) {
                         isPassed = false;
@@ -77,11 +104,13 @@ MoveClassification classifyMove(const Board& board, const std::pair<int, int>& m
             }
         }
 
-        classification.isPassed =
-            isPassed && (board.turn == ChessPieceColor::WHITE ? toRank >= 4 : toRank <= 3);
+        classification.isPassed = isPassed && (board.turn == ChessPieceColor::WHITE
+                                                   ? toRank >= kPassedPawnWhiteRankThreshold
+                                                   : toRank <= kPassedPawnBlackRankThreshold);
     }
 
-    if (movingPiece == ChessPieceType::KING && std::abs(move.second - move.first) == 2) {
+    if (movingPiece == ChessPieceType::KING &&
+        std::abs(move.second - move.first) == kCastlingFileDelta) {
         classification.isCastling = true;
     }
 
@@ -136,11 +165,11 @@ PositionContext evaluatePosition(const Board& board, int staticEval, int previou
     context.inCheck = isInCheck(board, board.turn);
 
     context.evalTrend = staticEval - previousEval;
-    context.isImproving = context.evalTrend > 20;
+    context.isImproving = context.evalTrend > kEvalImprovingThreshold;
 
-    int totalMaterial = 0;
-    int pieceCount = 0;
-    for (int sq = 0; sq < 64; ++sq) {
+    int totalMaterial = kZero;
+    int pieceCount = kZero;
+    for (int sq = kZero; sq < kBoardSquareCount; ++sq) {
         ChessPieceType piece = board.squares[sq].piece.PieceType;
         if (piece != ChessPieceType::NONE && piece != ChessPieceType::KING) {
             totalMaterial += getPieceValue(piece);
@@ -150,14 +179,15 @@ PositionContext evaluatePosition(const Board& board, int staticEval, int previou
         }
     }
 
-    const int startingMaterial = 7800;
     context.gamePhase =
-        std::min(256, (256 * (startingMaterial - totalMaterial)) / startingMaterial);
-    context.isEndgame = (context.gamePhase > 200 || pieceCount <= 6);
+        std::min(kGamePhaseScale,
+                 (kGamePhaseScale * (kStartingMaterial - totalMaterial)) / kStartingMaterial);
+    context.isEndgame =
+        (context.gamePhase > kEndgamePhaseThreshold || pieceCount <= kEndgamePieceCountThreshold);
 
     context.isTactical = false;
 
-    for (int sq = 0; sq < 64; ++sq) {
+    for (int sq = kZero; sq < kBoardSquareCount; ++sq) {
         if (board.squares[sq].piece.PieceType != ChessPieceType::NONE &&
             board.squares[sq].piece.PieceColor == board.turn) {
 
@@ -177,8 +207,9 @@ PositionContext evaluatePosition(const Board& board, int staticEval, int previou
                     }
                 }
             }
-            if (context.isTactical)
+            if (context.isTactical) {
                 break;
+            }
         }
     }
 

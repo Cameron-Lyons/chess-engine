@@ -3,8 +3,6 @@
 #include "gtest/gtest.h"
 #include "search/ValidMoves.h"
 
-std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color);
-
 TEST(Comprehensive, BasicMoveGeneration) {
     initKnightAttacks();
     initKingAttacks();

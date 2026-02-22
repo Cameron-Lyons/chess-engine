@@ -18,7 +18,7 @@
 
 class NeuralNetworkEvaluator::Impl {
 public:
-    NeuralNetworkEvaluator::ModelVersion version{1, 0, 0, "", 0.0f};
+    NeuralNetworkEvaluator::ModelVersion version{1, 0, 0, "", 0.0F};
 
     struct Layer {
         std::vector<std::vector<float>> weights;
@@ -219,7 +219,7 @@ public:
         size_t timestampLen = 0;
         file.read(reinterpret_cast<char*>(&timestampLen), sizeof(size_t));
         version.timestamp.resize(timestampLen);
-        file.read(&version.timestamp[0], static_cast<std::streamsize>(timestampLen));
+        file.read(version.timestamp.data(), static_cast<std::streamsize>(timestampLen));
         file.read(reinterpret_cast<char*>(&version.validationLoss), sizeof(float));
 
         file.read(reinterpret_cast<char*>(&config.inputSize), sizeof(int));
@@ -329,7 +329,7 @@ void NeuralNetworkEvaluator::train(const std::vector<std::pair<Board, float>>& t
 
     std::cout << "Training completed. Average loss: "
               << (totalLoss /
-                  static_cast<float>(trainingData.size() / static_cast<size_t>(batchSize)))
+                  (static_cast<float>(trainingData.size()) / static_cast<float>(batchSize)))
               << '\n';
 }
 
@@ -1014,7 +1014,7 @@ std::vector<std::string> NeuralNetworkEvaluator::listModelVersions(const std::st
                 size_t timestampLen = 0;
                 file.read(reinterpret_cast<char*>(&timestampLen), sizeof(size_t));
                 version.timestamp.resize(timestampLen);
-                file.read(&version.timestamp[0], static_cast<std::streamsize>(timestampLen));
+                file.read(version.timestamp.data(), static_cast<std::streamsize>(timestampLen));
                 file.read(reinterpret_cast<char*>(&version.validationLoss), sizeof(float));
                 file.close();
 

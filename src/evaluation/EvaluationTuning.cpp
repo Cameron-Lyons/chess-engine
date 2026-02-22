@@ -86,8 +86,9 @@ int getTunedPST(ChessPieceType piece, int square, bool isEndgame) {
     static const int* const egTables[] = {TUNED_PAWN_EG, TUNED_KNIGHT_EG, TUNED_BISHOP_EG,
                                           TUNED_ROOK_EG, TUNED_QUEEN_EG,  TUNED_KING_EG};
     int idx = static_cast<int>(piece);
-    if (idx < 0 || idx >= 6)
+    if (idx < 0 || idx >= 6) {
         return 0;
+    }
     return isEndgame ? egTables[idx][square] : mgTables[idx][square];
 }
 
@@ -121,8 +122,9 @@ int TexelTuner::evaluateWithParams(const Board& board, const std::vector<int>& p
 
     for (int sq = 0; sq < 64; ++sq) {
         const Piece& piece = board.squares[sq].piece;
-        if (piece.PieceType == ChessPieceType::NONE)
+        if (piece.PieceType == ChessPieceType::NONE) {
             continue;
+        }
 
         int matVal = 0;
         int ptIdx = static_cast<int>(piece.PieceType) - 1;
@@ -132,16 +134,17 @@ int TexelTuner::evaluateWithParams(const Board& board, const std::vector<int>& p
 
         int pstVal = 0;
         int pstBase = 5;
-        int pstIdx = pstBase + ptIdx * 64 + sq;
+        int pstIdx = pstBase + (ptIdx * 64) + sq;
         if (pstIdx < static_cast<int>(p.size())) {
             pstVal = p[pstIdx];
         }
 
         int total = matVal + pstVal;
-        if (piece.PieceColor == ChessPieceColor::WHITE)
+        if (piece.PieceColor == ChessPieceColor::WHITE) {
             score += total;
-        else
+        } else {
             score -= total;
+        }
     }
 
     (void)paramIdx;
@@ -158,7 +161,7 @@ double TexelTuner::computeError(const std::vector<int>& p) const {
         double diff = pos.result - predicted;
         totalError += diff * diff;
     }
-    return positions.empty() ? 0.0 : totalError / positions.size();
+    return positions.empty() ? 0.0 : totalError / static_cast<double>(positions.size());
 }
 
 void TexelTuner::findOptimalK() {
@@ -199,33 +202,38 @@ void TexelTuner::findOptimalK() {
 
 bool TexelTuner::loadPositions(const std::string& filename) {
     std::ifstream file(filename);
-    if (!file)
+    if (!file) {
         return false;
+    }
 
     std::string line;
     while (std::getline(file, line)) {
-        if (line.empty())
+        if (line.empty()) {
             continue;
+        }
         auto sep = line.rfind(';');
-        if (sep == std::string::npos)
+        if (sep == std::string::npos) {
             sep = line.rfind(',');
-        if (sep == std::string::npos)
+        }
+        if (sep == std::string::npos) {
             continue;
+        }
 
         TuningPosition pos;
         pos.fen = line.substr(0, sep);
         std::string resultStr = line.substr(sep + 1);
 
-        while (!resultStr.empty() && resultStr[0] == ' ')
+        while (!resultStr.empty() && resultStr[0] == ' ') {
             resultStr.erase(resultStr.begin());
+        }
 
-        if (resultStr == "1-0" || resultStr == "1.0")
+        if (resultStr == "1-0" || resultStr == "1.0") {
             pos.result = 1.0;
-        else if (resultStr == "0-1" || resultStr == "0.0")
+        } else if (resultStr == "0-1" || resultStr == "0.0") {
             pos.result = 0.0;
-        else if (resultStr == "1/2-1/2" || resultStr == "0.5")
+        } else if (resultStr == "1/2-1/2" || resultStr == "0.5") {
             pos.result = 0.5;
-        else {
+        } else {
             try {
                 pos.result = std::stod(resultStr);
             } catch (...) {
@@ -247,54 +255,60 @@ void TexelTuner::initParams() {
     params.push_back(EvaluationParams::ROOK_VALUE);
     params.push_back(EvaluationParams::QUEEN_VALUE);
 
-    for (int sq = 0; sq < 64; ++sq)
-        params.push_back(EvaluationParams::TUNED_PAWN_MG[sq]);
-    for (int sq = 0; sq < 64; ++sq)
-        params.push_back(EvaluationParams::TUNED_KNIGHT_MG[sq]);
-    for (int sq = 0; sq < 64; ++sq)
-        params.push_back(EvaluationParams::TUNED_BISHOP_MG[sq]);
-    for (int sq = 0; sq < 64; ++sq)
-        params.push_back(EvaluationParams::TUNED_ROOK_MG[sq]);
-    for (int sq = 0; sq < 64; ++sq)
-        params.push_back(EvaluationParams::TUNED_QUEEN_MG[sq]);
-    for (int sq = 0; sq < 64; ++sq)
-        params.push_back(EvaluationParams::TUNED_KING_MG[sq]);
+    for (int sq : EvaluationParams::TUNED_PAWN_MG) {
+        params.push_back(sq);
+    }
+    for (int sq : EvaluationParams::TUNED_KNIGHT_MG) {
+        params.push_back(sq);
+    }
+    for (int sq : EvaluationParams::TUNED_BISHOP_MG) {
+        params.push_back(sq);
+    }
+    for (int sq : EvaluationParams::TUNED_ROOK_MG) {
+        params.push_back(sq);
+    }
+    for (int sq : EvaluationParams::TUNED_QUEEN_MG) {
+        params.push_back(sq);
+    }
+    for (int sq : EvaluationParams::TUNED_KING_MG) {
+        params.push_back(sq);
+    }
 }
 
 void TexelTuner::optimize(int iterations) {
     initParams();
     findOptimalK();
 
-    std::cout << "Optimal K: " << scalingK << std::endl;
-    std::cout << "Initial error: " << computeError(params) << std::endl;
+    std::cout << "Optimal K: " << scalingK << '\n';
+    std::cout << "Initial error: " << computeError(params) << '\n';
 
     for (int iter = 0; iter < iterations; ++iter) {
         bool anyImproved = false;
-        for (size_t i = 0; i < params.size(); ++i) {
+        for (int& param : params) {
             double bestError = computeError(params);
 
-            params[i] += 1;
+            param += 1;
             double errorUp = computeError(params);
             if (errorUp < bestError) {
                 anyImproved = true;
                 continue;
             }
 
-            params[i] -= 2;
+            param -= 2;
             double errorDown = computeError(params);
             if (errorDown < bestError) {
                 anyImproved = true;
                 continue;
             }
 
-            params[i] += 1;
+            param += 1;
         }
 
         double currentError = computeError(params);
-        std::cout << "Iteration " << (iter + 1) << " error: " << currentError << std::endl;
+        std::cout << "Iteration " << (iter + 1) << " error: " << currentError << '\n';
 
         if (!anyImproved) {
-            std::cout << "Converged at iteration " << (iter + 1) << std::endl;
+            std::cout << "Converged at iteration " << (iter + 1) << '\n';
             break;
         }
     }
@@ -302,8 +316,9 @@ void TexelTuner::optimize(int iterations) {
 
 void TexelTuner::exportParams(const std::string& filename) const {
     std::ofstream file(filename);
-    if (!file)
+    if (!file) {
         return;
+    }
 
     file << "constexpr int PAWN_VALUE = " << params[0] << ";\n";
     file << "constexpr int KNIGHT_VALUE = " << params[1] << ";\n";
@@ -316,11 +331,13 @@ void TexelTuner::exportParams(const std::string& filename) const {
     for (int p = 0; p < 6; ++p) {
         file << "\nconst int TUNED_" << names[p] << "_MG[64] = {\n    ";
         for (int sq = 0; sq < 64; ++sq) {
-            file << params[base + p * 64 + sq];
-            if (sq < 63)
+            file << params[base + (p * 64) + sq];
+            if (sq < 63) {
                 file << ", ";
-            if ((sq + 1) % 8 == 0 && sq < 63)
+            }
+            if ((sq + 1) % 8 == 0 && sq < 63) {
                 file << "\n    ";
+            }
         }
         file << "\n};\n";
     }

@@ -1,8 +1,5 @@
 #include "BitboardOnly.h"
 
-#include <cctype>
-#include <sstream>
-
 static uint64_t zobristPieces[2][6][64];
 static uint64_t zobristSideToMove;
 static uint64_t zobristCastling[16];
@@ -21,46 +18,42 @@ static void initializeZobrist() {
         return seed;
     };
 
-    for (int color = 0; color < 2; ++color) {
-        for (int piece = 0; piece < 6; ++piece) {
-            for (int square = 0; square < 64; ++square) {
-                zobristPieces[color][piece][square] = next();
+    for (auto& zobristPiece : zobristPieces) {
+        for (auto& piece : zobristPiece) {
+            for (auto& squareKey : piece) {
+                squareKey = next();
             }
         }
     }
 
     zobristSideToMove = next();
 
-    for (int i = 0; i < 16; ++i) {
-        zobristCastling[i] = next();
+    for (unsigned long long& i : zobristCastling) {
+        i = next();
     }
 
-    for (int i = 0; i < 8; ++i) {
-        zobristEnPassant[i] = next();
+    for (unsigned long long& i : zobristEnPassant) {
+        i = next();
     }
 
     zobristInitialized = true;
 }
 
-BitboardPosition::BitboardPosition() {
+BitboardPosition::BitboardPosition()
+    : sideToMove(WHITE), castlingRights(0xF), epSquare(64), halfmoveClock(0), fullmoveNumber(1),
+      hash(0) {
     initializeZobrist();
 
-    for (int color = 0; color < 2; ++color) {
-        for (int piece = 0; piece < 6; ++piece) {
-            pieces[color][piece] = 0;
+    for (auto& color : pieces) {
+        for (unsigned long long& piece : color) {
+            piece = 0;
         }
     }
 
-    for (int i = 0; i < 3; ++i) {
-        occupancy[i] = 0;
+    for (unsigned long long& i : occupancy) {
+        i = 0;
     }
 
-    sideToMove = WHITE;
-    castlingRights = 0xF;
-    epSquare = 64;
-    halfmoveClock = 0;
-    fullmoveNumber = 1;
-    hash = 0;
     lastMoveTime = ChessClock::now();
 }
 
@@ -128,8 +121,8 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
     }
 
     if (movingPiece == ChessPieceType::KING && abs(to - from) == 2) {
-        int rookFrom;
-        int rookTo;
+        int rookFrom = 0;
+        int rookTo = 0;
         if (to > from) {
             rookFrom = to + 1;
             rookTo = to - 1;
@@ -205,9 +198,9 @@ void BitboardPosition::unmakeMove(int from, int to, ChessPieceType captured,
 
 void BitboardPosition::setFromFEN(const std::string& fen) {
 
-    for (int color = 0; color < 2; ++color) {
-        for (int piece = 0; piece < 6; ++piece) {
-            pieces[color][piece] = 0;
+    for (auto& color : pieces) {
+        for (unsigned long long& piece : color) {
+            piece = 0;
         }
     }
 
@@ -230,7 +223,7 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
         } else {
             int square = (rank * 8) + file;
             ChessPieceColor color = isupper(c) ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
-            ChessPieceType type;
+            ChessPieceType type = ChessPieceType::NONE;
 
             switch (tolower(c)) {
                 case 'p':
@@ -323,7 +316,7 @@ std::string BitboardPosition::toFEN() const {
                     emptyCount = 0;
                 }
 
-                char pieceChar;
+                char pieceChar = 0;
                 switch (piece) {
                     case ChessPieceType::PAWN:
                         pieceChar = 'p';
@@ -348,7 +341,8 @@ std::string BitboardPosition::toFEN() const {
                 }
 
                 if (getColorAt(square) == ChessPieceColor::WHITE) {
-                    pieceChar = toupper(pieceChar);
+                    pieceChar =
+                        static_cast<char>(std::toupper(static_cast<unsigned char>(pieceChar)));
                 }
 
                 ss << pieceChar;
@@ -407,7 +401,7 @@ std::string BitboardPosition::toString() const {
             if (piece == ChessPieceType::NONE) {
                 ss << ". ";
             } else {
-                char pieceChar;
+                char pieceChar = 0;
                 switch (piece) {
                     case ChessPieceType::PAWN:
                         pieceChar = 'p';
@@ -432,7 +426,8 @@ std::string BitboardPosition::toString() const {
                 }
 
                 if (getColorAt(square) == ChessPieceColor::WHITE) {
-                    pieceChar = toupper(pieceChar);
+                    pieceChar =
+                        static_cast<char>(std::toupper(static_cast<unsigned char>(pieceChar)));
                 }
 
                 ss << pieceChar << ' ';

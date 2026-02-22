@@ -1,27 +1,58 @@
-#include "ai/NeuralNetwork.h"
-#include "core/BitboardMoves.h"
 #include "core/ChessEngine.h"
 #include "core/MoveContent.h"
-#include "evaluation/Evaluation.h"
-#include "evaluation/EvaluationEnhanced.h"
 #include "evaluation/EvaluationTuning.h"
+#include "evaluation/HybridEvaluator.h"
 #include "evaluation/PositionAnalysis.h"
 #include "protocol/uci.h"
-#include "search/ValidMoves.h"
-#include "search/search.h"
 #include "utils/engine_globals.h"
-
-#include <cctype>
-#include <chrono>
-#include <cstdint>
-#include <exception>
-#include <iostream>
-#include <string>
-#include <vector>
 
 using ChessClock = std::chrono::steady_clock;
 using ChessDuration = std::chrono::milliseconds;
 using ChessTimePoint = ChessClock::time_point;
+
+namespace {
+constexpr int kBoardTopRow = BOARD_SIZE - 1;
+constexpr int kNominalMovesToGo = 40;
+constexpr int kOpeningMoveThreshold = 10;
+constexpr int kHighMaterialThreshold = 3000;
+constexpr int kLowMaterialThreshold = 1500;
+constexpr float kOpeningComplexityMultiplier = 0.8F;
+constexpr float kHighMaterialComplexityMultiplier = 3.0F;
+constexpr float kLowMaterialComplexityMultiplier = 2.5F;
+constexpr float kInCheckComplexityMultiplier = 1.5F;
+constexpr int kAdaptiveTimeScale = 15;
+constexpr int kDefaultComputerMoveTimeMs = 6000;
+constexpr int kBaseSearchDepth = 8;
+constexpr int kMinSearchDepth = 6;
+constexpr int kMaxSearchDepth = 12;
+constexpr int kDepth12TimeThresholdMs = 12000;
+constexpr int kDepth11TimeThresholdMs = 8000;
+constexpr int kDepth10TimeThresholdMs = 5000;
+constexpr int kDepth9TimeThresholdMs = 3000;
+constexpr int kDepth8TimeThresholdMs = 1500;
+constexpr int kDepth6TimeThresholdMs = 800;
+constexpr int kCrowdedPositionMoveThreshold = 35;
+constexpr int kSparsePositionMoveThreshold = 15;
+constexpr int kCrowdedDepthBonus = 3;
+constexpr int kSparseDepthPenalty = 1;
+constexpr int kCaptureRichThreshold = 5;
+constexpr int kVeryCaptureRichThreshold = 8;
+constexpr int kCaptureRichDepthBonus = 2;
+constexpr int kVeryCaptureRichDepthBonus = 1;
+constexpr int kHangingPieceDepthBonus = 1;
+constexpr int kSearchThreads = 1;
+constexpr int kSearchContempt = 0;
+constexpr int kSearchMultiPv = 1;
+constexpr int kInvalidSquare = -1;
+constexpr int kTrainingBatchSize = 32;
+constexpr int kTrainingEpochs = 5;
+constexpr float kTrainingValidationSplit = 0.2F;
+constexpr int kEarlyStoppingPatience = 3;
+constexpr int kDefaultTrainingGames = 100;
+constexpr int kDefaultDataGenerationGames = 50;
+constexpr int kDefaultTuneIterations = 100;
+constexpr const char* kStartingFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+} // namespace
 
 Board ChessBoard;
 Board PrevBoard;
@@ -33,7 +64,7 @@ bool PawnPromoted = false;
 
 void printBoard(const Board& board) {
     std::cout << "  a b c d e f g h\n";
-    for (int row = 7; row >= 0; --row) {
+    for (int row = kBoardTopRow; row >= 0; --row) {
         std::cout << (row + 1) << " ";
         for (int col = 0; col < BOARD_SIZE; ++col) {
             int pos = (row * BOARD_SIZE) + col;
@@ -82,7 +113,7 @@ void printBoard(const Board& board) {
 }
 
 int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
-    int baseTime = totalTimeMs / std::max(1, 40 - movesPlayed);
+    int baseTime = totalTimeMs / std::max(1, kNominalMovesToGo - movesPlayed);
 
     int totalMaterial = 0;
     for (int i = 0; i < NUM_SQUARES; i++) {
@@ -93,22 +124,22 @@ int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
 
     float complexityMultiplier = 1.0F;
 
-    if (movesPlayed < 10) {
-        complexityMultiplier = 0.8F;
-    } else if (totalMaterial > 3000) {
-        complexityMultiplier = 3.0F;
-    } else if (totalMaterial < 1500) {
-        complexityMultiplier = 2.5F;
+    if (movesPlayed < kOpeningMoveThreshold) {
+        complexityMultiplier = kOpeningComplexityMultiplier;
+    } else if (totalMaterial > kHighMaterialThreshold) {
+        complexityMultiplier = kHighMaterialComplexityMultiplier;
+    } else if (totalMaterial < kLowMaterialThreshold) {
+        complexityMultiplier = kLowMaterialComplexityMultiplier;
     }
 
     if (IsKingInCheck(board, board.turn)) {
-        complexityMultiplier *= 1.5F;
+        complexityMultiplier *= kInCheckComplexityMultiplier;
     }
 
     return static_cast<int>(static_cast<float>(baseTime) * complexityMultiplier);
 }
 
-std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 6000) {
+std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = kDefaultComputerMoveTimeMs) {
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {
@@ -124,36 +155,36 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 6000) {
 
     static int movesPlayed = 0;
     movesPlayed++;
-    int adaptiveTime = calculateTimeForMove(board, timeLimitMs * 15, movesPlayed);
+    int adaptiveTime = calculateTimeForMove(board, timeLimitMs * kAdaptiveTimeScale, movesPlayed);
     adaptiveTime = std::min(adaptiveTime, timeLimitMs);
 
     std::cout << "Allocated " << adaptiveTime << "ms for this move\n";
 
     std::cout << "Using optimized single-threaded search...\n";
 
-    int searchDepth = 8;
-    if (adaptiveTime > 12000) {
+    int searchDepth = kBaseSearchDepth;
+    if (adaptiveTime > kDepth12TimeThresholdMs) {
         searchDepth = 12;
-    } else if (adaptiveTime > 8000) {
+    } else if (adaptiveTime > kDepth11TimeThresholdMs) {
         searchDepth = 11;
-    } else if (adaptiveTime > 5000) {
+    } else if (adaptiveTime > kDepth10TimeThresholdMs) {
         searchDepth = 10;
-    } else if (adaptiveTime > 3000) {
+    } else if (adaptiveTime > kDepth9TimeThresholdMs) {
         searchDepth = 9;
-    } else if (adaptiveTime > 1500) {
-        searchDepth = 8;
-    } else if (adaptiveTime < 800) {
-        searchDepth = 6;
+    } else if (adaptiveTime > kDepth8TimeThresholdMs) {
+        searchDepth = kBaseSearchDepth;
+    } else if (adaptiveTime < kDepth6TimeThresholdMs) {
+        searchDepth = kMinSearchDepth;
     }
 
     GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
     int numMoves = static_cast<int>(moves.size());
 
-    if (numMoves > 35) {
-        searchDepth += 3;
-    } else if (numMoves < 15) {
-        searchDepth -= 1;
+    if (numMoves > kCrowdedPositionMoveThreshold) {
+        searchDepth += kCrowdedDepthBonus;
+    } else if (numMoves < kSparsePositionMoveThreshold) {
+        searchDepth -= kSparseDepthPenalty;
     }
 
     int numCaptures = 0;
@@ -162,11 +193,11 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 6000) {
             numCaptures++;
         }
     }
-    if (numCaptures > 5) {
-        searchDepth += 2;
+    if (numCaptures > kCaptureRichThreshold) {
+        searchDepth += kCaptureRichDepthBonus;
     }
-    if (numCaptures > 8) {
-        searchDepth += 1;
+    if (numCaptures > kVeryCaptureRichThreshold) {
+        searchDepth += kVeryCaptureRichDepthBonus;
     }
 
     bool hasHangingPieces = false;
@@ -192,18 +223,19 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 6000) {
     }
 
     if (hasHangingPieces) {
-        searchDepth += 1;
+        searchDepth += kHangingPieceDepthBonus;
     }
 
-    searchDepth = std::max(6, std::min(searchDepth, 12));
+    searchDepth = std::max(kMinSearchDepth, std::min(searchDepth, kMaxSearchDepth));
 
     std::cout << "Search depth: " << searchDepth << " (moves: " << numMoves
               << ", captures: " << numCaptures << ")\n";
 
-    SearchResult result = iterativeDeepeningParallel(board, searchDepth, adaptiveTime, 1, 0, 1,
-                                                     adaptiveTime, adaptiveTime);
+    SearchResult result =
+        iterativeDeepeningParallel(board, searchDepth, adaptiveTime, kSearchThreads,
+                                   kSearchContempt, kSearchMultiPv, adaptiveTime, adaptiveTime);
 
-    if (result.bestMove.first != -1 && result.bestMove.second != -1) {
+    if (result.bestMove.first != kInvalidSquare && result.bestMove.second != kInvalidSquare) {
         return result.bestMove;
     }
 
@@ -211,7 +243,7 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = 6000) {
         return moves.front();
     }
 
-    return {-1, -1};
+    return {kInvalidSquare, kInvalidSquare};
 }
 
 std::string positionToNotation(int pos) {
@@ -345,25 +377,25 @@ int main(int argc, char* argv[]) {
                 std::cout << "Neural Network Training Mode\n";
                 std::cout << "============================\n\n";
 
-                EnhancedEvaluator::EvaluationConfig config;
+                HybridEvaluator::EvaluationConfig config;
                 config.useNeuralNetwork = true;
                 config.nnWeight = 0.7F;
                 config.useTraditionalEval = true;
                 config.traditionalWeight = 0.3F;
 
-                initializeEnhancedEvaluator(config);
+                initializeHybridEvaluator(config);
 
                 NNTrainer::TrainingConfig trainConfig;
-                trainConfig.batchSize = 32;
-                trainConfig.epochs = 5;
-                trainConfig.validationSplit = 0.2F;
-                trainConfig.earlyStoppingPatience = 3;
+                trainConfig.batchSize = kTrainingBatchSize;
+                trainConfig.epochs = kTrainingEpochs;
+                trainConfig.validationSplit = kTrainingValidationSplit;
+                trainConfig.earlyStoppingPatience = kEarlyStoppingPatience;
                 trainConfig.modelPath = "models/chess_nn.bin";
                 trainConfig.trainingDataPath = "data/training_data.bin";
 
-                NNTrainer trainer(*getEnhancedEvaluator()->getNeuralNetwork(), trainConfig);
+                NNTrainer trainer(*getHybridEvaluator()->getNeuralNetwork(), trainConfig);
 
-                int numGames = 100;
+                int numGames = kDefaultTrainingGames;
                 if (argc > 2) {
                     numGames = std::stoi(argv[2]);
                 }
@@ -380,13 +412,13 @@ int main(int argc, char* argv[]) {
                 std::cout << "Neural Network Test Mode\n";
                 std::cout << "========================\n\n";
 
-                EnhancedEvaluator::EvaluationConfig config;
+                HybridEvaluator::EvaluationConfig config;
                 config.useNeuralNetwork = true;
                 config.nnWeight = 0.7F;
                 config.useTraditionalEval = true;
                 config.traditionalWeight = 0.3F;
 
-                initializeEnhancedEvaluator(config);
+                initializeHybridEvaluator(config);
 
                 std::vector<std::string> testFens = {
                     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -425,7 +457,7 @@ int main(int argc, char* argv[]) {
 
                 TrainingDataGenerator generator;
 
-                int numGames = 50;
+                int numGames = kDefaultDataGenerationGames;
                 if (argc > 2) {
                     numGames = std::stoi(argv[2]);
                 }
@@ -450,7 +482,7 @@ int main(int argc, char* argv[]) {
                     return 1;
                 }
                 std::string posFile = argv[2];
-                int iterations = 100;
+                int iterations = kDefaultTuneIterations;
                 if (argc > 3) {
                     iterations = std::stoi(argv[3]);
                 }
@@ -471,7 +503,7 @@ int main(int argc, char* argv[]) {
                 std::cout << "Position Analysis Mode\n";
                 std::cout << "======================\n\n";
 
-                std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+                std::string fen = kStartingFen;
                 if (argc > 2) {
                     fen = argv[2];
                 }
@@ -497,14 +529,14 @@ int main(int argc, char* argv[]) {
 
         InitZobrist();
 
-        initializeEnhancedEvaluator();
+        initializeHybridEvaluator();
 
         std::cout << "Chess Engine v2.0 - Advanced Features Edition\n";
         std::cout << "=============================================\n";
         std::cout << "Features: Magic bitboards, Neural network evaluation, Pattern recognition\n";
         std::cout << "Use './chess_engine uci' for UCI mode\n\n";
 
-        ChessBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        ChessBoard.InitializeFromFEN(kStartingFen);
 
         std::string input;
         while (true) {
@@ -556,10 +588,10 @@ int main(int argc, char* argv[]) {
                 std::cout << "\nComputer is thinking...\n";
 
                 ChessTimePoint computerStartTime = ChessClock::now();
-                auto computerMove = getComputerMove(ChessBoard, 6000);
+                auto computerMove = getComputerMove(ChessBoard, kDefaultComputerMoveTimeMs);
                 auto computerTime = ChessClock::now() - computerStartTime;
 
-                if (computerMove.first != -1 && computerMove.second != -1) {
+                if (computerMove.first != kInvalidSquare && computerMove.second != kInvalidSquare) {
                     int from = computerMove.first;
                     int to = computerMove.second;
                     int srcCol = from % BOARD_SIZE;

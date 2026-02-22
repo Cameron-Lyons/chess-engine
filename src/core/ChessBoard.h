@@ -78,15 +78,17 @@ struct Board {
 
     template <typename T>
     ChessPieceColor getPieceColor(T pos) const {
-        if (!isValidIndex(pos))
+        if (!isValidIndex(pos)) {
             return ChessPieceColor::WHITE;
+        }
         return squares[pos].piece.PieceColor;
     }
 
     template <typename T>
     ChessPieceType getPieceType(T pos) const {
-        if (!isValidIndex(pos))
+        if (!isValidIndex(pos)) {
             return ChessPieceType::NONE;
+        }
         return squares[pos].piece.PieceType;
     }
 
@@ -115,7 +117,7 @@ struct Board {
         for (int row = 7; row >= 0; --row) {
             result += std::to_string(row + 1) + " ";
             for (int col = 0; col < 8; ++col) {
-                result += squares[row * 8 + col].toString() + " ";
+                result += squares[(row * 8) + col].toString() + " ";
             }
             result += std::to_string(row + 1) + "\n";
         }
@@ -188,7 +190,7 @@ inline bool isValidPosition(int row, int col) {
 }
 
 inline int positionToIndex(int row, int col) {
-    return row * 8 + col;
+    return (row * 8) + col;
 }
 
 inline std::pair<int, int> indexToPosition(int index) {
