@@ -5,6 +5,11 @@
 std::array<Bitboard, 64> KnightAttacks;
 std::array<Bitboard, 64> KingAttacks;
 
+namespace {
+constexpr Bitboard kNotFileA = ~0x0101010101010101ULL;
+constexpr Bitboard kNotFileH = ~0x8080808080808080ULL;
+}
+
 void initKnightAttacks() {
     for (int sq = 0; sq < 64; sq++) {
         Bitboard attacks = 0;
@@ -192,11 +197,9 @@ Bitboard pawnPushes(Bitboard pawns, Bitboard empty, ChessPieceColor color) {
 Bitboard pawnCaptures(Bitboard pawns, Bitboard enemyPieces, ChessPieceColor color) {
     Bitboard captures = 0;
     if (color == ChessPieceColor::WHITE) {
-        captures =
-            ((pawns << 7) & ~0x0101010101010101ULL) | ((pawns << 9) & ~0x8080808080808080ULL);
+        captures = ((pawns & kNotFileA) << 7) | ((pawns & kNotFileH) << 9);
     } else {
-        captures =
-            ((pawns >> 7) & ~0x8080808080808080ULL) | ((pawns >> 9) & ~0x0101010101010101ULL);
+        captures = ((pawns & kNotFileH) >> 7) | ((pawns & kNotFileA) >> 9);
     }
     return captures & enemyPieces;
 }

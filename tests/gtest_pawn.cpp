@@ -37,3 +37,21 @@ TEST(PawnMoves, Promotion) {
 
     ASSERT_TRUE(foundPromotionMove);
 }
+
+TEST(PawnMoves, EdgeFileCaptureIsGenerated) {
+    Board testBoard;
+    testBoard.InitializeFromFEN("4k3/8/8/8/8/p7/1P6/4K3 w - - 0 1");
+    std::vector<std::pair<int, int>> allMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
+
+    constexpr int b2 = 9;
+    constexpr int a3 = 16;
+    bool foundCapture = false;
+    for (const auto& move : allMoves) {
+        if (move.first == b2 && move.second == a3) {
+            foundCapture = true;
+            break;
+        }
+    }
+
+    ASSERT_TRUE(foundCapture);
+}
