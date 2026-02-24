@@ -40,8 +40,7 @@ auto EndgameTablebase::probe(const Board& board, TablebaseResult& result) -> boo
         return false;
     }
 
-    std::string key = boardToTablebaseKey(board);
-    auto it = m_pImpl->cache.find(key);
+    auto it = m_pImpl->cache.find(boardToTablebaseKey(board));
     if (it != m_pImpl->cache.end()) {
         result = it->second;
         return true;
@@ -74,7 +73,7 @@ auto EndgameTablebase::probe(const Board& board, TablebaseResult& result) -> boo
         result.distanceToMate = dtz;
     }
 
-    m_pImpl->cache[key] = result;
+    m_pImpl->cache[boardToTablebaseKey(board)] = result;
     return true;
 }
 

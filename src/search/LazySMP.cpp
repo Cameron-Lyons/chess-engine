@@ -93,7 +93,7 @@ void LazySMP::workerThread(ThreadData* data) {
     }
 }
 
-void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit) {
+void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit) const {
     ParallelSearchContext context(numThreads);
     context.startTime = std::chrono::steady_clock::now();
     context.timeLimitMs = timeLimit;

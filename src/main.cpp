@@ -511,6 +511,7 @@ int main(int argc, char* argv[]) {
                 announceGameResult(gameState);
                 std::string dummy;
                 std::getline(std::cin, dummy);
+                (void)dummy;
                 break;
             }
 

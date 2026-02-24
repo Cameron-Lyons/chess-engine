@@ -127,7 +127,7 @@ void LinearLayer::forward(const void* input, void* output) const {
 #else
         int32_t sum = 0;
         const auto rowOffset = static_cast<std::size_t>(i) * static_cast<std::size_t>(inputSize);
-        const int16_t* w = weights.data() + rowOffset;
+        const int16_t* w{weights.data() + rowOffset};
         for (int j = 0; j < inputSize; ++j) {
             sum += static_cast<int32_t>(w[j]) * static_cast<int32_t>(in[j]);
         }
@@ -230,7 +230,7 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
 
     accumulator[0].init(ftWeights.data(), ftBiases.data());
     accumulator[1].init(ftWeights.data(), ftBiases.data());
-    return true;
+    return file.good();
 }
 
 void NNUEEvaluator::transformFeatures(const Board& board, ChessPieceColor perspective,

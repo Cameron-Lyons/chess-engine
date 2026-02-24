@@ -860,14 +860,12 @@ void NNTrainer::generateTrainingReport(const std::string& outputPath) {
 auto NNTrainer::splitData(const std::vector<std::pair<Board, float>>& data, float splitRatio,
                           bool takeFirst) -> std::vector<std::pair<Board, float>> {
     auto splitIndex = static_cast<size_t>(static_cast<float>(data.size()) * splitRatio);
-
     if (takeFirst) {
         return std::vector<std::pair<Board, float>>(
             data.begin(), data.begin() + static_cast<std::ptrdiff_t>(splitIndex));
-    } else {
-        return std::vector<std::pair<Board, float>>(
-            data.begin() + static_cast<std::ptrdiff_t>(splitIndex), data.end());
     }
+    return std::vector<std::pair<Board, float>>(
+        data.begin() + static_cast<std::ptrdiff_t>(splitIndex), data.end());
 }
 
 auto NNTrainer::calculateLoss(const std::vector<std::pair<Board, float>>& data) -> float {

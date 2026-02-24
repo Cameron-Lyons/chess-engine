@@ -747,8 +747,7 @@ EnhancedOpeningBook::EnhancedOpeningBook(const std::string& bookPath) : bookPath
 }
 
 std::vector<EnhancedOpeningBook::BookEntry> EnhancedOpeningBook::getBookMoves(const Board& board) {
-    std::string key = boardToKey(board);
-    auto it = book.find(key);
+    auto it = book.find(boardToKey(board));
     if (it != book.end()) {
         return it->second;
     }
@@ -756,18 +755,17 @@ std::vector<EnhancedOpeningBook::BookEntry> EnhancedOpeningBook::getBookMoves(co
 }
 
 std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool randomize) {
-    std::string key = boardToKey(board);
-    auto it = book.find(key);
+    auto it = book.find(boardToKey(board));
     if (it != book.end() && !it->second.empty()) {
         const auto& entries = it->second;
-        if (randomize) {
-            int totalWeight = kZero;
-            for (const auto& entry : entries) {
-                totalWeight += entry.weight;
-            }
-            if (totalWeight > kZero) {
-                static std::random_device rd;
-                static std::mt19937 gen(rd());
+            if (randomize) {
+                int totalWeight = kZero;
+                for (const auto& entry : entries) {
+                    totalWeight += entry.weight;
+                }
+                if (totalWeight > kZero) {
+                    static std::random_device rd;
+                    static std::mt19937 gen(static_cast<std::mt19937::result_type>(rd()));
                 std::uniform_int_distribution<> dis(kZero, totalWeight - kOne);
                 int random = dis(gen);
                 int cumulative = kZero;
@@ -798,11 +796,11 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
         if (!options.empty()) {
             if (randomize) {
                 static std::random_device rd;
-                static std::mt19937 gen(rd());
+                static std::mt19937 gen(static_cast<std::mt19937::result_type>(rd()));
                 std::uniform_int_distribution<int> dis(kZero,
                                                        static_cast<int>(options.size() - kOne));
-                std::string move = options[dis(gen)];
-                return parseMove(move);
+                std::string moveStr = options[dis(gen)];
+                return parseMove(moveStr);
             } else {
                 return parseMove(options[kFirstMoveIndex]);
             }
@@ -823,10 +821,10 @@ std::pair<int, int> EnhancedOpeningBook::parseMove(const std::string& move) {
         return {kInvalidSquare, kInvalidSquare};
     }
 
-    int srcCol = move[kMoveSourceFileIndex] - kBookFileOffset;
-    int srcRow = move[kMoveSourceRankIndex] - kBookRankOffset;
-    int destCol = move[kMoveDestFileIndex] - kBookFileOffset;
-    int destRow = move[kMoveDestRankIndex] - kBookRankOffset;
+    int srcCol{move[kMoveSourceFileIndex] - kBookFileOffset};
+    int srcRow{move[kMoveSourceRankIndex] - kBookRankOffset};
+    int destCol{move[kMoveDestFileIndex] - kBookFileOffset};
+    int destRow{move[kMoveDestRankIndex] - kBookRankOffset};
 
     if (srcCol < kZero || srcCol >= kBoardDimension || srcRow < kZero ||
         srcRow >= kBoardDimension || destCol < kZero || destCol >= kBoardDimension ||
@@ -838,8 +836,7 @@ std::pair<int, int> EnhancedOpeningBook::parseMove(const std::string& move) {
 }
 
 bool EnhancedOpeningBook::isInBook(const Board& board) {
-    std::string key = boardToKey(board);
-    return book.contains(key);
+    return book.contains(boardToKey(board));
 }
 
 void EnhancedOpeningBook::addMove(const Board& board, const BookEntry& entry) {

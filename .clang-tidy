@@ -3,6 +3,7 @@ Checks: >
   bugprone-*,
   -bugprone-easily-swappable-parameters,
   performance-*,
+  -performance-trivially-destructible,
   modernize-use-override,
   modernize-use-nullptr,
   modernize-use-auto,

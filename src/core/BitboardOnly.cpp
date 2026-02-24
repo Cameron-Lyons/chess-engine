@@ -196,14 +196,14 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
     }
 
     std::istringstream ss(fen);
-    std::string board;
+    std::string boardStr;
     std::string turn;
     std::string castling;
     std::string ep;
-    ss >> board >> turn >> castling >> ep >> halfmoveClock >> fullmoveNumber;
+    ss >> boardStr >> turn >> castling >> ep >> halfmoveClock >> fullmoveNumber;
     int rank = 7;
     int file = 0;
-    for (char c : board) {
+    for (char c : boardStr) {
         if (c == '/') {
             rank--;
             file = 0;

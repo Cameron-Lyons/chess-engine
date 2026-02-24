@@ -75,7 +75,6 @@ UCIEngine::~UCIEngine() = default;
 
 void UCIEngine::run() {
     std::string input;
-
     while (std::getline(std::cin, input)) {
         if (!input.empty()) {
             processCommand(input);
@@ -224,7 +223,7 @@ void UCIEngine::handlePosition(const std::string& command) {
 
         board = Board();
         board.InitializeFromFEN(kStartingFen);
-    } else if (word == "fen") {
+    } else         if (word == "fen") {
 
         std::string fen;
         for (int i = 0; i < kFenFieldCount; i++) {
@@ -336,8 +335,8 @@ void UCIEngine::handleGo(const std::string& command) {
         optimalTime = movetime;
         maxTime = movetime;
     } else if (wtime > 0 || btime > 0) {
-        int currentTime = (board.turn == ChessPieceColor::WHITE) ? wtime : btime;
-        int increment = (board.turn == ChessPieceColor::WHITE) ? winc : binc;
+        int currentTime{(board.turn == ChessPieceColor::WHITE) ? wtime : btime};
+        int increment{(board.turn == ChessPieceColor::WHITE) ? winc : binc};
 
         if (currentTime > 0) {
             int baseTime = 0;
@@ -453,10 +452,10 @@ void UCIEngine::handleBookStats() {
 
 void UCIEngine::reportBestMove(const std::pair<int, int>& move,
                                const std::pair<int, int>& ponderMove) {
-    std::string moveStr = UCINotation::moveToUCI(move);
-    std::string ponderStr =
-        (ponderMove.first != kInvalidSquare) ? " ponder " + UCINotation::moveToUCI(ponderMove) : "";
-    std::cout << "bestmove " << moveStr << ponderStr << '\n';
+    std::cout << "bestmove " << UCINotation::moveToUCI(move)
+              << (ponderMove.first != kInvalidSquare ? " ponder " + UCINotation::moveToUCI(ponderMove)
+                                                    : "")
+              << '\n';
 }
 
 void UCIEngine::reportInfo(int depth, int seldepth, int time, int nodes, int nps,
@@ -618,10 +617,10 @@ std::pair<int, int> UCINotation::uciToMove(const std::string& uciMove) {
         return {kInvalidSquare, kInvalidSquare};
     }
 
-    int fromFile = uciMove[0] - kMinFileChar;
-    int fromRank = uciMove[1] - kMinRankChar;
-    int toFile = uciMove[2] - kMinFileChar;
-    int toRank = uciMove[3] - kMinRankChar;
+    int fromFile{uciMove[0] - kMinFileChar};
+    int fromRank{uciMove[1] - kMinRankChar};
+    int toFile{uciMove[2] - kMinFileChar};
+    int toRank{uciMove[3] - kMinRankChar};
 
     if (fromFile < 0 || fromFile >= kBoardDimension || fromRank < 0 ||
         fromRank >= kBoardDimension || toFile < 0 || toFile >= kBoardDimension || toRank < 0 ||
@@ -639,8 +638,8 @@ std::string UCINotation::squareToAlgebraic(int square) {
         return "";
     }
 
-    int file = square % kBoardDimension;
-    int rank = square / kBoardDimension;
+    int file{square % kBoardDimension};
+    int rank{square / kBoardDimension};
     std::string result;
     result += static_cast<char>(kMinFileChar + file);
     result += static_cast<char>(kMinRankChar + rank);
@@ -652,8 +651,8 @@ int UCINotation::algebraicToSquare(const std::string& algebraic) {
         return kInvalidSquare;
     }
 
-    int file = algebraic[0] - kMinFileChar;
-    int rank = algebraic[1] - kMinRankChar;
+    int file{algebraic[0] - kMinFileChar};
+    int rank{algebraic[1] - kMinRankChar};
 
     if (file < 0 || file >= kBoardDimension || rank < 0 || rank >= kBoardDimension) {
         return kInvalidSquare;

@@ -8,7 +8,7 @@ std::array<Bitboard, 64> KingAttacks;
 namespace {
 constexpr Bitboard kNotFileA = ~0x0101010101010101ULL;
 constexpr Bitboard kNotFileH = ~0x8080808080808080ULL;
-}
+} // namespace
 
 void initKnightAttacks() {
     for (int sq = 0; sq < 64; sq++) {

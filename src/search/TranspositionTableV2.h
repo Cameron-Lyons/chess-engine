@@ -119,7 +119,7 @@ public:
     }
 
     TTEntry* probe(uint64_t key, bool& found) const {
-        TTCluster* cluster = &table[mulhi64(key, clusterCount)];
+        TTCluster* cluster{&table[mulhi64(key, clusterCount)]};
         auto key32 = static_cast<uint32_t>(key >> kKeyHighShift);
 
         for (auto& i : cluster->entry) {

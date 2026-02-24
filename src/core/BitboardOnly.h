@@ -198,7 +198,7 @@ public:
     }
 
     bool movePiece(int from, int to) {
-        ChessPieceType movingPiece = position.getPieceAt(from);
+        ChessPieceType movingPiece{position.getPieceAt(from)};
         if (movingPiece == ChessPieceType::NONE) {
             return false;
         }

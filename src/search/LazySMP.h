@@ -62,7 +62,7 @@ private:
     std::condition_variable poolCV;
     std::atomic<bool> shouldTerminate;
     void workerThread(ThreadData* data);
-    void searchThread(ThreadData* data, int maxDepth, int timeLimit);
+    void searchThread(ThreadData* data, int maxDepth, int timeLimit) const;
 
 public:
     explicit LazySMP(int threadCount = kAutoThreadCount);

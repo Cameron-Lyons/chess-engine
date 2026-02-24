@@ -98,7 +98,7 @@ public:
 
     void insert(uint64_t hash, const TTEntry& entry) {
         bool found = false;
-        TTv2::TTEntry* tte = tt.probe(hash, found);
+        TTv2::TTEntry* tte{tt.probe(hash, found)};
         TTv2::PackedMove pm = TTv2::packMove(
             entry.bestMove.first >= SearchConstants::kZero ? entry.bestMove.first
                                                            : SearchConstants::kZero,
@@ -117,7 +117,7 @@ public:
 
     bool find(uint64_t hash, TTEntry& entry) const {
         bool found = false;
-        TTv2::TTEntry* tte = const_cast<TTv2::TranspositionTable&>(tt).probe(hash, found);
+        TTv2::TTEntry* tte{const_cast<TTv2::TranspositionTable&>(tt).probe(hash, found)};
         if (!found) {
             return false;
         }
@@ -162,7 +162,7 @@ struct ThreadSafeHistory {
     std::vector<std::vector<int>> table;
     mutable std::mutex mutex;
     ThreadSafeHistory();
-    void update(int srcPos, int destPos, int depth);
+    void update(int srcPos, int destPos, int bonus);
     int get(int srcPos, int destPos) const;
     int getScore(int srcPos, int destPos) const {
         return get(srcPos, destPos);
@@ -339,7 +339,8 @@ std::vector<ScoredMove> scoreMovesOptimized(
     const std::pair<int, int>& ttMove = {SearchConstants::kInvalidSquare,
                                          SearchConstants::kInvalidSquare},
     const std::pair<int, int>& counterMove = {SearchConstants::kInvalidSquare,
-                                              SearchConstants::kInvalidSquare});
+                                              SearchConstants::kInvalidSquare},
+    const ParallelSearchContext* context = nullptr);
 
 enum class MovePickerStage : std::uint8_t {
     HASH_MOVE,

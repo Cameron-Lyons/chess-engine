@@ -169,7 +169,7 @@ void TexelTuner::findOptimalK() {
     double bestError = 1e9;
     for (double k = 0.5; k <= 2.0; k += 0.01) {
         scalingK = k;
-        double err = computeError(params);
+        double err{computeError(params)};
         if (err < bestError) {
             bestError = err;
             bestK = k;
@@ -182,7 +182,7 @@ void TexelTuner::findOptimalK() {
         while (improved) {
             improved = false;
             scalingK += delta;
-            double err = computeError(params);
+            double err{computeError(params)};
             if (err < bestError) {
                 bestError = err;
                 improved = true;
@@ -302,7 +302,7 @@ void TexelTuner::optimize(int iterations) {
             param += 1;
         }
 
-        double currentError = computeError(params);
+        double currentError{computeError(params)};
         std::cout << "Iteration " << (iter + 1) << " error: " << currentError << '\n';
 
         if (!anyImproved) {
@@ -325,8 +325,9 @@ void TexelTuner::exportParams(const std::string& filename) const {
     file << "constexpr int QUEEN_VALUE = " << params[4] << ";\n";
     const char* names[] = {"PAWN", "KNIGHT", "BISHOP", "ROOK", "QUEEN", "KING"};
     int base = 5;
-    for (int p = 0; p < 6; ++p) {
-        file << "\nconst int TUNED_" << names[p] << "_MG[64] = {\n    ";
+    int p = 0;
+    for (const char* name : names) {
+        file << "\nconst int TUNED_" << name << "_MG[64] = {\n    ";
         for (int sq = 0; sq < 64; ++sq) {
             file << params[base + (p * 64) + sq];
             if (sq < 63) {
@@ -337,5 +338,6 @@ void TexelTuner::exportParams(const std::string& filename) const {
             }
         }
         file << "\n};\n";
+        ++p;
     }
 }
