@@ -31,3 +31,13 @@ TEST(Comprehensive, BitboardSync) {
     ASSERT_TRUE(noPawnOnE2);
     ASSERT_TRUE(noPawnBitboardOnE2);
 }
+
+TEST(Comprehensive, KingsideCastleLegalInOpenPosition) {
+    initKnightAttacks();
+    initKingAttacks();
+
+    Board board;
+    board.InitializeFromFEN("r1b1k2r/pppp1ppp/2nbpn2/8/1q1PP3/1BN2N2/PPP2PPP/R1BQK2R w KQkq - 0 1");
+
+    EXPECT_TRUE(IsMoveLegal(board, 4, 6));
+}

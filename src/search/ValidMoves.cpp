@@ -123,6 +123,7 @@ bool IsMoveLegal(Board& board, int srcPos, int destPos) {
             break;
         case ChessPieceType::KING:
             moves = generateKingMoves(board, piece.PieceColor);
+            addCastlingMovesBitboard(board, piece.PieceColor, &moves);
             break;
         default:
             return false;
@@ -148,7 +149,7 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
                               std::vector<std::pair<int, int>>* generatedMoves) {
     int kingStart =
         (color == ChessPieceColor::WHITE) ? kWhiteKingStartSquare : kBlackKingStartSquare;
-    Piece& king = board.squares[kingStart].piece;
+    const Piece& king = board.squares[kingStart].piece;
     if (king.PieceType != ChessPieceType::KING || king.PieceColor != color || king.moved) {
         return;
     }
@@ -238,7 +239,6 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
     if (canCastleKingside) {
         int dest =
             (color == ChessPieceColor::WHITE) ? kWhiteKingsideDestination : kBlackKingsideDestination;
-        king.ValidMoves.push_back(dest);
         if (generatedMoves != nullptr) {
             generatedMoves->emplace_back(kingStart, dest);
         }
@@ -246,7 +246,6 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
     if (canCastleQueenside) {
         int dest = (color == ChessPieceColor::WHITE) ? kWhiteQueensideSecondTransit
                                                       : kBlackQueensideSecondTransit;
-        king.ValidMoves.push_back(dest);
         if (generatedMoves != nullptr) {
             generatedMoves->emplace_back(kingStart, dest);
         }
@@ -466,7 +465,6 @@ void GenValidMoves(Board& board) {
         board.squares[src].piece.ValidMoves.push_back(dest);
     }
 
-    addCastlingMovesBitboard(board, board.turn, nullptr);
     board.whiteChecked = IsKingInCheck(board, ChessPieceColor::WHITE);
     board.blackChecked = IsKingInCheck(board, ChessPieceColor::BLACK);
 }

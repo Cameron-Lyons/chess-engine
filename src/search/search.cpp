@@ -13,6 +13,7 @@
 #include <mutex>
 #include <random>
 #include <ranges>
+#include <sstream>
 #include <thread>
 
 namespace {
@@ -164,6 +165,36 @@ private:
 
 uint64_t resolveZobristKey(const Board& board, uint64_t key) {
     return (key == kUnsetZobristKey) ? ComputeZobrist(board) : key;
+}
+
+std::string normalizeBookFen(const std::string& fen, bool clearEnPassant) {
+    std::istringstream iss(fen);
+    std::string piecePlacement;
+    std::string sideToMove;
+    std::string castling;
+    std::string enPassant;
+    std::string halfmoveClock;
+    std::string fullmoveNumber;
+
+    if (!(iss >> piecePlacement >> sideToMove >> castling >> enPassant)) {
+        return fen;
+    }
+
+    if (!(iss >> halfmoveClock)) {
+        halfmoveClock = "0";
+    }
+    if (!(iss >> fullmoveNumber)) {
+        fullmoveNumber = "1";
+    }
+
+    if (clearEnPassant) {
+        enPassant = "-";
+    }
+
+    std::ostringstream normalized;
+    normalized << piecePlacement << ' ' << sideToMove << ' ' << castling << ' ' << enPassant
+               << ' ' << halfmoveClock << ' ' << fullmoveNumber;
+    return normalized.str();
 }
 
 int encodeCastlingState(const Board& board) {
@@ -821,22 +852,39 @@ bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLi
 }
 
 std::string getBookMove(const std::string& fen) {
+    auto lookup = [](const std::string& key) -> std::string {
+        auto optionsIt = OpeningBookOptions.find(key);
+        if (optionsIt != OpeningBookOptions.end()) {
+            const auto& options = optionsIt->second;
+            if (!options.empty()) {
+                static std::random_device rd;
+                static std::mt19937 gen(static_cast<std::mt19937::result_type>(rd()));
+                std::uniform_int_distribution<std::size_t> dis(kZero, options.size() - kOne);
+                return options[dis(gen)];
+            }
+        }
 
-    auto optionsIt = OpeningBookOptions.find(fen);
-    if (optionsIt != OpeningBookOptions.end()) {
-        const auto& options = optionsIt->second;
-        if (!options.empty()) {
-            static std::random_device rd;
-            static std::mt19937 gen(static_cast<std::mt19937::result_type>(rd()));
-            std::uniform_int_distribution<std::size_t> dis(kZero, options.size() - kOne);
-            return options[dis(gen)];
+        auto it = OpeningBook.find(key);
+        if (it != OpeningBook.end()) {
+            return it->second;
+        }
+
+        return "";
+    };
+
+    std::string move = lookup(fen);
+    if (!move.empty()) {
+        return move;
+    }
+
+    std::string normalizedFen = normalizeBookFen(fen, true);
+    if (normalizedFen != fen) {
+        move = lookup(normalizedFen);
+        if (!move.empty()) {
+            return move;
         }
     }
 
-    auto it = OpeningBook.find(fen);
-    if (it != OpeningBook.end()) {
-        return it->second;
-    }
     return "";
 }
 
@@ -1160,7 +1208,10 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
 
         if (AdvancedSearch::nullMovePruning(board, depth, alpha, beta) &&
             hasNonPawnMaterial(board, board.turn)) {
-            int sideEval = maximizingPlayer ? staticEval : -staticEval;
+            int sideEval = staticEval;
+            if (!maximizingPlayer) {
+                sideEval = -sideEval;
+            }
             int reduction = computeNullMoveReduction(depth, sideEval - beta);
             int nullDepth = std::max(kOne, depth - reduction);
             int previousEnPassant = board.enPassantSquare;
@@ -1171,16 +1222,28 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             board.enPassantSquare = kNoEpSquare;
             board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                 : ChessPieceColor::WHITE;
-            int nullScore = -PrincipalVariationSearch(board, nullDepth, -beta,
-                                                      -beta + kZeroWindowOffset, !maximizingPlayer,
-                                                      ply + kOne, historyTable, context, false,
-                                                      nullZobristKey);
+            int nullScore = kZero;
+            if (maximizingPlayer) {
+                nullScore = PrincipalVariationSearch(
+                    board, nullDepth, beta - kZeroWindowOffset, beta, !maximizingPlayer,
+                    ply + kOne, historyTable, context, false, nullZobristKey);
+            } else {
+                nullScore = PrincipalVariationSearch(
+                    board, nullDepth, alpha, alpha + kZeroWindowOffset, !maximizingPlayer,
+                    ply + kOne, historyTable, context, false, nullZobristKey);
+            }
             board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                 : ChessPieceColor::WHITE;
             board.enPassantSquare = previousEnPassant;
 
-            if (nullScore >= beta) {
-                return beta;
+            if (maximizingPlayer) {
+                if (nullScore >= beta) {
+                    return beta;
+                }
+            } else {
+                if (nullScore <= alpha) {
+                    return alpha;
+                }
             }
         }
 
@@ -1306,19 +1369,37 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         }
 
         int score = kZero;
-        if (movesSearched == kZero) {
-            score =
-                -PrincipalVariationSearch(tempBoard, searchDepth, -beta, -alpha, !maximizingPlayer,
-                                          ply + kOne, historyTable, context, isPVNode,
-                                          childZobristKey);
+        if (maximizingPlayer) {
+            if (movesSearched == kZero) {
+                score = PrincipalVariationSearch(tempBoard, searchDepth, alpha, beta,
+                                                 !maximizingPlayer, ply + kOne, historyTable,
+                                                 context, isPVNode, childZobristKey);
+            } else {
+                score = PrincipalVariationSearch(tempBoard, searchDepth, alpha,
+                                                 alpha + kZeroWindowOffset, !maximizingPlayer,
+                                                 ply + kOne, historyTable, context, false,
+                                                 childZobristKey);
+                if (score > alpha && score < beta) {
+                    score = PrincipalVariationSearch(tempBoard, searchDepth, alpha, beta,
+                                                     !maximizingPlayer, ply + kOne, historyTable,
+                                                     context, isPVNode, childZobristKey);
+                }
+            }
         } else {
-            score = -PrincipalVariationSearch(tempBoard, searchDepth, -alpha - kOne, -alpha,
-                                              !maximizingPlayer, ply + kOne, historyTable, context,
-                                              false, childZobristKey);
-            if (score > alpha && score < beta) {
-                score = -PrincipalVariationSearch(tempBoard, searchDepth, -beta, -alpha,
-                                                  !maximizingPlayer, ply + kOne, historyTable,
-                                                  context, isPVNode, childZobristKey);
+            if (movesSearched == kZero) {
+                score = PrincipalVariationSearch(tempBoard, searchDepth, alpha, beta,
+                                                 !maximizingPlayer, ply + kOne, historyTable,
+                                                 context, isPVNode, childZobristKey);
+            } else {
+                score = PrincipalVariationSearch(tempBoard, searchDepth,
+                                                 beta - kZeroWindowOffset, beta,
+                                                 !maximizingPlayer, ply + kOne, historyTable,
+                                                 context, false, childZobristKey);
+                if (score < beta && score > alpha) {
+                    score = PrincipalVariationSearch(tempBoard, searchDepth, alpha, beta,
+                                                     !maximizingPlayer, ply + kOne, historyTable,
+                                                     context, isPVNode, childZobristKey);
+                }
             }
         }
 

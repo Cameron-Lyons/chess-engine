@@ -250,6 +250,154 @@ std::string positionToNotation(int pos) {
     return std::string(1, static_cast<char>('a' + col)) + std::to_string(row + 1);
 }
 
+char pieceToSanSymbol(ChessPieceType pieceType) {
+    switch (pieceType) {
+        case ChessPieceType::KNIGHT:
+            return 'N';
+        case ChessPieceType::BISHOP:
+            return 'B';
+        case ChessPieceType::ROOK:
+            return 'R';
+        case ChessPieceType::QUEEN:
+            return 'Q';
+        case ChessPieceType::KING:
+            return 'K';
+        default:
+            return '\0';
+    }
+}
+
+std::string legalMoveDisambiguation(const Board& board, int from, int to, const Piece& movingPiece) {
+    const int fromFile = from % BOARD_SIZE;
+    const int fromRank = from / BOARD_SIZE;
+
+    bool ambiguous = false;
+    bool sameFileConflict = false;
+    bool sameRankConflict = false;
+
+    Board probeBoard = board;
+    for (int candidate = 0; candidate < NUM_SQUARES; ++candidate) {
+        if (candidate == from) {
+            continue;
+        }
+
+        const Piece& candidatePiece = board.squares[candidate].piece;
+        if (candidatePiece.PieceType != movingPiece.PieceType ||
+            candidatePiece.PieceColor != movingPiece.PieceColor) {
+            continue;
+        }
+        if (!IsMoveLegal(probeBoard, candidate, to)) {
+            continue;
+        }
+
+        ambiguous = true;
+        if ((candidate % BOARD_SIZE) == fromFile) {
+            sameFileConflict = true;
+        }
+        if ((candidate / BOARD_SIZE) == fromRank) {
+            sameRankConflict = true;
+        }
+    }
+
+    if (!ambiguous) {
+        return "";
+    }
+    if (!sameFileConflict) {
+        return std::string(1, static_cast<char>('a' + fromFile));
+    }
+    if (!sameRankConflict) {
+        return std::to_string(fromRank + 1);
+    }
+    return std::string(1, static_cast<char>('a' + fromFile)) + std::to_string(fromRank + 1);
+}
+
+bool hasAnyLegalMoves(Board& board, ChessPieceColor sideToMove) {
+    std::vector<std::pair<int, int>> moves = GetAllMoves(board, sideToMove);
+    for (const auto& move : moves) {
+        const Piece& piece = board.squares[move.first].piece;
+        if (piece.PieceType == ChessPieceType::NONE || piece.PieceColor != sideToMove) {
+            continue;
+        }
+        if (IsMoveLegal(board, move.first, move.second)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string moveToSan(const Board& board, int from, int to,
+                      ChessPieceType promotionPiece = ChessPieceType::QUEEN) {
+    if (from < 0 || from >= NUM_SQUARES || to < 0 || to >= NUM_SQUARES) {
+        return positionToNotation(from) + positionToNotation(to);
+    }
+
+    const Piece& movingPiece = board.squares[from].piece;
+    if (movingPiece.PieceType == ChessPieceType::NONE) {
+        return positionToNotation(from) + positionToNotation(to);
+    }
+
+    const int fromFile = from % BOARD_SIZE;
+    const int toRank = to / BOARD_SIZE;
+    const bool isKingsideCastle =
+        movingPiece.PieceType == ChessPieceType::KING && (to - from) == 2;
+    const bool isQueensideCastle =
+        movingPiece.PieceType == ChessPieceType::KING && (from - to) == 2;
+    const bool isCaptureMove = isCapture(board, from, to);
+    const bool isPromotion =
+        movingPiece.PieceType == ChessPieceType::PAWN && (toRank == 0 || toRank == 7);
+
+    ChessPieceType sanPromotionPiece = promotionPiece;
+    if (sanPromotionPiece != ChessPieceType::QUEEN && sanPromotionPiece != ChessPieceType::ROOK &&
+        sanPromotionPiece != ChessPieceType::BISHOP && sanPromotionPiece != ChessPieceType::KNIGHT) {
+        sanPromotionPiece = ChessPieceType::QUEEN;
+    }
+
+    std::string san;
+    if (isKingsideCastle) {
+        san = "O-O";
+    } else if (isQueensideCastle) {
+        san = "O-O-O";
+    } else {
+        const char pieceSymbol = pieceToSanSymbol(movingPiece.PieceType);
+        if (pieceSymbol != '\0') {
+            san += pieceSymbol;
+            san += legalMoveDisambiguation(board, from, to, movingPiece);
+        } else if (isCaptureMove) {
+            san += static_cast<char>('a' + fromFile);
+        }
+
+        if (isCaptureMove) {
+            san += "x";
+        }
+        san += positionToNotation(to);
+
+        if (isPromotion) {
+            san += "=";
+            san += pieceToSanSymbol(sanPromotionPiece);
+        }
+    }
+
+    Board afterMove = board;
+    if (applySearchMove(afterMove, from, to, false)) {
+        if (isPromotion) {
+            afterMove.squares[to].piece = Piece(movingPiece.PieceColor, sanPromotionPiece);
+            afterMove.squares[to].piece.moved = true;
+            afterMove.updateBitboards();
+        }
+
+        ChessPieceColor opponent = (movingPiece.PieceColor == ChessPieceColor::WHITE)
+                                       ? ChessPieceColor::BLACK
+                                       : ChessPieceColor::WHITE;
+        afterMove.turn = opponent;
+
+        if (IsKingInCheck(afterMove, opponent)) {
+            san += hasAnyLegalMoves(afterMove, opponent) ? "+" : "#";
+        }
+    }
+
+    return san;
+}
+
 enum class GameState : std::uint8_t {
     ONGOING,
     CHECKMATE_WHITE_WINS,
@@ -567,10 +715,11 @@ int main(int argc, char* argv[]) {
                         (destRow == 0 || destRow == 7)) {
                         computerPromotionPiece = ChessPieceType::QUEEN;
                     }
+                    std::string computerMoveSan =
+                        moveToSan(ChessBoard, from, to, computerPromotionPiece);
 
                     if (MovePiece(srcCol, srcRow, destCol, destRow, computerPromotionPiece)) {
-                        std::cout << "Computer played: " << positionToNotation(computerMove.first)
-                                  << " to " << positionToNotation(computerMove.second) << " (took "
+                        std::cout << "Computer played: " << computerMoveSan << " (took "
                                   << std::chrono::duration_cast<ChessDuration>(computerTime).count()
                                   << "ms)\n";
 
