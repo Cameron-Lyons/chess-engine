@@ -101,4 +101,6 @@ uint64_t computePawnHash(const Board& board);
 
 bool isNNUEEnabled();
 void setNNUEEnabled(bool enabled);
+void setFastEvaluationMode(bool enabled);
+bool isFastEvaluationMode();
 int evaluatePositionNNUE(const Board& board);

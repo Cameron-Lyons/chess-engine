@@ -159,8 +159,7 @@ public:
 };
 
 struct ThreadSafeHistory {
-    std::vector<std::vector<int>> table;
-    mutable std::mutex mutex;
+    std::array<int, SearchConstants::kMoveMaskSize> table{};
     ThreadSafeHistory();
     void update(int srcPos, int destPos, int bonus);
     int get(int srcPos, int destPos) const;
@@ -169,6 +168,11 @@ struct ThreadSafeHistory {
     }
     void updateScore(int srcPos, int destPos, int score) {
         update(srcPos, destPos, score);
+    }
+
+private:
+    static constexpr int index(int srcPos, int destPos) {
+        return (srcPos * SearchConstants::kBoardSquareCount) + destPos;
     }
 };
 
@@ -281,6 +285,8 @@ struct SearchResult {
 
 extern uint64_t ZobristTable[64][12];
 extern uint64_t ZobristBlackToMove;
+extern uint64_t ZobristCastling[4];
+extern uint64_t ZobristEnPassant[64];
 extern TranspositionTableAdapter TransTable;
 
 void InitZobrist();
@@ -288,6 +294,8 @@ int pieceToZobristIndex(const Piece& p);
 uint64_t ComputeZobrist(const Board& board);
 
 bool isCapture(const Board& board, int srcPos, int destPos);
+bool applySearchMove(Board& board, int fromSquare, int toSquare,
+                     bool autoPromoteToQueen = true);
 
 inline int pieceTypeIndex(ChessPieceType pt) {
     switch (pt) {
@@ -312,9 +320,11 @@ bool isInCheck(const Board& board, ChessPieceColor color);
 void updateHistoryTable(ThreadSafeHistory& historyTable, int fromSquare, int toSquare, int depth);
 bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLimitMs);
 int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, int ply,
-                    ThreadSafeHistory& historyTable, ParallelSearchContext& context);
+                    ThreadSafeHistory& historyTable, ParallelSearchContext& context,
+                    uint64_t zobristKey = std::numeric_limits<uint64_t>::max());
 int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
-                     ThreadSafeHistory& historyTable, ParallelSearchContext& context, int ply);
+                     ThreadSafeHistory& historyTable, ParallelSearchContext& context, int ply,
+                     uint64_t zobristKey = std::numeric_limits<uint64_t>::max());
 std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color);
 std::string getBookMove(const std::string& fen);
 SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs,
@@ -322,11 +332,14 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
                                         int contempt = SearchConstants::kZero,
                                         int multiPV = SearchConstants::kOne,
                                         int optimalTimeMs = SearchConstants::kZero,
-                                        int maxTimeMs = SearchConstants::kZero);
+                                        int maxTimeMs = SearchConstants::kZero,
+                                        int hashSizeMb =
+                                            SearchConstants::kDefaultTranspositionTableMb);
 std::pair<int, int> findBestMove(Board& board, int depth);
 int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer,
                              int ply, ThreadSafeHistory& historyTable,
-                             ParallelSearchContext& context, bool isPVNode = true);
+                             ParallelSearchContext& context, bool isPVNode = true,
+                             uint64_t zobristKey = std::numeric_limits<uint64_t>::max());
 
 int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare);
 int getSmallestAttacker(const Board& board, int targetSquare, ChessPieceColor color);

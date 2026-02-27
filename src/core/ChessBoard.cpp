@@ -1,5 +1,8 @@
 #include "ChessBoard.h"
 
+#include <cctype>
+#include <sstream>
+
 void Board::clearBitboards() {
     whitePawns = whiteKnights = whiteBishops = whiteRooks = whiteQueens = whiteKings = 0;
     blackPawns = blackKnights = blackBishops = blackRooks = blackQueens = blackKings = 0;
@@ -113,6 +116,8 @@ bool Board::movePiece(int from, int to) {
     }
     Piece& fromPiece = squares[from].piece;
     Piece& toPiece = squares[to].piece;
+    const Piece movingPieceBefore = fromPiece;
+    const Piece capturedPieceBefore = toPiece;
 
     if (fromPiece.PieceType == ChessPieceType::NONE) {
         return false;
@@ -217,6 +222,9 @@ bool Board::movePiece(int from, int to) {
 
     toPiece = fromPiece;
     fromPiece = Piece();
+    toPiece.moved = true;
+    LastMove = to;
+    recordMoveTime();
 
     if (toPiece.PieceColor == ChessPieceColor::WHITE) {
         switch (toPiece.PieceType) {
@@ -267,6 +275,37 @@ bool Board::movePiece(int from, int to) {
     }
 
     updateOccupancy();
+
+    if (movingPieceBefore.PieceType == ChessPieceType::KING) {
+        if (movingPieceBefore.PieceColor == ChessPieceColor::WHITE) {
+            whiteCanCastle = false;
+        } else {
+            blackCanCastle = false;
+        }
+    }
+
+    if (movingPieceBefore.PieceType == ChessPieceType::ROOK) {
+        if (from == 0 || from == 7) {
+            whiteCanCastle = false;
+        } else if (from == 56 || from == 63) {
+            blackCanCastle = false;
+        }
+    }
+
+    if (capturedPieceBefore.PieceType == ChessPieceType::ROOK) {
+        if (to == 0 || to == 7) {
+            whiteCanCastle = false;
+        } else if (to == 56 || to == 63) {
+            blackCanCastle = false;
+        }
+    }
+
+    enPassantSquare = -1;
+    int moveDelta = to - from;
+    if (movingPieceBefore.PieceType == ChessPieceType::PAWN &&
+        (moveDelta == 16 || moveDelta == -16)) {
+        enPassantSquare = (from + to) / 2;
+    }
     return true;
 }
 
@@ -333,18 +372,22 @@ std::string Board::toFEN() const {
     std::string castling;
     if (whiteCanCastle) {
         castling += "K";
-    }
-    if (whiteCanCastle) {
         castling += "Q";
     }
     if (blackCanCastle) {
         castling += "k";
-    }
-    if (blackCanCastle) {
         castling += "q";
     }
     fen += " " + (castling.empty() ? "-" : castling);
-    fen += " -";
+    if (enPassantSquare >= 0 && enPassantSquare < NUM_SQUARES) {
+        int epFile = enPassantSquare % BOARD_SIZE;
+        int epRank = enPassantSquare / BOARD_SIZE;
+        fen += " ";
+        fen += static_cast<char>('a' + epFile);
+        fen += static_cast<char>('1' + epRank);
+    } else {
+        fen += " -";
+    }
     fen += " 0 1";
     return fen;
 }
@@ -360,12 +403,40 @@ void Board::InitializeFromFEN(ChessString fen) {
         squares[i].piece = Piece();
     }
 
+    turn = ChessPieceColor::WHITE;
+    whiteCanCastle = false;
+    blackCanCastle = false;
+    enPassantSquare = -1;
+    whiteChecked = false;
+    blackChecked = false;
+    LastMove = 0;
+
+    std::string fenString(fen);
+    std::istringstream iss(fenString);
+    std::string placement;
+    std::string activeColor;
+    std::string castling;
+    std::string enPassant;
+    if (!(iss >> placement)) {
+        updateBitboards();
+        return;
+    }
+    if (!(iss >> activeColor)) {
+        activeColor = "w";
+    }
+    if (!(iss >> castling)) {
+        castling = "-";
+    }
+    if (!(iss >> enPassant)) {
+        enPassant = "-";
+    }
+
     size_t pos = 0;
     int fenRank = 7;
     int file = 0;
 
-    while (pos < fen.length() && fen[pos] != ' ') {
-        char c = fen[pos];
+    while (pos < placement.length()) {
+        char c = placement[pos];
         if (c == '/') {
             fenRank--;
             file = 0;
@@ -414,6 +485,22 @@ void Board::InitializeFromFEN(ChessString fen) {
             file++;
         }
         pos++;
+    }
+
+    turn = (activeColor == "b") ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+    if (castling != "-") {
+        whiteCanCastle = (castling.find('K') != std::string::npos) ||
+                         (castling.find('Q') != std::string::npos);
+        blackCanCastle = (castling.find('k') != std::string::npos) ||
+                         (castling.find('q') != std::string::npos);
+    }
+
+    if (enPassant != "-" && enPassant.size() == 2) {
+        int epFile = static_cast<int>(enPassant[0] - 'a');
+        int epRank = static_cast<int>(enPassant[1] - '1');
+        if (epFile >= 0 && epFile < BOARD_SIZE && epRank >= 0 && epRank < BOARD_SIZE) {
+            enPassantSquare = (epRank * BOARD_SIZE) + epFile;
+        }
     }
 
     updateBitboards();

@@ -23,6 +23,7 @@ public:
         std::atomic<bool> stopFlag;
         std::atomic<int> depth;
         std::atomic<int> bestScore;
+        std::atomic<int> bestDepth;
         std::pair<int, int> bestMove;
         ThreadSafeHistory historyTable;
         KillerMoves killerMoves;
@@ -33,9 +34,9 @@ public:
 
         ThreadData(int threadId)
             : id(threadId), searching(false), stopFlag(false), depth(kInitialDepth),
-              bestScore(kInitialScore), bestMove({kInvalidMoveSquare, kInvalidMoveSquare}),
-              context(nullptr), aspirationDelta(kInitialDepth), depthOffset(kInitialDepth),
-              useNullMove(true) {}
+              bestScore(kInitialScore), bestDepth(kInitialDepth),
+              bestMove({kInvalidMoveSquare, kInvalidMoveSquare}), context(nullptr),
+              aspirationDelta(kInitialDepth), depthOffset(kInitialDepth), useNullMove(true) {}
     };
 
     struct SharedData {
@@ -45,16 +46,25 @@ public:
         std::atomic<int> bestScore;
         std::pair<int, int> bestMove;
         std::mutex bestMoveMutex;
-        TranspositionTableAdapter* transTable;
 
         SharedData()
             : globalStop(false), nodesSearched(kInitialDepth), bestDepth(kInitialDepth),
-              bestScore(kInitialScore), bestMove({kInvalidMoveSquare, kInvalidMoveSquare}),
-              transTable(&TransTable) {}
+              bestScore(kInitialScore), bestMove({kInvalidMoveSquare, kInvalidMoveSquare}) {}
     };
 
 private:
+    struct SearchThreadArgs {
+        const LazySMP* self;
+        ThreadData* data;
+        int maxDepth;
+        int timeLimit;
+    };
+
+    static void* searchThreadEntry(void* arg);
+
     int numThreads;
+    int hashSizeMb;
+    int contempt;
     std::vector<std::unique_ptr<ThreadData>> threads;
     std::unique_ptr<SharedData> shared;
     std::vector<std::thread> workers;
@@ -65,7 +75,9 @@ private:
     void searchThread(ThreadData* data, int maxDepth, int timeLimit) const;
 
 public:
-    explicit LazySMP(int threadCount = kAutoThreadCount);
+    explicit LazySMP(int threadCount = kAutoThreadCount,
+                     int hashMb = SearchConstants::kDefaultTranspositionTableMb,
+                     int contemptValue = SearchConstants::kZero);
     ~LazySMP();
     SearchResult search(const Board& board, int maxDepth, int timeLimit);
     void stop();

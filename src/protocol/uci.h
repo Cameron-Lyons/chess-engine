@@ -7,6 +7,7 @@
 #include "../search/search.h"
 
 #include <memory>
+#include <pthread.h>
 #include <string>
 #include <vector>
 
@@ -21,7 +22,7 @@ public:
         bool ownBook = true;
         int moveOverhead = 10;
         int minimumThinkingTime = 20;
-        bool useNeuralNetwork = true;
+        bool useNeuralNetwork = false;
         float nnWeight = 0.7F;
         bool useTablebases = true;
         std::string syzygyPath;
@@ -54,6 +55,17 @@ public:
     void reportInfo(const std::string& info);
 
 private:
+    struct SearchTask {
+        UCIEngine* engine;
+        int depth;
+        int timeForMove;
+        int optimalTime;
+        int maxTime;
+        Board boardSnapshot;
+    };
+
+    static void* searchThreadEntry(void* arg);
+
     Board board;
     UCIOptions options;
     std::unique_ptr<NeuralNetworkEvaluator> nnEvaluator;
@@ -65,7 +77,8 @@ private:
     std::chrono::steady_clock::time_point searchStartTime;
     int searchTimeLimit;
     int searchDepthLimit;
-    std::thread searchThread;
+    pthread_t searchThread{};
+    bool searchThreadActive = false;
 
     SearchResult performSearch(const Board& board, int depth, int timeLimit, int optimalTime = 0,
                                int maxTime = 0);

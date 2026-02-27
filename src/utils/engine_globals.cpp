@@ -44,7 +44,6 @@ constexpr char kRankSeparator = '/';
 constexpr char kEmptySquareSymbol = '.';
 constexpr const char* kWhiteTurnFenToken = " w";
 constexpr const char* kBlackTurnFenToken = " b";
-constexpr const char* kFenSuffix = " KQkq - 0 1";
 constexpr const char* kKingsideCastleNotation = "O-O";
 constexpr const char* kKingsideCastleNotationAlt = "0-0";
 constexpr const char* kQueensideCastleNotation = "O-O-O";
@@ -136,6 +135,8 @@ std::unordered_map<std::string, std::string> OpeningBook;
 
 uint64_t ZobristTable[kBoardSquares][kZobristPieceStates];
 uint64_t ZobristBlackToMove;
+uint64_t ZobristCastling[4];
+uint64_t ZobristEnPassant[kBoardSquares];
 TranspositionTableAdapter TransTable;
 
 std::string getFEN(const Board& board) {
@@ -187,7 +188,26 @@ std::string getFEN(const Board& board) {
         }
     }
     fen += board.turn == ChessPieceColor::WHITE ? kWhiteTurnFenToken : kBlackTurnFenToken;
-    fen += kFenSuffix;
+    std::string castling;
+    if (board.whiteCanCastle) {
+        castling += "KQ";
+    }
+    if (board.blackCanCastle) {
+        castling += "kq";
+    }
+    fen += " " + (castling.empty() ? "-" : castling);
+
+    if (board.enPassantSquare >= 0 && board.enPassantSquare < kBoardSquares) {
+        int epFile = board.enPassantSquare % BOARD_SIZE;
+        int epRank = board.enPassantSquare / BOARD_SIZE;
+        fen += " ";
+        fen += static_cast<char>(kFileCharOffset + epFile);
+        fen += static_cast<char>(kRankCharOffset + epRank);
+    } else {
+        fen += " -";
+    }
+
+    fen += " 0 1";
     return fen;
 }
 

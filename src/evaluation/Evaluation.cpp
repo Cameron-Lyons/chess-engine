@@ -16,6 +16,7 @@ extern uint64_t ZobristTable[64][12];
 using namespace EvaluationParams;
 
 static bool useNNUE = false;
+thread_local bool useFastEval = false;
 
 namespace {
 constexpr int kBoardSquareCount = 64;
@@ -749,14 +750,19 @@ int evaluatePosition(const Board& board, int contempt) {
         egScore += static_cast<int>(static_cast<float>(kingSafetyScore) * kKingSafetyEgScale);
     }
 
+    const bool fastEval = useFastEval;
+
     int bishopPairScore = evaluateBishopPair(board);
     mgScore += bishopPairScore;
     egScore += static_cast<int>(static_cast<float>(bishopPairScore) * kBishopPairEgScale);
     int rookFileScore = evaluateRooksOnOpenFiles(board);
     mgScore += rookFileScore;
     egScore += rookFileScore;
-    int tacticalSafetyScore = evaluateTacticalSafety(board);
-    mgScore += tacticalSafetyScore;
+    int tacticalSafetyScore = 0;
+    if (!fastEval) {
+        tacticalSafetyScore = evaluateTacticalSafety(board);
+        mgScore += tacticalSafetyScore;
+    }
     int endgameScore = 0;
     if (gamePhase < kOpeningEndgameBoundaryPhase) {
         endgameScore = evaluateEndgame(board);
@@ -765,12 +771,14 @@ int evaluatePosition(const Board& board, int contempt) {
         egScore += endgameKnowledgeScore;
     }
     egScore += static_cast<int>(static_cast<float>(tacticalSafetyScore) * kTacticalSafetyEgScale);
-    int hangingPiecesScore = evaluateHangingPieces(board);
-    mgScore += hangingPiecesScore;
-    egScore += hangingPiecesScore;
-    int queenTrapScore = evaluateQueenTrapDanger(board);
-    mgScore += queenTrapScore;
-    egScore += static_cast<int>(static_cast<float>(queenTrapScore) * kQueenTrapEgScale);
+    if (!fastEval) {
+        int hangingPiecesScore = evaluateHangingPieces(board);
+        mgScore += hangingPiecesScore;
+        egScore += hangingPiecesScore;
+        int queenTrapScore = evaluateQueenTrapDanger(board);
+        mgScore += queenTrapScore;
+        egScore += static_cast<int>(static_cast<float>(queenTrapScore) * kQueenTrapEgScale);
+    }
 
     if (board.turn == ChessPieceColor::WHITE) {
         mgScore += TEMPO_BONUS;
@@ -786,7 +794,9 @@ int evaluatePosition(const Board& board, int contempt) {
         finalScore += (board.turn == ChessPieceColor::WHITE) ? contempt : -contempt;
     }
 
-    logEvaluationComponents("Final Enhanced Score", finalScore);
+    if (!fastEval) {
+        logEvaluationComponents("Final Enhanced Score", finalScore);
+    }
     return finalScore;
 }
 
@@ -1288,6 +1298,14 @@ bool isNNUEEnabled() {
 
 void setNNUEEnabled(bool enabled) {
     useNNUE = enabled;
+}
+
+void setFastEvaluationMode(bool enabled) {
+    useFastEval = enabled;
+}
+
+bool isFastEvaluationMode() {
+    return useFastEval;
 }
 
 int evaluatePositionNNUE(const Board& board) {

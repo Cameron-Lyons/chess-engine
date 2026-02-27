@@ -109,7 +109,9 @@ MoveClassification classifyMove(const Board& board, const std::pair<int, int>& m
     }
 
     Board tempBoard = board;
-    tempBoard.movePiece(move.first, move.second);
+    if (!applySearchMove(tempBoard, move.first, move.second)) {
+        return classification;
+    }
     tempBoard.turn =
         (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
     classification.givesCheck = isInCheck(tempBoard, tempBoard.turn);

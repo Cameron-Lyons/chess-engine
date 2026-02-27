@@ -7,10 +7,12 @@
 #include "../utils/TunableParams.h"
 #include "../utils/engine_globals.h"
 
+#include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <future>
 #include <iostream>
+#include <pthread.h>
 #include <sstream>
 #include <thread>
 
@@ -29,7 +31,6 @@ constexpr int kUnsetTimeValue = -1;
 constexpr int kDefaultSearchDepth = 64;
 constexpr int kDefaultMoveTimeMs = 5000;
 constexpr int kInfiniteTimeMs = 999999999;
-constexpr int kSearchThreads = 1;
 constexpr int kEstimatedMovesToGo = 30;
 constexpr double kIncrementUsageFactor = 0.75;
 constexpr double kMaxTimeFraction = 0.5;
@@ -38,6 +39,7 @@ constexpr int kNpsMillisScale = 1000;
 constexpr int kMateScoreThreshold = 30000;
 constexpr int kMatePlyDivisor = 2;
 constexpr int kMatePlyOffset = 1;
+constexpr std::size_t kUciSearchThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
 constexpr int kBoardDimension = 8;
 constexpr int kBoardSquareCount = kBoardDimension * kBoardDimension;
 constexpr int kMaxSquareIndex = kBoardSquareCount - 1;
@@ -69,9 +71,47 @@ UCIEngine::UCIEngine() : isSearching(false), isPondering(false) {
     tc.movesToGo = kDefaultMovesToGo;
     tc.isInfinite = false;
     timeManager = std::make_unique<TimeManager>(tc);
+    setUseNeuralNetwork(options.useNeuralNetwork);
 }
 
 UCIEngine::~UCIEngine() = default;
+
+void* UCIEngine::searchThreadEntry(void* arg) {
+    std::unique_ptr<SearchTask> task(static_cast<SearchTask*>(arg));
+    UCIEngine* self = task->engine;
+
+    try {
+        SearchResult result = self->performSearch(task->boardSnapshot, task->depth, task->timeForMove,
+                                                  task->optimalTime, task->maxTime);
+
+        if (self->isSearching) {
+            std::pair<int, int> ponderMove = {kInvalidSquare, kInvalidSquare};
+            if (result.bestMove.first >= 0) {
+                Board tempBoard = task->boardSnapshot;
+                if (applySearchMove(tempBoard, result.bestMove.first, result.bestMove.second)) {
+                    tempBoard.turn =
+                        (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
+                                                                    : ChessPieceColor::WHITE;
+                    uint64_t hash = ComputeZobrist(tempBoard);
+                    TTEntry ttEntry;
+                    if (TransTable.find(hash, ttEntry) && ttEntry.bestMove.first >= 0) {
+                        ponderMove = ttEntry.bestMove;
+                    }
+                }
+            }
+            self->reportBestMove(result.bestMove, ponderMove);
+            int nps = result.timeMs > 0 ? result.nodes * kNpsMillisScale / result.timeMs : 0;
+            self->reportInfo(result.depth, result.depth, result.timeMs, result.nodes, nps, {},
+                             result.score, 0);
+        }
+    } catch (const std::exception& e) {
+        std::cout << "info string Search error: " << e.what() << '\n';
+    }
+
+    self->isSearching = false;
+    self->isPondering = false;
+    return nullptr;
+}
 
 void UCIEngine::run() {
     std::string input;
@@ -129,7 +169,7 @@ void UCIEngine::handleUCI() {
     std::cout << "option name OwnBook type check default true" << '\n';
     std::cout << "option name Move Overhead type spin default 10 min 0 max 5000" << '\n';
     std::cout << "option name Minimum Thinking Time type spin default 20 min 0 max 5000" << '\n';
-    std::cout << "option name Use Neural Network type check default true" << '\n';
+    std::cout << "option name Use Neural Network type check default false" << '\n';
     std::cout << "option name Neural Network Weight type spin default 70 min 0 max 100" << '\n';
     std::cout << "option name Use Tablebases type check default true" << '\n';
     std::cout << "option name SyzygyPath type string default " << '\n';
@@ -267,7 +307,9 @@ void UCIEngine::handlePosition(const std::string& command) {
                 }
 
                 if (isValid) {
-                    board.movePiece(movePos.first, movePos.second);
+                    if (!applySearchMove(board, movePos.first, movePos.second)) {
+                        continue;
+                    }
                     board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                         : ChessPieceColor::WHITE;
                     board.updateBitboards();
@@ -362,48 +404,33 @@ void UCIEngine::handleGo(const std::string& command) {
     searchTimeLimit = timeForMove;
     searchDepthLimit = searchDepth;
 
-    if (searchThread.joinable()) {
-        searchThread.join();
+    if (searchThreadActive) {
+        pthread_join(searchThread, nullptr);
+        searchThreadActive = false;
     }
 
-    searchThread = std::thread([this, searchDepth, timeForMove, optimalTime, maxTime]() {
-        try {
-            SearchResult result =
-                performSearch(board, searchDepth, timeForMove, optimalTime, maxTime);
-
-            if (isSearching) {
-                std::pair<int, int> ponderMove = {kInvalidSquare, kInvalidSquare};
-                if (result.bestMove.first >= 0) {
-                    Board tempBoard = board;
-                    tempBoard.movePiece(result.bestMove.first, result.bestMove.second);
-                    tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE)
-                                         ? ChessPieceColor::BLACK
-                                         : ChessPieceColor::WHITE;
-                    uint64_t hash = ComputeZobrist(tempBoard);
-                    TTEntry ttEntry;
-                    if (TransTable.find(hash, ttEntry) && ttEntry.bestMove.first >= 0) {
-                        ponderMove = ttEntry.bestMove;
-                    }
-                }
-                reportBestMove(result.bestMove, ponderMove);
-                int nps = result.timeMs > 0 ? result.nodes * kNpsMillisScale / result.timeMs : 0;
-                reportInfo(result.depth, result.depth, result.timeMs, result.nodes, nps, {},
-                           result.score, 0);
-            }
-        } catch (const std::exception& e) {
-            std::cout << "info string Search error: " << e.what() << '\n';
-        }
-
+    auto* task = new SearchTask{this, searchDepth, timeForMove, optimalTime, maxTime, board};
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setstacksize(&attr, kUciSearchThreadStackBytes);
+    int createRc = pthread_create(&searchThread, &attr, &UCIEngine::searchThreadEntry, task);
+    pthread_attr_destroy(&attr);
+    if (createRc != 0) {
+        delete task;
         isSearching = false;
         isPondering = false;
-    });
+        std::cout << "info string Search thread creation failed" << '\n';
+        return;
+    }
+    searchThreadActive = true;
 }
 
 void UCIEngine::handleStop() {
     isSearching = false;
     isPondering = false;
-    if (searchThread.joinable()) {
-        searchThread.join();
+    if (searchThreadActive) {
+        pthread_join(searchThread, nullptr);
+        searchThreadActive = false;
     }
 }
 
@@ -414,8 +441,9 @@ void UCIEngine::handlePonderHit() {
 void UCIEngine::handleQuit() {
     isSearching = false;
     isPondering = false;
-    if (searchThread.joinable()) {
-        searchThread.join();
+    if (searchThreadActive) {
+        pthread_join(searchThread, nullptr);
+        searchThreadActive = false;
     }
     std::exit(0);
 }
@@ -540,8 +568,9 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
 
     Board searchBoard = board;
 
-    result = iterativeDeepeningParallel(searchBoard, depth, timeLimit, kSearchThreads,
-                                        options.contempt, options.multiPV, optimalTime, maxTime);
+    result = iterativeDeepeningParallel(searchBoard, depth, timeLimit, options.threads,
+                                        options.contempt, options.multiPV, optimalTime, maxTime,
+                                        options.hashSize);
 
     return result;
 }
@@ -552,7 +581,7 @@ void UCIEngine::setHashSize(int size) {
 }
 
 void UCIEngine::setThreads(int num) {
-    options.threads = num;
+    options.threads = std::clamp(num, 1, 16);
 }
 
 void UCIEngine::setMultiPV(int num) {
@@ -577,6 +606,16 @@ void UCIEngine::setMinimumThinkingTime(int time) {
 
 void UCIEngine::setUseNeuralNetwork(bool enabled) {
     options.useNeuralNetwork = enabled;
+    if (enabled) {
+        if (NNUE::globalEvaluator) {
+            setNNUEEnabled(true);
+        } else {
+            setNNUEEnabled(false);
+            std::cout << "info string NNUE requested but no model loaded; using classical eval\n";
+        }
+    } else {
+        setNNUEEnabled(false);
+    }
 }
 
 void UCIEngine::setNNWeight(float weight) {
@@ -708,7 +747,9 @@ void UCIPosition::parseMoves(const std::string& moves, Board& board) {
     while (iss >> move) {
         std::pair<int, int> movePos = UCINotation::uciToMove(move);
         if (movePos.first != kInvalidSquare && movePos.second != kInvalidSquare) {
-            board.movePiece(movePos.first, movePos.second);
+            if (!applySearchMove(board, movePos.first, movePos.second)) {
+                continue;
+            }
             board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                 : ChessPieceColor::WHITE;
         }

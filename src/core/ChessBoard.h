@@ -53,6 +53,7 @@ struct Board {
     ChessPieceColor turn;
     bool whiteCanCastle;
     bool blackCanCastle;
+    int enPassantSquare;
     bool whiteChecked;
     bool blackChecked;
     int LastMove;
@@ -63,7 +64,8 @@ struct Board {
 
     Board()
         : turn(ChessPieceColor::WHITE), whiteCanCastle(true), blackCanCastle(true),
-          whiteChecked(false), blackChecked(false), LastMove(0), lastMoveTime(ChessClock::now()) {
+          enPassantSquare(-1), whiteChecked(false), blackChecked(false), LastMove(0),
+          lastMoveTime(ChessClock::now()) {
         for (int i = 0; i < 64; i++) {
             squares[i] = Square(i);
         }

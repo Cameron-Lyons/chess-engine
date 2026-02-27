@@ -293,7 +293,7 @@ bool AdvancedSearch::singularExtension(Board& board, int depth, const std::pair<
     }
 
     Board tempBoard = board;
-    if (!tempBoard.movePiece(move.first, move.second)) {
+    if (!applySearchMove(tempBoard, move.first, move.second)) {
         return false;
     }
     tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
@@ -315,7 +315,7 @@ bool AdvancedSearch::singularExtension(Board& board, int depth, const std::pair<
         }
 
         Board otherBoard = board;
-        if (!otherBoard.movePiece(otherMove.first, otherMove.second)) {
+        if (!applySearchMove(otherBoard, otherMove.first, otherMove.second)) {
             continue;
         }
         otherBoard.turn = (otherBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
@@ -389,7 +389,7 @@ bool AdvancedSearch::checkExtension(const Board& board, const std::pair<int, int
                                     int depth) {
     (void)depth;
     Board tempBoard = board;
-    if (!tempBoard.movePiece(move.first, move.second)) {
+    if (!applySearchMove(tempBoard, move.first, move.second)) {
         return false;
     }
     tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
@@ -506,7 +506,7 @@ int EnhancedMoveOrdering::getSEEScore(const Board& board, const std::pair<int, i
 int EnhancedMoveOrdering::getThreatScore(const Board& board, const std::pair<int, int>& move) {
     int score = kZero;
     Board tempBoard = board;
-    if (!tempBoard.movePiece(move.first, move.second)) {
+    if (!applySearchMove(tempBoard, move.first, move.second)) {
         return kZero;
     }
     tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
@@ -529,7 +529,7 @@ int EnhancedMoveOrdering::getThreatScore(const Board& board, const std::pair<int
 int EnhancedMoveOrdering::getMobilityScore(const Board& board, const std::pair<int, int>& move) {
 
     Board tempBoard = board;
-    if (!tempBoard.movePiece(move.first, move.second)) {
+    if (!applySearchMove(tempBoard, move.first, move.second)) {
         return kZero;
     }
     tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK

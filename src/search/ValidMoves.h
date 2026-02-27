@@ -29,4 +29,5 @@ std::vector<std::pair<int, int>> generateQueenMoves(Board& board, ChessPieceColo
 std::vector<std::pair<int, int>> generateKingMoves(Board& board, ChessPieceColor color);
 std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color);
 
-void addCastlingMovesBitboard(Board& board, ChessPieceColor color);
+void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
+                              std::vector<std::pair<int, int>>* generatedMoves = nullptr);
