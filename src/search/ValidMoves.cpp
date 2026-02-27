@@ -7,8 +7,17 @@ namespace {
 constexpr int kZero = 0;
 constexpr int kInvalidSquare = -1;
 constexpr int kBoardSquareCount = kValidMovesBoardSquareCount;
+constexpr int kBoardDimension = 8;
 constexpr int kSinglePawnPush = 8;
 constexpr int kDoublePawnPush = 16;
+constexpr int kWhitePawnStartRank = 1;
+constexpr int kBlackPawnStartRank = 6;
+constexpr int kMinFile = 0;
+constexpr int kMaxFile = kBoardDimension - 1;
+constexpr int kWhiteEnPassantCaptureLeftOffset = 7;
+constexpr int kWhiteEnPassantCaptureRightOffset = 9;
+constexpr int kBlackEnPassantCaptureLeftOffset = 9;
+constexpr int kBlackEnPassantCaptureRightOffset = 7;
 
 constexpr int kWhiteKingStartSquare = 4;
 constexpr int kBlackKingStartSquare = 60;
@@ -267,7 +276,7 @@ std::vector<std::pair<int, int>> generatePawnMoves(Board& board, ChessPieceColor
             int oneStep = src + kSinglePawnPush;
             if (oneStep < kBoardSquareCount && !(occupied & (1ULL << oneStep))) {
                 moves.emplace_back(src, oneStep);
-                if ((src / 8) == 1) {
+                if ((src / kBoardDimension) == kWhitePawnStartRank) {
                     int twoStep = src + kDoublePawnPush;
                     if (!(occupied & (1ULL << twoStep))) {
                         moves.emplace_back(src, twoStep);
@@ -278,7 +287,7 @@ std::vector<std::pair<int, int>> generatePawnMoves(Board& board, ChessPieceColor
             int oneStep = src - kSinglePawnPush;
             if (oneStep >= kZero && !(occupied & (1ULL << oneStep))) {
                 moves.emplace_back(src, oneStep);
-                if ((src / 8) == 6) {
+                if ((src / kBoardDimension) == kBlackPawnStartRank) {
                     int twoStep = src - kDoublePawnPush;
                     if (!(occupied & (1ULL << twoStep))) {
                         moves.emplace_back(src, twoStep);
@@ -296,9 +305,11 @@ std::vector<std::pair<int, int>> generatePawnMoves(Board& board, ChessPieceColor
 
         if (board.enPassantSquare >= kZero && board.enPassantSquare < kBoardSquareCount) {
             int epSquare = board.enPassantSquare;
-            int srcFile = src % 8;
+            int srcFile = src % kBoardDimension;
             if (color == ChessPieceColor::WHITE) {
-                if ((srcFile > 0 && epSquare == src + 7) || (srcFile < 7 && epSquare == src + 9)) {
+                if ((srcFile > kMinFile && epSquare == src + kWhiteEnPassantCaptureLeftOffset) ||
+                    (srcFile < kMaxFile &&
+                     epSquare == src + kWhiteEnPassantCaptureRightOffset)) {
                     int capturedPawnSquare = epSquare - kSinglePawnPush;
                     if (capturedPawnSquare >= kZero &&
                         board.squares[capturedPawnSquare].piece.PieceType == ChessPieceType::PAWN &&
@@ -308,7 +319,9 @@ std::vector<std::pair<int, int>> generatePawnMoves(Board& board, ChessPieceColor
                     }
                 }
             } else {
-                if ((srcFile > 0 && epSquare == src - 9) || (srcFile < 7 && epSquare == src - 7)) {
+                if ((srcFile > kMinFile && epSquare == src - kBlackEnPassantCaptureLeftOffset) ||
+                    (srcFile < kMaxFile &&
+                     epSquare == src - kBlackEnPassantCaptureRightOffset)) {
                     int capturedPawnSquare = epSquare + kSinglePawnPush;
                     if (capturedPawnSquare < kBoardSquareCount &&
                         board.squares[capturedPawnSquare].piece.PieceType == ChessPieceType::PAWN &&
@@ -416,7 +429,7 @@ std::vector<std::pair<int, int>> generateKingMoves(Board& board, ChessPieceColor
 
 std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color) {
     std::vector<std::pair<int, int>> moves;
-    moves.reserve(64);
+    moves.reserve(kBoardSquareCount);
     auto pawnMoves = generatePawnMoves(board, color);
     auto knightMoves = generateKnightMoves(board, color);
     auto bishopMoves = generateBishopMoves(board, color);

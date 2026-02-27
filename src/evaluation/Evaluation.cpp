@@ -22,12 +22,6 @@ namespace {
 constexpr int kBoardSquareCount = 64;
 constexpr int kPieceTypeCount = 6;
 constexpr int kMirrorSquareOffset = kBoardSquareCount - 1;
-constexpr int kGamePhaseScale = 256;
-constexpr int kMaxMinorMaterial = 3900;
-constexpr int kMaterialWeightQueen = 900;
-constexpr int kMaterialWeightRook = 500;
-constexpr int kMaterialWeightMinor = 300;
-
 constexpr int kCenterControlBonus = 30;
 constexpr int kDoublePawnPenalty = 20;
 constexpr int kIsolatedPawnPenalty = 30;
@@ -88,18 +82,7 @@ const int PAWN_MG[64] = {0,  0,  0,  0,   0,   0,  0,  0,  50, 50, 50,  50, 50, 
                          0,  0,  0,  20,  20,  0,  0,  0,  5,  -5, -10, 0,  0,  -10, -5, 5,
                          5,  10, 10, -20, -20, 10, 10, 5,  0,  0,  0,   0,  0,  0,   0,  0};
 
-const int PAWN_EG[64] = {0,  0,  0,  0,  0,  0,  0,  0,  80, 80, 80, 80, 80, 80, 80, 80,
-                         50, 50, 50, 50, 50, 50, 50, 50, 30, 30, 30, 30, 30, 30, 30, 30,
-                         20, 20, 20, 20, 20, 20, 20, 20, 10, 10, 10, 10, 10, 10, 10, 10,
-                         10, 10, 10, 10, 10, 10, 10, 10, 0,  0,  0,  0,  0,  0,  0,  0};
-
 const int KNIGHT_MG[64] = {-50, -40, -30, -30, -30, -30, -40, -50, -40, -20, 0,   0,   0,
-                           0,   -20, -40, -30, 0,   10,  15,  15,  10,  0,   -30, -30, 5,
-                           15,  20,  20,  15,  5,   -30, -30, 0,   15,  20,  20,  15,  0,
-                           -30, -30, 5,   10,  15,  15,  10,  5,   -30, -40, -20, 0,   5,
-                           5,   0,   -20, -40, -50, -40, -30, -30, -30, -30, -40, -50};
-
-const int KNIGHT_EG[64] = {-50, -40, -30, -30, -30, -30, -40, -50, -40, -20, 0,   0,   0,
                            0,   -20, -40, -30, 0,   10,  15,  15,  10,  0,   -30, -30, 5,
                            15,  20,  20,  15,  5,   -30, -30, 0,   15,  20,  20,  15,  0,
                            -30, -30, 5,   10,  15,  15,  10,  5,   -30, -40, -20, 0,   5,
@@ -111,29 +94,12 @@ const int BISHOP_MG[64] = {-20, -10, -10, -10, -10, -10, -10, -20, -10, 0,   0, 
                            -10, -10, 10,  10,  10,  10,  10,  10,  -10, -10, 5,   0,   0,
                            0,   0,   5,   -10, -20, -10, -10, -10, -10, -10, -10, -20};
 
-const int BISHOP_EG[64] = {-20, -10, -10, -10, -10, -10, -10, -20, -10, 0,   0,   0,   0,
-                           0,   0,   -10, -10, 0,   5,   10,  10,  5,   0,   -10, -10, 5,
-                           5,   10,  10,  5,   5,   -10, -10, 0,   10,  10,  10,  10,  0,
-                           -10, -10, 10,  10,  10,  10,  10,  10,  -10, -10, 5,   0,   0,
-                           0,   0,   5,   -10, -20, -10, -10, -10, -10, -10, -10, -20};
-
 const int ROOK_MG[64] = {0,  0, 0, 0, 0, 0, 0, 0,  5,  10, 10, 10, 10, 10, 10, 5,
                          -5, 0, 0, 0, 0, 0, 0, -5, -5, 0,  0,  0,  0,  0,  0,  -5,
                          -5, 0, 0, 0, 0, 0, 0, -5, -5, 0,  0,  0,  0,  0,  0,  -5,
                          -5, 0, 0, 0, 0, 0, 0, -5, 0,  0,  0,  5,  5,  0,  0,  0};
 
-const int ROOK_EG[64] = {0,  0, 0, 0, 0, 0, 0, 0,  5,  10, 10, 10, 10, 10, 10, 5,
-                         -5, 0, 0, 0, 0, 0, 0, -5, -5, 0,  0,  0,  0,  0,  0,  -5,
-                         -5, 0, 0, 0, 0, 0, 0, -5, -5, 0,  0,  0,  0,  0,  0,  -5,
-                         -5, 0, 0, 0, 0, 0, 0, -5, 0,  0,  0,  5,  5,  0,  0,  0};
-
 const int QUEEN_MG[64] = {-20, -10, -10, -5,  -5,  -10, -10, -20, -10, 0,   0,   0,  0,
-                          0,   0,   -10, -10, 0,   5,   5,   5,   5,   0,   -10, -5, 0,
-                          5,   5,   5,   5,   0,   -5,  0,   0,   5,   5,   5,   5,  0,
-                          -5,  -10, 5,   5,   5,   5,   5,   0,   -10, -10, 0,   5,  0,
-                          0,   0,   0,   -10, -20, -10, -10, -5,  -5,  -10, -10, -20};
-
-const int QUEEN_EG[64] = {-20, -10, -10, -5,  -5,  -10, -10, -20, -10, 0,   0,   0,  0,
                           0,   0,   -10, -10, 0,   5,   5,   5,   5,   0,   -10, -5, 0,
                           5,   5,   5,   5,   0,   -5,  0,   0,   5,   5,   5,   5,  0,
                           -5,  -10, 5,   5,   5,   5,   5,   0,   -10, -10, 0,   5,  0,
@@ -145,64 +111,6 @@ const int KING_MG[64] = {-30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, 
                          -20, -10, -20, -20, -20, -20, -20, -20, -10, 20,  20,  0,   0,
                          0,   0,   20,  20,  20,  30,  10,  0,   0,   10,  30,  20};
 
-const int KING_EG[64] = {-50, -40, -30, -20, -20, -30, -40, -50, -30, -20, -10, 0,   0,
-                         -10, -20, -30, -30, -10, 20,  30,  30,  20,  -10, -30, -30, -10,
-                         30,  40,  40,  30,  -10, -30, -30, -10, 30,  40,  40,  30,  -10,
-                         -30, -30, -10, 20,  30,  30,  20,  -10, -30, -30, -30, 0,   0,
-                         0,   0,   -30, -30, -50, -30, -30, -30, -30, -30, -30, -50};
-
-int getPieceSquareValue(ChessPieceType piece, int square, ChessPieceColor color, int gamePhase) {
-
-    if (square < 0 || square >= NUM_SQUARES) {
-        return 0;
-    }
-
-    int adjustedSquare =
-        (color == ChessPieceColor::WHITE) ? square : (kMirrorSquareOffset - square);
-
-    if (adjustedSquare < 0 || adjustedSquare >= NUM_SQUARES) {
-        return 0;
-    }
-
-    static const int* const mgTables[] = {PAWN_MG, KNIGHT_MG, BISHOP_MG,
-                                          ROOK_MG, QUEEN_MG,  KING_MG};
-    static const int* const egTables[] = {PAWN_EG, KNIGHT_EG, BISHOP_EG,
-                                          ROOK_EG, QUEEN_EG,  KING_EG};
-    int idx = static_cast<int>(piece);
-    if (idx < 0 || idx >= kPieceTypeCount) {
-        return 0;
-    }
-    int mgValue = mgTables[idx][adjustedSquare];
-    int egValue = egTables[idx][adjustedSquare];
-    return ((mgValue * (kGamePhaseScale - gamePhase)) + (egValue * gamePhase)) / kGamePhaseScale;
-}
-
-int calculateGamePhase(const Board& board) {
-    int totalMaterial = 0;
-    for (int i = 0; i < NUM_SQUARES; i++) {
-        ChessPieceType piece = board.squares[i].piece.PieceType;
-        if (piece != ChessPieceType::NONE && piece != ChessPieceType::KING &&
-            piece != ChessPieceType::PAWN) {
-            switch (piece) {
-                case ChessPieceType::QUEEN:
-                    totalMaterial += kMaterialWeightQueen;
-                    break;
-                case ChessPieceType::ROOK:
-                    totalMaterial += kMaterialWeightRook;
-                    break;
-                case ChessPieceType::BISHOP:
-                case ChessPieceType::KNIGHT:
-                    totalMaterial += kMaterialWeightMinor;
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
-    int phase = kGamePhaseScale - ((totalMaterial * kGamePhaseScale) / kMaxMinorMaterial);
-    return std::max(0, std::min(kGamePhaseScale, phase));
-}
 } // namespace PieceSquareTables
 
 int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor color) {

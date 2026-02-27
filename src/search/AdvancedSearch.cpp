@@ -1,4 +1,5 @@
 #include "AdvancedSearch.h"
+#include "BookUtils.h"
 #include "../core/BitboardMoves.h"
 #include "../evaluation/Evaluation.h"
 #include "../utils/engine_globals.h"
@@ -125,36 +126,6 @@ constexpr int kNormalizedWeightTotal = 1000;
 constexpr int kFallbackWeight = 1;
 constexpr double kDefaultTimeFactor = 1.0;
 constexpr float kZeroFloat = 0.0F;
-
-std::string normalizeBookFen(const std::string& fen, bool clearEnPassant) {
-    std::istringstream iss(fen);
-    std::string piecePlacement;
-    std::string sideToMove;
-    std::string castling;
-    std::string enPassant;
-    std::string halfmoveClock;
-    std::string fullmoveNumber;
-
-    if (!(iss >> piecePlacement >> sideToMove >> castling >> enPassant)) {
-        return fen;
-    }
-
-    if (!(iss >> halfmoveClock)) {
-        halfmoveClock = "0";
-    }
-    if (!(iss >> fullmoveNumber)) {
-        fullmoveNumber = "1";
-    }
-
-    if (clearEnPassant) {
-        enPassant = "-";
-    }
-
-    std::ostringstream normalized;
-    normalized << piecePlacement << ' ' << sideToMove << ' ' << castling << ' ' << enPassant
-               << ' ' << halfmoveClock << ' ' << fullmoveNumber;
-    return normalized.str();
-}
 } // namespace
 
 bool AdvancedSearch::futilityPruning(const Board& board, int depth, int alpha, int beta,
@@ -831,42 +802,11 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
         return parseMove(moveStr);
     };
 
-    auto lookupFallbackBook = [&](const std::string& key) -> std::pair<int, int> {
-        auto optionsIt = OpeningBookOptions.find(key);
-        if (optionsIt != OpeningBookOptions.end()) {
-            const auto& options = optionsIt->second;
-            if (!options.empty()) {
-                if (randomize) {
-                    static std::random_device rd;
-                    static std::mt19937 gen(static_cast<std::mt19937::result_type>(rd()));
-                    std::uniform_int_distribution<int> dis(
-                        kZero, static_cast<int>(options.size() - kOne));
-                    return parseBookMoveString(options[dis(gen)]);
-                }
-                return parseBookMoveString(options[kFirstMoveIndex]);
-            }
-        }
-
-        auto legacyIt = OpeningBook.find(key);
-        if (legacyIt != OpeningBook.end()) {
-            return parseBookMoveString(legacyIt->second);
-        }
-
-        return {kInvalidSquare, kInvalidSquare};
-    };
-
     std::string fen = getFEN(board);
-    std::pair<int, int> fallbackMove = lookupFallbackBook(fen);
-    if (fallbackMove.first != kInvalidSquare && fallbackMove.second != kInvalidSquare) {
-        return fallbackMove;
-    }
-
-    std::string normalizedFen = normalizeBookFen(fen, true);
-    if (normalizedFen != fen) {
-        fallbackMove = lookupFallbackBook(normalizedFen);
-        if (fallbackMove.first != kInvalidSquare && fallbackMove.second != kInvalidSquare) {
-            return fallbackMove;
-        }
+    std::string fallbackMove =
+        lookupBookMoveString(fen, OpeningBookOptions, OpeningBook, randomize);
+    if (!fallbackMove.empty()) {
+        return parseBookMoveString(fallbackMove);
     }
 
     return {kInvalidSquare, kInvalidSquare};

@@ -2,6 +2,7 @@
 #include "../ai/SyzygyTablebase.h"
 #include "../utils/engine_globals.h"
 #include "AdvancedSearch.h"
+#include "BookUtils.h"
 #include "LazySMP.h"
 #include "LMR.h"
 
@@ -128,6 +129,10 @@ constexpr int kKingsideRookOffset = 3;
 constexpr int kKingsideRookTargetOffset = 1;
 constexpr int kQueensideRookOffset = 4;
 constexpr int kQueensideRookTargetOffset = 1;
+constexpr int kWhiteQueensideRookSquare = 0;
+constexpr int kWhiteKingsideRookSquare = 7;
+constexpr int kBlackQueensideRookSquare = 56;
+constexpr int kBlackKingsideRookSquare = 63;
 constexpr int kPromotionWhiteRank = 7;
 constexpr int kPromotionBlackRank = 0;
 constexpr int kPositionalScoreDivisor = 10;
@@ -165,36 +170,6 @@ private:
 
 uint64_t resolveZobristKey(const Board& board, uint64_t key) {
     return (key == kUnsetZobristKey) ? ComputeZobrist(board) : key;
-}
-
-std::string normalizeBookFen(const std::string& fen, bool clearEnPassant) {
-    std::istringstream iss(fen);
-    std::string piecePlacement;
-    std::string sideToMove;
-    std::string castling;
-    std::string enPassant;
-    std::string halfmoveClock;
-    std::string fullmoveNumber;
-
-    if (!(iss >> piecePlacement >> sideToMove >> castling >> enPassant)) {
-        return fen;
-    }
-
-    if (!(iss >> halfmoveClock)) {
-        halfmoveClock = "0";
-    }
-    if (!(iss >> fullmoveNumber)) {
-        fullmoveNumber = "1";
-    }
-
-    if (clearEnPassant) {
-        enPassant = "-";
-    }
-
-    std::ostringstream normalized;
-    normalized << piecePlacement << ' ' << sideToMove << ' ' << castling << ' ' << enPassant
-               << ' ' << halfmoveClock << ' ' << fullmoveNumber;
-    return normalized.str();
 }
 
 int encodeCastlingState(const Board& board) {
@@ -345,17 +320,20 @@ bool applySearchMoveWithData(Board& board, int fromSquare, int toSquare, bool au
     }
 
     if (movingPiece.PieceType == ChessPieceType::ROOK) {
-        if (fromSquare == 0 || fromSquare == 7) {
+        if (fromSquare == kWhiteQueensideRookSquare || fromSquare == kWhiteKingsideRookSquare) {
             board.whiteCanCastle = false;
-        } else if (fromSquare == 56 || fromSquare == 63) {
+        } else if (fromSquare == kBlackQueensideRookSquare ||
+                   fromSquare == kBlackKingsideRookSquare) {
             board.blackCanCastle = false;
         }
     }
 
     if (moveData.capturedPiece.PieceType == ChessPieceType::ROOK) {
-        if (moveData.captureSquare == 0 || moveData.captureSquare == 7) {
+        if (moveData.captureSquare == kWhiteQueensideRookSquare ||
+            moveData.captureSquare == kWhiteKingsideRookSquare) {
             board.whiteCanCastle = false;
-        } else if (moveData.captureSquare == 56 || moveData.captureSquare == 63) {
+        } else if (moveData.captureSquare == kBlackQueensideRookSquare ||
+                   moveData.captureSquare == kBlackKingsideRookSquare) {
             board.blackCanCastle = false;
         }
     }
@@ -363,7 +341,7 @@ bool applySearchMoveWithData(Board& board, int fromSquare, int toSquare, bool au
     board.enPassantSquare = kNoEpSquare;
     if (movingPiece.PieceType == ChessPieceType::PAWN &&
         std::abs(toSquare - fromSquare) == (2 * kBoardDimension)) {
-        board.enPassantSquare = (fromSquare + toSquare) / 2;
+        board.enPassantSquare = (fromSquare + toSquare) / kTwo;
     }
 
     if (moveDataOut != nullptr) {
@@ -852,40 +830,7 @@ bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLi
 }
 
 std::string getBookMove(const std::string& fen) {
-    auto lookup = [](const std::string& key) -> std::string {
-        auto optionsIt = OpeningBookOptions.find(key);
-        if (optionsIt != OpeningBookOptions.end()) {
-            const auto& options = optionsIt->second;
-            if (!options.empty()) {
-                static std::random_device rd;
-                static std::mt19937 gen(static_cast<std::mt19937::result_type>(rd()));
-                std::uniform_int_distribution<std::size_t> dis(kZero, options.size() - kOne);
-                return options[dis(gen)];
-            }
-        }
-
-        auto it = OpeningBook.find(key);
-        if (it != OpeningBook.end()) {
-            return it->second;
-        }
-
-        return "";
-    };
-
-    std::string move = lookup(fen);
-    if (!move.empty()) {
-        return move;
-    }
-
-    std::string normalizedFen = normalizeBookFen(fen, true);
-    if (normalizedFen != fen) {
-        move = lookup(normalizedFen);
-        if (!move.empty()) {
-            return move;
-        }
-    }
-
-    return "";
+    return lookupBookMoveString(fen, OpeningBookOptions, OpeningBook, true);
 }
 
 int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,

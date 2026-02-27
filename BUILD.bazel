@@ -31,6 +31,7 @@ cc_library(
         "src/evaluation/PositionAnalysis.cpp",
         "src/protocol/uci.cpp",
         "src/search/AdvancedSearch.cpp",
+        "src/search/BookUtils.cpp",
         "src/search/LMR.cpp",
         "src/search/LazySMP.cpp",
         "src/search/TranspositionTableV2.cpp",

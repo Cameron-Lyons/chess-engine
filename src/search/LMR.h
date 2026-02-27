@@ -189,14 +189,6 @@ inline int calculateReduction(int depth, const MoveClassification& move,
     return reduction;
 }
 
-MoveClassification classifyMove(const Board& board, const std::pair<int, int>& move,
-                                const KillerMoves& killers, int ply,
-                                const ThreadSafeHistory& history,
-                                const std::pair<int, int>& hashMove, int moveNumber);
-
-PositionContext evaluatePosition(const Board& board, int staticEval, int previousEval,
-                                 bool isPVNode);
-
 inline bool shouldVerifyReduction(int reduction, int score, int alpha, int beta) {
 
     return reduction >= LMRParams::VERIFY_REDUCTION_THRESHOLD &&
