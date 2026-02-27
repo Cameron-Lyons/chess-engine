@@ -4,17 +4,38 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <numeric>
 #include <random>
 #include <ranges>
 #include <sstream>
+#include <thread>
+
+namespace {
+constexpr int kThreadFallback = 4;
+constexpr std::uint32_t kSelfPlaySeed = 42U;
+
+int getWorkerCount(std::size_t taskCount, int perTaskThreads = 1) {
+    if (taskCount == 0U) {
+        return 1;
+    }
+    const unsigned int hardware = std::thread::hardware_concurrency();
+    const int available = (hardware == 0U) ? kThreadFallback : static_cast<int>(hardware);
+    const int taskThreads = std::max(1, perTaskThreads);
+    const int boundedByCpu = std::max(1, available / taskThreads);
+    return std::max(1, std::min(static_cast<int>(taskCount), boundedByCpu));
+}
+} // namespace
 
 class NeuralNetworkEvaluator::Impl {
 public:
@@ -90,6 +111,27 @@ public:
         }
 
         return layers.back().activations[0];
+    }
+
+    auto infer(const std::vector<float>& input) const -> float {
+        std::vector<float> currentInput = input;
+        for (size_t i = 0; i < layers.size(); ++i) {
+            const Layer& layer = layers[i];
+            std::vector<float> nextInput(layer.weights.size(), 0.0F);
+            for (size_t j = 0; j < layer.weights.size(); ++j) {
+                float sum = layer.biases[j];
+                for (size_t k = 0; k < layer.weights[j].size(); ++k) {
+                    sum += layer.weights[j][k] * currentInput[k];
+                }
+                if (i == layers.size() - 1U) {
+                    nextInput[j] = std::tanh(sum);
+                } else {
+                    nextInput[j] = std::max(0.0F, sum);
+                }
+            }
+            currentInput = std::move(nextInput);
+        }
+        return currentInput.empty() ? 0.0F : currentInput[0];
     }
 
     void backwardPass(const std::vector<float>& input, float target, float predicted) {
@@ -255,7 +297,7 @@ NeuralNetworkEvaluator::~NeuralNetworkEvaluator() = default;
 
 auto NeuralNetworkEvaluator::evaluatePosition(const Board& board) -> float {
     std::vector<float> input = encodePosition(board);
-    float evaluation = m_pImpl->forwardPass(input);
+    float evaluation = m_pImpl->infer(input);
     return evaluation * 1000.0F;
 }
 
@@ -512,27 +554,65 @@ auto FeatureExtractor::calculateGamePhase(const Board& board) -> float {
     return phase;
 }
 
-TrainingDataGenerator::TrainingDataGenerator() : m_rng(42) {}
+TrainingDataGenerator::TrainingDataGenerator() = default;
 
 auto TrainingDataGenerator::generateSelfPlayData(int numGames, int maxMoves)
     -> std::vector<TrainingDataGenerator::TrainingExample> {
     std::vector<TrainingExample> allExamples;
-    std::cout << "Generating " << numGames << " self-play games..." << '\n';
+    if (numGames <= 0) {
+        return allExamples;
+    }
 
-    for (int game = 0; game < numGames; ++game) {
-        if (game % 10 == 0) {
-            std::cout << "Playing game " << game + 1 << "/" << numGames << '\n';
+    std::cout << "Generating " << numGames << " self-play games..." << '\n';
+    const int workerCount = getWorkerCount(static_cast<std::size_t>(numGames));
+    std::cout << "Self-play workers: " << workerCount << '\n';
+
+    if (workerCount == 1) {
+        for (int game = 0; game < numGames; ++game) {
+            if (game % 10 == 0) {
+                std::cout << "Playing game " << game + 1 << "/" << numGames << '\n';
+            }
+            std::mt19937 rng(kSelfPlaySeed + static_cast<std::uint32_t>(game));
+            auto gameExamples = playGame(maxMoves, rng);
+            allExamples.insert(allExamples.end(),
+                               std::make_move_iterator(gameExamples.begin()),
+                               std::make_move_iterator(gameExamples.end()));
+        }
+    } else {
+        std::atomic<int> nextGame{0};
+        std::vector<std::future<std::vector<TrainingExample>>> futures;
+        futures.reserve(static_cast<std::size_t>(workerCount));
+        for (int worker = 0; worker < workerCount; ++worker) {
+            futures.emplace_back(std::async(std::launch::async, [this, &nextGame, numGames, maxMoves] {
+                std::vector<TrainingExample> workerExamples;
+                while (true) {
+                    const int game = nextGame.fetch_add(1, std::memory_order_relaxed);
+                    if (game >= numGames) {
+                        break;
+                    }
+                    std::mt19937 rng(kSelfPlaySeed + static_cast<std::uint32_t>(game));
+                    auto gameExamples = playGame(maxMoves, rng);
+                    workerExamples.insert(workerExamples.end(),
+                                          std::make_move_iterator(gameExamples.begin()),
+                                          std::make_move_iterator(gameExamples.end()));
+                }
+                return workerExamples;
+            }));
         }
 
-        auto gameExamples = playGame(maxMoves);
-        allExamples.insert(allExamples.end(), gameExamples.begin(), gameExamples.end());
+        for (auto& future : futures) {
+            auto workerExamples = future.get();
+            allExamples.insert(allExamples.end(),
+                               std::make_move_iterator(workerExamples.begin()),
+                               std::make_move_iterator(workerExamples.end()));
+        }
     }
 
     std::cout << "Generated " << allExamples.size() << " training examples" << '\n';
     return allExamples;
 }
 
-auto TrainingDataGenerator::playGame(int maxMoves)
+auto TrainingDataGenerator::playGame(int maxMoves, std::mt19937& rng)
     -> std::vector<TrainingDataGenerator::TrainingExample> {
     std::vector<TrainingExample> examples;
     Board board;
@@ -579,7 +659,7 @@ auto TrainingDataGenerator::playGame(int maxMoves)
             }
 
             std::uniform_real_distribution<float> noise(-100.0F, 100.0F);
-            score += noise(m_rng);
+            score += noise(rng);
 
             if (score > bestScore) {
                 bestScore = score;
@@ -805,16 +885,62 @@ void NNTrainer::validateModel(const std::vector<std::pair<Board, float>>& valida
 }
 
 auto NNTrainer::evaluateModel(const std::vector<std::pair<Board, float>>& testData) -> float {
+    if (testData.empty()) {
+        std::cout << "Test loss: 0\n";
+        std::cout << "Prediction accuracy: 0%\n";
+        return 0.0F;
+    }
+
     float totalLoss = 0.0F;
     int correctPredictions = 0;
+    const int workerCount = getWorkerCount(testData.size());
 
-    for (const auto& [board, target] : testData) {
-        float predicted = m_neuralNetwork.evaluatePosition(board);
-        float error = predicted - target;
-        totalLoss += error * error;
+    if (workerCount == 1) {
+        for (const auto& [board, target] : testData) {
+            float predicted = m_neuralNetwork.evaluatePosition(board);
+            float error = predicted - target;
+            totalLoss += error * error;
 
-        if ((predicted > 0 && target > 0) || (predicted < 0 && target < 0)) {
-            correctPredictions++;
+            if ((predicted > 0 && target > 0) || (predicted < 0 && target < 0)) {
+                correctPredictions++;
+            }
+        }
+    } else {
+        struct EvalChunk {
+            float loss = 0.0F;
+            int correct = 0;
+        };
+
+        std::vector<std::future<EvalChunk>> futures;
+        futures.reserve(static_cast<std::size_t>(workerCount));
+        const std::size_t chunkSize =
+            (testData.size() + static_cast<std::size_t>(workerCount) - 1U) /
+            static_cast<std::size_t>(workerCount);
+        for (int worker = 0; worker < workerCount; ++worker) {
+            const std::size_t begin = static_cast<std::size_t>(worker) * chunkSize;
+            if (begin >= testData.size()) {
+                break;
+            }
+            const std::size_t end = std::min(begin + chunkSize, testData.size());
+            futures.emplace_back(std::async(std::launch::async, [this, &testData, begin, end]() {
+                EvalChunk chunk;
+                for (std::size_t idx = begin; idx < end; ++idx) {
+                    const auto& [board, target] = testData[idx];
+                    float predicted = m_neuralNetwork.evaluatePosition(board);
+                    float error = predicted - target;
+                    chunk.loss += error * error;
+                    if ((predicted > 0 && target > 0) || (predicted < 0 && target < 0)) {
+                        chunk.correct++;
+                    }
+                }
+                return chunk;
+            }));
+        }
+
+        for (auto& future : futures) {
+            EvalChunk chunk = future.get();
+            totalLoss += chunk.loss;
+            correctPredictions += chunk.correct;
         }
     }
 
@@ -869,12 +995,45 @@ auto NNTrainer::splitData(const std::vector<std::pair<Board, float>>& data, floa
 }
 
 auto NNTrainer::calculateLoss(const std::vector<std::pair<Board, float>>& data) -> float {
-    float totalLoss = 0.0F;
+    if (data.empty()) {
+        return 0.0F;
+    }
 
-    for (const auto& [board, target] : data) {
-        float predicted = m_neuralNetwork.evaluatePosition(board);
-        float error = predicted - target;
-        totalLoss += error * error;
+    float totalLoss = 0.0F;
+    const int workerCount = getWorkerCount(data.size());
+
+    if (workerCount == 1) {
+        for (const auto& [board, target] : data) {
+            float predicted = m_neuralNetwork.evaluatePosition(board);
+            float error = predicted - target;
+            totalLoss += error * error;
+        }
+    } else {
+        std::vector<std::future<float>> futures;
+        futures.reserve(static_cast<std::size_t>(workerCount));
+        const std::size_t chunkSize =
+            (data.size() + static_cast<std::size_t>(workerCount) - 1U) /
+            static_cast<std::size_t>(workerCount);
+        for (int worker = 0; worker < workerCount; ++worker) {
+            const std::size_t begin = static_cast<std::size_t>(worker) * chunkSize;
+            if (begin >= data.size()) {
+                break;
+            }
+            const std::size_t end = std::min(begin + chunkSize, data.size());
+            futures.emplace_back(std::async(std::launch::async, [this, &data, begin, end]() {
+                float partialLoss = 0.0F;
+                for (std::size_t idx = begin; idx < end; ++idx) {
+                    const auto& [board, target] = data[idx];
+                    float predicted = m_neuralNetwork.evaluatePosition(board);
+                    float error = predicted - target;
+                    partialLoss += error * error;
+                }
+                return partialLoss;
+            }));
+        }
+        for (auto& future : futures) {
+            totalLoss += future.get();
+        }
     }
 
     return totalLoss / static_cast<float>(data.size());

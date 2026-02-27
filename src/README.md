@@ -31,7 +31,6 @@ Contains position evaluation functions:
 - `HybridEvaluator.h/cpp` - Hybrid evaluation with advanced features
 - `EvaluationTuning.h/cpp` - Tunable evaluation parameters
 - `NNUE.h` - NNUE (Efficiently Updatable Neural Network) evaluation
-- `NNUEEvaluation.h` - NNUE evaluation interface
 - `NNUEBitboard.h/cpp` - Bitboard NNUE implementation
 - `PositionAnalysis.h/cpp` - Position analysis utilities
 
@@ -48,10 +47,6 @@ Contains advanced AI and machine learning components:
 ### `utils/` - Utilities and Optimizations
 Contains utility functions and performance optimizations:
 - `engine_globals.h/cpp` - Global engine state and configuration
-- `PerformanceOptimizations.h` - Performance optimization techniques
-- `PieceMoves.h` - Piece-specific move utilities
-- `PieceTables.h` - Piece-square tables
-- `ModernChess.h` - Modern chess concepts and utilities
 - `PerftTest.h` - Perft testing utilities
 - `Profiler.h` - Performance profiling tools
 

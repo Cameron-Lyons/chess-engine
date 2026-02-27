@@ -17,8 +17,8 @@ jobs:
           pip install clang-format
       - name: Check formatting
         run: |
-          find src/ tests/ -name '*.cpp' -o -name '*.h' | \
-            xargs clang-format --dry-run --Werror
+          find src tests -type f \( -name '*.cpp' -o -name '*.h' \) -print0 | \
+            xargs -0 -P "$(nproc)" -n 20 clang-format --dry-run --Werror
 
   build-and-test:
     name: Build & Test (${{ matrix.compiler }})
@@ -60,6 +60,7 @@ jobs:
           CXX: ${{ matrix.cxx }}
         run: >
           bazel build //:chess_engine
+          --jobs=$(nproc)
           --copt=-march=x86-64-v3
           --copt=-mavx2
 
@@ -69,6 +70,7 @@ jobs:
           CXX: ${{ matrix.cxx }}
         run: >
           bazel test //tests/...
+          --jobs=$(nproc)
           --config=release
           --copt=-march=x86-64-v3
           --copt=-mavx2
@@ -89,5 +91,6 @@ jobs:
 
       - name: Run clang-tidy
         run: |
-          clang-tidy-20 src/**/*.cpp -- \
-            -std=c++23 -Isrc -Isrc/core -mavx2 -march=x86-64-v3 || true
+          find src -type f -name '*.cpp' -print0 | \
+            xargs -0 -P "$(nproc)" -I{} sh -c \
+              'clang-tidy-20 "$1" -- -std=c++23 -Isrc -Isrc/core -mavx2 -march=x86-64-v3' _ {} || true

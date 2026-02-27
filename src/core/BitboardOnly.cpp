@@ -1,5 +1,8 @@
 #include "BitboardOnly.h"
 
+#include <cctype>
+#include <sstream>
+
 static uint64_t zobristPieces[2][6][64];
 static uint64_t zobristSideToMove;
 static uint64_t zobristCastling[16];
@@ -207,34 +210,16 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
         if (c == '/') {
             rank--;
             file = 0;
-        } else if (isdigit(c)) {
+        } else if (std::isdigit(static_cast<unsigned char>(c))) {
             file += c - '0';
         } else {
             int square = (rank * 8) + file;
-            ChessPieceColor color = isupper(c) ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
-            ChessPieceType type = ChessPieceType::NONE;
-
-            switch (tolower(c)) {
-                case 'p':
-                    type = ChessPieceType::PAWN;
-                    break;
-                case 'n':
-                    type = ChessPieceType::KNIGHT;
-                    break;
-                case 'b':
-                    type = ChessPieceType::BISHOP;
-                    break;
-                case 'r':
-                    type = ChessPieceType::ROOK;
-                    break;
-                case 'q':
-                    type = ChessPieceType::QUEEN;
-                    break;
-                case 'k':
-                    type = ChessPieceType::KING;
-                    break;
-                default:
-                    continue;
+            ChessPieceColor color = std::isupper(static_cast<unsigned char>(c))
+                                        ? ChessPieceColor::WHITE
+                                        : ChessPieceColor::BLACK;
+            ChessPieceType type = Piece::fromFenChar(c);
+            if (type == ChessPieceType::NONE) {
+                continue;
             }
 
             placePiece(square, color, type);

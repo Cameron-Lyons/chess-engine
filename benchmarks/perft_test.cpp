@@ -1,10 +1,14 @@
-#include "../src/ChessBoard.h"
-#include "../src/search.h"
-#include "../src/search/ValidMoves.h"
+#include "src/core/ChessBoard.h"
+#include "src/search/ValidMoves.h"
+#include "src/search/search.h"
+#include <algorithm>
 #include <chrono>
+#include <future>
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <thread>
+#include <tuple>
 #include <vector>
 
 using namespace std::chrono;
@@ -44,22 +48,6 @@ public:
 
         return nodes;
     }
-
-private:
-    static bool isValidMove(const Board& board, int from, int to) {
-        if (from == to)
-            return false;
-        if (board.squares[from].piece.PieceType == ChessPieceType::NONE)
-            return false;
-        return true;
-    }
-
-    static void makeMove(Board& board, int from, int to) {
-        board.squares[to] = board.squares[from];
-        board.squares[from].piece = {ChessPieceType::NONE, ChessPieceColor::WHITE};
-        board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                            : ChessPieceColor::WHITE;
-    }
 };
 
 class SearchBenchmark {
@@ -77,7 +65,8 @@ public:
         auto end = high_resolution_clock::now();
         duration<double> time = end - start;
 
-        return {result.bestMove.first * 8 + result.bestMove.second, result.score, result.nodes,
+        return {result.bestMove.first * 8 + result.bestMove.second, result.score,
+                static_cast<uint64_t>(result.nodes),
                 time};
     }
 };
@@ -86,45 +75,94 @@ void runBenchmarkSuite() {
     std::cout << "🚀 Chess Engine Performance Benchmark Suite\n";
     std::cout << "=============================================\n\n";
 
+    initKnightAttacks();
+    initKingAttacks();
+    InitZobrist();
+
     std::vector<std::pair<std::string, std::string>> testPositions = {
         {"Starting Position", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"},
         {"Kiwipete", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"},
         {"Position 3", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"},
         {"Position 4", "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"}};
 
-    Board testBoard;
-    InitializeBoard(testBoard);
+    struct PerftTaskResult {
+        std::size_t positionIndex;
+        int depth;
+        PerftResult result;
+    };
+    struct SearchTaskResult {
+        std::size_t positionIndex;
+        SearchBenchmark::SearchResult result;
+    };
+
     std::cout << "📊 PERFT (Move Generation) Tests:\n";
     std::cout << "Position                 | Depth | Nodes      | Time(s) | NPS        \n";
     std::cout << "-------------------------|-------|------------|---------|------------\n";
 
-    for (const auto& [name, fen] : testPositions) {
-        InitializeBoard(testBoard);
-
+    std::vector<std::future<PerftTaskResult>> perftFutures;
+    perftFutures.reserve(testPositions.size() * 4U);
+    for (std::size_t i = 0; i < testPositions.size(); ++i) {
         for (int depth = 1; depth <= 4; depth++) {
-            auto result = PerftBenchmark::runPerft(testBoard, depth);
-
-            std::cout << std::left << std::setw(24) << name.substr(0, 23) << "| " << std::setw(5)
-                      << depth << "| " << std::setw(10) << result.nodes << "| " << std::setw(7)
-                      << std::fixed << std::setprecision(3) << result.time.count() << "| "
-                      << std::setw(10) << std::scientific << std::setprecision(2) << result.nps
-                      << "\n";
+            perftFutures.emplace_back(std::async(std::launch::async, [i, depth, &testPositions]() {
+                Board board;
+                board.InitializeFromFEN(testPositions[i].second);
+                return PerftTaskResult{i, depth, PerftBenchmark::runPerft(board, depth)};
+            }));
         }
-        std::cout << "-------------------------|-------|------------|---------|------------\n";
+    }
+
+    std::vector<PerftTaskResult> perftResults;
+    perftResults.reserve(perftFutures.size());
+    for (auto& future : perftFutures) {
+        perftResults.push_back(future.get());
+    }
+    std::sort(perftResults.begin(), perftResults.end(), [](const PerftTaskResult& lhs,
+                                                           const PerftTaskResult& rhs) {
+        return std::tie(lhs.positionIndex, lhs.depth) < std::tie(rhs.positionIndex, rhs.depth);
+    });
+
+    for (const auto& row : perftResults) {
+        const auto& name = testPositions[row.positionIndex].first;
+        std::cout << std::left << std::setw(24) << name.substr(0, 23) << "| " << std::setw(5)
+                  << row.depth << "| " << std::setw(10) << row.result.nodes << "| " << std::setw(7)
+                  << std::fixed << std::setprecision(3) << row.result.time.count() << "| "
+                  << std::setw(10) << std::scientific << std::setprecision(2) << row.result.nps
+                  << "\n";
+        if (row.depth == 4) {
+            std::cout << "-------------------------|-------|------------|---------|------------\n";
+        }
     }
 
     std::cout << "\n🧠 Search Performance Tests:\n";
     std::cout << "Position           | Depth | Score | Nodes    | Time(s) | Best Move\n";
     std::cout << "-------------------|-------|-------|----------|---------|----------\n";
 
-    for (const auto& [name, fen] : testPositions) {
-        InitializeBoard(testBoard);
-        auto result = SearchBenchmark::runSearchBenchmark(testBoard, 6, 5000);
+    std::vector<std::future<SearchTaskResult>> searchFutures;
+    searchFutures.reserve(testPositions.size());
+    for (std::size_t i = 0; i < testPositions.size(); ++i) {
+        searchFutures.emplace_back(std::async(std::launch::async, [i, &testPositions]() {
+            Board board;
+            board.InitializeFromFEN(testPositions[i].second);
+            return SearchTaskResult{i, SearchBenchmark::runSearchBenchmark(board, 6, 5000)};
+        }));
+    }
 
+    std::vector<SearchTaskResult> searchResults;
+    searchResults.reserve(searchFutures.size());
+    for (auto& future : searchFutures) {
+        searchResults.push_back(future.get());
+    }
+    std::sort(searchResults.begin(), searchResults.end(), [](const SearchTaskResult& lhs,
+                                                             const SearchTaskResult& rhs) {
+        return lhs.positionIndex < rhs.positionIndex;
+    });
+
+    for (const auto& row : searchResults) {
+        const auto& name = testPositions[row.positionIndex].first;
         std::cout << std::left << std::setw(18) << name.substr(0, 17) << "| " << std::setw(5) << 6
-                  << "| " << std::setw(5) << result.score << "| " << std::setw(8) << result.nodes
-                  << "| " << std::setw(7) << std::fixed << std::setprecision(3)
-                  << result.time.count() << "| " << std::setw(8) << result.bestMove << "\n";
+                  << "| " << std::setw(5) << row.result.score << "| " << std::setw(8)
+                  << row.result.nodes << "| " << std::setw(7) << std::fixed << std::setprecision(3)
+                  << row.result.time.count() << "| " << std::setw(8) << row.result.bestMove << "\n";
     }
 
     std::cout << "\n✅ Benchmark suite completed!\n";

@@ -1,9 +1,27 @@
 #include "src/core/ChessBoard.h"
 #include "src/search/search.h"
+#include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <future>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
+
+namespace {
+constexpr int kThreadFallback = 4;
+
+int getWorkerCount(std::size_t taskCount, int perTaskThreads = 1) {
+    if (taskCount == 0U) {
+        return 1;
+    }
+    const unsigned int hardware = std::thread::hardware_concurrency();
+    const int available = (hardware == 0U) ? kThreadFallback : static_cast<int>(hardware);
+    const int boundedByCpu = std::max(1, available / std::max(1, perTaskThreads));
+    return std::max(1, std::min(static_cast<int>(taskCount), boundedByCpu));
+}
+} // namespace
 
 void testPosition(const std::string& fen, const std::string& description, int depth = 8) {
     std::cout << "\n=== Testing: " << description << " ===" << '\n';
@@ -59,16 +77,42 @@ int main() {
 
     long long totalNodes = 0;
     long long totalTime = 0;
+    constexpr int benchmarkSearchThreads = 4;
+    struct BenchmarkResult {
+        long long nodes = 0;
+        long long timeMs = 0;
+    };
+    std::vector<BenchmarkResult> benchmarkResults(benchmarkFens.size());
 
-    for (const auto& fen : benchmarkFens) {
-        Board board;
-        board.InitializeFromFEN(fen);
-        auto start = std::chrono::high_resolution_clock::now();
-        SearchResult result = iterativeDeepeningParallel(board, 8, 2000, 4);
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    const int workerCount = getWorkerCount(benchmarkFens.size(), benchmarkSearchThreads);
+    std::atomic<std::size_t> nextIndex{0};
+    std::vector<std::future<void>> workers;
+    workers.reserve(static_cast<std::size_t>(workerCount));
+    for (int worker = 0; worker < workerCount; ++worker) {
+        workers.emplace_back(std::async(std::launch::async, [&benchmarkFens, &benchmarkResults, &nextIndex] {
+            while (true) {
+                const std::size_t index = nextIndex.fetch_add(1, std::memory_order_relaxed);
+                if (index >= benchmarkFens.size()) {
+                    break;
+                }
+                Board board;
+                board.InitializeFromFEN(benchmarkFens[index]);
+                auto start = std::chrono::high_resolution_clock::now();
+                SearchResult result = iterativeDeepeningParallel(board, 8, 2000, benchmarkSearchThreads);
+                auto end = std::chrono::high_resolution_clock::now();
+                benchmarkResults[index] = {
+                    result.nodes,
+                    std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()};
+            }
+        }));
+    }
+    for (auto& future : workers) {
+        future.get();
+    }
+
+    for (const auto& result : benchmarkResults) {
         totalNodes += result.nodes;
-        totalTime += duration.count();
+        totalTime += result.timeMs;
     }
 
     std::cout << "Total nodes searched: " << totalNodes << '\n';

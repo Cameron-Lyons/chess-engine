@@ -44,4 +44,29 @@ public:
         constexpr short values[] = {6, 3, 3, 2, 2, 1, 0};
         return values[static_cast<int>(pieceType)];
     }
+
+    static constexpr ChessPieceType fromFenChar(char fenChar) {
+        switch (fenChar) {
+            case 'p':
+            case 'P':
+                return ChessPieceType::PAWN;
+            case 'n':
+            case 'N':
+                return ChessPieceType::KNIGHT;
+            case 'b':
+            case 'B':
+                return ChessPieceType::BISHOP;
+            case 'r':
+            case 'R':
+                return ChessPieceType::ROOK;
+            case 'q':
+            case 'Q':
+                return ChessPieceType::QUEEN;
+            case 'k':
+            case 'K':
+                return ChessPieceType::KING;
+            default:
+                return ChessPieceType::NONE;
+        }
+    }
 };

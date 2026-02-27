@@ -443,37 +443,10 @@ void Board::InitializeFromFEN(ChessString fen) {
         } else if (c >= '1' && c <= '8') {
             file += (c - '0');
         } else {
-            ChessPieceType type = ChessPieceType::NONE;
-            ChessPieceColor color = ChessPieceColor::WHITE;
-
-            switch (std::tolower(static_cast<unsigned char>(c))) {
-                case 'p':
-                    type = ChessPieceType::PAWN;
-                    break;
-                case 'n':
-                    type = ChessPieceType::KNIGHT;
-                    break;
-                case 'b':
-                    type = ChessPieceType::BISHOP;
-                    break;
-                case 'r':
-                    type = ChessPieceType::ROOK;
-                    break;
-                case 'q':
-                    type = ChessPieceType::QUEEN;
-                    break;
-                case 'k':
-                    type = ChessPieceType::KING;
-                    break;
-                default:
-                    break;
-            }
-
-            if (isupper(c)) {
-                color = ChessPieceColor::WHITE;
-            } else {
-                color = ChessPieceColor::BLACK;
-            }
+            ChessPieceType type = Piece::fromFenChar(c);
+            ChessPieceColor color = std::isupper(static_cast<unsigned char>(c))
+                                        ? ChessPieceColor::WHITE
+                                        : ChessPieceColor::BLACK;
             if (type != ChessPieceType::NONE && fenRank >= 0 && fenRank < BOARD_SIZE && file >= 0 &&
                 file < BOARD_SIZE) {
                 int boardRow = fenRank;

@@ -80,8 +80,7 @@ public:
     auto loadTrainingData(const std::string& path) -> std::vector<TrainingExample>;
 
 private:
-    std::mt19937 m_rng;
-    auto playGame(int maxMoves) -> std::vector<TrainingExample>;
+    auto playGame(int maxMoves, std::mt19937& rng) -> std::vector<TrainingExample>;
     auto evaluateGameResult(const Board& board, int gameLength) -> float;
     auto getMaterialScore(const Board& board) -> float;
     auto getPositionalScore(const Board& board) -> float;

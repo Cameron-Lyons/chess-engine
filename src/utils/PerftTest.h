@@ -5,11 +5,13 @@
 #include "../search/ValidMoves.h"
 #include "Profiler.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <future>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <thread>
 #include <vector>
 
@@ -219,41 +221,117 @@ public:
              {44, 1486, 62379, 2103487}}};
 
         std::cout << "\n========== Perft Test Suite ==========\n";
+        struct DepthReport {
+            size_t depth;
+            uint64_t nodes;
+            uint64_t expected;
+            long long durationMs;
+            double nps;
+            bool passed;
+            uint64_t captures;
+            uint64_t enPassants;
+            uint64_t castles;
+            uint64_t promotions;
+        };
+        struct PositionReport {
+            size_t index;
+            std::string name;
+            std::string fen;
+            std::vector<DepthReport> depths;
+        };
 
-        for (const auto& test : positions) {
-            Board board;
-            board.InitializeFromFEN(test.fen);
-            std::cout << "\n" << test.name << ":\n";
-            std::cout << "FEN: " << test.fen << "\n\n";
+        const unsigned int hardware = std::thread::hardware_concurrency();
+        const int fallbackThreads = 4;
+        const int maxWorkers = (hardware == 0U) ? fallbackThreads : static_cast<int>(hardware);
+        const int workerCount =
+            std::max(1, std::min(static_cast<int>(positions.size()), maxWorkers));
+        std::atomic<std::size_t> nextIndex{0};
+        std::vector<std::future<std::vector<PositionReport>>> workers;
+        workers.reserve(static_cast<std::size_t>(workerCount));
 
-            for (size_t depth = 1; depth <= test.expected.size(); depth++) {
-                auto start = std::chrono::high_resolution_clock::now();
-                uint64_t result = perft(board, depth, true);
-                auto end = std::chrono::high_resolution_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-                double nps = duration.count() > 0 ? (result * 1000.0 / duration.count()) : 0;
-                bool passed = (result == test.expected[depth - 1]);
-                std::cout << "Depth " << depth << ": " << std::setw(10) << result;
+        for (int worker = 0; worker < workerCount; ++worker) {
+            workers.emplace_back(std::async(std::launch::async, [&positions, &nextIndex]() {
+                std::vector<PositionReport> reports;
+                while (true) {
+                    const std::size_t index = nextIndex.fetch_add(1, std::memory_order_relaxed);
+                    if (index >= positions.size()) {
+                        break;
+                    }
 
-                if (passed) {
+                    const auto& test = positions[index];
+                    PositionReport report;
+                    report.index = index;
+                    report.name = test.name;
+                    report.fen = test.fen;
+
+                    Board board;
+                    board.InitializeFromFEN(test.fen);
+                    PerftTest workerPerft;
+                    for (size_t depth = 1; depth <= test.expected.size(); depth++) {
+                        auto start = std::chrono::high_resolution_clock::now();
+                        uint64_t nodes = workerPerft.perft(board, static_cast<int>(depth), true);
+                        auto end = std::chrono::high_resolution_clock::now();
+                        auto duration =
+                            std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+                        bool passed = (nodes == test.expected[depth - 1]);
+                        double nps =
+                            duration.count() > 0 ? (nodes * 1000.0 / duration.count()) : 0.0;
+                        report.depths.push_back({depth,
+                                                 nodes,
+                                                 test.expected[depth - 1],
+                                                 duration.count(),
+                                                 nps,
+                                                 passed,
+                                                 workerPerft.captures.load(),
+                                                 workerPerft.enPassants.load(),
+                                                 workerPerft.castles.load(),
+                                                 workerPerft.promotions.load()});
+                        if (!passed) {
+                            break;
+                        }
+                    }
+                    reports.push_back(std::move(report));
+                }
+                return reports;
+            }));
+        }
+
+        std::vector<PositionReport> allReports;
+        for (auto& future : workers) {
+            auto reports = future.get();
+            allReports.insert(allReports.end(),
+                              std::make_move_iterator(reports.begin()),
+                              std::make_move_iterator(reports.end()));
+        }
+
+        std::sort(allReports.begin(), allReports.end(), [](const PositionReport& lhs,
+                                                           const PositionReport& rhs) {
+            return lhs.index < rhs.index;
+        });
+
+        for (const auto& report : allReports) {
+            std::cout << "\n" << report.name << ":\n";
+            std::cout << "FEN: " << report.fen << "\n\n";
+            for (const auto& depthReport : report.depths) {
+                std::cout << "Depth " << depthReport.depth << ": " << std::setw(10)
+                          << depthReport.nodes;
+
+                if (depthReport.passed) {
                     std::cout << " ✓";
                 } else {
-                    std::cout << " ✗ (expected " << test.expected[depth - 1] << ")";
+                    std::cout << " ✗ (expected " << depthReport.expected << ")";
                 }
 
-                std::cout << " | Time: " << std::setw(6) << duration.count() << " ms"
+                std::cout << " | Time: " << std::setw(6) << depthReport.durationMs << " ms"
                           << " | NPS: " << std::fixed << std::setprecision(0) << std::setw(10)
-                          << nps << "\n";
+                          << depthReport.nps << "\n";
 
-                if (verbose && depth <= 2) {
-                    std::cout << "  Captures: " << captures.load()
-                              << ", En passants: " << enPassants.load()
-                              << ", Castles: " << castles.load()
-                              << ", Promotions: " << promotions.load() << "\n";
+                if (verbose && depthReport.depth <= 2) {
+                    std::cout << "  Captures: " << depthReport.captures
+                              << ", En passants: " << depthReport.enPassants
+                              << ", Castles: " << depthReport.castles
+                              << ", Promotions: " << depthReport.promotions << "\n";
                 }
-
-                if (!passed)
-                    break;
             }
         }
 

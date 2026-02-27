@@ -10,6 +10,7 @@
 #include <cmath>
 #include <future>
 #include <limits>
+#include <mutex>
 #include <random>
 #include <ranges>
 #include <thread>
@@ -436,25 +437,23 @@ SearchResult::SearchResult()
       timeMs(kZero) {}
 
 void InitZobrist() {
-    static bool initialized = false;
-    if (initialized) {
-        return;
-    }
-    initialized = true;
-    std::mt19937_64 rng(kZobristSeed);
-    std::uniform_int_distribution<uint64_t> dist;
-    for (auto& squareKeys : ZobristTable) {
-        for (auto& pieceKey : squareKeys) {
-            pieceKey = dist(rng);
+    static std::once_flag initFlag;
+    std::call_once(initFlag, []() {
+        std::mt19937_64 rng(kZobristSeed);
+        std::uniform_int_distribution<uint64_t> dist;
+        for (auto& squareKeys : ZobristTable) {
+            for (auto& pieceKey : squareKeys) {
+                pieceKey = dist(rng);
+            }
         }
-    }
-    ZobristBlackToMove = dist(rng);
-    for (auto& castlingKey : ZobristCastling) {
-        castlingKey = dist(rng);
-    }
-    for (auto& epKey : ZobristEnPassant) {
-        epKey = dist(rng);
-    }
+        ZobristBlackToMove = dist(rng);
+        for (auto& castlingKey : ZobristCastling) {
+            castlingKey = dist(rng);
+        }
+        for (auto& epKey : ZobristEnPassant) {
+            epKey = dist(rng);
+        }
+    });
 }
 
 int pieceToZobristIndex(const Piece& p) {

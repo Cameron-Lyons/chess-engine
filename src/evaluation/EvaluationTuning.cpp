@@ -1,6 +1,9 @@
 #include "EvaluationTuning.h"
 
+#include <algorithm>
+#include <future>
 #include <iostream>
+#include <thread>
 
 namespace EvaluationParams {
 
@@ -112,6 +115,18 @@ void logEvaluationComponents(const char* component, int value) {
 #include <fstream>
 #include <sstream>
 
+namespace {
+int getWorkerCount(std::size_t taskCount) {
+    if (taskCount == 0U) {
+        return 1;
+    }
+    const unsigned int hardware = std::thread::hardware_concurrency();
+    const int fallback = 4;
+    const int available = (hardware == 0U) ? fallback : static_cast<int>(hardware);
+    return std::max(1, std::min(static_cast<int>(taskCount), available));
+}
+} // namespace
+
 double TexelTuner::sigmoid(double eval) const {
     return 1.0 / (1.0 + std::pow(10.0, -scalingK * eval / 400.0));
 }
@@ -152,16 +167,54 @@ int TexelTuner::evaluateWithParams(const Board& board, const std::vector<int>& p
 }
 
 double TexelTuner::computeError(const std::vector<int>& p) const {
-    double totalError = 0.0;
-    for (const auto& pos : positions) {
-        Board board;
-        board.InitializeFromFEN(pos.fen);
-        int eval = evaluateWithParams(board, p);
-        double predicted = sigmoid(eval);
-        double diff = pos.result - predicted;
-        totalError += diff * diff;
+    if (positions.empty()) {
+        return 0.0;
     }
-    return positions.empty() ? 0.0 : totalError / static_cast<double>(positions.size());
+
+    const int workerCount = getWorkerCount(positions.size());
+    if (workerCount == 1) {
+        double totalError = 0.0;
+        for (const auto& pos : positions) {
+            Board board;
+            board.InitializeFromFEN(pos.fen);
+            int eval = evaluateWithParams(board, p);
+            double predicted = sigmoid(eval);
+            double diff = pos.result - predicted;
+            totalError += diff * diff;
+        }
+        return totalError / static_cast<double>(positions.size());
+    }
+
+    std::vector<std::future<double>> futures;
+    futures.reserve(static_cast<std::size_t>(workerCount));
+    const std::size_t chunkSize = (positions.size() + static_cast<std::size_t>(workerCount) - 1U) /
+                                  static_cast<std::size_t>(workerCount);
+    for (int worker = 0; worker < workerCount; ++worker) {
+        const std::size_t begin = static_cast<std::size_t>(worker) * chunkSize;
+        if (begin >= positions.size()) {
+            break;
+        }
+        const std::size_t end = std::min(begin + chunkSize, positions.size());
+        futures.emplace_back(std::async(std::launch::async, [this, &p, begin, end]() {
+            double partialError = 0.0;
+            for (std::size_t idx = begin; idx < end; ++idx) {
+                Board board;
+                board.InitializeFromFEN(positions[idx].fen);
+                int eval = evaluateWithParams(board, p);
+                double predicted = sigmoid(eval);
+                double diff = positions[idx].result - predicted;
+                partialError += diff * diff;
+            }
+            return partialError;
+        }));
+    }
+
+    double totalError = 0.0;
+    for (auto& future : futures) {
+        totalError += future.get();
+    }
+
+    return totalError / static_cast<double>(positions.size());
 }
 
 void TexelTuner::findOptimalK() {
