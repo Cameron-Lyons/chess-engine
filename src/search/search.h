@@ -342,7 +342,6 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                              uint64_t zobristKey = std::numeric_limits<uint64_t>::max());
 
 int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare);
-int getSmallestAttacker(const Board& board, int targetSquare, ChessPieceColor color);
 
 bool isPromotion(const Board& board, int from, int to);
 bool isCastling(const Board& board, int from, int to);

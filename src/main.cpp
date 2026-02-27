@@ -172,7 +172,6 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = kDefaultComp
         searchDepth = kMinSearchDepth;
     }
 
-    GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
     int numMoves = static_cast<int>(moves.size());
 
@@ -408,7 +407,6 @@ enum class GameState : std::uint8_t {
 
 GameState checkGameState(Board& board) {
     ChessPieceColor currentPlayer = board.turn;
-    GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, currentPlayer);
     std::vector<std::pair<int, int>> legalMoves;
     for (const auto& move : moves) {

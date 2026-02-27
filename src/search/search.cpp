@@ -122,8 +122,11 @@ constexpr int kWinningSeeBonus = 200;
 constexpr int kCaptureVictimScale = 100;
 constexpr int kQueenGamePhaseIncrement = 4;
 constexpr int kFutilityMarginTableSize = 4;
-
-constexpr int kAttackerInitValue = 10000;
+constexpr int kSeeMaxExchangeDepth = 32;
+constexpr Bitboard kFileAMask = 0x0101010101010101ULL;
+constexpr Bitboard kFileHMask = 0x8080808080808080ULL;
+constexpr Bitboard kNotFileA = ~kFileAMask;
+constexpr Bitboard kNotFileH = ~kFileHMask;
 constexpr int kCastlingDistance = 2;
 constexpr int kKingsideRookOffset = 3;
 constexpr int kKingsideRookTargetOffset = 1;
@@ -167,6 +170,179 @@ public:
 private:
     bool previousMode;
 };
+
+struct BitboardMoveState {
+    Bitboard pieces[2][kPieceTypePerColorCount]{};
+    Bitboard occupancy = EMPTY;
+    int movingColor = kWhiteIndex;
+    int movedPiece = kInvalidSquare;
+    int capturedPiece = kInvalidSquare;
+};
+
+void initializeBitboardsFromBoard(const Board& board, Bitboard pieces[2][kPieceTypePerColorCount],
+                                  Bitboard& occupancy) {
+    pieces[kWhiteIndex][pieceTypeIndex(ChessPieceType::PAWN)] = board.whitePawns;
+    pieces[kWhiteIndex][pieceTypeIndex(ChessPieceType::KNIGHT)] = board.whiteKnights;
+    pieces[kWhiteIndex][pieceTypeIndex(ChessPieceType::BISHOP)] = board.whiteBishops;
+    pieces[kWhiteIndex][pieceTypeIndex(ChessPieceType::ROOK)] = board.whiteRooks;
+    pieces[kWhiteIndex][pieceTypeIndex(ChessPieceType::QUEEN)] = board.whiteQueens;
+    pieces[kWhiteIndex][pieceTypeIndex(ChessPieceType::KING)] = board.whiteKings;
+
+    pieces[kBlackIndex][pieceTypeIndex(ChessPieceType::PAWN)] = board.blackPawns;
+    pieces[kBlackIndex][pieceTypeIndex(ChessPieceType::KNIGHT)] = board.blackKnights;
+    pieces[kBlackIndex][pieceTypeIndex(ChessPieceType::BISHOP)] = board.blackBishops;
+    pieces[kBlackIndex][pieceTypeIndex(ChessPieceType::ROOK)] = board.blackRooks;
+    pieces[kBlackIndex][pieceTypeIndex(ChessPieceType::QUEEN)] = board.blackQueens;
+    pieces[kBlackIndex][pieceTypeIndex(ChessPieceType::KING)] = board.blackKings;
+
+    occupancy = board.allPieces;
+}
+
+int pieceValueFromIndex(int pieceIndex) {
+    if (pieceIndex < kZero || pieceIndex >= kPieceTypePerColorCount) {
+        return kZero;
+    }
+    return Piece::getPieceValue(static_cast<ChessPieceType>(pieceIndex));
+}
+
+Bitboard attackersToSquare(const Bitboard pieces[2][kPieceTypePerColorCount], Bitboard occupancy,
+                           int targetSquare, int colorIndex) {
+    if (targetSquare < kZero || targetSquare >= kBoardSquareCount || colorIndex < kWhiteIndex ||
+        colorIndex > kBlackIndex) {
+        return EMPTY;
+    }
+
+    const Bitboard target = (1ULL << targetSquare);
+    Bitboard attackers = EMPTY;
+
+    if (colorIndex == kWhiteIndex) {
+        attackers |= (((target >> 7) & kNotFileA) | ((target >> 9) & kNotFileH)) &
+                     pieces[kWhiteIndex][pieceTypeIndex(ChessPieceType::PAWN)];
+    } else {
+        attackers |= (((target << 7) & kNotFileH) | ((target << 9) & kNotFileA)) &
+                     pieces[kBlackIndex][pieceTypeIndex(ChessPieceType::PAWN)];
+    }
+
+    attackers |= KnightAttacks[targetSquare] & pieces[colorIndex][pieceTypeIndex(ChessPieceType::KNIGHT)];
+    attackers |= KingAttacks[targetSquare] & pieces[colorIndex][pieceTypeIndex(ChessPieceType::KING)];
+    attackers |= fastBishopAttacks(targetSquare, occupancy) &
+                 (pieces[colorIndex][pieceTypeIndex(ChessPieceType::BISHOP)] |
+                  pieces[colorIndex][pieceTypeIndex(ChessPieceType::QUEEN)]);
+    attackers |= fastRookAttacks(targetSquare, occupancy) &
+                 (pieces[colorIndex][pieceTypeIndex(ChessPieceType::ROOK)] |
+                  pieces[colorIndex][pieceTypeIndex(ChessPieceType::QUEEN)]);
+    return attackers;
+}
+
+bool popLeastValuableAttacker(const Bitboard pieces[2][kPieceTypePerColorCount], Bitboard attackers,
+                              int colorIndex, int& attackerSquareOut, int& attackerPieceOut) {
+    for (int piece = pieceTypeIndex(ChessPieceType::PAWN);
+         piece <= pieceTypeIndex(ChessPieceType::KING); ++piece) {
+        Bitboard candidates = attackers & pieces[colorIndex][piece];
+        if (candidates != EMPTY) {
+            attackerSquareOut = lsb(candidates);
+            attackerPieceOut = piece;
+            return attackerSquareOut >= kZero;
+        }
+    }
+    return false;
+}
+
+int computeGamePhase(const Board& board) {
+    const int minorCount =
+        popcount(board.whiteKnights | board.blackKnights) +
+        popcount(board.whiteBishops | board.blackBishops);
+    const int rookCount = popcount(board.whiteRooks | board.blackRooks);
+    const int queenCount = popcount(board.whiteQueens | board.blackQueens);
+    return minorCount + (kTwo * rookCount) + (kQueenGamePhaseIncrement * queenCount);
+}
+
+bool applyMoveToBitboards(const Board& board, int fromSquare, int toSquare, bool autoPromoteToQueen,
+                          BitboardMoveState& state) {
+    if (fromSquare < kZero || fromSquare >= kBoardSquareCount || toSquare < kZero ||
+        toSquare >= kBoardSquareCount) {
+        return false;
+    }
+
+    initializeBitboardsFromBoard(board, state.pieces, state.occupancy);
+
+    const Piece& movingPiece = board.squares[fromSquare].piece;
+    if (movingPiece.PieceType == ChessPieceType::NONE) {
+        return false;
+    }
+
+    state.movingColor = (movingPiece.PieceColor == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
+    const int enemyColor = (state.movingColor == kWhiteIndex) ? kBlackIndex : kWhiteIndex;
+    const int movingPieceIndex = pieceTypeIndex(movingPiece.PieceType);
+    if (movingPieceIndex < kZero) {
+        return false;
+    }
+
+    clear_bit(state.pieces[state.movingColor][movingPieceIndex], fromSquare);
+    clear_bit(state.occupancy, fromSquare);
+
+    state.capturedPiece = kInvalidSquare;
+    bool isEnPassant =
+        (movingPiece.PieceType == ChessPieceType::PAWN && board.enPassantSquare == toSquare &&
+         board.squares[toSquare].piece.PieceType == ChessPieceType::NONE &&
+         std::abs((toSquare % kBoardDimension) - (fromSquare % kBoardDimension)) == kOne);
+    if (isEnPassant) {
+        int captureSquare = (movingPiece.PieceColor == ChessPieceColor::WHITE)
+                                ? (toSquare - kBoardDimension)
+                                : (toSquare + kBoardDimension);
+        if (captureSquare < kZero || captureSquare >= kBoardSquareCount) {
+            return false;
+        }
+        const int capturedPieceIndex = pieceTypeIndex(board.squares[captureSquare].piece.PieceType);
+        if (capturedPieceIndex < kZero) {
+            return false;
+        }
+        state.capturedPiece = capturedPieceIndex;
+        clear_bit(state.pieces[enemyColor][capturedPieceIndex], captureSquare);
+        clear_bit(state.occupancy, captureSquare);
+    } else {
+        const Piece& capturedPiece = board.squares[toSquare].piece;
+        const int capturedPieceIndex = pieceTypeIndex(capturedPiece.PieceType);
+        if (capturedPieceIndex >= kZero) {
+            const int capturedColor =
+                (capturedPiece.PieceColor == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
+            state.capturedPiece = capturedPieceIndex;
+            clear_bit(state.pieces[capturedColor][capturedPieceIndex], toSquare);
+            clear_bit(state.occupancy, toSquare);
+        }
+    }
+
+    int movedPieceIndex = movingPieceIndex;
+    const int destinationRow = toSquare / kBoardDimension;
+    const bool isPromotion =
+        movingPiece.PieceType == ChessPieceType::PAWN &&
+        ((movingPiece.PieceColor == ChessPieceColor::WHITE && destinationRow == kPromotionWhiteRank) ||
+         (movingPiece.PieceColor == ChessPieceColor::BLACK && destinationRow == kPromotionBlackRank));
+    if (autoPromoteToQueen && isPromotion) {
+        movedPieceIndex = pieceTypeIndex(ChessPieceType::QUEEN);
+    }
+
+    set_bit(state.pieces[state.movingColor][movedPieceIndex], toSquare);
+    set_bit(state.occupancy, toSquare);
+
+    if (movingPiece.PieceType == ChessPieceType::KING &&
+        std::abs(toSquare - fromSquare) == kCastlingDistance) {
+        const int rookFrom =
+            (toSquare > fromSquare) ? (fromSquare + kKingsideRookOffset)
+                                    : (fromSquare - kQueensideRookOffset);
+        const int rookTo =
+            (toSquare > fromSquare) ? (fromSquare + kKingsideRookTargetOffset)
+                                    : (fromSquare - kQueensideRookTargetOffset);
+        const int rookIndex = pieceTypeIndex(ChessPieceType::ROOK);
+        clear_bit(state.pieces[state.movingColor][rookIndex], rookFrom);
+        set_bit(state.pieces[state.movingColor][rookIndex], rookTo);
+        clear_bit(state.occupancy, rookFrom);
+        set_bit(state.occupancy, rookTo);
+    }
+
+    state.movedPiece = movedPieceIndex;
+    return true;
+}
 
 uint64_t resolveZobristKey(const Board& board, uint64_t key) {
     return (key == kUnsetZobristKey) ? ComputeZobrist(board) : key;
@@ -507,13 +683,19 @@ bool isCapture(const Board& board, int srcPos, int destPos) {
 }
 
 bool givesCheck(const Board& board, int srcPos, int destPos) {
-    Board tempBoard = board;
-    if (!applySearchMove(tempBoard, srcPos, destPos)) {
+    BitboardMoveState state;
+    if (!applyMoveToBitboards(board, srcPos, destPos, true, state)) {
         return false;
     }
-    ChessPieceColor kingColor =
-        (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
-    return IsKingInCheck(tempBoard, kingColor);
+
+    const int enemyColor = (state.movingColor == kWhiteIndex) ? kBlackIndex : kWhiteIndex;
+    const Bitboard enemyKing = state.pieces[enemyColor][pieceTypeIndex(ChessPieceType::KING)];
+    if (enemyKing == EMPTY) {
+        return false;
+    }
+    const int enemyKingSquare = lsb(enemyKing);
+    return attackersToSquare(state.pieces, state.occupancy, enemyKingSquare, state.movingColor) !=
+           EMPTY;
 }
 
 bool isInCheck(const Board& board, ChessPieceColor color) {
@@ -657,7 +839,6 @@ void MovePicker::generateAndPartitionMoves() {
         return;
     }
     movesGenerated = true;
-    GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
     goodCaptures.reserve(moves.size());
     badCaptures.reserve(moves.size());
@@ -873,7 +1054,6 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
     ChessPieceColor currentColor =
         maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
     bool inCheck = isInCheck(board, currentColor);
-    GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, currentColor);
 
     if (moves.empty()) {
@@ -1123,23 +1303,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
 
     ScopedFastEvalMode fastEvalScope(!isPVNode && depth <= kFastEvalDepthThreshold);
     int staticEval = evaluatePosition(board, context.contempt);
-    int gamePhase = kZero;
-    for (int sq = kZero; sq < kBoardSquareCount; ++sq) {
-        switch (board.squares[sq].piece.PieceType) {
-            case ChessPieceType::KNIGHT:
-            case ChessPieceType::BISHOP:
-                gamePhase += kOne;
-                break;
-            case ChessPieceType::ROOK:
-                gamePhase += kTwo;
-                break;
-            case ChessPieceType::QUEEN:
-                gamePhase += kQueenGamePhaseIncrement;
-                break;
-            default:
-                break;
-        }
-    }
+    int gamePhase = computeGamePhase(board);
 
     if (!isPVNode) {
 
@@ -1197,7 +1361,6 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         }
     }
 
-    GenValidMoves(board);
     MovePicker picker(board, ttEntry.bestMove, context.killerMoves, ply, historyTable, context);
     int colorIdx = (board.turn == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
     int prevDest = board.LastMove;
@@ -1528,7 +1691,6 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                      {kInvalidSquare, kInvalidSquare}, ply);
         return eval;
     }
-    GenValidMoves(board);
     std::vector<std::pair<int, int>> moves =
         GetAllMoves(board, maximizingPlayer ? ChessPieceColor::WHITE : ChessPieceColor::BLACK);
     if (moves.empty()) {
@@ -2062,7 +2224,6 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= kZero) {
                 result.bestMove = rootEntry.bestMove;
             } else {
-                GenValidMoves(board);
                 std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
                 if (!moves.empty()) {
                     std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
@@ -2138,7 +2299,6 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= kZero) {
                 result.bestMove = rootEntry.bestMove;
             } else {
-                GenValidMoves(board);
                 std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
                 if (!moves.empty()) {
                     std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
@@ -2168,7 +2328,6 @@ std::pair<int, int> findBestMove(Board& board, int depth) {
     ParallelSearchContext context(kOne);
     context.startTime = std::chrono::steady_clock::now();
     context.timeLimitMs = kDefaultFindBestMoveTimeLimitMs;
-    GenValidMoves(board);
     std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
 
     if (moves.empty()) {
@@ -2278,61 +2437,52 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {
         return kZero;
     }
 
-    const Piece& victim = board.squares[toSquare].piece;
-    const Piece& attacker = board.squares[fromSquare].piece;
-
-    if (victim.PieceType == ChessPieceType::NONE || attacker.PieceType == ChessPieceType::NONE) {
+    BitboardMoveState state;
+    if (!applyMoveToBitboards(board, fromSquare, toSquare, true, state) ||
+        state.capturedPiece < kZero) {
         return kZero;
     }
 
-    int score = victim.PieceValue;
-    ChessPieceColor sideToMove = attacker.PieceColor;
-    Board tempBoard = board;
-    tempBoard.squares[toSquare].piece = attacker;
-    tempBoard.squares[fromSquare].piece = Piece();
-    tempBoard.updateBitboards();
+    int gain[kSeeMaxExchangeDepth]{};
+    gain[kZero] = pieceValueFromIndex(state.capturedPiece);
+    int depth = kZero;
 
-    ChessPieceColor currentSide =
-        (sideToMove == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+    int sideToMove = (state.movingColor == kWhiteIndex) ? kBlackIndex : kWhiteIndex;
+    int occupiedSide = state.movingColor;
+    int occupiedPiece = state.movedPiece;
 
-    while (true) {
-        int smallestAttacker = getSmallestAttacker(tempBoard, toSquare, currentSide);
-        if (smallestAttacker == kInvalidSquare) {
+    while (depth + kOne < kSeeMaxExchangeDepth) {
+        Bitboard attackers = attackersToSquare(state.pieces, state.occupancy, toSquare, sideToMove);
+        int attackerSquare = kInvalidSquare;
+        int attackerPiece = kInvalidSquare;
+        if (!popLeastValuableAttacker(state.pieces, attackers, sideToMove, attackerSquare,
+                                      attackerPiece)) {
             break;
         }
 
-        const Piece& currentAttacker = tempBoard.squares[smallestAttacker].piece;
-        tempBoard.squares[toSquare].piece = currentAttacker;
-        tempBoard.squares[smallestAttacker].piece = Piece();
-        tempBoard.updateBitboards();
-        score = currentAttacker.PieceValue - score;
-
-        currentSide = (currentSide == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                              : ChessPieceColor::WHITE;
-    }
-
-    return score;
-}
-
-int getSmallestAttacker(const Board& board, int targetSquare, ChessPieceColor color) {
-    int smallestValue = kAttackerInitValue;
-    int smallestAttacker = kInvalidSquare;
-
-    for (int i = kZero; i < kBoardSquareCount; i++) {
-        const Piece& piece = board.squares[i].piece;
-        if (piece.PieceType == ChessPieceType::NONE || piece.PieceColor != color) {
-            continue;
+        depth++;
+        gain[depth] = pieceValueFromIndex(occupiedPiece) - gain[depth - kOne];
+        if (std::max(-gain[depth - kOne], gain[depth]) < kZero) {
+            break;
         }
 
-        if (canPieceAttackSquare(board, i, targetSquare)) {
-            if (piece.PieceValue < smallestValue) {
-                smallestValue = piece.PieceValue;
-                smallestAttacker = i;
-            }
-        }
+        clear_bit(state.pieces[sideToMove][attackerPiece], attackerSquare);
+        clear_bit(state.pieces[occupiedSide][occupiedPiece], toSquare);
+        clear_bit(state.occupancy, attackerSquare);
+        set_bit(state.pieces[sideToMove][attackerPiece], toSquare);
+        set_bit(state.occupancy, toSquare);
+
+        occupiedSide = sideToMove;
+        occupiedPiece = attackerPiece;
+        sideToMove = (sideToMove == kWhiteIndex) ? kBlackIndex : kWhiteIndex;
     }
 
-    return smallestAttacker;
+    while (depth > kZero) {
+        gain[depth - kOne] = -std::max(-gain[depth - kOne], gain[depth]);
+        depth--;
+    }
+
+    return gain[kZero];
 }
 
 bool isPromotion(const Board& board, int from, int to) {

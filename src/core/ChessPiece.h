@@ -1,8 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
-#include <vector>
 
 enum class ChessPieceColor : std::uint8_t { WHITE, BLACK };
 
@@ -18,22 +16,15 @@ public:
     short PieceActionValue;
     bool selected;
     bool moved;
-    std::string possibleMoves[64];
-    std::vector<int> ValidMoves;
 
     Piece()
         : PieceColor(ChessPieceColor::WHITE), PieceType(ChessPieceType::NONE), PieceValue(0),
-          AttackedValue(0), DefendedValue(0), PieceActionValue(0), selected(false), moved(false) {
-        ValidMoves.clear();
-    }
+          AttackedValue(0), DefendedValue(0), PieceActionValue(0), selected(false), moved(false) {}
 
     Piece(ChessPieceColor color, ChessPieceType type)
         : PieceColor(color), PieceType(type), PieceValue(getPieceValue(type)), AttackedValue(0),
           DefendedValue(0), PieceActionValue(getPieceActionValue(type)), selected(false),
-          moved(false) {
-
-        ValidMoves.clear();
-    }
+          moved(false) {}
 
     static constexpr short getPieceValue(ChessPieceType pieceType) {
         constexpr short values[] = {100, 320, 325, 500, 975, 32767, 0};

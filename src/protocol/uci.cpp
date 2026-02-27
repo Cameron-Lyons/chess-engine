@@ -296,7 +296,6 @@ void UCIEngine::handlePosition(const std::string& command) {
             std::pair<int, int> movePos = UCINotation::uciToMove(move);
             if (movePos.first != -1 && movePos.second != -1) {
 
-                GenValidMoves(board);
                 std::vector<std::pair<int, int>> validMoves = GetAllMoves(board, board.turn);
                 bool isValid = false;
                 for (const auto& validMove : validMoves) {

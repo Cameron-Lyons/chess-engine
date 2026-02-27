@@ -588,7 +588,11 @@ int evaluatePosition(const Board& board, int contempt) {
     int egScore = 0;
     int gamePhase = 0;
     for (int square = 0; square < NUM_SQUARES; ++square) {
-        switch (board.squares[square].piece.PieceType) {
+        const Piece& piece = board.squares[square].piece;
+        if (piece.PieceType == ChessPieceType::NONE) {
+            continue;
+        }
+        switch (piece.PieceType) {
             case ChessPieceType::KNIGHT:
             case ChessPieceType::BISHOP:
                 gamePhase += 1;
@@ -601,14 +605,6 @@ int evaluatePosition(const Board& board, int contempt) {
                 break;
             default:
                 break;
-        }
-    }
-    gamePhase = std::min(gamePhase, TOTAL_PHASE);
-
-    for (int square = 0; square < NUM_SQUARES; ++square) {
-        const Piece& piece = board.squares[square].piece;
-        if (piece.PieceType == ChessPieceType::NONE) {
-            continue;
         }
         int materialValue = piece.PieceValue;
         int adjustedSquare =
@@ -625,6 +621,7 @@ int evaluatePosition(const Board& board, int contempt) {
             egScore -= materialValue + newEgPST;
         }
     }
+    gamePhase = std::min(gamePhase, TOTAL_PHASE);
 
     if (ENABLE_PAWN_STRUCTURE) {
         uint64_t pawnKey = computePawnHash(board);

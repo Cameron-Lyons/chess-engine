@@ -35,6 +35,7 @@ constexpr int kWhiteKingsideRookSquare = 7;
 constexpr int kWhiteQueensideRookSquare = 0;
 constexpr int kBlackKingsideRookSquare = 63;
 constexpr int kBlackQueensideRookSquare = 56;
+constexpr std::size_t kTypicalMoveCapacity = 96;
 
 } // namespace
 
@@ -90,11 +91,11 @@ bool IsKingInCheck(const Board& board, ChessPieceColor color) {
         return true;
     }
 
-    if (bishopAttacks(kingSq, occ) & (enemyBishops | enemyQueens)) {
+    if (fastBishopAttacks(kingSq, occ) & (enemyBishops | enemyQueens)) {
         return true;
     }
 
-    if (rookAttacks(kingSq, occ) & (enemyRooks | enemyQueens)) {
+    if (fastRookAttacks(kingSq, occ) & (enemyRooks | enemyQueens)) {
         return true;
     }
 
@@ -261,8 +262,8 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
     }
 }
 
-std::vector<std::pair<int, int>> generatePawnMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+namespace {
+void appendPawnMoves(Board& board, ChessPieceColor color, std::vector<std::pair<int, int>>& moves) {
     Bitboard pawns = board.getPieceBitboard(ChessPieceType::PAWN, color);
     const Bitboard occupied = board.allPieces;
     const Bitboard enemyPieces =
@@ -333,12 +334,10 @@ std::vector<std::pair<int, int>> generatePawnMoves(Board& board, ChessPieceColor
             }
         }
     }
-
-    return moves;
 }
 
-std::vector<std::pair<int, int>> generateKnightMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+void appendKnightMoves(Board& board, ChessPieceColor color,
+                       std::vector<std::pair<int, int>>& moves) {
     Bitboard knights = board.getPieceBitboard(ChessPieceType::KNIGHT, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
     while (knights) {
@@ -351,12 +350,10 @@ std::vector<std::pair<int, int>> generateKnightMoves(Board& board, ChessPieceCol
             clear_bit(attacks, dest);
         }
     }
-
-    return moves;
 }
 
-std::vector<std::pair<int, int>> generateBishopMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+void appendBishopMoves(Board& board, ChessPieceColor color,
+                       std::vector<std::pair<int, int>>& moves) {
     Bitboard bishops = board.getPieceBitboard(ChessPieceType::BISHOP, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
     while (bishops) {
@@ -369,12 +366,10 @@ std::vector<std::pair<int, int>> generateBishopMoves(Board& board, ChessPieceCol
             clear_bit(attacks, dest);
         }
     }
-
-    return moves;
 }
 
-std::vector<std::pair<int, int>> generateRookMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+void appendRookMoves(Board& board, ChessPieceColor color,
+                     std::vector<std::pair<int, int>>& moves) {
     Bitboard rooks = board.getPieceBitboard(ChessPieceType::ROOK, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
     while (rooks) {
@@ -387,12 +382,10 @@ std::vector<std::pair<int, int>> generateRookMoves(Board& board, ChessPieceColor
             clear_bit(attacks, dest);
         }
     }
-
-    return moves;
 }
 
-std::vector<std::pair<int, int>> generateQueenMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+void appendQueenMoves(Board& board, ChessPieceColor color,
+                      std::vector<std::pair<int, int>>& moves) {
     Bitboard queens = board.getPieceBitboard(ChessPieceType::QUEEN, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
     while (queens) {
@@ -405,12 +398,9 @@ std::vector<std::pair<int, int>> generateQueenMoves(Board& board, ChessPieceColo
             clear_bit(attacks, dest);
         }
     }
-
-    return moves;
 }
 
-std::vector<std::pair<int, int>> generateKingMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+void appendKingMoves(Board& board, ChessPieceColor color, std::vector<std::pair<int, int>>& moves) {
     Bitboard king = board.getPieceBitboard(ChessPieceType::KING, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
 
@@ -423,25 +413,60 @@ std::vector<std::pair<int, int>> generateKingMoves(Board& board, ChessPieceColor
             clear_bit(kingMovesBB, dest);
         }
     }
+}
+} // namespace
 
+std::vector<std::pair<int, int>> generatePawnMoves(Board& board, ChessPieceColor color) {
+    std::vector<std::pair<int, int>> moves;
+    moves.reserve(kTypicalMoveCapacity);
+    appendPawnMoves(board, color, moves);
+    return moves;
+}
+
+std::vector<std::pair<int, int>> generateKnightMoves(Board& board, ChessPieceColor color) {
+    std::vector<std::pair<int, int>> moves;
+    moves.reserve(kTypicalMoveCapacity);
+    appendKnightMoves(board, color, moves);
+    return moves;
+}
+
+std::vector<std::pair<int, int>> generateBishopMoves(Board& board, ChessPieceColor color) {
+    std::vector<std::pair<int, int>> moves;
+    moves.reserve(kTypicalMoveCapacity);
+    appendBishopMoves(board, color, moves);
+    return moves;
+}
+
+std::vector<std::pair<int, int>> generateRookMoves(Board& board, ChessPieceColor color) {
+    std::vector<std::pair<int, int>> moves;
+    moves.reserve(kTypicalMoveCapacity);
+    appendRookMoves(board, color, moves);
+    return moves;
+}
+
+std::vector<std::pair<int, int>> generateQueenMoves(Board& board, ChessPieceColor color) {
+    std::vector<std::pair<int, int>> moves;
+    moves.reserve(kTypicalMoveCapacity);
+    appendQueenMoves(board, color, moves);
+    return moves;
+}
+
+std::vector<std::pair<int, int>> generateKingMoves(Board& board, ChessPieceColor color) {
+    std::vector<std::pair<int, int>> moves;
+    moves.reserve(16);
+    appendKingMoves(board, color, moves);
     return moves;
 }
 
 std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color) {
     std::vector<std::pair<int, int>> moves;
-    moves.reserve(kBoardSquareCount);
-    auto pawnMoves = generatePawnMoves(board, color);
-    auto knightMoves = generateKnightMoves(board, color);
-    auto bishopMoves = generateBishopMoves(board, color);
-    auto rookMoves = generateRookMoves(board, color);
-    auto queenMoves = generateQueenMoves(board, color);
-    auto kingMoves = generateKingMoves(board, color);
-    moves.insert(moves.end(), pawnMoves.begin(), pawnMoves.end());
-    moves.insert(moves.end(), knightMoves.begin(), knightMoves.end());
-    moves.insert(moves.end(), bishopMoves.begin(), bishopMoves.end());
-    moves.insert(moves.end(), rookMoves.begin(), rookMoves.end());
-    moves.insert(moves.end(), queenMoves.begin(), queenMoves.end());
-    moves.insert(moves.end(), kingMoves.begin(), kingMoves.end());
+    moves.reserve(kTypicalMoveCapacity);
+    appendPawnMoves(board, color, moves);
+    appendKnightMoves(board, color, moves);
+    appendBishopMoves(board, color, moves);
+    appendRookMoves(board, color, moves);
+    appendQueenMoves(board, color, moves);
+    appendKingMoves(board, color, moves);
     addCastlingMovesBitboard(board, color, &moves);
     return moves;
 }
@@ -456,7 +481,7 @@ void GenValidMoves(Board& board) {
     }
 
     for (int i = kZero; i < kBoardSquareCount; i++) {
-        board.squares[i].piece.ValidMoves.clear();
+        board.squares[i].ValidMoves.clear();
     }
 
     for (int i = kZero; i < kBoardSquareCount; i++) {
@@ -475,7 +500,7 @@ void GenValidMoves(Board& board) {
     for (const auto& move : moves) {
         int src = move.first;
         int dest = move.second;
-        board.squares[src].piece.ValidMoves.push_back(dest);
+        board.squares[src].ValidMoves.push_back(dest);
     }
 
     board.whiteChecked = IsKingInCheck(board, ChessPieceColor::WHITE);
