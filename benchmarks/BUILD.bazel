@@ -1,0 +1,15 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+cc_binary(
+    name = "search_benchmark",
+    srcs = ["search_benchmark.cpp"],
+    copts = ["-Werror"],
+    deps = ["//:engine_lib"],
+)
+
+cc_binary(
+    name = "micro_benchmark",
+    srcs = ["micro_benchmark.cpp"],
+    copts = ["-Werror"],
+    deps = ["//:engine_lib"],
+)

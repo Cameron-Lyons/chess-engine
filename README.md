@@ -53,10 +53,29 @@ Run all tests:
 bazel test //tests/...
 ```
 
+## Benchmarks
+
+Build benchmark binaries:
+```bash
+bazel build //benchmarks:search_benchmark //benchmarks:micro_benchmark
+```
+
+Run search throughput benchmark:
+```bash
+bazel run //benchmarks:search_benchmark -- --rounds=3 --time_ms=2000 --threads=1 --depth=12
+```
+
+Run focused microbenchmark:
+```bash
+bazel run //benchmarks:micro_benchmark -- --iterations=2000000
+```
+
 ## Useful Targets
 
 - Engine binary: `//:chess_engine`
 - Core engine library: `//:engine_lib`
+- Search benchmark: `//benchmarks:search_benchmark`
+- Micro benchmark: `//benchmarks:micro_benchmark`
 
 ## Repository Layout
 

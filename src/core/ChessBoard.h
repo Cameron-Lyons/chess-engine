@@ -71,6 +71,66 @@ struct Board {
         }
     }
 
+    // ValidMoves is a transient cache and intentionally not copied.
+    Board(const Board& other)
+        : turn(other.turn), whiteCanCastle(other.whiteCanCastle),
+          blackCanCastle(other.blackCanCastle), enPassantSquare(other.enPassantSquare),
+          whiteChecked(other.whiteChecked), blackChecked(other.blackChecked), LastMove(other.LastMove),
+          whitePawns(other.whitePawns), whiteKnights(other.whiteKnights),
+          whiteBishops(other.whiteBishops), whiteRooks(other.whiteRooks),
+          whiteQueens(other.whiteQueens), whiteKings(other.whiteKings), blackPawns(other.blackPawns),
+          blackKnights(other.blackKnights), blackBishops(other.blackBishops),
+          blackRooks(other.blackRooks), blackQueens(other.blackQueens), blackKings(other.blackKings),
+          whitePieces(other.whitePieces), blackPieces(other.blackPieces), allPieces(other.allPieces),
+          lastMoveTime(other.lastMoveTime) {
+        for (int i = 0; i < 64; ++i) {
+            squares[i].piece = other.squares[i].piece;
+            squares[i].loc = other.squares[i].loc;
+            squares[i].ValidMoves.clear();
+        }
+    }
+
+    Board& operator=(const Board& other) {
+        if (this == &other) {
+            return *this;
+        }
+
+        turn = other.turn;
+        whiteCanCastle = other.whiteCanCastle;
+        blackCanCastle = other.blackCanCastle;
+        enPassantSquare = other.enPassantSquare;
+        whiteChecked = other.whiteChecked;
+        blackChecked = other.blackChecked;
+        LastMove = other.LastMove;
+        whitePawns = other.whitePawns;
+        whiteKnights = other.whiteKnights;
+        whiteBishops = other.whiteBishops;
+        whiteRooks = other.whiteRooks;
+        whiteQueens = other.whiteQueens;
+        whiteKings = other.whiteKings;
+        blackPawns = other.blackPawns;
+        blackKnights = other.blackKnights;
+        blackBishops = other.blackBishops;
+        blackRooks = other.blackRooks;
+        blackQueens = other.blackQueens;
+        blackKings = other.blackKings;
+        whitePieces = other.whitePieces;
+        blackPieces = other.blackPieces;
+        allPieces = other.allPieces;
+        lastMoveTime = other.lastMoveTime;
+
+        for (int i = 0; i < 64; ++i) {
+            squares[i].piece = other.squares[i].piece;
+            squares[i].loc = other.squares[i].loc;
+            squares[i].ValidMoves.clear();
+        }
+
+        return *this;
+    }
+
+    Board(Board&&) = default;
+    Board& operator=(Board&&) = default;
+
     template <typename T>
     bool isValidIndex(T index) const {
         return index >= 0 && index < 64;

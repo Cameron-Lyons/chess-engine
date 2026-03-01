@@ -9,7 +9,6 @@
 #include <fstream>
 #include <random>
 #include <ranges>
-#include <sstream>
 #include <unordered_map>
 
 namespace {
@@ -18,10 +17,6 @@ constexpr int kOne = 1;
 constexpr int kBoardSquareCount = 64;
 constexpr int kBoardDimension = 8;
 constexpr int kInvalidSquare = -1;
-constexpr int kCenterStart = 2;
-constexpr int kCenterEnd = 5;
-constexpr int kRookPromotionRank = 6;
-constexpr int kRookDevelopmentRank = 1;
 
 constexpr int kFutilityMarginPerDepth = 150;
 constexpr int kShallowDepthLimit = 3;
@@ -38,25 +33,10 @@ constexpr int kNullMoveMinMaterialCount = 3;
 constexpr int kNullMoveMinTotalMaterial = 300;
 constexpr int kNullMoveMaxMaterialCount = 4;
 
-constexpr int kLmrMinDepth = 3;
-constexpr int kLmrMinMoveNumber = 4;
-constexpr int kLmrSecondReductionMove = 8;
-constexpr int kLmrThirdReductionMove = 12;
-constexpr int kLmrSecondReduction = 2;
-constexpr int kLmrThirdReduction = 3;
-
 constexpr int kMultiCutMinDepth = 4;
 constexpr int kMultiCutMinMoves = 8;
 constexpr int kMultiCutDepthReduction = 3;
 constexpr int kMultiCutCutoffCount = 2;
-
-constexpr int kIidMinDepth = 4;
-constexpr int kIidDepthReduction = 2;
-
-constexpr int kSingularMinDepth = 6;
-constexpr int kSingularDepthReduction = 1;
-constexpr int kSingularOtherMoveReduction = 2;
-constexpr int kSingularBetterMoveCutoff = 2;
 
 constexpr int kHistoryPruningDepthLimit = 3;
 constexpr int kHistoryPruningThreshold = -1000;
@@ -64,17 +44,6 @@ constexpr int kLateMovePruningMoveThreshold = 4;
 constexpr int kRecaptureMaxLastMove = kBoardSquareCount - 1;
 constexpr int kPawnPushWhiteAdvancedRank = 5;
 constexpr int kPawnPushBlackAdvancedRank = 2;
-
-constexpr int kHashMoveScore = 10000;
-constexpr int kSeeVictimScale = 10;
-constexpr int kSeeUndervaluedCaptureBonus = 50;
-constexpr int kSeeCenterBonus = 10;
-constexpr int kThreatValueDivisor = 10;
-constexpr int kMobilityScorePerMove = 2;
-constexpr int kPawnAdvanceBonus = 5;
-constexpr int kCenterMinorBonus = 10;
-constexpr int kRookRankBonus = 15;
-constexpr int kCenterQueenBonus = 5;
 
 constexpr int kDefaultTotalMoves = 30;
 constexpr double kInCheckTimeFactor = 1.5;
@@ -113,8 +82,6 @@ constexpr int kSingleThreadContextCount = 1;
 constexpr int kRootPly = 0;
 constexpr int kFirstMoveIndex = 0;
 constexpr int kNarrowWindowWidth = 1;
-constexpr int kMinReducedDepth = 1;
-constexpr int kNoBetterMoves = 0;
 constexpr int kMoveSourceFileIndex = 0;
 constexpr int kMoveSourceRankIndex = 1;
 constexpr int kMoveDestFileIndex = 2;
@@ -126,6 +93,39 @@ constexpr int kNormalizedWeightTotal = 1000;
 constexpr int kFallbackWeight = 1;
 constexpr double kDefaultTimeFactor = 1.0;
 constexpr float kZeroFloat = 0.0F;
+
+struct MaterialSummary {
+    int nonKingPieceCount;
+    int totalMaterial;
+    int queenCount;
+    int rookCount;
+    int minorPieceCount;
+};
+
+MaterialSummary summarizeMaterial(const Board& board) {
+    const Bitboard pawns = board.whitePawns | board.blackPawns;
+    const Bitboard knights = board.whiteKnights | board.blackKnights;
+    const Bitboard bishops = board.whiteBishops | board.blackBishops;
+    const Bitboard rooks = board.whiteRooks | board.blackRooks;
+    const Bitboard queens = board.whiteQueens | board.blackQueens;
+    const Bitboard nonKingPieces = board.allPieces & ~(board.whiteKings | board.blackKings);
+
+    const int pawnCount = popcount(pawns);
+    const int knightCount = popcount(knights);
+    const int bishopCount = popcount(bishops);
+    const int rookCount = popcount(rooks);
+    const int queenCount = popcount(queens);
+
+    MaterialSummary summary{};
+    summary.nonKingPieceCount = popcount(nonKingPieces);
+    summary.totalMaterial = (pawnCount * kPawnMaterialValue) +
+                            ((knightCount + bishopCount) * kMinorMaterialValue) +
+                            (rookCount * kRookMaterialValue) + (queenCount * kQueenMaterialValue);
+    summary.queenCount = queenCount;
+    summary.rookCount = rookCount;
+    summary.minorPieceCount = knightCount + bishopCount;
+    return summary;
+}
 } // namespace
 
 bool AdvancedSearch::futilityPruning(const Board& board, int depth, int alpha, int beta,
@@ -185,50 +185,13 @@ bool AdvancedSearch::nullMovePruning(const Board& board, int depth, int alpha, i
         return false;
     }
 
-    int materialCount = kZero;
-    int totalMaterial = kZero;
-
-    for (int i = kZero; i < kBoardSquareCount; i++) {
-        const Piece& piece = board.squares[i].piece;
-        if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
-            materialCount++;
-            totalMaterial += piece.PieceValue;
-        }
-    }
-
-    if (materialCount < kNullMoveMinMaterialCount || totalMaterial < kNullMoveMinTotalMaterial) {
+    const MaterialSummary material = summarizeMaterial(board);
+    if (material.nonKingPieceCount < kNullMoveMinMaterialCount ||
+        material.totalMaterial < kNullMoveMinTotalMaterial) {
         return false;
     }
 
-    if (materialCount <= kNullMoveMaxMaterialCount) {
-        return false;
-    }
-
-    return true;
-}
-
-bool AdvancedSearch::lateMoveReduction(const Board& board, int depth, int moveNumber, int alpha,
-                                       int beta) {
-    (void)alpha;
-    (void)beta;
-
-    if (isInCheck(board, board.turn) || depth < kLmrMinDepth || moveNumber < kLmrMinMoveNumber) {
-        return false;
-    }
-
-    if (depth <= kShallowDepthLimit) {
-        return false;
-    }
-
-    int reduction = kMinReducedDepth;
-    if (moveNumber >= kLmrSecondReductionMove) {
-        reduction = kLmrSecondReduction;
-    }
-    if (moveNumber >= kLmrThirdReductionMove) {
-        reduction = kLmrThirdReduction;
-    }
-
-    if (depth - reduction < kMinReducedDepth) {
+    if (material.nonKingPieceCount <= kNullMoveMaxMaterialCount) {
         return false;
     }
 
@@ -268,73 +231,6 @@ bool AdvancedSearch::multiCutPruning(Board& board, int depth, int alpha, int bet
     }
 
     return nullMoveCount >= kMultiCutCutoffCount;
-}
-
-std::pair<int, int> AdvancedSearch::internalIterativeDeepening(Board& board, int depth, int alpha,
-                                                               int beta) {
-
-    if (depth < kIidMinDepth) {
-        return {kInvalidSquare, kInvalidSquare};
-    }
-
-    ThreadSafeHistory historyTable;
-    ParallelSearchContext context(kSingleThreadContextCount);
-    int reducedDepth = std::max(kMinReducedDepth, depth - kIidDepthReduction);
-    (void)AlphaBetaSearch(board, reducedDepth, alpha, beta, board.turn == ChessPieceColor::WHITE,
-                          kRootPly, historyTable, context);
-
-    return {kInvalidSquare, kInvalidSquare};
-}
-
-bool AdvancedSearch::singularExtension(Board& board, int depth, const std::pair<int, int>& move,
-                                       int alpha, int beta) {
-
-    if (depth < kSingularMinDepth) {
-        return false;
-    }
-
-    Board tempBoard = board;
-    if (!applySearchMove(tempBoard, move.first, move.second)) {
-        return false;
-    }
-    tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                : ChessPieceColor::WHITE;
-
-    ThreadSafeHistory historyTable;
-    ParallelSearchContext context(kSingleThreadContextCount);
-    int reducedDepth = depth - kSingularDepthReduction;
-    int score =
-        AlphaBetaSearch(tempBoard, reducedDepth, alpha, beta,
-                        !(board.turn == ChessPieceColor::WHITE), kRootPly, historyTable, context);
-
-    GenValidMoves(board);
-    std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
-    int betterMoves = kZero;
-    for (const auto& otherMove : moves) {
-        if (otherMove == move) {
-            continue;
-        }
-
-        Board otherBoard = board;
-        if (!applySearchMove(otherBoard, otherMove.first, otherMove.second)) {
-            continue;
-        }
-        otherBoard.turn = (otherBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                      : ChessPieceColor::WHITE;
-
-        int otherScore = AlphaBetaSearch(otherBoard, reducedDepth - kSingularOtherMoveReduction,
-                                         alpha, beta, !(board.turn == ChessPieceColor::WHITE),
-                                         kRootPly, historyTable, context);
-
-        if (otherScore >= score) {
-            betterMoves++;
-            if (betterMoves >= kSingularBetterMoveCutoff) {
-                break;
-            }
-        }
-    }
-
-    return betterMoves == kNoBetterMoves;
 }
 
 bool AdvancedSearch::historyPruning(const Board& board, int depth, const std::pair<int, int>& move,
@@ -389,14 +285,7 @@ bool AdvancedSearch::recaptureExtension(const Board& board, const std::pair<int,
 bool AdvancedSearch::checkExtension(const Board& board, const std::pair<int, int>& move,
                                     int depth) {
     (void)depth;
-    Board tempBoard = board;
-    if (!applySearchMove(tempBoard, move.first, move.second)) {
-        return false;
-    }
-    tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                : ChessPieceColor::WHITE;
-
-    return isInCheck(tempBoard, tempBoard.turn);
+    return givesCheck(board, move.first, move.second);
 }
 
 bool AdvancedSearch::pawnPushExtension(const Board& board, const std::pair<int, int>& move,
@@ -443,149 +332,6 @@ bool AdvancedSearch::passedPawnExtension(const Board& board, const std::pair<int
     }
 
     return false;
-}
-
-std::vector<EnhancedMoveOrdering::MoveScore> EnhancedMoveOrdering::scoreMoves(
-    const Board& board, const std::vector<std::pair<int, int>>& moves,
-    const ThreadSafeHistory& history, const KillerMoves& killers, int ply,
-    const std::pair<int, int>& hashMove) {
-
-    std::vector<MoveScore> scoredMoves;
-
-    for (const auto& move : moves) {
-        int score = kZero;
-
-        if (move == hashMove) {
-            score = kHashMoveScore;
-        }
-
-        else if (board.squares[move.second].piece.PieceType != ChessPieceType::NONE) {
-            score = getSEEScore(board, move);
-        }
-
-        else if (killers.isKiller(ply, move)) {
-            score = killers.getKillerScore(ply, move);
-        }
-
-        else {
-            score = history.get(move.first, move.second);
-        }
-
-        score += getPositionalScore(board, move);
-        score += getMobilityScore(board, move);
-        score += getThreatScore(board, move);
-        scoredMoves.emplace_back(move, score);
-    }
-
-    return scoredMoves;
-}
-
-int EnhancedMoveOrdering::getSEEScore(const Board& board, const std::pair<int, int>& move) {
-    const Piece& attacker = board.squares[move.first].piece;
-    const Piece& victim = board.squares[move.second].piece;
-
-    if (victim.PieceType == ChessPieceType::NONE) {
-        return kZero;
-    }
-
-    int score = (victim.PieceValue * kSeeVictimScale) - attacker.PieceValue;
-
-    if (attacker.PieceValue < victim.PieceValue) {
-        score += kSeeUndervaluedCaptureBonus;
-    }
-
-    int destCol = move.second % kBoardDimension;
-    int destRow = move.second / kBoardDimension;
-    if ((destCol >= kCenterStart && destCol <= kCenterEnd) &&
-        (destRow >= kCenterStart && destRow <= kCenterEnd)) {
-        score += kSeeCenterBonus;
-    }
-
-    return score;
-}
-
-int EnhancedMoveOrdering::getThreatScore(const Board& board, const std::pair<int, int>& move) {
-    int score = kZero;
-    Board tempBoard = board;
-    if (!applySearchMove(tempBoard, move.first, move.second)) {
-        return kZero;
-    }
-    tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                : ChessPieceColor::WHITE;
-
-    GenValidMoves(tempBoard);
-    std::vector<std::pair<int, int>> opponentMoves = GetAllMoves(tempBoard, tempBoard.turn);
-
-    for (const auto& oppMove : opponentMoves) {
-        const Piece& threatenedPiece = board.squares[oppMove.second].piece;
-        if (threatenedPiece.PieceType != ChessPieceType::NONE &&
-            threatenedPiece.PieceColor == board.turn) {
-            score += threatenedPiece.PieceValue / kThreatValueDivisor;
-        }
-    }
-
-    return score;
-}
-
-int EnhancedMoveOrdering::getMobilityScore(const Board& board, const std::pair<int, int>& move) {
-
-    Board tempBoard = board;
-    if (!applySearchMove(tempBoard, move.first, move.second)) {
-        return kZero;
-    }
-    tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                : ChessPieceColor::WHITE;
-
-    GenValidMoves(tempBoard);
-    std::vector<std::pair<int, int>> moves = GetAllMoves(tempBoard, tempBoard.turn);
-    return static_cast<int>(moves.size()) * kMobilityScorePerMove;
-}
-
-int EnhancedMoveOrdering::getPositionalScore(const Board& board, const std::pair<int, int>& move) {
-    const Piece& piece = board.squares[move.first].piece;
-    int destCol = move.second % kBoardDimension;
-    int destRow = move.second / kBoardDimension;
-    int score = kZero;
-
-    switch (piece.PieceType) {
-        case ChessPieceType::PAWN:
-
-            if (piece.PieceColor == ChessPieceColor::WHITE) {
-                score += destRow * kPawnAdvanceBonus;
-            } else {
-                score += ((kBoardDimension - kOne) - destRow) * kPawnAdvanceBonus;
-            }
-            break;
-
-        case ChessPieceType::KNIGHT:
-        case ChessPieceType::BISHOP:
-
-            if ((destCol >= kCenterStart && destCol <= kCenterEnd) &&
-                (destRow >= kCenterStart && destRow <= kCenterEnd)) {
-                score += kCenterMinorBonus;
-            }
-            break;
-
-        case ChessPieceType::ROOK:
-
-            if (destRow == kRookPromotionRank || destRow == kRookDevelopmentRank) {
-                score += kRookRankBonus;
-            }
-            break;
-
-        case ChessPieceType::QUEEN:
-
-            if ((destCol >= kCenterStart && destCol <= kCenterEnd) &&
-                (destRow >= kCenterStart && destRow <= kCenterEnd)) {
-                score += kCenterQueenBonus;
-            }
-            break;
-
-        default:
-            break;
-    }
-
-    return score;
 }
 
 TimeManager::TimeManager(const TimeControl& tc)
@@ -683,47 +429,18 @@ double TimeManager::getTimeFactor(int depth, int nodes) {
 }
 
 GamePhase TimeManager::getGamePhase(const Board& board) const {
-    int totalMaterial = kZero;
-    int pieceCount = kZero;
-    int queenCount = kZero;
-    int rookCount = kZero;
-    int minorPieceCount = kZero;
+    const MaterialSummary material = summarizeMaterial(board);
 
-    for (int sq = kZero; sq < kBoardSquareCount; ++sq) {
-        const Piece& piece = board.squares[sq].piece;
-        if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
-            pieceCount++;
-            switch (piece.PieceType) {
-                case ChessPieceType::QUEEN:
-                    totalMaterial += kQueenMaterialValue;
-                    queenCount++;
-                    break;
-                case ChessPieceType::ROOK:
-                    totalMaterial += kRookMaterialValue;
-                    rookCount++;
-                    break;
-                case ChessPieceType::BISHOP:
-                case ChessPieceType::KNIGHT:
-                    totalMaterial += kMinorMaterialValue;
-                    minorPieceCount++;
-                    break;
-                case ChessPieceType::PAWN:
-                    totalMaterial += kPawnMaterialValue;
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
-    if (totalMaterial > kOpeningMaterialThreshold && queenCount >= kOpeningMinQueenCount &&
-        pieceCount > kOpeningPieceCountThreshold) {
+    if (material.totalMaterial > kOpeningMaterialThreshold &&
+        material.queenCount >= kOpeningMinQueenCount &&
+        material.nonKingPieceCount > kOpeningPieceCountThreshold) {
         return GamePhase::OPENING;
     }
 
-    if (totalMaterial < kEndgameMaterialThreshold || pieceCount <= kEndgamePieceCountThreshold ||
-        (queenCount == kZero && rookCount <= kEndgameRookCountThreshold &&
-         minorPieceCount <= kEndgameMinorPieceCountThreshold)) {
+    if (material.totalMaterial < kEndgameMaterialThreshold ||
+        material.nonKingPieceCount <= kEndgamePieceCountThreshold ||
+        (material.queenCount == kZero && material.rookCount <= kEndgameRookCountThreshold &&
+         material.minorPieceCount <= kEndgameMinorPieceCountThreshold)) {
         return GamePhase::ENDGAME;
     }
 
@@ -759,14 +476,14 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
     auto it = book.find(boardToKey(board));
     if (it != book.end() && !it->second.empty()) {
         const auto& entries = it->second;
-            if (randomize) {
-                int totalWeight = kZero;
-                for (const auto& entry : entries) {
-                    totalWeight += entry.weight;
-                }
-                if (totalWeight > kZero) {
-                    static std::random_device rd;
-                    static std::mt19937 gen(static_cast<std::mt19937::result_type>(rd()));
+        if (randomize) {
+            int totalWeight = kZero;
+            for (const auto& entry : entries) {
+                totalWeight += entry.weight;
+            }
+            if (totalWeight > kZero) {
+                static std::random_device rd;
+                static std::mt19937 gen(static_cast<std::mt19937::result_type>(rd()));
                 std::uniform_int_distribution<> dis(kZero, totalWeight - kOne);
                 int random = dis(gen);
                 int cumulative = kZero;
@@ -778,16 +495,15 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
                 }
             }
             return entries[kFirstMoveIndex].move;
-        } else {
-            auto bestIt =
-                std::ranges::max_element(entries, [](const BookEntry& a, const BookEntry& b) {
-                    if (a.weight != b.weight) {
-                        return a.weight < b.weight;
-                    }
-                    return a.winRate < b.winRate;
-                });
-            return bestIt->move;
         }
+
+        auto bestIt = std::ranges::max_element(entries, [](const BookEntry& a, const BookEntry& b) {
+            if (a.weight != b.weight) {
+                return a.weight < b.weight;
+            }
+            return a.winRate < b.winRate;
+        });
+        return bestIt->move;
     }
 
     auto parseBookMoveString = [&](const std::string& moveStr) -> std::pair<int, int> {
@@ -940,16 +656,17 @@ void EnhancedOpeningBook::loadBook(const std::string& path) {
 }
 
 std::string EnhancedOpeningBook::boardToKey(const Board& board) {
-    std::string fen = getFEN(board);
-    std::istringstream iss(fen);
-    std::string position;
-    std::string activeColor;
-    std::string castling;
-    std::string enPassant;
-    iss >> position >> activeColor >> castling >> enPassant;
-    std::ostringstream keyStream;
-    keyStream << position << " " << activeColor << " " << castling << " " << enPassant;
-    return keyStream.str();
+    const std::string fen = getFEN(board);
+    int fieldCount = kZero;
+    for (std::size_t i = kZero; i < fen.size(); ++i) {
+        if (fen[i] == ' ') {
+            fieldCount++;
+            if (fieldCount == 4) {
+                return fen.substr(kZero, i);
+            }
+        }
+    }
+    return fen;
 }
 
 void EnhancedOpeningBook::normalizeWeights(std::vector<BookEntry>& entries) {

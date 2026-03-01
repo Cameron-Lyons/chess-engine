@@ -21,8 +21,6 @@ Contains all search-related functionality:
 - `AdvancedSearch.h/cpp` - Advanced search techniques (futility pruning, null move, extensions)
 - `LazySMP.h/cpp` - Lazy SMP (Symmetric Multi-Processing) parallel search
 - `LMR.h/cpp` - Enhanced Late Move Reductions
-- `MoveOrdering.h` - Move ordering heuristics
-- `SearchEnhancements.h` - Additional search enhancements
 - `TranspositionTableV2.h/cpp` - Advanced transposition table implementation
 
 ### `evaluation/` - Position Evaluation
@@ -47,7 +45,6 @@ Contains advanced AI and machine learning components:
 ### `utils/` - Utilities and Optimizations
 Contains utility functions and performance optimizations:
 - `engine_globals.h/cpp` - Global engine state and configuration
-- `PerftTest.h` - Perft testing utilities
 - `Profiler.h` - Performance profiling tools
 
 ## Implementation Status

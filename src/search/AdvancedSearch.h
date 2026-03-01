@@ -16,16 +16,7 @@ public:
 
     static bool nullMovePruning(const Board& board, int depth, int alpha, int beta);
 
-    static bool lateMoveReduction(const Board& board, int depth, int moveNumber, int alpha,
-                                  int beta);
-
     static bool multiCutPruning(Board& board, int depth, int alpha, int beta, int r);
-
-    static std::pair<int, int> internalIterativeDeepening(Board& board, int depth, int alpha,
-                                                          int beta);
-
-    static bool singularExtension(Board& board, int depth, const std::pair<int, int>& move,
-                                  int alpha, int beta);
 
     static bool historyPruning(const Board& board, int depth, const std::pair<int, int>& move,
                                const ThreadSafeHistory& history);
@@ -36,33 +27,6 @@ public:
     static bool pawnPushExtension(const Board& board, const std::pair<int, int>& move, int depth);
     static bool passedPawnExtension(const Board& board, const std::pair<int, int>& move, int depth);
 };
-
-namespace EnhancedMoveOrdering {
-constexpr int INVALID_MOVE_SQUARE = -1;
-
-struct MoveScore {
-    std::pair<int, int> move;
-    int score;
-    MoveScore(const std::pair<int, int>& m, int s) : move(m), score(s) {}
-    bool operator<(const MoveScore& other) const {
-        return score > other.score;
-    }
-};
-
-std::vector<MoveScore> scoreMoves(const Board& board, const std::vector<std::pair<int, int>>& moves,
-                                  const ThreadSafeHistory& history, const KillerMoves& killers,
-                                  int ply,
-                                  const std::pair<int, int>& hashMove = {INVALID_MOVE_SQUARE,
-                                                                         INVALID_MOVE_SQUARE});
-
-int getSEEScore(const Board& board, const std::pair<int, int>& move);
-
-int getThreatScore(const Board& board, const std::pair<int, int>& move);
-
-int getMobilityScore(const Board& board, const std::pair<int, int>& move);
-
-int getPositionalScore(const Board& board, const std::pair<int, int>& move);
-} // namespace EnhancedMoveOrdering
 
 enum class GamePhase : std::uint8_t { OPENING, MIDDLEGAME, ENDGAME };
 
