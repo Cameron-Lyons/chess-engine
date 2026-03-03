@@ -1,9 +1,16 @@
 #include "NNUE.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <ios>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace NNUE {
 

@@ -1,9 +1,14 @@
 #include "EvaluationTuning.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <future>
 #include <iostream>
+#include <string>
 #include <thread>
+#include <vector>
 
 namespace EvaluationParams {
 
@@ -110,10 +115,8 @@ void logEvaluationComponents(const char* component, int value) {
 
 } // namespace EvaluationParams
 
-#include "../evaluation/Evaluation.h"
 #include <cmath>
 #include <fstream>
-#include <sstream>
 
 namespace {
 int getWorkerCount(std::size_t taskCount) {

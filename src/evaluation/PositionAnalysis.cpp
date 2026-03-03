@@ -1,13 +1,16 @@
 #include "PositionAnalysis.h"
-#include "../core/BitboardMoves.h"
 #include "../search/ValidMoves.h"
 #include "../search/search.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
 #include "Evaluation.h"
 #include "GamePhaseConstants.h"
 
-#include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace {
 constexpr int kBoardSquareCount = 64;

@@ -1,8 +1,13 @@
 #include "ChessBoard.h"
+#include "Bitboard.h"
 #include "CastlingConstants.h"
+#include "ChessPiece.h"
 
+#include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <sstream>
+#include <string>
 
 void Board::clearBitboards() {
     whitePawns = whiteKnights = whiteBishops = whiteRooks = whiteQueens = whiteKings = 0;

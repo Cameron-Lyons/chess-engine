@@ -1,5 +1,9 @@
 #include "BitboardMoves.h"
+#include "Bitboard.h"
+#include "ChessPiece.h"
+#include "MagicBitboards.h"
 
+#include <array>
 #include <iostream>
 
 std::array<Bitboard, 64> KnightAttacks;

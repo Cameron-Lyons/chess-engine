@@ -2,17 +2,30 @@
 #include "../ai/SyzygyTablebase.h"
 #include "../core/BitboardMoves.h"
 #include "../evaluation/Evaluation.h"
-#include "../search/ValidMoves.h"
 #include "../search/search.h"
 #include "../utils/TunableParams.h"
-#include "../utils/engine_globals.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
+#include "ai/EndgameTablebase.h"
+#include "ai/NeuralNetwork.h"
+#include "evaluation/NNUE.h"
+#include "search/AdvancedSearch.h"
 
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <exception>
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <sstream>
+#include <stop_token>
+#include <string>
 #include <system_error>
+#include <utility>
+#include <vector>
 
 extern Board ChessBoard;
 extern Board PrevBoard;

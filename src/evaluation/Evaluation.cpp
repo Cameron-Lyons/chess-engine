@@ -2,15 +2,14 @@
 #include "../ai/EndgameTablebase.h"
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
+#include "Bitboard.h"
 #include "EvaluationTuning.h"
-#include "HybridEvaluator.h"
 #include "NNUE.h"
 
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
-#include <vector>
 
 extern uint64_t ZobristTable[64][12];
 

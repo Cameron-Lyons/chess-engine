@@ -1,11 +1,18 @@
 #include "NNUEBitboard.h"
+#include "Bitboard.h"
+#include "BitboardOnly.h"
+#include "ChessPiece.h"
 
 #include <algorithm>
 #include <bit>
 #include <cpuid.h>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <ios>
+#include <memory>
+#include <string>
 
 namespace NNUEBitboard {
 

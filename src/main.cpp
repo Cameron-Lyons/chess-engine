@@ -1,11 +1,30 @@
+#include "Bitboard.h"
+#include "BitboardMoves.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
+#include "ai/NeuralNetwork.h"
 #include "core/ChessEngine.h"
+#include "evaluation/Evaluation.h"
 #include "evaluation/EvaluationTuning.h"
 #include "evaluation/HybridEvaluator.h"
 #include "evaluation/PositionAnalysis.h"
 #include "protocol/uci.h"
+#include "search/ValidMoves.h"
+#include "search/search.h"
 #include "utils/engine_globals.h"
 
+#include <algorithm>
+#include <cctype>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <exception>
+#include <iostream>
+#include <stack>
+#include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 using ChessClock = std::chrono::steady_clock;
 using ChessDuration = std::chrono::milliseconds;
@@ -219,11 +238,10 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = kDefaultComp
     std::cout << "Search depth: " << searchDepth << " (moves: " << numMoves
               << ", captures: " << numCaptures << ")\n";
 
-    SearchResult result =
-        iterativeDeepeningParallel(
-            board, searchDepth, adaptiveTime,
-            std::max(kSearchThreadsFallback, static_cast<int>(std::thread::hardware_concurrency())),
-                                   kSearchContempt, kSearchMultiPv, adaptiveTime, adaptiveTime);
+    SearchResult result = iterativeDeepeningParallel(
+        board, searchDepth, adaptiveTime,
+        std::max(kSearchThreadsFallback, static_cast<int>(std::thread::hardware_concurrency())),
+        kSearchContempt, kSearchMultiPv, adaptiveTime, adaptiveTime);
 
     if (result.bestMove.first != kInvalidSquare && result.bestMove.second != kInvalidSquare) {
         return result.bestMove;

@@ -1,9 +1,17 @@
 #include "EndgameTablebase.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
 #include "SyzygyTablebase.h"
 
+#include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <iostream>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 class EndgameTablebase::Impl {
 public:

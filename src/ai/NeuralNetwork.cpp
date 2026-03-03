@@ -1,12 +1,15 @@
 #include "NeuralNetwork.h"
 #include "../evaluation/Evaluation.h"
 #include "../search/ValidMoves.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
 
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <ctime>
 #include <filesystem>
@@ -15,11 +18,14 @@
 #include <iomanip>
 #include <iostream>
 #include <iterator>
-#include <numeric>
+#include <limits>
+#include <memory>
 #include <random>
-#include <ranges>
 #include <sstream>
+#include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 namespace {
 constexpr int kThreadFallback = 4;

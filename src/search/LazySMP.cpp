@@ -1,11 +1,21 @@
 #include "LazySMP.h"
-#include "../evaluation/Evaluation.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
+#include "search/ValidMoves.h"
+#include "search/search.h"
 
 #include <algorithm>
+#include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <pthread.h>
+#include <thread>
+#include <utility>
+#include <vector>
 
 namespace {
 constexpr int kZero = 0;
@@ -100,7 +110,6 @@ LazySMP::LazySMP(int threadCount, int hashMb, int contemptValue)
         threads[i]->aspirationDelta = getAspirationDelta(i);
         threads[i]->depthOffset = getDepthOffset(i);
     }
-
 }
 
 LazySMP::~LazySMP() = default;

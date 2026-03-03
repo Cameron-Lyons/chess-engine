@@ -1,7 +1,18 @@
 #include "engine_globals.h"
+#include "Bitboard.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
+#include "search/search.h"
 
-#include <random>
-#include <sstream>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <expected>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace {

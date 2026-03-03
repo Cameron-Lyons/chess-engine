@@ -1,5 +1,11 @@
 #include "MagicBitboards.h"
+#include "Bitboard.h"
+#include <array>
+#include <cstdint>
+#include <cstdlib>
 #include <random>
+#include <utility>
+#include <vector>
 
 std::array<std::array<uint64_t, 4096>, 64> MagicBitboards::rookAttacks;
 std::array<std::array<uint64_t, 512>, 64> MagicBitboards::bishopAttacks;

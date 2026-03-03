@@ -2,21 +2,34 @@
 #include "../ai/SyzygyTablebase.h"
 #include "../utils/engine_globals.h"
 #include "AdvancedSearch.h"
+#include "Bitboard.h"
+#include "BitboardMoves.h"
 #include "BookUtils.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
 #include "LMR.h"
 #include "LazySMP.h"
+#include "evaluation/Evaluation.h"
+#include "search/ValidMoves.h"
 
 #include <algorithm>
+#include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
-#include <future>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <iostream>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <pthread.h>
 #include <random>
-#include <ranges>
-#include <sstream>
+#include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 namespace {
 constexpr int kZero = SearchConstants::kZero;
@@ -965,7 +978,7 @@ struct RootSplitSharedState {
     int depth = kZero;
     bool maximizingPlayer = true;
     int hashSizeMb = SearchConstants::kDefaultTranspositionTableMb;
-    ThreadSafeHistory historySeed{};
+    ThreadSafeHistory historySeed;
     std::chrono::steady_clock::time_point startTime;
     int timeLimitMs = kZero;
     int contempt = kZero;
@@ -1044,10 +1057,10 @@ bool evaluateRootSplitMove(const RootSplitSharedState& shared, std::pair<int, in
         return false;
     }
 
-    const uint64_t childZobristKey = computeChildZobrist(
-        shared.rootZobristKey, newBoard, move.first, move.second, moveData);
-    newBoard.turn = (newBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                               : ChessPieceColor::WHITE;
+    const uint64_t childZobristKey =
+        computeChildZobrist(shared.rootZobristKey, newBoard, move.first, move.second, moveData);
+    newBoard.turn =
+        (newBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
 
     ThreadSafeHistory localHistory = shared.historySeed;
     ParallelSearchContext localContext(kOne);
@@ -1091,7 +1104,8 @@ void commitRootSplitResult(RootSplitSharedState& shared, int eval, std::pair<int
 
 void* rootSplitWorkerEntry(void* arg) {
     auto* workerArgs = static_cast<RootSplitWorkerArgs*>(arg);
-    if (workerArgs == nullptr || workerArgs->shared == nullptr || workerArgs->shared->rootMoves == nullptr) {
+    if (workerArgs == nullptr || workerArgs->shared == nullptr ||
+        workerArgs->shared->rootMoves == nullptr) {
         return nullptr;
     }
 
@@ -1102,12 +1116,12 @@ void* rootSplitWorkerEntry(void* arg) {
         }
 
         const int moveIndex = shared.nextMoveIndex.fetch_add(kOne, std::memory_order_relaxed);
-        if (moveIndex < kZero ||
-            moveIndex >= static_cast<int>(shared.rootMoves->size())) {
+        if (moveIndex < kZero || moveIndex >= static_cast<int>(shared.rootMoves->size())) {
             break;
         }
 
-        const std::pair<int, int> move = (*shared.rootMoves)[static_cast<std::size_t>(moveIndex)].move;
+        const std::pair<int, int> move =
+            (*shared.rootMoves)[static_cast<std::size_t>(moveIndex)].move;
         int alphaWindow = -kMateScore;
         int betaWindow = kMateScore;
         {
@@ -1144,10 +1158,9 @@ RootSplitResult searchRootMovesYBWC(const Board& board, int depth, int alpha, in
         return result;
     }
 
-    std::vector<ScoredMove> scoredMoves =
-        scoreMovesOptimized(rootBoard, moves, historyTable, context.killerMoves, kZero,
-                            {kInvalidSquare, kInvalidSquare}, {kInvalidSquare, kInvalidSquare},
-                            &context);
+    std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
+        rootBoard, moves, historyTable, context.killerMoves, kZero,
+        {kInvalidSquare, kInvalidSquare}, {kInvalidSquare, kInvalidSquare}, &context);
     std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
 
     std::vector<ScoredMove> rootMoves;
@@ -1193,8 +1206,8 @@ RootSplitResult searchRootMovesYBWC(const Board& board, int depth, int alpha, in
     for (int i = kZero; i < static_cast<int>(rootMoves.size()); ++i) {
         int eval = kZero;
         int nodes = kZero;
-        if (!evaluateRootSplitMove(shared, rootMoves[static_cast<std::size_t>(i)].move, shared.alpha,
-                                   shared.beta, eval, nodes)) {
+        if (!evaluateRootSplitMove(shared, rootMoves[static_cast<std::size_t>(i)].move,
+                                   shared.alpha, shared.beta, eval, nodes)) {
             continue;
         }
 
@@ -1249,7 +1262,7 @@ RootSplitResult searchRootMovesYBWC(const Board& board, int depth, int alpha, in
     result.score = shared.bestScore;
     const long long totalNodes = shared.nodes.load(std::memory_order_relaxed);
     result.nodes = (totalNodes > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max()
-                                                                   : static_cast<int>(totalNodes);
+                                                                  : static_cast<int>(totalNodes);
     result.timeExpired = shared.timeExpired.load(std::memory_order_relaxed);
     return result;
 }
@@ -2617,10 +2630,9 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
                     rootSplitEnabled && depth >= kRootSplitMinDepth &&
                     searchAttempts <= kRootSplitMaxAspirationSplitAttempt;
                 if (shouldUseRootSplitAttempt) {
-                    RootSplitResult rootSplitResult =
-                        searchRootMovesYBWC(board, depth, alpha, beta,
-                                            board.turn == ChessPieceColor::WHITE, context.historyTable,
-                                            context, numThreads, hashSizeMb);
+                    RootSplitResult rootSplitResult = searchRootMovesYBWC(
+                        board, depth, alpha, beta, board.turn == ChessPieceColor::WHITE,
+                        context.historyTable, context, numThreads, hashSizeMb);
                     if (rootSplitResult.hasLegalMove) {
                         searchScore = rootSplitResult.score;
                         depthBestMove = rootSplitResult.bestMove;

@@ -1,7 +1,14 @@
 #include "BitboardOnly.h"
+#include "Bitboard.h"
+#include "CastlingConstants.h"
+#include "ChessPiece.h"
 
+#include <bit>
 #include <cctype>
+#include <cstdint>
+#include <cstdlib>
 #include <sstream>
+#include <string>
 
 static uint64_t zobristPieces[2][6][64];
 static uint64_t zobristSideToMove;

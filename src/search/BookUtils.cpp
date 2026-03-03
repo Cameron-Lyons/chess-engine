@@ -1,7 +1,11 @@
 #include "BookUtils.h"
 
+#include <cstddef>
 #include <random>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace {
 constexpr int kZero = 0;

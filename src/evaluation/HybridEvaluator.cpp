@@ -1,8 +1,15 @@
 #include "HybridEvaluator.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
 #include "Evaluation.h"
+#include "ai/NeuralNetwork.h"
 
+#include <algorithm>
+#include <exception>
 #include <filesystem>
 #include <iostream>
+#include <memory>
+#include <string>
 
 namespace {
 constexpr int kBoardSquareCount = 64;

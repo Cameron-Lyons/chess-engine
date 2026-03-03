@@ -1,16 +1,23 @@
 #include "AdvancedSearch.h"
-#include "../core/BitboardMoves.h"
-#include "../evaluation/Evaluation.h"
 #include "../evaluation/GamePhaseConstants.h"
 #include "../utils/engine_globals.h"
+#include "Bitboard.h"
 #include "BookUtils.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
+#include "search/ValidMoves.h"
+#include "search/search.h"
 
 #include <algorithm>
-#include <cmath>
+#include <cstddef>
 #include <fstream>
+#include <ios>
 #include <random>
 #include <ranges>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace {
 constexpr int kZero = 0;

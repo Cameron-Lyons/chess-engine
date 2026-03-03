@@ -1,7 +1,12 @@
 #include "ValidMoves.h"
 #include "../core/BitboardMoves.h"
+#include "Bitboard.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
 
-#include <iostream>
+#include <cstddef>
+#include <utility>
+#include <vector>
 
 namespace {
 constexpr int kZero = 0;

@@ -1,9 +1,14 @@
 #include "SyzygyTablebase.h"
+#include "Bitboard.h"
+#include "ChessBoard.h"
+#include "ChessPiece.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
-#include <fstream>
+#include <string>
+#include <vector>
 #ifdef __BMI2__
 #include <x86intrin.h>
 #endif
