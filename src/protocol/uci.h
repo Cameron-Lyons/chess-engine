@@ -6,9 +6,12 @@
 #include "../search/AdvancedSearch.h"
 #include "../search/search.h"
 
+#include <atomic>
 #include <memory>
-#include <pthread.h>
+#include <optional>
+#include <stop_token>
 #include <string>
+#include <thread>
 #include <vector>
 
 class UCIEngine {
@@ -49,14 +52,13 @@ public:
     void handleBookStats();
 
     void reportBestMove(const std::pair<int, int>& move,
-                        const std::pair<int, int>& ponderMove = {-1, -1});
+                        const std::optional<std::pair<int, int>>& ponderMove = std::nullopt);
     void reportInfo(int depth, int seldepth, int time, int nodes, int nps,
                     const std::vector<std::pair<int, int>>& pv, int score, int hashfull);
     void reportInfo(const std::string& info);
 
 private:
     struct SearchTask {
-        UCIEngine* engine;
         int depth;
         int timeForMove;
         int optimalTime;
@@ -64,7 +66,7 @@ private:
         Board boardSnapshot;
     };
 
-    static void* searchThreadEntry(void* arg);
+    void searchThreadEntry(const std::stop_token& stopToken, const SearchTask& task);
 
     Board board;
     UCIOptions options;
@@ -72,13 +74,12 @@ private:
     std::unique_ptr<EndgameTablebase> tablebase;
     std::unique_ptr<EnhancedOpeningBook> openingBook;
     std::unique_ptr<TimeManager> timeManager;
-    bool isSearching;
-    bool isPondering;
+    std::atomic_bool isSearching{false};
+    std::atomic_bool isPondering{false};
     std::chrono::steady_clock::time_point searchStartTime;
-    int searchTimeLimit;
-    int searchDepthLimit;
-    pthread_t searchThread{};
-    bool searchThreadActive = false;
+    int searchTimeLimit = 0;
+    int searchDepthLimit = 0;
+    std::jthread searchThread;
 
     SearchResult performSearch(const Board& board, int depth, int timeLimit, int optimalTime = 0,
                                int maxTime = 0);
@@ -100,7 +101,7 @@ private:
 class UCINotation {
 public:
     static std::string moveToUCI(const std::pair<int, int>& move);
-    static std::pair<int, int> uciToMove(const std::string& uciMove);
+    static std::optional<std::pair<int, int>> uciToMove(const std::string& uciMove);
     static std::string squareToAlgebraic(int square);
     static int algebraicToSquare(const std::string& algebraic);
     static bool isValidUCIMove(const std::string& uciMove);
@@ -114,16 +115,4 @@ public:
     static std::string generateFEN(const Board& board);
     static bool isValidFEN(const std::string& fen);
     static uint64_t getPositionHash(const Board& board);
-};
-
-class UCISearchInfo {
-public:
-    static std::string formatInfo(int depth, int seldepth, int time, int nodes, int nps,
-                                  const std::vector<std::pair<int, int>>& pv, int score,
-                                  int hashfull);
-
-    static std::string formatScore(int score, bool isMate = false);
-    static std::string formatPV(const std::vector<std::pair<int, int>>& pv);
-    static std::string formatTime(int timeMs);
-    static std::string formatNPS(int nodes, int timeMs);
 };

@@ -220,7 +220,8 @@ double TexelTuner::computeError(const std::vector<int>& p) const {
 void TexelTuner::findOptimalK() {
     double bestK = 1.0;
     double bestError = 1e9;
-    for (double k = 0.5; k <= 2.0; k += 0.01) {
+    for (int kCenti = 50; kCenti <= 200; ++kCenti) {
+        double k = static_cast<double>(kCenti) / 100.0;
         scalingK = k;
         double err{computeError(params)};
         if (err < bestError) {
@@ -230,7 +231,8 @@ void TexelTuner::findOptimalK() {
     }
     scalingK = bestK;
 
-    for (double delta = 0.005; delta >= 0.0001; delta /= 2.0) {
+    double delta = 0.005;
+    while (delta >= 0.0001) {
         bool improved = true;
         while (improved) {
             improved = false;
@@ -250,6 +252,7 @@ void TexelTuner::findOptimalK() {
                 }
             }
         }
+        delta /= 2.0;
     }
 }
 

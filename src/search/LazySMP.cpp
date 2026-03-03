@@ -170,7 +170,8 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit) const 
 
         int score = kZero;
         for (int attempt = kZero;
-             attempt < kMaxAspirationAttempts && !data->stopFlag && !shared->globalStop; ++attempt) {
+             attempt < kMaxAspirationAttempts && !data->stopFlag && !shared->globalStop;
+             ++attempt) {
             Board boardCopy = data->board;
             score = PrincipalVariationSearch(boardCopy, depth, alpha, beta,
                                              boardCopy.turn == ChessPieceColor::WHITE, kRootPly,
@@ -346,7 +347,8 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit) {
         }
 
         if (foundConsensus) {
-            result.bestMove = {chosenKey >> kMovePackShift, chosenKey & ((kOne << kMovePackShift) - kOne)};
+            result.bestMove = {chosenKey >> kMovePackShift,
+                               chosenKey & ((kOne << kMovePackShift) - kOne)};
             result.depth = chosenStats.depth;
             result.score = chosenStats.score;
         }

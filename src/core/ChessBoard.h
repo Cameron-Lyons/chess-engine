@@ -6,10 +6,12 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <concepts>
 #include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 using ChessString = std::string_view;
@@ -75,14 +77,15 @@ struct Board {
     Board(const Board& other)
         : turn(other.turn), whiteCanCastle(other.whiteCanCastle),
           blackCanCastle(other.blackCanCastle), enPassantSquare(other.enPassantSquare),
-          whiteChecked(other.whiteChecked), blackChecked(other.blackChecked), LastMove(other.LastMove),
-          whitePawns(other.whitePawns), whiteKnights(other.whiteKnights),
+          whiteChecked(other.whiteChecked), blackChecked(other.blackChecked),
+          LastMove(other.LastMove), whitePawns(other.whitePawns), whiteKnights(other.whiteKnights),
           whiteBishops(other.whiteBishops), whiteRooks(other.whiteRooks),
-          whiteQueens(other.whiteQueens), whiteKings(other.whiteKings), blackPawns(other.blackPawns),
-          blackKnights(other.blackKnights), blackBishops(other.blackBishops),
-          blackRooks(other.blackRooks), blackQueens(other.blackQueens), blackKings(other.blackKings),
-          whitePieces(other.whitePieces), blackPieces(other.blackPieces), allPieces(other.allPieces),
-          lastMoveTime(other.lastMoveTime) {
+          whiteQueens(other.whiteQueens), whiteKings(other.whiteKings),
+          blackPawns(other.blackPawns), blackKnights(other.blackKnights),
+          blackBishops(other.blackBishops), blackRooks(other.blackRooks),
+          blackQueens(other.blackQueens), blackKings(other.blackKings),
+          whitePieces(other.whitePieces), blackPieces(other.blackPieces),
+          allPieces(other.allPieces), lastMoveTime(other.lastMoveTime) {
         for (int i = 0; i < 64; ++i) {
             squares[i].piece = other.squares[i].piece;
             squares[i].loc = other.squares[i].loc;
@@ -131,12 +134,15 @@ struct Board {
     Board(Board&&) = default;
     Board& operator=(Board&&) = default;
 
-    template <typename T>
+    template <std::integral T>
     bool isValidIndex(T index) const {
-        return index >= 0 && index < 64;
+        if constexpr (std::is_signed_v<T>) {
+            return index >= 0 && index < static_cast<T>(NUM_SQUARES);
+        }
+        return index < static_cast<T>(NUM_SQUARES);
     }
 
-    template <typename T>
+    template <std::integral T>
     ChessPieceColor getPieceColor(T pos) const {
         if (!isValidIndex(pos)) {
             return ChessPieceColor::WHITE;
@@ -144,7 +150,7 @@ struct Board {
         return squares[pos].piece.PieceColor;
     }
 
-    template <typename T>
+    template <std::integral T>
     ChessPieceType getPieceType(T pos) const {
         if (!isValidIndex(pos)) {
             return ChessPieceType::NONE;

@@ -2,7 +2,7 @@
 #include "src/core/ChessBoard.h"
 #include <iostream>
 
-int main() {
+int main() { // NOLINT(bugprone-exception-escape)
 
     EndgameTablebase tablebase("./tablebases/");
     Board board;
@@ -14,15 +14,15 @@ int main() {
     board.updateBitboards();
 
     if (tablebase.isInTablebase(board)) {
-        std::cout << "Position found in tablebase!" << std::endl;
+        std::cout << "Position found in tablebase!" << '\n';
         EndgameTablebase::TablebaseResult result;
         if (tablebase.probe(board, result)) {
             if (result.distanceToMate > 0) {
-                std::cout << "White is winning" << std::endl;
+                std::cout << "White is winning" << '\n';
             } else if (result.distanceToMate < 0) {
-                std::cout << "Black is winning" << std::endl;
+                std::cout << "Black is winning" << '\n';
             } else {
-                std::cout << "Position is drawn" << std::endl;
+                std::cout << "Position is drawn" << '\n';
             }
 
             std::pair<int, int> bestMove;
@@ -33,13 +33,13 @@ int main() {
                 int toCol = bestMove.second % 8;
 
                 std::cout << "Best move: " << char('a' + fromCol) << (fromRow + 1) << " to "
-                          << char('a' + toCol) << (toRow + 1) << std::endl;
+                          << char('a' + toCol) << (toRow + 1) << '\n';
             }
         }
     } else {
-        std::cout << "Position not in tablebase (or tablebase not loaded)" << std::endl;
+        std::cout << "Position not in tablebase (or tablebase not loaded)" << '\n';
         int eval = EndgameKnowledge::evaluateEndgame(board);
-        std::cout << "Endgame evaluation: " << eval << std::endl;
+        std::cout << "Endgame evaluation: " << eval << '\n';
     }
 
     return 0;

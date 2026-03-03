@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Bitboard.h"
+#include "CastlingConstants.h"
 #include "ChessPiece.h"
 
 #include <chrono>
@@ -125,16 +126,22 @@ public:
 
     void setCastlingRights(bool whiteKingside, bool whiteQueenside, bool blackKingside,
                            bool blackQueenside) {
-        castlingRights = (whiteKingside ? 1 : 0) | (whiteQueenside ? 2 : 0) |
-                         (blackKingside ? 4 : 0) | (blackQueenside ? 8 : 0);
+        castlingRights = (whiteKingside ? CastlingConstants::kWhiteKingsideCastlingRight : 0) |
+                         (whiteQueenside ? CastlingConstants::kWhiteQueensideCastlingRight : 0) |
+                         (blackKingside ? CastlingConstants::kBlackKingsideCastlingRight : 0) |
+                         (blackQueenside ? CastlingConstants::kBlackQueensideCastlingRight : 0);
     }
 
     int getEnPassantSquare() const {
-        return epSquare < 64 ? epSquare : -1;
+        return epSquare < CastlingConstants::kNoEnPassantSquareBitboard
+                   ? epSquare
+                   : CastlingConstants::kNoEnPassantSquareMailbox;
     }
 
     void setEnPassantSquare(int square) {
-        epSquare = (square >= 0 && square < 64) ? square : 64;
+        epSquare = (square >= 0 && square < NUM_SQUARES)
+                       ? square
+                       : CastlingConstants::kNoEnPassantSquareBitboard;
     }
 
     uint64_t getHash() const {

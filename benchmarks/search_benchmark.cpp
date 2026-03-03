@@ -3,9 +3,11 @@
 #include "src/search/search.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -18,15 +20,22 @@ constexpr int kDefaultRounds = 3;
 int parseIntArg(const std::vector<std::string>& args, const std::string& key, int fallback) {
     const std::string prefix = key + "=";
     for (const std::string& arg : args) {
-        if (arg.rfind(prefix, 0) == 0) {
-            return std::max(1, std::atoi(arg.substr(prefix.size()).c_str()));
+        if (arg.starts_with(prefix)) {
+            const std::string value = arg.substr(prefix.size());
+            char* end = nullptr;
+            errno = 0;
+            const long parsed = std::strtol(value.c_str(), &end, 10);
+            if (errno == 0 && end != value.c_str() && *end == '\0' && parsed > 0 &&
+                parsed <= std::numeric_limits<int>::max()) {
+                return static_cast<int>(parsed);
+            }
         }
     }
     return fallback;
 }
 } // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
     const std::vector<std::string> args(argv + 1, argv + argc);
     const int depthLimit = parseIntArg(args, "--depth", kDefaultDepthLimit);
     const int timeMs = parseIntArg(args, "--time_ms", kDefaultTimeMs);
@@ -57,7 +66,8 @@ int main(int argc, char** argv) {
             board.InitializeFromFEN(fens[i]);
 
             const auto start = std::chrono::steady_clock::now();
-            const SearchResult result = iterativeDeepeningParallel(board, depthLimit, timeMs, threads);
+            const SearchResult result =
+                iterativeDeepeningParallel(board, depthLimit, timeMs, threads);
             const auto end = std::chrono::steady_clock::now();
             const auto elapsedMs =
                 std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -67,8 +77,8 @@ int main(int argc, char** argv) {
             totalElapsedMs += elapsedMs;
 
             std::cout << "pos=" << (i + 1) << " depth_reached=" << result.depth
-                      << " nodes=" << result.nodes << " elapsed_ms=" << elapsedMs
-                      << " nps=" << nps << '\n';
+                      << " nodes=" << result.nodes << " elapsed_ms=" << elapsedMs << " nps=" << nps
+                      << '\n';
         }
     }
 

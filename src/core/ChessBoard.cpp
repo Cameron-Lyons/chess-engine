@@ -1,4 +1,5 @@
 #include "ChessBoard.h"
+#include "CastlingConstants.h"
 
 #include <cctype>
 #include <sstream>
@@ -285,25 +286,30 @@ bool Board::movePiece(int from, int to) {
     }
 
     if (movingPieceBefore.PieceType == ChessPieceType::ROOK) {
-        if (from == 0 || from == 7) {
+        if (from == CastlingConstants::kWhiteQueensideRookSquare ||
+            from == CastlingConstants::kWhiteKingsideRookSquare) {
             whiteCanCastle = false;
-        } else if (from == 56 || from == 63) {
+        } else if (from == CastlingConstants::kBlackQueensideRookSquare ||
+                   from == CastlingConstants::kBlackKingsideRookSquare) {
             blackCanCastle = false;
         }
     }
 
     if (capturedPieceBefore.PieceType == ChessPieceType::ROOK) {
-        if (to == 0 || to == 7) {
+        if (to == CastlingConstants::kWhiteQueensideRookSquare ||
+            to == CastlingConstants::kWhiteKingsideRookSquare) {
             whiteCanCastle = false;
-        } else if (to == 56 || to == 63) {
+        } else if (to == CastlingConstants::kBlackQueensideRookSquare ||
+                   to == CastlingConstants::kBlackKingsideRookSquare) {
             blackCanCastle = false;
         }
     }
 
-    enPassantSquare = -1;
+    enPassantSquare = CastlingConstants::kNoEnPassantSquareMailbox;
     int moveDelta = to - from;
     if (movingPieceBefore.PieceType == ChessPieceType::PAWN &&
-        (moveDelta == 16 || moveDelta == -16)) {
+        (moveDelta == CastlingConstants::kPawnDoublePushDistance ||
+         moveDelta == -CastlingConstants::kPawnDoublePushDistance)) {
         enPassantSquare = (from + to) / 2;
     }
     return true;
@@ -406,7 +412,7 @@ void Board::InitializeFromFEN(ChessString fen) {
     turn = ChessPieceColor::WHITE;
     whiteCanCastle = false;
     blackCanCastle = false;
-    enPassantSquare = -1;
+    enPassantSquare = CastlingConstants::kNoEnPassantSquareMailbox;
     whiteChecked = false;
     blackChecked = false;
     LastMove = 0;
@@ -462,10 +468,8 @@ void Board::InitializeFromFEN(ChessString fen) {
 
     turn = (activeColor == "b") ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
     if (castling != "-") {
-        whiteCanCastle = (castling.find('K') != std::string::npos) ||
-                         (castling.find('Q') != std::string::npos);
-        blackCanCastle = (castling.find('k') != std::string::npos) ||
-                         (castling.find('q') != std::string::npos);
+        whiteCanCastle = castling.contains('K') || castling.contains('Q');
+        blackCanCastle = castling.contains('k') || castling.contains('q');
     }
 
     if (enPassant != "-" && enPassant.size() == 2) {

@@ -1,5 +1,4 @@
 #include "core/ChessEngine.h"
-#include "core/MoveContent.h"
 #include "evaluation/EvaluationTuning.h"
 #include "evaluation/HybridEvaluator.h"
 #include "evaluation/PositionAnalysis.h"
@@ -57,10 +56,6 @@ constexpr const char* kStartingFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN
 Board ChessBoard;
 Board PrevBoard;
 std::stack<int> MoveHistory;
-
-PieceMoving MovingPiece(ChessPieceColor::WHITE, ChessPieceType::PAWN, false);
-PieceMoving MovingPieceSecondary(ChessPieceColor::WHITE, ChessPieceType::PAWN, false);
-bool PawnPromoted = false;
 
 void printBoard(const Board& board) {
     std::cout << "  a b c d e f g h\n";
@@ -142,12 +137,9 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = kDefaultComp
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {
         std::cout << "Using opening book move: " << bookMove << "\n";
-        int srcCol = 0;
-        int srcRow = 0;
-        int destCol = 0;
-        int destRow = 0;
-        if (parseAlgebraicMove(bookMove, board, srcCol, srcRow, destCol, destRow)) {
-            return {(srcCol + (srcRow * BOARD_SIZE)), (destCol + (destRow * BOARD_SIZE))};
+        if (auto parsed = parseAlgebraicMove(bookMove, board)) {
+            return {(parsed->srcCol + (parsed->srcRow * BOARD_SIZE)),
+                    (parsed->destCol + (parsed->destRow * BOARD_SIZE))};
         }
     }
 
@@ -266,7 +258,8 @@ char pieceToSanSymbol(ChessPieceType pieceType) {
     }
 }
 
-std::string legalMoveDisambiguation(const Board& board, int from, int to, const Piece& movingPiece) {
+std::string legalMoveDisambiguation(const Board& board, int from, int to,
+                                    const Piece& movingPiece) {
     const int fromFile = from % BOARD_SIZE;
     const int fromRank = from / BOARD_SIZE;
 
@@ -337,8 +330,7 @@ std::string moveToSan(const Board& board, int from, int to,
 
     const int fromFile = from % BOARD_SIZE;
     const int toRank = to / BOARD_SIZE;
-    const bool isKingsideCastle =
-        movingPiece.PieceType == ChessPieceType::KING && (to - from) == 2;
+    const bool isKingsideCastle = movingPiece.PieceType == ChessPieceType::KING && (to - from) == 2;
     const bool isQueensideCastle =
         movingPiece.PieceType == ChessPieceType::KING && (from - to) == 2;
     const bool isCaptureMove = isCapture(board, from, to);
@@ -347,7 +339,8 @@ std::string moveToSan(const Board& board, int from, int to,
 
     ChessPieceType sanPromotionPiece = promotionPiece;
     if (sanPromotionPiece != ChessPieceType::QUEEN && sanPromotionPiece != ChessPieceType::ROOK &&
-        sanPromotionPiece != ChessPieceType::BISHOP && sanPromotionPiece != ChessPieceType::KNIGHT) {
+        sanPromotionPiece != ChessPieceType::BISHOP &&
+        sanPromotionPiece != ChessPieceType::KNIGHT) {
         sanPromotionPiece = ChessPieceType::QUEEN;
     }
 
@@ -674,17 +667,14 @@ int main(int argc, char* argv[]) {
             }
 
             ChessTimePoint moveStartTime = ChessClock::now();
-            int srcCol = 0;
-            int srcRow = 0;
-            int destCol = 0;
-            int destRow = 0;
-            if (parseAlgebraicMove(input, ChessBoard, srcCol, srcRow, destCol, destRow)) {
+            if (auto parsed = parseAlgebraicMove(input, ChessBoard)) {
                 ChessPieceType promotionPiece = ChessPieceType::QUEEN;
                 if (input.contains('=')) {
                     promotionPiece = getPromotionPiece(input);
                 }
 
-                if (MovePiece(srcCol, srcRow, destCol, destRow, promotionPiece)) {
+                if (MovePiece(parsed->srcCol, parsed->srcRow, parsed->destCol, parsed->destRow,
+                              promotionPiece)) {
                     std::cout << "✓ Move played successfully!\n";
                 } else {
                     std::cout << "❌ Invalid move. Try again.\n";

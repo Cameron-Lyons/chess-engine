@@ -247,15 +247,15 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
         }
     }
     if (canCastleKingside) {
-        int dest =
-            (color == ChessPieceColor::WHITE) ? kWhiteKingsideDestination : kBlackKingsideDestination;
+        int dest = (color == ChessPieceColor::WHITE) ? kWhiteKingsideDestination
+                                                     : kBlackKingsideDestination;
         if (generatedMoves != nullptr) {
             generatedMoves->emplace_back(kingStart, dest);
         }
     }
     if (canCastleQueenside) {
         int dest = (color == ChessPieceColor::WHITE) ? kWhiteQueensideSecondTransit
-                                                      : kBlackQueensideSecondTransit;
+                                                     : kBlackQueensideSecondTransit;
         if (generatedMoves != nullptr) {
             generatedMoves->emplace_back(kingStart, dest);
         }
@@ -309,24 +309,24 @@ void appendPawnMoves(Board& board, ChessPieceColor color, std::vector<std::pair<
             int srcFile = src % kBoardDimension;
             if (color == ChessPieceColor::WHITE) {
                 if ((srcFile > kMinFile && epSquare == src + kWhiteEnPassantCaptureLeftOffset) ||
-                    (srcFile < kMaxFile &&
-                     epSquare == src + kWhiteEnPassantCaptureRightOffset)) {
+                    (srcFile < kMaxFile && epSquare == src + kWhiteEnPassantCaptureRightOffset)) {
                     int capturedPawnSquare = epSquare - kSinglePawnPush;
                     if (capturedPawnSquare >= kZero &&
                         board.squares[capturedPawnSquare].piece.PieceType == ChessPieceType::PAWN &&
-                        board.squares[capturedPawnSquare].piece.PieceColor == ChessPieceColor::BLACK &&
+                        board.squares[capturedPawnSquare].piece.PieceColor ==
+                            ChessPieceColor::BLACK &&
                         board.squares[epSquare].piece.PieceType == ChessPieceType::NONE) {
                         moves.emplace_back(src, epSquare);
                     }
                 }
             } else {
                 if ((srcFile > kMinFile && epSquare == src - kBlackEnPassantCaptureLeftOffset) ||
-                    (srcFile < kMaxFile &&
-                     epSquare == src - kBlackEnPassantCaptureRightOffset)) {
+                    (srcFile < kMaxFile && epSquare == src - kBlackEnPassantCaptureRightOffset)) {
                     int capturedPawnSquare = epSquare + kSinglePawnPush;
                     if (capturedPawnSquare < kBoardSquareCount &&
                         board.squares[capturedPawnSquare].piece.PieceType == ChessPieceType::PAWN &&
-                        board.squares[capturedPawnSquare].piece.PieceColor == ChessPieceColor::WHITE &&
+                        board.squares[capturedPawnSquare].piece.PieceColor ==
+                            ChessPieceColor::WHITE &&
                         board.squares[epSquare].piece.PieceType == ChessPieceType::NONE) {
                         moves.emplace_back(src, epSquare);
                     }
@@ -368,8 +368,7 @@ void appendBishopMoves(Board& board, ChessPieceColor color,
     }
 }
 
-void appendRookMoves(Board& board, ChessPieceColor color,
-                     std::vector<std::pair<int, int>>& moves) {
+void appendRookMoves(Board& board, ChessPieceColor color, std::vector<std::pair<int, int>>& moves) {
     Bitboard rooks = board.getPieceBitboard(ChessPieceType::ROOK, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
     while (rooks) {

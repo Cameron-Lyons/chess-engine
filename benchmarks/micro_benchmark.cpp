@@ -4,9 +4,11 @@
 #include "src/search/search.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -17,8 +19,15 @@ int parseIntArg(int argc, char** argv, const std::string& key, int fallback) {
     const std::string prefix = key + "=";
     for (int i = 1; i < argc; ++i) {
         const std::string arg(argv[i]);
-        if (arg.rfind(prefix, 0) == 0) {
-            return std::max(1, std::atoi(arg.substr(prefix.size()).c_str()));
+        if (arg.starts_with(prefix)) {
+            const std::string value = arg.substr(prefix.size());
+            char* end = nullptr;
+            errno = 0;
+            const long parsed = std::strtol(value.c_str(), &end, 10);
+            if (errno == 0 && end != value.c_str() && *end == '\0' && parsed > 0 &&
+                parsed <= std::numeric_limits<int>::max()) {
+                return static_cast<int>(parsed);
+            }
         }
     }
     return fallback;
@@ -70,7 +79,7 @@ long long benchBookKeyPath(const std::vector<Board>& boards, int iterations) {
 }
 } // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
     const int iterations = parseIntArg(argc, argv, "--iterations", kDefaultIterations);
 
     initKnightAttacks();

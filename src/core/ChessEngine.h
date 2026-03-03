@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/CastlingConstants.h"
 #include "core/ChessBoard.h"
 #include "core/ChessPiece.h"
 #include "search/ValidMoves.h"
@@ -20,15 +21,15 @@ void Engine() {
 }
 
 void RegisterPiece(int col, int row, Piece piece) {
-    int position = col + (row * 8);
-    ChessBoard.squares[position].piece = std::move(piece);
+    int position = col + (row * BOARD_SIZE);
+    ChessBoard.squares[position].piece = piece;
 }
 
-bool MovePiece(int srcCol, int srcRow, int destCol, int destRow) {
-    int src = srcCol + (srcRow * 8);
-    int dest = destCol + (destRow * 8);
+bool MovePiece(int srcCol, int srcRow, int destCol, int destRow, ChessPieceType promotionPiece) {
+    int src = srcCol + (srcRow * BOARD_SIZE);
+    int dest = destCol + (destRow * BOARD_SIZE);
 
-    if (src < 0 || src >= 64 || dest < 0 || dest >= 64) {
+    if (src < 0 || src >= NUM_SQUARES || dest < 0 || dest >= NUM_SQUARES) {
         return false;
     }
 
@@ -47,94 +48,20 @@ bool MovePiece(int srcCol, int srcRow, int destCol, int destRow) {
     }
 
     PrevBoard = ChessBoard;
-    bool promotePawn = (piece.PieceType == ChessPieceType::PAWN && (destRow == 0 || destRow == 7));
+    bool promotePawn =
+        (piece.PieceType == ChessPieceType::PAWN && (destRow == 0 || destRow == (BOARD_SIZE - 1)));
     ChessBoard.movePiece(src, dest);
 
     if (promotePawn) {
-        ChessBoard.squares[dest].piece.PieceType = ChessPieceType::QUEEN;
-        ChessBoard.updateBitboards();
-    }
-
-    if (piece.PieceType == ChessPieceType::KING) {
-        if (piece.PieceColor == ChessPieceColor::WHITE) {
-            if (destCol == 6 && srcCol == 4) {
-                ChessBoard.movePiece(7, 5);
-                ChessBoard.whiteCanCastle = false;
-            } else if (destCol == 2 && srcCol == 4) {
-                ChessBoard.movePiece(0, 3);
-                ChessBoard.whiteCanCastle = false;
-            }
-        } else {
-            if (destCol == 6 && srcCol == 4) {
-                ChessBoard.movePiece(63, 61);
-                ChessBoard.blackCanCastle = false;
-            } else if (destCol == 2 && srcCol == 4) {
-                ChessBoard.movePiece(56, 59);
-                ChessBoard.blackCanCastle = false;
-            }
-        }
-    }
-
-    if (piece.PieceType == ChessPieceType::KING) {
-        if (piece.PieceColor == ChessPieceColor::WHITE) {
-            WhiteKingPosition = dest;
-        } else {
-            BlackKingPosition = dest;
-        }
-    }
-
-    GenValidMoves(ChessBoard);
-
-    if (IsKingInCheck(ChessBoard, piece.PieceColor)) {
-        ChessBoard = PrevBoard;
-        GenValidMoves(ChessBoard);
-        return false;
-    }
-
-    ChessBoard.turn = (ChessBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                  : ChessPieceColor::WHITE;
-
-    MoveHistory.push(ChessBoard.LastMove);
-    return true;
-}
-
-bool MovePiece(int srcCol, int srcRow, int destCol, int destRow,
-               ChessPieceType promotionPiece = ChessPieceType::QUEEN) {
-    int src = srcCol + (srcRow * 8);
-    int dest = destCol + (destRow * 8);
-
-    if (src < 0 || src >= 64 || dest < 0 || dest >= 64) {
-        return false;
-    }
-
-    Piece piece = ChessBoard.squares[src].piece;
-
-    if (piece.PieceType == ChessPieceType::NONE) {
-        return false;
-    }
-
-    if (piece.PieceColor != ChessBoard.turn) {
-        return false;
-    }
-
-    if (!IsMoveLegal(ChessBoard, src, dest)) {
-        return false;
-    }
-
-    PrevBoard = ChessBoard;
-    bool promotePawn = (piece.PieceType == ChessPieceType::PAWN && (destRow == 0 || destRow == 7));
-    ChessBoard.movePiece(src, dest);
-
-    if (promotePawn) {
-        if (promotionPiece == ChessPieceType::QUEEN || promotionPiece == ChessPieceType::ROOK ||
-            promotionPiece == ChessPieceType::BISHOP || promotionPiece == ChessPieceType::KNIGHT) {
-            ChessBoard.squares[dest].piece.PieceType = promotionPiece;
-        } else {
-            ChessBoard.squares[dest].piece.PieceType = ChessPieceType::QUEEN;
-        }
+        const bool isValidPromotion =
+            promotionPiece == ChessPieceType::QUEEN || promotionPiece == ChessPieceType::ROOK ||
+            promotionPiece == ChessPieceType::BISHOP || promotionPiece == ChessPieceType::KNIGHT;
+        const ChessPieceType finalPromotion =
+            isValidPromotion ? promotionPiece : ChessPieceType::QUEEN;
+        ChessBoard.squares[dest].piece.PieceType = finalPromotion;
         ChessBoard.updateBitboards();
         const char* promotedPieceName = "Queen";
-        switch (promotionPiece) {
+        switch (finalPromotion) {
             case ChessPieceType::QUEEN:
                 promotedPieceName = "Queen";
                 break;
@@ -154,21 +81,26 @@ bool MovePiece(int srcCol, int srcRow, int destCol, int destRow,
         std::cout << "Pawn promoted to " << promotedPieceName << "!\n";
     }
 
-    if (piece.PieceType == ChessPieceType::KING) {
+    if (piece.PieceType == ChessPieceType::KING &&
+        srcCol == CastlingConstants::kWhiteKingStartCol) {
         if (piece.PieceColor == ChessPieceColor::WHITE) {
-            if (destCol == 6 && srcCol == 4) {
-                ChessBoard.movePiece(7, 5);
+            if (destCol == CastlingConstants::kKingsideKingDestCol) {
+                ChessBoard.movePiece(CastlingConstants::kWhiteKingsideRookSquare,
+                                     CastlingConstants::kWhiteKingsideRookCastleDest);
                 ChessBoard.whiteCanCastle = false;
-            } else if (destCol == 2 && srcCol == 4) {
-                ChessBoard.movePiece(0, 3);
+            } else if (destCol == CastlingConstants::kQueensideKingDestCol) {
+                ChessBoard.movePiece(CastlingConstants::kWhiteQueensideRookSquare,
+                                     CastlingConstants::kWhiteQueensideRookCastleDest);
                 ChessBoard.whiteCanCastle = false;
             }
         } else {
-            if (destCol == 6 && srcCol == 4) {
-                ChessBoard.movePiece(63, 61);
+            if (destCol == CastlingConstants::kKingsideKingDestCol) {
+                ChessBoard.movePiece(CastlingConstants::kBlackKingsideRookSquare,
+                                     CastlingConstants::kBlackKingsideRookCastleDest);
                 ChessBoard.blackCanCastle = false;
-            } else if (destCol == 2 && srcCol == 4) {
-                ChessBoard.movePiece(56, 59);
+            } else if (destCol == CastlingConstants::kQueensideKingDestCol) {
+                ChessBoard.movePiece(CastlingConstants::kBlackQueensideRookSquare,
+                                     CastlingConstants::kBlackQueensideRookCastleDest);
                 ChessBoard.blackCanCastle = false;
             }
         }
@@ -195,4 +127,8 @@ bool MovePiece(int srcCol, int srcRow, int destCol, int destRow,
 
     MoveHistory.push(ChessBoard.LastMove);
     return true;
+}
+
+bool MovePiece(int srcCol, int srcRow, int destCol, int destRow) {
+    return MovePiece(srcCol, srcRow, destCol, destRow, ChessPieceType::QUEEN);
 }

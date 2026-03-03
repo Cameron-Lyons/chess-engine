@@ -106,7 +106,7 @@ public:
 
         if (newClusterCount != clusterCount) {
             clusterCount = newClusterCount;
-            table.reset(new TTCluster[clusterCount]);
+            table = std::make_unique_for_overwrite<TTCluster[]>(clusterCount);
             clear();
         }
     }
@@ -119,7 +119,8 @@ public:
     }
 
     TTEntry* probe(uint64_t key, bool& found) const {
-        TTCluster* cluster{&table[mulhi64(key, clusterCount)]};
+        // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+        TTCluster* cluster = &table[mulhi64(key, clusterCount)];
         auto key32 = static_cast<uint32_t>(key >> kKeyHighShift);
 
         for (auto& i : cluster->entry) {

@@ -3,8 +3,8 @@
 #include "../utils/engine_globals.h"
 #include "AdvancedSearch.h"
 #include "BookUtils.h"
-#include "LazySMP.h"
 #include "LMR.h"
+#include "LazySMP.h"
 
 #include <algorithm>
 #include <chrono>
@@ -166,7 +166,7 @@ struct MoveApplicationData {
     bool previousWhiteChecked = false;
     bool previousBlackChecked = false;
     int previousLastMove = kZero;
-    ChessTimePoint previousLastMoveTime{};
+    ChessTimePoint previousLastMoveTime;
     Bitboard previousWhitePawns = EMPTY;
     Bitboard previousWhiteKnights = EMPTY;
     Bitboard previousWhiteBishops = EMPTY;
@@ -199,7 +199,7 @@ void recordUndoSquare(MoveApplicationData& moveData, const Board& board, int squ
         return;
     }
 
-    const std::size_t index = static_cast<std::size_t>(moveData.changedSquareCount);
+    const auto index = static_cast<std::size_t>(moveData.changedSquareCount);
     moveData.changedSquares[index] = square;
     moveData.previousPieces[index] = board.squares[square].piece;
     moveData.changedSquareCount++;
@@ -273,8 +273,10 @@ Bitboard attackersToSquare(const Bitboard pieces[2][kPieceTypePerColorCount], Bi
                      pieces[kBlackIndex][pieceTypeIndex(ChessPieceType::PAWN)];
     }
 
-    attackers |= KnightAttacks[targetSquare] & pieces[colorIndex][pieceTypeIndex(ChessPieceType::KNIGHT)];
-    attackers |= KingAttacks[targetSquare] & pieces[colorIndex][pieceTypeIndex(ChessPieceType::KING)];
+    attackers |=
+        KnightAttacks[targetSquare] & pieces[colorIndex][pieceTypeIndex(ChessPieceType::KNIGHT)];
+    attackers |=
+        KingAttacks[targetSquare] & pieces[colorIndex][pieceTypeIndex(ChessPieceType::KING)];
     attackers |= fastBishopAttacks(targetSquare, occupancy) &
                  (pieces[colorIndex][pieceTypeIndex(ChessPieceType::BISHOP)] |
                   pieces[colorIndex][pieceTypeIndex(ChessPieceType::QUEEN)]);
@@ -299,9 +301,8 @@ bool popLeastValuableAttacker(const Bitboard pieces[2][kPieceTypePerColorCount],
 }
 
 int computeGamePhase(const Board& board) {
-    const int minorCount =
-        popcount(board.whiteKnights | board.blackKnights) +
-        popcount(board.whiteBishops | board.blackBishops);
+    const int minorCount = popcount(board.whiteKnights | board.blackKnights) +
+                           popcount(board.whiteBishops | board.blackBishops);
     const int rookCount = popcount(board.whiteRooks | board.blackRooks);
     const int queenCount = popcount(board.whiteQueens | board.blackQueens);
     return minorCount + (kTwo * rookCount) + (kQueenGamePhaseIncrement * queenCount);
@@ -321,7 +322,8 @@ bool applyMoveToBitboards(const Board& board, int fromSquare, int toSquare, bool
         return false;
     }
 
-    state.movingColor = (movingPiece.PieceColor == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
+    state.movingColor =
+        (movingPiece.PieceColor == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
     const int enemyColor = (state.movingColor == kWhiteIndex) ? kBlackIndex : kWhiteIndex;
     const int movingPieceIndex = pieceTypeIndex(movingPiece.PieceType);
     if (movingPieceIndex < kZero) {
@@ -364,10 +366,11 @@ bool applyMoveToBitboards(const Board& board, int fromSquare, int toSquare, bool
 
     int movedPieceIndex = movingPieceIndex;
     const int destinationRow = toSquare / kBoardDimension;
-    const bool isPromotion =
-        movingPiece.PieceType == ChessPieceType::PAWN &&
-        ((movingPiece.PieceColor == ChessPieceColor::WHITE && destinationRow == kPromotionWhiteRank) ||
-         (movingPiece.PieceColor == ChessPieceColor::BLACK && destinationRow == kPromotionBlackRank));
+    const bool isPromotion = movingPiece.PieceType == ChessPieceType::PAWN &&
+                             ((movingPiece.PieceColor == ChessPieceColor::WHITE &&
+                               destinationRow == kPromotionWhiteRank) ||
+                              (movingPiece.PieceColor == ChessPieceColor::BLACK &&
+                               destinationRow == kPromotionBlackRank));
     if (autoPromoteToQueen && isPromotion) {
         movedPieceIndex = pieceTypeIndex(ChessPieceType::QUEEN);
     }
@@ -377,12 +380,10 @@ bool applyMoveToBitboards(const Board& board, int fromSquare, int toSquare, bool
 
     if (movingPiece.PieceType == ChessPieceType::KING &&
         std::abs(toSquare - fromSquare) == kCastlingDistance) {
-        const int rookFrom =
-            (toSquare > fromSquare) ? (fromSquare + kKingsideRookOffset)
-                                    : (fromSquare - kQueensideRookOffset);
-        const int rookTo =
-            (toSquare > fromSquare) ? (fromSquare + kKingsideRookTargetOffset)
-                                    : (fromSquare - kQueensideRookTargetOffset);
+        const int rookFrom = (toSquare > fromSquare) ? (fromSquare + kKingsideRookOffset)
+                                                     : (fromSquare - kQueensideRookOffset);
+        const int rookTo = (toSquare > fromSquare) ? (fromSquare + kKingsideRookTargetOffset)
+                                                   : (fromSquare - kQueensideRookTargetOffset);
         const int rookIndex = pieceTypeIndex(ChessPieceType::ROOK);
         clear_bit(state.pieces[state.movingColor][rookIndex], rookFrom);
         set_bit(state.pieces[state.movingColor][rookIndex], rookTo);
@@ -402,8 +403,8 @@ int encodeCastlingState(const Board& board) {
     return (board.whiteCanCastle ? kOne : kZero) | (board.blackCanCastle ? kTwo : kZero);
 }
 
-uint64_t computeChildZobrist(uint64_t parentKey, const Board& childBoard,
-                             int fromSquare, int toSquare, const MoveApplicationData& moveData) {
+uint64_t computeChildZobrist(uint64_t parentKey, const Board& childBoard, int fromSquare,
+                             int toSquare, const MoveApplicationData& moveData) {
     uint64_t childKey = parentKey;
     int movingIdx = pieceToZobristIndex(moveData.movingPiece);
     if (movingIdx >= kZero) {
@@ -422,7 +423,8 @@ uint64_t computeChildZobrist(uint64_t parentKey, const Board& childBoard,
     }
 
     if (moveData.wasCastling && moveData.rookFrom >= kZero && moveData.rookTo >= kZero) {
-        int rookIdx = pieceToZobristIndex(Piece(moveData.movingPiece.PieceColor, ChessPieceType::ROOK));
+        int rookIdx =
+            pieceToZobristIndex(Piece(moveData.movingPiece.PieceColor, ChessPieceType::ROOK));
         if (rookIdx >= kZero) {
             childKey ^= ZobristTable[moveData.rookFrom][rookIdx];
             childKey ^= ZobristTable[moveData.rookTo][rookIdx];
@@ -513,9 +515,9 @@ bool applySearchMoveWithData(Board& board, int fromSquare, int toSquare, bool au
          board.squares[toSquare].piece.PieceType == ChessPieceType::NONE &&
          std::abs((toSquare % kBoardDimension) - (fromSquare % kBoardDimension)) == kOne);
     if (isEnPassant) {
-        int captureSquare =
-            (movingPiece.PieceColor == ChessPieceColor::WHITE) ? (toSquare - kBoardDimension)
-                                                                : (toSquare + kBoardDimension);
+        int captureSquare = (movingPiece.PieceColor == ChessPieceColor::WHITE)
+                                ? (toSquare - kBoardDimension)
+                                : (toSquare + kBoardDimension);
         if (captureSquare < kZero || captureSquare >= kBoardSquareCount) {
             return false;
         }
@@ -554,10 +556,11 @@ bool applySearchMoveWithData(Board& board, int fromSquare, int toSquare, bool au
     }
 
     const int destinationRow = toSquare / kBoardDimension;
-    const bool isPromotion =
-        movingPiece.PieceType == ChessPieceType::PAWN &&
-        ((movingPiece.PieceColor == ChessPieceColor::WHITE && destinationRow == kPromotionWhiteRank) ||
-         (movingPiece.PieceColor == ChessPieceColor::BLACK && destinationRow == kPromotionBlackRank));
+    const bool isPromotion = movingPiece.PieceType == ChessPieceType::PAWN &&
+                             ((movingPiece.PieceColor == ChessPieceColor::WHITE &&
+                               destinationRow == kPromotionWhiteRank) ||
+                              (movingPiece.PieceColor == ChessPieceColor::BLACK &&
+                               destinationRow == kPromotionBlackRank));
     if (autoPromoteToQueen && isPromotion) {
         if (movingPiece.PieceColor == ChessPieceColor::WHITE) {
             clear_bit(board.whitePawns, toSquare);
@@ -738,7 +741,7 @@ SearchResult::SearchResult()
 void InitZobrist() {
     static std::once_flag initFlag;
     std::call_once(initFlag, []() {
-        std::mt19937_64 rng(kZobristSeed);
+        std::mt19937_64 rng(kZobristSeed); // NOLINT(bugprone-random-generator-seed)
         std::uniform_int_distribution<uint64_t> dist;
         for (auto& squareKeys : ZobristTable) {
             for (auto& pieceKey : squareKeys) {
@@ -789,11 +792,8 @@ bool isCapture(const Board& board, int srcPos, int destPos) {
         return true;
     }
     const Piece& movingPiece = board.squares[srcPos].piece;
-    if (movingPiece.PieceType == ChessPieceType::PAWN && board.enPassantSquare == destPos &&
-        std::abs((destPos % kBoardDimension) - (srcPos % kBoardDimension)) == kOne) {
-        return true;
-    }
-    return false;
+    return movingPiece.PieceType == ChessPieceType::PAWN && board.enPassantSquare == destPos &&
+           std::abs((destPos % kBoardDimension) - (srcPos % kBoardDimension)) == kOne;
 }
 
 bool givesCheck(const Board& board, int srcPos, int destPos) {
@@ -1305,7 +1305,7 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
             continue;
         }
         newBoard.turn = (newBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                   : ChessPieceColor::WHITE;
+                                                                  : ChessPieceColor::WHITE;
 
         int eval = QuiescenceSearch(newBoard, alpha, beta, !maximizingPlayer, historyTable, context,
                                     ply + kOne, childZobristKey);
@@ -1447,9 +1447,9 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                                                                 : ChessPieceColor::WHITE;
             int nullScore = kZero;
             if (maximizingPlayer) {
-                nullScore = PrincipalVariationSearch(
-                    board, nullDepth, beta - kZeroWindowOffset, beta, !maximizingPlayer,
-                    ply + kOne, historyTable, context, false, nullZobristKey);
+                nullScore = PrincipalVariationSearch(board, nullDepth, beta - kZeroWindowOffset,
+                                                     beta, !maximizingPlayer, ply + kOne,
+                                                     historyTable, context, false, nullZobristKey);
             } else {
                 nullScore = PrincipalVariationSearch(
                     board, nullDepth, alpha, alpha + kZeroWindowOffset, !maximizingPlayer,
@@ -1597,10 +1597,9 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                                                  !maximizingPlayer, ply + kOne, historyTable,
                                                  context, isPVNode, childZobristKey);
             } else {
-                score = PrincipalVariationSearch(tempBoard, searchDepth, alpha,
-                                                 alpha + kZeroWindowOffset, !maximizingPlayer,
-                                                 ply + kOne, historyTable, context, false,
-                                                 childZobristKey);
+                score = PrincipalVariationSearch(
+                    tempBoard, searchDepth, alpha, alpha + kZeroWindowOffset, !maximizingPlayer,
+                    ply + kOne, historyTable, context, false, childZobristKey);
                 if (score > alpha && score < beta) {
                     score = PrincipalVariationSearch(tempBoard, searchDepth, alpha, beta,
                                                      !maximizingPlayer, ply + kOne, historyTable,
@@ -1613,9 +1612,8 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                                                  !maximizingPlayer, ply + kOne, historyTable,
                                                  context, isPVNode, childZobristKey);
             } else {
-                score = PrincipalVariationSearch(tempBoard, searchDepth,
-                                                 beta - kZeroWindowOffset, beta,
-                                                 !maximizingPlayer, ply + kOne, historyTable,
+                score = PrincipalVariationSearch(tempBoard, searchDepth, beta - kZeroWindowOffset,
+                                                 beta, !maximizingPlayer, ply + kOne, historyTable,
                                                  context, false, childZobristKey);
                 if (score < beta && score > alpha) {
                     score = PrincipalVariationSearch(tempBoard, searchDepth, alpha, beta,
@@ -1634,17 +1632,13 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             if (score > bestValue) {
                 bestValue = std::max(bestValue, score);
                 bestMove = move;
-                if (score > alpha) {
-                    alpha = score;
-                }
+                alpha = std::max(alpha, score);
             }
         } else {
             if (score < bestValue) {
                 bestValue = std::min(bestValue, score);
                 bestMove = move;
-                if (score < beta) {
-                    beta = score;
-                }
+                beta = std::min(beta, score);
             }
         }
 
@@ -1798,9 +1792,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     }
 
     if (depth == kZero) {
-        int eval =
-            QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context, ply,
-                             nodeZobristKey);
+        int eval = QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context,
+                                    ply, nodeZobristKey);
         storeTtEntry(context, nodeZobristKey, depth, eval, kExactFlag,
                      {kInvalidSquare, kInvalidSquare}, ply);
         return eval;
@@ -1842,9 +1835,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 maximizingPlayer
                     ? AlphaBetaSearch(board, reducedDepth, beta - kOne, beta, !maximizingPlayer,
                                       ply + kOne, historyTable, context, nullZobristKey)
-                    : AlphaBetaSearch(board, reducedDepth, alpha, alpha + kOne,
-                                      !maximizingPlayer, ply + kOne, historyTable, context,
-                                      nullZobristKey);
+                    : AlphaBetaSearch(board, reducedDepth, alpha, alpha + kOne, !maximizingPlayer,
+                                      ply + kOne, historyTable, context, nullZobristKey);
             board.turn = previousTurn;
             board.enPassantSquare = previousEnPassant;
             if (context.stopSearch.load()) {
@@ -1893,14 +1885,14 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             if (!applySearchMoveWithData(newBoard, move.first, move.second, true, &moveData)) {
                 continue;
             }
-            uint64_t childZobristKey = computeChildZobrist(nodeZobristKey, newBoard,
-                                                           move.first, move.second, moveData);
+            uint64_t childZobristKey =
+                computeChildZobrist(nodeZobristKey, newBoard, move.first, move.second, moveData);
 
             if (isInCheck(newBoard, currentColor)) {
                 continue;
             }
             newBoard.turn = (newBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                       : ChessPieceColor::WHITE;
+                                                                      : ChessPieceColor::WHITE;
 
             int eval = kZero;
             bool isCaptureMove = moveData.captureSquare >= kZero;
@@ -1976,9 +1968,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                                             ply + kOne, historyTable, context, childZobristKey);
 
                         if (reducedEval > alpha) {
-                            eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, false,
-                                                   ply + kOne, historyTable, context,
-                                                   childZobristKey);
+                            eval =
+                                AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, false,
+                                                ply + kOne, historyTable, context, childZobristKey);
                         } else {
                             eval = reducedEval;
                         }
@@ -1987,9 +1979,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                                                ply + kOne, historyTable, context, childZobristKey);
 
                         if (eval > alpha && eval < beta) {
-                            eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, false,
-                                                   ply + kOne, historyTable, context,
-                                                   childZobristKey);
+                            eval =
+                                AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, false,
+                                                ply + kOne, historyTable, context, childZobristKey);
                         }
                     }
                 }
@@ -2055,14 +2047,14 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
             if (!applySearchMoveWithData(newBoard, move.first, move.second, true, &moveData)) {
                 continue;
             }
-            uint64_t childZobristKey = computeChildZobrist(nodeZobristKey, newBoard,
-                                                           move.first, move.second, moveData);
+            uint64_t childZobristKey =
+                computeChildZobrist(nodeZobristKey, newBoard, move.first, move.second, moveData);
 
             if (isInCheck(newBoard, currentColor)) {
                 continue;
             }
             newBoard.turn = (newBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                       : ChessPieceColor::WHITE;
+                                                                      : ChessPieceColor::WHITE;
 
             int eval = kZero;
             bool isCaptureMove = moveData.captureSquare >= kZero;
@@ -2133,14 +2125,14 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 
                     if (reduction > kZero && !isCaptureMove && !isCheckMove) {
                         int reducedDepth = std::max(kZero, depth - kOne - reduction);
-                        int reducedEval = AlphaBetaSearch(newBoard, reducedDepth, beta - kOne, beta,
-                                                          true, ply + kOne, historyTable, context,
-                                                          childZobristKey);
+                        int reducedEval =
+                            AlphaBetaSearch(newBoard, reducedDepth, beta - kOne, beta, true,
+                                            ply + kOne, historyTable, context, childZobristKey);
 
                         if (reducedEval < beta) {
-                            eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, true,
-                                                   ply + kOne, historyTable, context,
-                                                   childZobristKey);
+                            eval =
+                                AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, true,
+                                                ply + kOne, historyTable, context, childZobristKey);
                         } else {
                             eval = reducedEval;
                         }
@@ -2149,9 +2141,9 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                                                ply + kOne, historyTable, context, childZobristKey);
 
                         if (eval < beta && eval > alpha) {
-                            eval = AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, true,
-                                                   ply + kOne, historyTable, context,
-                                                   childZobristKey);
+                            eval =
+                                AlphaBetaSearch(newBoard, depth - kOne, alpha, beta, true,
+                                                ply + kOne, historyTable, context, childZobristKey);
                         }
                     }
                 }
@@ -2216,19 +2208,18 @@ std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color
 }
 
 SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs, int numThreads,
-                                        int contempt, int multiPV, int optimalTimeMs,
-                                        int maxTimeMs, int hashSizeMb) {
+                                        int contempt, int multiPV, int optimalTimeMs, int maxTimeMs,
+                                        int hashSizeMb) {
     if (numThreads > kOne && multiPV == kOne) {
         auto smpStart = std::chrono::steady_clock::now();
         LazySMP smp(numThreads, hashSizeMb, contempt);
         SearchResult smpResult = smp.search(board, maxDepth, timeLimitMs);
-        const auto smpElapsedMs =
-            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
-                                                                  smpStart)
-                .count();
-        smpResult.timeMs =
-            (smpElapsedMs > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max()
-                                                             : static_cast<int>(smpElapsedMs);
+        const auto smpElapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                      std::chrono::steady_clock::now() - smpStart)
+                                      .count();
+        smpResult.timeMs = (smpElapsedMs > std::numeric_limits<int>::max())
+                               ? std::numeric_limits<int>::max()
+                               : static_cast<int>(smpElapsedMs);
         return smpResult;
     }
 
@@ -2249,13 +2240,9 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {
-        int srcCol = kZero;
-        int srcRow = kZero;
-        int destCol = kZero;
-        int destRow = kZero;
-        if (parseAlgebraicMove(bookMove, board, srcCol, srcRow, destCol, destRow)) {
-            result.bestMove = {(srcRow * kBoardDimension) + srcCol,
-                               (destRow * kBoardDimension) + destCol};
+        if (auto parsed = parseAlgebraicMove(bookMove, board)) {
+            result.bestMove = {(parsed->srcRow * kBoardDimension) + parsed->srcCol,
+                               (parsed->destRow * kBoardDimension) + parsed->destCol};
             result.score = kZero;
             result.depth = kOne;
             result.nodes = kOne;
@@ -2295,10 +2282,9 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             const uint64_t rootZobristKey = ComputeZobrist(board);
 
             do {
-                searchScore = PrincipalVariationSearch(board, depth, alpha, beta,
-                                                       board.turn == ChessPieceColor::WHITE, kZero,
-                                                       context.historyTable, context, true,
-                                                       rootZobristKey);
+                searchScore = PrincipalVariationSearch(
+                    board, depth, alpha, beta, board.turn == ChessPieceColor::WHITE, kZero,
+                    context.historyTable, context, true, rootZobristKey);
                 searchAttempts++;
 
                 if (context.stopSearch.load()) {

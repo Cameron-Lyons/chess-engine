@@ -3,6 +3,7 @@
 #include "../search/ValidMoves.h"
 #include "../search/search.h"
 #include "Evaluation.h"
+#include "GamePhaseConstants.h"
 
 #include <algorithm>
 #include <iostream>
@@ -10,14 +11,6 @@
 
 namespace {
 constexpr int kBoardSquareCount = 64;
-constexpr int kMaterialWeightQueen = 900;
-constexpr int kMaterialWeightRook = 500;
-constexpr int kMaterialWeightMinor = 300;
-constexpr int kMaterialWeightPawn = 100;
-constexpr int kOpeningMaterialThreshold = 6000;
-constexpr int kOpeningPieceCountThreshold = 20;
-constexpr int kEndgameMaterialThreshold = 2000;
-constexpr int kEndgamePieceCountThreshold = 10;
 constexpr int kHangingPiecePenalty = 100;
 constexpr int kPinPenalty = 50;
 constexpr int kPieceActivityScale = 5;
@@ -234,18 +227,18 @@ PositionAnalysis::GamePhase PositionAnalyzer::determineGamePhase(const Board& bo
             pieceCount++;
             switch (piece.PieceType) {
                 case ChessPieceType::QUEEN:
-                    totalMaterial += kMaterialWeightQueen;
+                    totalMaterial += GamePhaseConstants::kQueenMaterialValue;
                     queenCount++;
                     break;
                 case ChessPieceType::ROOK:
-                    totalMaterial += kMaterialWeightRook;
+                    totalMaterial += GamePhaseConstants::kRookMaterialValue;
                     break;
                 case ChessPieceType::BISHOP:
                 case ChessPieceType::KNIGHT:
-                    totalMaterial += kMaterialWeightMinor;
+                    totalMaterial += GamePhaseConstants::kMinorMaterialValue;
                     break;
                 case ChessPieceType::PAWN:
-                    totalMaterial += kMaterialWeightPawn;
+                    totalMaterial += GamePhaseConstants::kPawnMaterialValue;
                     break;
                 default:
                     break;
@@ -253,12 +246,14 @@ PositionAnalysis::GamePhase PositionAnalyzer::determineGamePhase(const Board& bo
         }
     }
 
-    if (totalMaterial > kOpeningMaterialThreshold && queenCount >= 1 &&
-        pieceCount > kOpeningPieceCountThreshold) {
+    if (totalMaterial > GamePhaseConstants::kOpeningMaterialThreshold &&
+        queenCount >= GamePhaseConstants::kOpeningMinQueenCount &&
+        pieceCount > GamePhaseConstants::kOpeningPieceCountThreshold) {
         return PositionAnalysis::OPENING;
     }
 
-    if (totalMaterial < kEndgameMaterialThreshold || pieceCount <= kEndgamePieceCountThreshold) {
+    if (totalMaterial < GamePhaseConstants::kEndgameMaterialThreshold ||
+        pieceCount <= GamePhaseConstants::kEndgamePieceCountThreshold) {
         return PositionAnalysis::ENDGAME;
     }
 

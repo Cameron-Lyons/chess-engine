@@ -211,8 +211,8 @@ std::string getFEN(const Board& board) {
     return fen;
 }
 
-bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& srcRow, int& destCol,
-                        int& destRow) {
+static bool parseAlgebraicMoveLegacy(std::string_view move, const Board& board, int& srcCol,
+                                     int& srcRow, int& destCol, int& destRow) {
     std::string cleanMove(move);
     if (!cleanMove.empty() &&
         (cleanMove.back() == kCheckMarker || cleanMove.back() == kMateMarker)) {
@@ -676,6 +676,29 @@ bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& s
     }
 
     return false;
+}
+
+std::expected<ParsedAlgebraicMove, ParseAlgebraicMoveError> parseAlgebraicMove(
+    std::string_view move, const Board& board) {
+    ParsedAlgebraicMove parsed{};
+    if (!parseAlgebraicMoveLegacy(move, board, parsed.srcCol, parsed.srcRow, parsed.destCol,
+                                  parsed.destRow)) {
+        return std::unexpected(ParseAlgebraicMoveError::InvalidNotation);
+    }
+    return parsed;
+}
+
+bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& srcRow, int& destCol,
+                        int& destRow) {
+    auto parsed = parseAlgebraicMove(move, static_cast<const Board&>(board));
+    if (!parsed) {
+        return false;
+    }
+    srcCol = parsed->srcCol;
+    srcRow = parsed->srcRow;
+    destCol = parsed->destCol;
+    destRow = parsed->destRow;
+    return true;
 }
 
 ChessPieceType getPromotionPiece(std::string_view move) {

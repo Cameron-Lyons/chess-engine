@@ -885,7 +885,7 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
             int rowStep = (rowDiff > 0) ? 1 : -1;
             int colStep = (colDiff > 0) ? 1 : -1;
             for (int i = 1; i < abs(rowDiff); i++) {
-                int checkPos = ((fromRow + i * rowStep) * BOARD_SIZE) + (fromCol + i * colStep);
+                int checkPos = ((fromRow + (i * rowStep)) * BOARD_SIZE) + (fromCol + (i * colStep));
                 if (checkPos < 0 || checkPos >= NUM_SQUARES) {
                     return false;
                 }
@@ -902,7 +902,7 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
             if (rowDiff == 0) {
                 int colStep = (colDiff > 0) ? 1 : -1;
                 for (int i = 1; i < abs(colDiff); i++) {
-                    int checkPos = (fromRow * BOARD_SIZE) + (fromCol + i * colStep);
+                    int checkPos = (fromRow * BOARD_SIZE) + (fromCol + (i * colStep));
                     if (checkPos < 0 || checkPos >= NUM_SQUARES) {
                         return false;
                     }
@@ -913,7 +913,7 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
             } else {
                 int rowStep = (rowDiff > 0) ? 1 : -1;
                 for (int i = 1; i < abs(rowDiff); i++) {
-                    int checkPos = ((fromRow + i * rowStep) * BOARD_SIZE) + fromCol;
+                    int checkPos = ((fromRow + (i * rowStep)) * BOARD_SIZE) + fromCol;
                     if (checkPos < 0 || checkPos >= NUM_SQUARES) {
                         return false;
                     }
@@ -929,7 +929,7 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
                 if (rowDiff == 0) {
                     int colStep = (colDiff > 0) ? 1 : -1;
                     for (int i = 1; i < abs(colDiff); i++) {
-                        int checkPos = (fromRow * BOARD_SIZE) + (fromCol + i * colStep);
+                        int checkPos = (fromRow * BOARD_SIZE) + (fromCol + (i * colStep));
                         if (checkPos < 0 || checkPos >= NUM_SQUARES) {
                             return false;
                         }
@@ -940,7 +940,7 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
                 } else if (colDiff == 0) {
                     int rowStep = (rowDiff > 0) ? 1 : -1;
                     for (int i = 1; i < abs(rowDiff); i++) {
-                        int checkPos = ((fromRow + i * rowStep) * BOARD_SIZE) + fromCol;
+                        int checkPos = ((fromRow + (i * rowStep)) * BOARD_SIZE) + fromCol;
                         if (checkPos < 0 || checkPos >= NUM_SQUARES) {
                             return false;
                         }
@@ -953,7 +953,7 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
                     int colStep = (colDiff > 0) ? 1 : -1;
                     for (int i = 1; i < abs(rowDiff); i++) {
                         int checkPos =
-                            ((fromRow + i * rowStep) * BOARD_SIZE) + (fromCol + i * colStep);
+                            ((fromRow + (i * rowStep)) * BOARD_SIZE) + (fromCol + (i * colStep));
                         if (checkPos < 0 || checkPos >= NUM_SQUARES) {
                             return false;
                         }

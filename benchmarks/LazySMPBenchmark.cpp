@@ -23,7 +23,7 @@ int getWorkerCount(std::size_t taskCount, int perTaskThreads = 1) {
 }
 } // namespace
 
-int main() {
+int main() { // NOLINT(bugprone-exception-escape)
     InitZobrist();
 
     std::vector<std::string> testPositions = {
@@ -36,14 +36,16 @@ int main() {
 
         "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"};
 
-    int numThreads = std::thread::hardware_concurrency();
-    if (numThreads == 0)
+    const auto hardwareThreads = std::thread::hardware_concurrency();
+    int numThreads = (hardwareThreads == 0U) ? 0 : static_cast<int>(hardwareThreads);
+    if (numThreads == 0) {
         numThreads = 4;
+    }
 
-    std::cout << "Lazy SMP Benchmark" << std::endl;
-    std::cout << "==================" << std::endl;
-    std::cout << "Threads available: " << numThreads << std::endl;
-    std::cout << std::endl;
+    std::cout << "Lazy SMP Benchmark" << '\n';
+    std::cout << "==================" << '\n';
+    std::cout << "Threads available: " << numThreads << '\n';
+    std::cout << '\n';
 
     struct TimedSearch {
         SearchResult result;
@@ -59,8 +61,7 @@ int main() {
         SearchResult result = iterativeDeepeningParallel(board, 8, 5000, 1);
         auto end = std::chrono::high_resolution_clock::now();
         regularResults[index] = {
-            result,
-            std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()};
+            result, std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()};
     };
 
     auto runSMPSearch = [&testPositions, &smpResults, numThreads](std::size_t index) {
@@ -70,8 +71,7 @@ int main() {
         SearchResult result = iterativeDeepeningParallel(board, 8, 5000, numThreads);
         auto end = std::chrono::high_resolution_clock::now();
         smpResults[index] = {
-            result,
-            std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()};
+            result, std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()};
     };
 
     const int regularWorkers = getWorkerCount(testPositions.size(), 1);
@@ -82,15 +82,16 @@ int main() {
         std::vector<std::future<void>> workers;
         workers.reserve(static_cast<std::size_t>(workerCount));
         for (int worker = 0; worker < workerCount; ++worker) {
-            workers.emplace_back(std::async(std::launch::async, [&nextIndex, &testPositions, &task] {
-                while (true) {
-                    const std::size_t index = nextIndex.fetch_add(1, std::memory_order_relaxed);
-                    if (index >= testPositions.size()) {
-                        break;
+            workers.emplace_back(
+                std::async(std::launch::async, [&nextIndex, &testPositions, &task] {
+                    while (true) {
+                        const std::size_t index = nextIndex.fetch_add(1, std::memory_order_relaxed);
+                        if (index >= testPositions.size()) {
+                            break;
+                        }
+                        task(index);
                     }
-                    task(index);
-                }
-            }));
+                }));
         }
         for (auto& future : workers) {
             future.get();
@@ -103,27 +104,31 @@ int main() {
     for (std::size_t i = 0; i < testPositions.size(); ++i) {
         const auto& regular = regularResults[i];
         const auto& smp = smpResults[i];
-        std::cout << "Position: " << testPositions[i] << std::endl;
-        std::cout << "Regular search (1 thread):" << std::endl;
-        std::cout << "  Depth: " << regular.result.depth << std::endl;
-        std::cout << "  Score: " << regular.result.score << std::endl;
-        std::cout << "  Nodes: " << regular.result.nodes << std::endl;
-        std::cout << "  Time: " << regular.timeMs << " ms" << std::endl;
-        std::cout << "  NPS: " << (regular.result.nodes * 1000 / std::max(1LL, regular.timeMs))
-                  << std::endl;
-        std::cout << "Lazy SMP (" << numThreads << " threads):" << std::endl;
-        std::cout << "  Depth: " << smp.result.depth << std::endl;
-        std::cout << "  Score: " << smp.result.score << std::endl;
-        std::cout << "  Nodes: " << smp.result.nodes << std::endl;
-        std::cout << "  Time: " << smp.timeMs << " ms" << std::endl;
-        std::cout << "  NPS: " << (smp.result.nodes * 1000 / std::max(1LL, smp.timeMs))
-                  << std::endl;
+        std::cout << "Position: " << testPositions[i] << '\n';
+        std::cout << "Regular search (1 thread):" << '\n';
+        std::cout << "  Depth: " << regular.result.depth << '\n';
+        std::cout << "  Score: " << regular.result.score << '\n';
+        std::cout << "  Nodes: " << regular.result.nodes << '\n';
+        std::cout << "  Time: " << regular.timeMs << " ms" << '\n';
+        std::cout << "  NPS: "
+                  << ((static_cast<long long>(regular.result.nodes) * 1000LL) /
+                      std::max(1LL, regular.timeMs))
+                  << '\n';
+        std::cout << "Lazy SMP (" << numThreads << " threads):" << '\n';
+        std::cout << "  Depth: " << smp.result.depth << '\n';
+        std::cout << "  Score: " << smp.result.score << '\n';
+        std::cout << "  Nodes: " << smp.result.nodes << '\n';
+        std::cout << "  Time: " << smp.timeMs << " ms" << '\n';
+        std::cout << "  NPS: "
+                  << ((static_cast<long long>(smp.result.nodes) * 1000LL) /
+                      std::max(1LL, smp.timeMs))
+                  << '\n';
         double speedup =
             static_cast<double>(regular.timeMs) / static_cast<double>(std::max(1LL, smp.timeMs));
         double efficiency = speedup / numThreads * 100.0;
-        std::cout << "Speedup: " << speedup << "x" << std::endl;
-        std::cout << "Efficiency: " << efficiency << "%" << std::endl;
-        std::cout << std::endl;
+        std::cout << "Speedup: " << speedup << "x" << '\n';
+        std::cout << "Efficiency: " << efficiency << "%" << '\n';
+        std::cout << '\n';
     }
 
     return 0;

@@ -10,11 +10,9 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
-#include <future>
 #include <iostream>
-#include <pthread.h>
 #include <sstream>
-#include <thread>
+#include <system_error>
 
 extern Board ChessBoard;
 extern Board PrevBoard;
@@ -39,7 +37,6 @@ constexpr int kNpsMillisScale = 1000;
 constexpr int kMateScoreThreshold = 30000;
 constexpr int kMatePlyDivisor = 2;
 constexpr int kMatePlyOffset = 1;
-constexpr std::size_t kUciSearchThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
 constexpr int kBoardDimension = 8;
 constexpr int kBoardSquareCount = kBoardDimension * kBoardDimension;
 constexpr int kMaxSquareIndex = kBoardSquareCount - 1;
@@ -55,7 +52,7 @@ constexpr int kTablebaseMateScore = 30000;
 constexpr const char* kStartingFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 } // namespace
 
-UCIEngine::UCIEngine() : isSearching(false), isPondering(false) {
+UCIEngine::UCIEngine() {
 
     initKnightAttacks();
     initKingAttacks();
@@ -74,24 +71,23 @@ UCIEngine::UCIEngine() : isSearching(false), isPondering(false) {
     setUseNeuralNetwork(options.useNeuralNetwork);
 }
 
-UCIEngine::~UCIEngine() = default;
+UCIEngine::~UCIEngine() {
+    handleStop();
+}
 
-void* UCIEngine::searchThreadEntry(void* arg) {
-    std::unique_ptr<SearchTask> task(static_cast<SearchTask*>(arg));
-    UCIEngine* self = task->engine;
-
+void UCIEngine::searchThreadEntry(const std::stop_token& stopToken, const SearchTask& task) {
     try {
-        SearchResult result = self->performSearch(task->boardSnapshot, task->depth, task->timeForMove,
-                                                  task->optimalTime, task->maxTime);
+        SearchResult result = performSearch(task.boardSnapshot, task.depth, task.timeForMove,
+                                            task.optimalTime, task.maxTime);
 
-        if (self->isSearching) {
-            std::pair<int, int> ponderMove = {kInvalidSquare, kInvalidSquare};
+        if (!stopToken.stop_requested() && isSearching.load()) {
+            std::optional<std::pair<int, int>> ponderMove;
             if (result.bestMove.first >= 0) {
-                Board tempBoard = task->boardSnapshot;
+                Board tempBoard = task.boardSnapshot;
                 if (applySearchMove(tempBoard, result.bestMove.first, result.bestMove.second)) {
-                    tempBoard.turn =
-                        (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                    : ChessPieceColor::WHITE;
+                    tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE)
+                                         ? ChessPieceColor::BLACK
+                                         : ChessPieceColor::WHITE;
                     uint64_t hash = ComputeZobrist(tempBoard);
                     TTEntry ttEntry;
                     if (TransTable.find(hash, ttEntry) && ttEntry.bestMove.first >= 0) {
@@ -99,18 +95,17 @@ void* UCIEngine::searchThreadEntry(void* arg) {
                     }
                 }
             }
-            self->reportBestMove(result.bestMove, ponderMove);
+            reportBestMove(result.bestMove, ponderMove);
             int nps = result.timeMs > 0 ? result.nodes * kNpsMillisScale / result.timeMs : 0;
-            self->reportInfo(result.depth, result.depth, result.timeMs, result.nodes, nps, {},
-                             result.score, 0);
+            reportInfo(result.depth, result.depth, result.timeMs, result.nodes, nps, {},
+                       result.score, 0);
         }
     } catch (const std::exception& e) {
         std::cout << "info string Search error: " << e.what() << '\n';
     }
 
-    self->isSearching = false;
-    self->isPondering = false;
-    return nullptr;
+    isSearching.store(false);
+    isPondering.store(false);
 }
 
 void UCIEngine::run() {
@@ -263,7 +258,7 @@ void UCIEngine::handlePosition(const std::string& command) {
 
         board = Board();
         board.InitializeFromFEN(kStartingFen);
-    } else         if (word == "fen") {
+    } else if (word == "fen") {
 
         std::string fen;
         for (int i = 0; i < kFenFieldCount; i++) {
@@ -293,20 +288,19 @@ void UCIEngine::handlePosition(const std::string& command) {
     if (iss >> word && word == "moves") {
         std::string move;
         while (iss >> move) {
-            std::pair<int, int> movePos = UCINotation::uciToMove(move);
-            if (movePos.first != -1 && movePos.second != -1) {
+            if (const auto movePos = UCINotation::uciToMove(move)) {
 
                 std::vector<std::pair<int, int>> validMoves = GetAllMoves(board, board.turn);
                 bool isValid = false;
                 for (const auto& validMove : validMoves) {
-                    if (validMove.first == movePos.first && validMove.second == movePos.second) {
+                    if (validMove.first == movePos->first && validMove.second == movePos->second) {
                         isValid = true;
                         break;
                     }
                 }
 
                 if (isValid) {
-                    if (!applySearchMove(board, movePos.first, movePos.second)) {
+                    if (!applySearchMove(board, movePos->first, movePos->second)) {
                         continue;
                     }
                     board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
@@ -323,7 +317,7 @@ void UCIEngine::handlePosition(const std::string& command) {
 }
 
 void UCIEngine::handleGo(const std::string& command) {
-    if (isSearching) {
+    if (isSearching.load()) {
         std::cout << "info string Search already in progress" << '\n';
         return;
     }
@@ -397,52 +391,49 @@ void UCIEngine::handleGo(const std::string& command) {
         }
     }
 
-    isSearching = true;
-    isPondering = isPonder;
+    isSearching.store(true);
+    isPondering.store(isPonder);
     searchStartTime = std::chrono::steady_clock::now();
     searchTimeLimit = timeForMove;
     searchDepthLimit = searchDepth;
 
-    if (searchThreadActive) {
-        pthread_join(searchThread, nullptr);
-        searchThreadActive = false;
+    if (searchThread.joinable()) {
+        searchThread.request_stop();
+        searchThread.join();
     }
 
-    auto* task = new SearchTask{this, searchDepth, timeForMove, optimalTime, maxTime, board};
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, kUciSearchThreadStackBytes);
-    int createRc = pthread_create(&searchThread, &attr, &UCIEngine::searchThreadEntry, task);
-    pthread_attr_destroy(&attr);
-    if (createRc != 0) {
-        delete task;
-        isSearching = false;
-        isPondering = false;
+    try {
+        searchThread =
+            std::jthread([this](const std::stop_token& stopToken,
+                                const SearchTask& task) { searchThreadEntry(stopToken, task); },
+                         SearchTask{searchDepth, timeForMove, optimalTime, maxTime, board});
+    } catch (const std::system_error&) {
+        isSearching.store(false);
+        isPondering.store(false);
         std::cout << "info string Search thread creation failed" << '\n';
         return;
     }
-    searchThreadActive = true;
 }
 
 void UCIEngine::handleStop() {
-    isSearching = false;
-    isPondering = false;
-    if (searchThreadActive) {
-        pthread_join(searchThread, nullptr);
-        searchThreadActive = false;
+    isSearching.store(false);
+    isPondering.store(false);
+    if (searchThread.joinable()) {
+        searchThread.request_stop();
+        searchThread.join();
     }
 }
 
 void UCIEngine::handlePonderHit() {
-    isPondering = false;
+    isPondering.store(false);
 }
 
 void UCIEngine::handleQuit() {
-    isSearching = false;
-    isPondering = false;
-    if (searchThreadActive) {
-        pthread_join(searchThread, nullptr);
-        searchThreadActive = false;
+    isSearching.store(false);
+    isPondering.store(false);
+    if (searchThread.joinable()) {
+        searchThread.request_stop();
+        searchThread.join();
     }
     std::exit(0);
 }
@@ -478,11 +469,9 @@ void UCIEngine::handleBookStats() {
 }
 
 void UCIEngine::reportBestMove(const std::pair<int, int>& move,
-                               const std::pair<int, int>& ponderMove) {
+                               const std::optional<std::pair<int, int>>& ponderMove) {
     std::cout << "bestmove " << UCINotation::moveToUCI(move)
-              << (ponderMove.first != kInvalidSquare ? " ponder " + UCINotation::moveToUCI(ponderMove)
-                                                    : "")
-              << '\n';
+              << (ponderMove ? " ponder " + UCINotation::moveToUCI(*ponderMove) : "") << '\n';
 }
 
 void UCIEngine::reportInfo(int depth, int seldepth, int time, int nodes, int nps,
@@ -567,9 +556,9 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
 
     Board searchBoard = board;
 
-    result = iterativeDeepeningParallel(searchBoard, depth, timeLimit, options.threads,
-                                        options.contempt, options.multiPV, optimalTime, maxTime,
-                                        options.hashSize);
+    result =
+        iterativeDeepeningParallel(searchBoard, depth, timeLimit, options.threads, options.contempt,
+                                   options.multiPV, optimalTime, maxTime, options.hashSize);
 
     return result;
 }
@@ -650,9 +639,9 @@ std::string UCINotation::moveToUCI(const std::pair<int, int>& move) {
     return result;
 }
 
-std::pair<int, int> UCINotation::uciToMove(const std::string& uciMove) {
+std::optional<std::pair<int, int>> UCINotation::uciToMove(const std::string& uciMove) {
     if (uciMove.length() != kUciMoveLength) {
-        return {kInvalidSquare, kInvalidSquare};
+        return std::nullopt;
     }
 
     int fromFile{uciMove[0] - kMinFileChar};
@@ -663,12 +652,12 @@ std::pair<int, int> UCINotation::uciToMove(const std::string& uciMove) {
     if (fromFile < 0 || fromFile >= kBoardDimension || fromRank < 0 ||
         fromRank >= kBoardDimension || toFile < 0 || toFile >= kBoardDimension || toRank < 0 ||
         toRank >= kBoardDimension) {
-        return {kInvalidSquare, kInvalidSquare};
+        return std::nullopt;
     }
 
     int from = (fromRank * kBoardDimension) + fromFile;
     int to = (toRank * kBoardDimension) + toFile;
-    return {from, to};
+    return std::pair<int, int>{from, to};
 }
 
 std::string UCINotation::squareToAlgebraic(int square) {
@@ -700,7 +689,7 @@ int UCINotation::algebraicToSquare(const std::string& algebraic) {
 }
 
 bool UCINotation::isValidUCIMove(const std::string& uciMove) {
-    return uciMove.length() == kUciMoveLength && uciToMove(uciMove).first != kInvalidSquare;
+    return uciMove.length() == kUciMoveLength && uciToMove(uciMove).has_value();
 }
 
 std::string UCINotation::getMoveType(const Board& board, const std::pair<int, int>& move) {
@@ -744,9 +733,8 @@ void UCIPosition::parseMoves(const std::string& moves, Board& board) {
     std::istringstream iss(moves);
     std::string move;
     while (iss >> move) {
-        std::pair<int, int> movePos = UCINotation::uciToMove(move);
-        if (movePos.first != kInvalidSquare && movePos.second != kInvalidSquare) {
-            if (!applySearchMove(board, movePos.first, movePos.second)) {
+        if (const auto movePos = UCINotation::uciToMove(move)) {
+            if (!applySearchMove(board, movePos->first, movePos->second)) {
                 continue;
             }
             board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
@@ -858,68 +846,6 @@ bool UCIPosition::isValidFEN(const std::string& fen) {
 
 uint64_t UCIPosition::getPositionHash(const Board& board) {
     return ComputeZobrist(board);
-}
-
-std::string UCISearchInfo::formatInfo(int depth, int seldepth, int time, int nodes, int nps,
-                                      const std::vector<std::pair<int, int>>& pv, int score,
-                                      int hashfull) {
-    std::ostringstream oss;
-    oss << "info depth " << depth;
-    if (seldepth > 0) {
-        oss << " seldepth " << seldepth;
-    }
-    if (time > 0) {
-        oss << " time " << time;
-    }
-    if (nodes > 0) {
-        oss << " nodes " << nodes;
-    }
-    if (nps > 0) {
-        oss << " nps " << nps;
-    }
-    if (hashfull > 0) {
-        oss << " hashfull " << hashfull;
-    }
-    if (score != 0) {
-        oss << " " << formatScore(score);
-    }
-    if (!pv.empty()) {
-        oss << " pv" << formatPV(pv);
-    }
-    return oss.str();
-}
-
-std::string UCISearchInfo::formatScore(int score, bool isMate) {
-    (void)isMate;
-    std::ostringstream oss;
-    oss << "score ";
-    if (score > kMateScoreThreshold) {
-        oss << "mate " << (kMateScoreThreshold - score + kMatePlyOffset) / kMatePlyDivisor;
-    } else if (score < -kMateScoreThreshold) {
-        oss << "mate " << -(kMateScoreThreshold + score + kMatePlyOffset) / kMatePlyDivisor;
-    } else {
-        oss << "cp " << score;
-    }
-    return oss.str();
-}
-
-std::string UCISearchInfo::formatPV(const std::vector<std::pair<int, int>>& pv) {
-    std::ostringstream oss;
-    for (const auto& move : pv) {
-        oss << " " << UCINotation::moveToUCI(move);
-    }
-    return oss.str();
-}
-
-std::string UCISearchInfo::formatTime(int timeMs) {
-    return std::to_string(timeMs);
-}
-
-std::string UCISearchInfo::formatNPS(int nodes, int timeMs) {
-    if (timeMs == 0) {
-        return "0";
-    }
-    return std::to_string(nodes * kNpsMillisScale / timeMs);
 }
 
 int runUCIEngine() {

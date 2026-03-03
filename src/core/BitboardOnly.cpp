@@ -43,7 +43,8 @@ static void initializeZobrist() {
 }
 
 BitboardPosition::BitboardPosition()
-    : sideToMove(WHITE), castlingRights(0xF), epSquare(64), halfmoveClock(0), fullmoveNumber(1),
+    : sideToMove(WHITE), castlingRights(CastlingConstants::kAllCastlingRightsMask),
+      epSquare(CastlingConstants::kNoEnPassantSquareBitboard), halfmoveClock(0), fullmoveNumber(1),
       hash(0) {
     initializeZobrist();
 
@@ -104,7 +105,8 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
     ChessPieceType finalPiece = (promotion != ChessPieceType::NONE) ? promotion : movingPiece;
     placePiece(to, movingColor, finalPiece);
 
-    if (movingPiece == ChessPieceType::PAWN && to == epSquare && epSquare < 64) {
+    if (movingPiece == ChessPieceType::PAWN && to == epSquare &&
+        epSquare < CastlingConstants::kNoEnPassantSquareBitboard) {
         int captureSquare = (movingColor == ChessPieceColor::WHITE) ? to - 8 : to + 8;
         ChessPieceColor enemyColor = (movingColor == ChessPieceColor::WHITE)
                                          ? ChessPieceColor::BLACK
@@ -112,13 +114,15 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
         removePiece(captureSquare, enemyColor, ChessPieceType::PAWN);
     }
 
-    if (movingPiece == ChessPieceType::PAWN && abs(to - from) == 16) {
+    if (movingPiece == ChessPieceType::PAWN &&
+        abs(to - from) == CastlingConstants::kPawnDoublePushDistance) {
         epSquare = (from + to) / 2;
     } else {
-        epSquare = 64;
+        epSquare = CastlingConstants::kNoEnPassantSquareBitboard;
     }
 
-    if (movingPiece == ChessPieceType::KING && abs(to - from) == 2) {
+    if (movingPiece == ChessPieceType::KING &&
+        abs(to - from) == CastlingConstants::kKingCastlingDistance) {
         int rookFrom = 0;
         int rookTo = 0;
         if (to > from) {
@@ -135,19 +139,21 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
 
     if (movingPiece == ChessPieceType::KING) {
         if (movingColor == ChessPieceColor::WHITE) {
-            castlingRights &= ~0x3;
+            castlingRights &= static_cast<uint8_t>(~CastlingConstants::kWhiteCastlingRightsMask);
         } else {
-            castlingRights &= ~0xC;
+            castlingRights &= static_cast<uint8_t>(~CastlingConstants::kBlackCastlingRightsMask);
         }
     } else if (movingPiece == ChessPieceType::ROOK) {
-        if (from == 0) {
-            castlingRights &= ~0x2;
-        } else if (from == 7) {
-            castlingRights &= ~0x1;
-        } else if (from == 56) {
-            castlingRights &= ~0x8;
-        } else if (from == 63) {
-            castlingRights &= ~0x4;
+        if (from == CastlingConstants::kWhiteQueensideRookSquare) {
+            castlingRights &=
+                static_cast<uint8_t>(~CastlingConstants::kWhiteQueensideCastlingRight);
+        } else if (from == CastlingConstants::kWhiteKingsideRookSquare) {
+            castlingRights &= static_cast<uint8_t>(~CastlingConstants::kWhiteKingsideCastlingRight);
+        } else if (from == CastlingConstants::kBlackQueensideRookSquare) {
+            castlingRights &=
+                static_cast<uint8_t>(~CastlingConstants::kBlackQueensideCastlingRight);
+        } else if (from == CastlingConstants::kBlackKingsideRookSquare) {
+            castlingRights &= static_cast<uint8_t>(~CastlingConstants::kBlackKingsideCastlingRight);
         }
     }
 
@@ -230,23 +236,23 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
     sideToMove = (turn == "w") ? WHITE : BLACK;
     castlingRights = 0;
     if (castling.contains('K')) {
-        castlingRights |= 1;
+        castlingRights |= CastlingConstants::kWhiteKingsideCastlingRight;
     }
     if (castling.contains('Q')) {
-        castlingRights |= 2;
+        castlingRights |= CastlingConstants::kWhiteQueensideCastlingRight;
     }
     if (castling.contains('k')) {
-        castlingRights |= 4;
+        castlingRights |= CastlingConstants::kBlackKingsideCastlingRight;
     }
     if (castling.contains('q')) {
-        castlingRights |= 8;
+        castlingRights |= CastlingConstants::kBlackQueensideCastlingRight;
     }
     if (ep != "-" && ep.length() >= 2) {
         int file = ep[0] - 'a';
         int rank = ep[1] - '1';
         epSquare = (rank * 8) + file;
     } else {
-        epSquare = 64;
+        epSquare = CastlingConstants::kNoEnPassantSquareBitboard;
     }
 
     updateOccupancy();
@@ -266,7 +272,7 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
         hash ^= zobristSideToMove;
     }
     hash ^= zobristCastling[castlingRights];
-    if (epSquare < 64) {
+    if (epSquare < CastlingConstants::kNoEnPassantSquareBitboard) {
         hash ^= zobristEnPassant[epSquare & 7];
     }
 }
@@ -333,21 +339,21 @@ std::string BitboardPosition::toFEN() const {
     ss << ' ' << (sideToMove == WHITE ? 'w' : 'b');
     ss << ' ';
     std::string castling;
-    if (castlingRights & 1) {
+    if (castlingRights & CastlingConstants::kWhiteKingsideCastlingRight) {
         castling += 'K';
     }
-    if (castlingRights & 2) {
+    if (castlingRights & CastlingConstants::kWhiteQueensideCastlingRight) {
         castling += 'Q';
     }
-    if (castlingRights & 4) {
+    if (castlingRights & CastlingConstants::kBlackKingsideCastlingRight) {
         castling += 'k';
     }
-    if (castlingRights & 8) {
+    if (castlingRights & CastlingConstants::kBlackQueensideCastlingRight) {
         castling += 'q';
     }
     ss << (castling.empty() ? "-" : castling);
     ss << ' ';
-    if (epSquare < 64) {
+    if (epSquare < CastlingConstants::kNoEnPassantSquareBitboard) {
         ss << char('a' + (epSquare & 7)) << char('1' + (epSquare >> 3));
     } else {
         ss << '-';

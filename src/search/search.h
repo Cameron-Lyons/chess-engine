@@ -9,8 +9,10 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <compare>
 #include <condition_variable>
 #include <cstdint>
+#include <expected>
 #include <future>
 #include <iostream>
 #include <limits>
@@ -40,6 +42,19 @@ constexpr std::size_t kMoveMaskSize = kMoveMaskDimension * kMoveMaskDimension;
 } // namespace SearchConstants
 
 std::string getFEN(const Board& board);
+struct ParsedAlgebraicMove {
+    int srcCol;
+    int srcRow;
+    int destCol;
+    int destRow;
+};
+
+enum class ParseAlgebraicMoveError : std::uint8_t {
+    InvalidNotation,
+};
+
+std::expected<ParsedAlgebraicMove, ParseAlgebraicMoveError> parseAlgebraicMove(
+    std::string_view move, const Board& board);
 bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& srcRow, int& destCol,
                         int& destRow);
 
@@ -98,7 +113,7 @@ public:
 
     void insert(uint64_t hash, const TTEntry& entry) {
         bool found = false;
-        TTv2::TTEntry* tte{tt.probe(hash, found)};
+        TTv2::TTEntry* tte = tt.probe(hash, found); // NOLINT(cppcoreguidelines-init-variables)
         TTv2::PackedMove pm = TTv2::packMove(
             entry.bestMove.first >= SearchConstants::kZero ? entry.bestMove.first
                                                            : SearchConstants::kZero,
@@ -117,7 +132,8 @@ public:
 
     bool find(uint64_t hash, TTEntry& entry) const {
         bool found = false;
-        TTv2::TTEntry* tte{const_cast<TTv2::TranspositionTable&>(tt).probe(hash, found)};
+        // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+        TTv2::TTEntry* tte = const_cast<TTv2::TranspositionTable&>(tt).probe(hash, found);
         if (!found) {
             return false;
         }
@@ -266,12 +282,13 @@ struct ScoredMove {
     std::pair<int, int> move;
     int score;
     ScoredMove(std::pair<int, int> m, int s) : move(m), score(s) {}
-    bool operator<(const ScoredMove& other) const {
-        return score < other.score;
+    std::strong_ordering operator<=>(const ScoredMove& other) const {
+        if (const auto scoreCmp = score <=> other.score; scoreCmp != 0) {
+            return scoreCmp;
+        }
+        return move <=> other.move;
     }
-    bool operator>(const ScoredMove& other) const {
-        return score > other.score;
-    }
+    bool operator==(const ScoredMove& other) const = default;
 };
 
 struct SearchResult {
@@ -294,8 +311,7 @@ int pieceToZobristIndex(const Piece& p);
 uint64_t ComputeZobrist(const Board& board);
 
 bool isCapture(const Board& board, int srcPos, int destPos);
-bool applySearchMove(Board& board, int fromSquare, int toSquare,
-                     bool autoPromoteToQueen = true);
+bool applySearchMove(Board& board, int fromSquare, int toSquare, bool autoPromoteToQueen = true);
 
 inline int pieceTypeIndex(ChessPieceType pt) {
     switch (pt) {
@@ -327,14 +343,11 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
                      uint64_t zobristKey = std::numeric_limits<uint64_t>::max());
 std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color);
 std::string getBookMove(const std::string& fen);
-SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimitMs,
-                                        int numThreads = SearchConstants::kZero,
-                                        int contempt = SearchConstants::kZero,
-                                        int multiPV = SearchConstants::kOne,
-                                        int optimalTimeMs = SearchConstants::kZero,
-                                        int maxTimeMs = SearchConstants::kZero,
-                                        int hashSizeMb =
-                                            SearchConstants::kDefaultTranspositionTableMb);
+SearchResult iterativeDeepeningParallel(
+    Board& board, int maxDepth, int timeLimitMs, int numThreads = SearchConstants::kZero,
+    int contempt = SearchConstants::kZero, int multiPV = SearchConstants::kOne,
+    int optimalTimeMs = SearchConstants::kZero, int maxTimeMs = SearchConstants::kZero,
+    int hashSizeMb = SearchConstants::kDefaultTranspositionTableMb);
 std::pair<int, int> findBestMove(Board& board, int depth);
 int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer,
                              int ply, ThreadSafeHistory& historyTable,

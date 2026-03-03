@@ -26,13 +26,14 @@ public:
         uint64_t nodes = perft(board, depth);
         auto end = high_resolution_clock::now();
         duration<double> time = end - start;
-        double nps = nodes / time.count();
+        double nps = static_cast<double>(nodes) / time.count();
         return {nodes, time, nps};
     }
 
     static uint64_t perft(Board& board, int depth) {
-        if (depth == 0)
+        if (depth == 0) {
             return 1;
+        }
 
         uint64_t nodes = 0;
         GenValidMoves(board);
@@ -65,9 +66,8 @@ public:
         auto end = high_resolution_clock::now();
         duration<double> time = end - start;
 
-        return {result.bestMove.first * 8 + result.bestMove.second, result.score,
-                static_cast<uint64_t>(result.nodes),
-                time};
+        return {(result.bestMove.first * 8) + result.bestMove.second, result.score,
+                static_cast<uint64_t>(result.nodes), time};
     }
 };
 
@@ -116,10 +116,11 @@ void runBenchmarkSuite() {
     for (auto& future : perftFutures) {
         perftResults.push_back(future.get());
     }
-    std::sort(perftResults.begin(), perftResults.end(), [](const PerftTaskResult& lhs,
-                                                           const PerftTaskResult& rhs) {
-        return std::tie(lhs.positionIndex, lhs.depth) < std::tie(rhs.positionIndex, rhs.depth);
-    });
+    std::sort(perftResults.begin(), perftResults.end(),
+              [](const PerftTaskResult& lhs, const PerftTaskResult& rhs) {
+                  return std::tie(lhs.positionIndex, lhs.depth) <
+                         std::tie(rhs.positionIndex, rhs.depth);
+              });
 
     for (const auto& row : perftResults) {
         const auto& name = testPositions[row.positionIndex].first;
@@ -152,10 +153,10 @@ void runBenchmarkSuite() {
     for (auto& future : searchFutures) {
         searchResults.push_back(future.get());
     }
-    std::sort(searchResults.begin(), searchResults.end(), [](const SearchTaskResult& lhs,
-                                                             const SearchTaskResult& rhs) {
-        return lhs.positionIndex < rhs.positionIndex;
-    });
+    std::sort(searchResults.begin(), searchResults.end(),
+              [](const SearchTaskResult& lhs, const SearchTaskResult& rhs) {
+                  return lhs.positionIndex < rhs.positionIndex;
+              });
 
     for (const auto& row : searchResults) {
         const auto& name = testPositions[row.positionIndex].first;
@@ -172,7 +173,7 @@ int main() {
     try {
         runBenchmarkSuite();
     } catch (const std::exception& e) {
-        std::cerr << "❌ Benchmark failed: " << e.what() << std::endl;
+        std::cerr << "❌ Benchmark failed: " << e.what() << '\n';
         return 1;
     }
 

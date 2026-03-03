@@ -1,8 +1,9 @@
 #include "AdvancedSearch.h"
-#include "BookUtils.h"
 #include "../core/BitboardMoves.h"
 #include "../evaluation/Evaluation.h"
+#include "../evaluation/GamePhaseConstants.h"
 #include "../utils/engine_globals.h"
+#include "BookUtils.h"
 
 #include <algorithm>
 #include <cmath>
@@ -63,14 +64,6 @@ constexpr double kShallowSearchTimeFactor = 0.8;
 constexpr int kLargeNodeThreshold = 1000000;
 constexpr double kLargeNodeTimeFactor = 1.1;
 
-constexpr int kQueenMaterialValue = 900;
-constexpr int kRookMaterialValue = 500;
-constexpr int kMinorMaterialValue = 300;
-constexpr int kPawnMaterialValue = 100;
-constexpr int kOpeningMaterialThreshold = 6000;
-constexpr int kOpeningPieceCountThreshold = 20;
-constexpr int kEndgameMaterialThreshold = 2000;
-constexpr int kEndgamePieceCountThreshold = 10;
 constexpr int kEndgameRookCountThreshold = 1;
 constexpr int kEndgameMinorPieceCountThreshold = 2;
 constexpr double kOpeningPhaseTimeFactor = 0.7;
@@ -88,7 +81,6 @@ constexpr int kMoveDestFileIndex = 2;
 constexpr int kMoveDestRankIndex = 3;
 constexpr char kBookFileOffset = 'a';
 constexpr char kBookRankOffset = '1';
-constexpr int kOpeningMinQueenCount = 1;
 constexpr int kNormalizedWeightTotal = 1000;
 constexpr int kFallbackWeight = 1;
 constexpr double kDefaultTimeFactor = 1.0;
@@ -118,9 +110,11 @@ MaterialSummary summarizeMaterial(const Board& board) {
 
     MaterialSummary summary{};
     summary.nonKingPieceCount = popcount(nonKingPieces);
-    summary.totalMaterial = (pawnCount * kPawnMaterialValue) +
-                            ((knightCount + bishopCount) * kMinorMaterialValue) +
-                            (rookCount * kRookMaterialValue) + (queenCount * kQueenMaterialValue);
+    summary.totalMaterial =
+        (pawnCount * GamePhaseConstants::kPawnMaterialValue) +
+        ((knightCount + bishopCount) * GamePhaseConstants::kMinorMaterialValue) +
+        (rookCount * GamePhaseConstants::kRookMaterialValue) +
+        (queenCount * GamePhaseConstants::kQueenMaterialValue);
     summary.queenCount = queenCount;
     summary.rookCount = rookCount;
     summary.minorPieceCount = knightCount + bishopCount;
@@ -431,14 +425,14 @@ double TimeManager::getTimeFactor(int depth, int nodes) {
 GamePhase TimeManager::getGamePhase(const Board& board) const {
     const MaterialSummary material = summarizeMaterial(board);
 
-    if (material.totalMaterial > kOpeningMaterialThreshold &&
-        material.queenCount >= kOpeningMinQueenCount &&
-        material.nonKingPieceCount > kOpeningPieceCountThreshold) {
+    if (material.totalMaterial > GamePhaseConstants::kOpeningMaterialThreshold &&
+        material.queenCount >= GamePhaseConstants::kOpeningMinQueenCount &&
+        material.nonKingPieceCount > GamePhaseConstants::kOpeningPieceCountThreshold) {
         return GamePhase::OPENING;
     }
 
-    if (material.totalMaterial < kEndgameMaterialThreshold ||
-        material.nonKingPieceCount <= kEndgamePieceCountThreshold ||
+    if (material.totalMaterial < GamePhaseConstants::kEndgameMaterialThreshold ||
+        material.nonKingPieceCount <= GamePhaseConstants::kEndgamePieceCountThreshold ||
         (material.queenCount == kZero && material.rookCount <= kEndgameRookCountThreshold &&
          material.minorPieceCount <= kEndgameMinorPieceCountThreshold)) {
         return GamePhase::ENDGAME;
@@ -507,13 +501,9 @@ std::pair<int, int> EnhancedOpeningBook::getBestMove(const Board& board, bool ra
     }
 
     auto parseBookMoveString = [&](const std::string& moveStr) -> std::pair<int, int> {
-        Board parseBoard = board;
-        int srcCol = kZero;
-        int srcRow = kZero;
-        int destCol = kZero;
-        int destRow = kZero;
-        if (parseAlgebraicMove(moveStr, parseBoard, srcCol, srcRow, destCol, destRow)) {
-            return {(srcRow * kBoardDimension) + srcCol, (destRow * kBoardDimension) + destCol};
+        if (auto parsed = parseAlgebraicMove(moveStr, board)) {
+            return {(parsed->srcRow * kBoardDimension) + parsed->srcCol,
+                    (parsed->destRow * kBoardDimension) + parsed->destCol};
         }
         return parseMove(moveStr);
     };
@@ -656,7 +646,7 @@ void EnhancedOpeningBook::loadBook(const std::string& path) {
 }
 
 std::string EnhancedOpeningBook::boardToKey(const Board& board) {
-    const std::string fen = getFEN(board);
+    std::string fen = getFEN(board);
     int fieldCount = kZero;
     for (std::size_t i = kZero; i < fen.size(); ++i) {
         if (fen[i] == ' ') {

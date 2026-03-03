@@ -6,7 +6,7 @@
 namespace {
 constexpr int kZero = 0;
 constexpr int kOne = 1;
-}
+} // namespace
 
 std::string normalizeBookFen(const std::string& fen, bool clearEnPassant) {
     std::istringstream iss(fen);
@@ -33,8 +33,8 @@ std::string normalizeBookFen(const std::string& fen, bool clearEnPassant) {
     }
 
     std::ostringstream normalized;
-    normalized << piecePlacement << ' ' << sideToMove << ' ' << castling << ' ' << enPassant
-               << ' ' << halfmoveClock << ' ' << fullmoveNumber;
+    normalized << piecePlacement << ' ' << sideToMove << ' ' << castling << ' ' << enPassant << ' '
+               << halfmoveClock << ' ' << fullmoveNumber;
     return normalized.str();
 }
 

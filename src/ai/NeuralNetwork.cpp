@@ -51,7 +51,8 @@ public:
     std::vector<Layer> layers;
     std::mt19937 rng;
 
-    Impl(const NetworkConfig& config) : config(config), rng(42) {
+    Impl(const NetworkConfig& config)
+        : config(config), rng(42) { // NOLINT(bugprone-random-generator-seed)
         initializeNetwork();
     }
 
@@ -574,8 +575,7 @@ auto TrainingDataGenerator::generateSelfPlayData(int numGames, int maxMoves)
             }
             std::mt19937 rng(kSelfPlaySeed + static_cast<std::uint32_t>(game));
             auto gameExamples = playGame(maxMoves, rng);
-            allExamples.insert(allExamples.end(),
-                               std::make_move_iterator(gameExamples.begin()),
+            allExamples.insert(allExamples.end(), std::make_move_iterator(gameExamples.begin()),
                                std::make_move_iterator(gameExamples.end()));
         }
     } else {
@@ -583,27 +583,27 @@ auto TrainingDataGenerator::generateSelfPlayData(int numGames, int maxMoves)
         std::vector<std::future<std::vector<TrainingExample>>> futures;
         futures.reserve(static_cast<std::size_t>(workerCount));
         for (int worker = 0; worker < workerCount; ++worker) {
-            futures.emplace_back(std::async(std::launch::async, [this, &nextGame, numGames, maxMoves] {
-                std::vector<TrainingExample> workerExamples;
-                while (true) {
-                    const int game = nextGame.fetch_add(1, std::memory_order_relaxed);
-                    if (game >= numGames) {
-                        break;
+            futures.emplace_back(
+                std::async(std::launch::async, [this, &nextGame, numGames, maxMoves] {
+                    std::vector<TrainingExample> workerExamples;
+                    while (true) {
+                        const int game = nextGame.fetch_add(1, std::memory_order_relaxed);
+                        if (game >= numGames) {
+                            break;
+                        }
+                        std::mt19937 rng(kSelfPlaySeed + static_cast<std::uint32_t>(game));
+                        auto gameExamples = playGame(maxMoves, rng);
+                        workerExamples.insert(workerExamples.end(),
+                                              std::make_move_iterator(gameExamples.begin()),
+                                              std::make_move_iterator(gameExamples.end()));
                     }
-                    std::mt19937 rng(kSelfPlaySeed + static_cast<std::uint32_t>(game));
-                    auto gameExamples = playGame(maxMoves, rng);
-                    workerExamples.insert(workerExamples.end(),
-                                          std::make_move_iterator(gameExamples.begin()),
-                                          std::make_move_iterator(gameExamples.end()));
-                }
-                return workerExamples;
-            }));
+                    return workerExamples;
+                }));
         }
 
         for (auto& future : futures) {
             auto workerExamples = future.get();
-            allExamples.insert(allExamples.end(),
-                               std::make_move_iterator(workerExamples.begin()),
+            allExamples.insert(allExamples.end(), std::make_move_iterator(workerExamples.begin()),
                                std::make_move_iterator(workerExamples.end()));
         }
     }
@@ -1011,9 +1011,8 @@ auto NNTrainer::calculateLoss(const std::vector<std::pair<Board, float>>& data) 
     } else {
         std::vector<std::future<float>> futures;
         futures.reserve(static_cast<std::size_t>(workerCount));
-        const std::size_t chunkSize =
-            (data.size() + static_cast<std::size_t>(workerCount) - 1U) /
-            static_cast<std::size_t>(workerCount);
+        const std::size_t chunkSize = (data.size() + static_cast<std::size_t>(workerCount) - 1U) /
+                                      static_cast<std::size_t>(workerCount);
         for (int worker = 0; worker < workerCount; ++worker) {
             const std::size_t begin = static_cast<std::size_t>(worker) * chunkSize;
             if (begin >= data.size()) {
