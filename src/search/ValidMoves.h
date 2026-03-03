@@ -7,10 +7,10 @@
 
 constexpr int kValidMovesBoardSquareCount = 64;
 
-extern bool BlackAttackBoard[kValidMovesBoardSquareCount];
-extern bool WhiteAttackBoard[kValidMovesBoardSquareCount];
-extern int BlackKingPosition;
-extern int WhiteKingPosition;
+extern thread_local bool BlackAttackBoard[kValidMovesBoardSquareCount];
+extern thread_local bool WhiteAttackBoard[kValidMovesBoardSquareCount];
+extern thread_local int BlackKingPosition;
+extern thread_local int WhiteKingPosition;
 
 bool AnalyzeMove(Board& board, int dest, Piece& piece);
 void CheckValidMovesPawn(const std::vector<int>& moves, Piece& piece, int start, Board& board,

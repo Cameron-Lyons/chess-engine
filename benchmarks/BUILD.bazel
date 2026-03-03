@@ -1,15 +1,38 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+
+cc_library(
+    name = "benchmark_args",
+    srcs = ["benchmark_args.cpp"],
+    hdrs = ["benchmark_args.h"],
+    copts = ["-Werror"],
+)
 
 cc_binary(
     name = "search_benchmark",
     srcs = ["search_benchmark.cpp"],
     copts = ["-Werror"],
-    deps = ["//:engine_lib"],
+    deps = [
+        ":benchmark_args",
+        "//:engine_lib",
+    ],
 )
 
 cc_binary(
     name = "micro_benchmark",
     srcs = ["micro_benchmark.cpp"],
     copts = ["-Werror"],
-    deps = ["//:engine_lib"],
+    deps = [
+        ":benchmark_args",
+        "//:engine_lib",
+    ],
+)
+
+cc_binary(
+    name = "multipv_benchmark",
+    srcs = ["multipv_benchmark.cpp"],
+    copts = ["-Werror"],
+    deps = [
+        ":benchmark_args",
+        "//:engine_lib",
+    ],
 )

@@ -4,9 +4,7 @@
 #include "search.h"
 
 #include <atomic>
-#include <condition_variable>
 #include <memory>
-#include <thread>
 #include <vector>
 
 class LazySMP {
@@ -26,17 +24,14 @@ public:
         std::atomic<int> bestDepth;
         std::pair<int, int> bestMove;
         ThreadSafeHistory historyTable;
-        KillerMoves killerMoves;
-        ParallelSearchContext* context;
         int aspirationDelta;
         int depthOffset;
-        bool useNullMove;
 
         ThreadData(int threadId)
             : id(threadId), searching(false), stopFlag(false), depth(kInitialDepth),
               bestScore(kInitialScore), bestDepth(kInitialDepth),
-              bestMove({kInvalidMoveSquare, kInvalidMoveSquare}), context(nullptr),
-              aspirationDelta(kInitialDepth), depthOffset(kInitialDepth), useNullMove(true) {}
+              bestMove({kInvalidMoveSquare, kInvalidMoveSquare}), aspirationDelta(kInitialDepth),
+              depthOffset(kInitialDepth) {}
     };
 
     struct SharedData {
@@ -58,6 +53,7 @@ private:
         ThreadData* data;
         int maxDepth;
         int timeLimit;
+        const std::vector<std::pair<int, int>>* excludedRootMoves;
     };
 
     static void* searchThreadEntry(void* arg);
@@ -67,19 +63,16 @@ private:
     int contempt;
     std::vector<std::unique_ptr<ThreadData>> threads;
     std::unique_ptr<SharedData> shared;
-    std::vector<std::thread> workers;
-    std::mutex poolMutex;
-    std::condition_variable poolCV;
-    std::atomic<bool> shouldTerminate;
-    void workerThread(ThreadData* data);
-    void searchThread(ThreadData* data, int maxDepth, int timeLimit) const;
+    void searchThread(ThreadData* data, int maxDepth, int timeLimit,
+                      const std::vector<std::pair<int, int>>& excludedRootMoves) const;
 
 public:
     explicit LazySMP(int threadCount = kAutoThreadCount,
                      int hashMb = SearchConstants::kDefaultTranspositionTableMb,
                      int contemptValue = SearchConstants::kZero);
     ~LazySMP();
-    SearchResult search(const Board& board, int maxDepth, int timeLimit);
+    SearchResult search(const Board& board, int maxDepth, int timeLimit,
+                        const std::vector<std::pair<int, int>>& excludedRootMoves = {});
     void stop();
 
     int getNodesSearched() const {
@@ -91,21 +84,15 @@ public:
 
     static int getAspirationDelta(int threadId);
     static int getDepthOffset(int threadId);
-    static bool shouldUseNullMove(int threadId);
 };
 
 class SMPTimeManager {
 private:
     std::chrono::steady_clock::time_point startTime;
     int allocatedTime;
-    std::atomic<bool> hardStop;
 
 public:
     explicit SMPTimeManager(int timeMs);
     bool shouldStop() const;
-    void forceStop() {
-        hardStop = true;
-    }
     int getElapsedTime() const;
-    int getRemainingTime() const;
 };

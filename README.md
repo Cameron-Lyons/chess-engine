@@ -57,7 +57,7 @@ bazel test //tests/...
 
 Build benchmark binaries:
 ```bash
-bazel build //benchmarks:search_benchmark //benchmarks:micro_benchmark
+bazel build //benchmarks:search_benchmark //benchmarks:micro_benchmark //benchmarks:multipv_benchmark
 ```
 
 Run search throughput benchmark:
@@ -70,12 +70,18 @@ Run focused microbenchmark:
 bazel run //benchmarks:micro_benchmark -- --iterations=2000000
 ```
 
+Run threaded MultiPV scaling benchmark:
+```bash
+bazel run //benchmarks:multipv_benchmark -- --rounds=2 --time_ms=1200 --depth=10 --multipv=3
+```
+
 ## Useful Targets
 
 - Engine binary: `//:chess_engine`
 - Core engine library: `//:engine_lib`
 - Search benchmark: `//benchmarks:search_benchmark`
 - Micro benchmark: `//benchmarks:micro_benchmark`
+- MultiPV benchmark: `//benchmarks:multipv_benchmark`
 
 ## Repository Layout
 

@@ -12,6 +12,7 @@
 #include <future>
 #include <limits>
 #include <mutex>
+#include <pthread.h>
 #include <random>
 #include <ranges>
 #include <sstream>
@@ -148,6 +149,12 @@ constexpr std::uint64_t kUnsetZobristKey = std::numeric_limits<std::uint64_t>::m
 constexpr int kZobristCastlingStateCount = 4;
 constexpr int kNoEpSquare = -1;
 constexpr int kMoveUndoMaxSquares = 5;
+constexpr std::size_t kRootSplitThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
+constexpr int kRootSplitMinDepth = 4;
+constexpr int kRootSplitMinMoves = 3;
+constexpr int kRootSplitLowDepthThreshold = 6;
+constexpr int kRootSplitLowDepthMaxWorkers = 2;
+constexpr int kRootSplitMaxAspirationSplitAttempt = 0;
 
 struct MoveApplicationData {
     Piece movingPiece;
@@ -941,6 +948,310 @@ std::vector<ScoredMove> scoreMovesOptimized(const Board& board,
     }
 
     return scoredMoves;
+}
+
+struct RootSplitResult {
+    int score = kZero;
+    std::pair<int, int> bestMove = {kInvalidSquare, kInvalidSquare};
+    int nodes = kZero;
+    bool hasLegalMove = false;
+    bool timeExpired = false;
+};
+
+struct RootSplitSharedState {
+    const Board* board = nullptr;
+    const std::vector<ScoredMove>* rootMoves = nullptr;
+    uint64_t rootZobristKey = kUnsetZobristKey;
+    int depth = kZero;
+    bool maximizingPlayer = true;
+    int hashSizeMb = SearchConstants::kDefaultTranspositionTableMb;
+    ThreadSafeHistory historySeed{};
+    std::chrono::steady_clock::time_point startTime;
+    int timeLimitMs = kZero;
+    int contempt = kZero;
+    int optimalTimeMs = kZero;
+    int maxTimeMs = kZero;
+    bool useSyzygy = false;
+    std::atomic<int> nextMoveIndex{0};
+    std::atomic<long long> nodes{0};
+    std::atomic<bool> stop{false};
+    std::atomic<bool> timeExpired{false};
+    std::mutex bestMutex;
+    int alpha = -kMateScore;
+    int beta = kMateScore;
+    int bestScore = kZero;
+    std::pair<int, int> bestMove = {kInvalidSquare, kInvalidSquare};
+    bool hasBestMove = false;
+};
+
+struct RootSplitWorkerArgs {
+    RootSplitSharedState* shared = nullptr;
+};
+
+int chooseRootSplitWorkerCount(int depth, int numThreads, int remainingMoves) {
+    if (depth < kRootSplitMinDepth || remainingMoves <= kZero) {
+        return kZero;
+    }
+
+    int workerCount = std::min(numThreads - kOne, remainingMoves);
+    if (depth <= kRootSplitLowDepthThreshold) {
+        workerCount = std::min(workerCount, kRootSplitLowDepthMaxWorkers);
+    }
+
+    return std::max(kZero, workerCount);
+}
+
+bool isPreferredRootMove(std::pair<int, int> lhs, std::pair<int, int> rhs) {
+    if (rhs.first < kZero) {
+        return true;
+    }
+    if (lhs.first != rhs.first) {
+        return lhs.first < rhs.first;
+    }
+    return lhs.second < rhs.second;
+}
+
+bool checkRootSplitTimeLimit(RootSplitSharedState& shared) {
+    if (shared.timeLimitMs <= kZero) {
+        return false;
+    }
+
+    const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now() - shared.startTime)
+                               .count();
+    if (elapsedMs >= shared.timeLimitMs) {
+        shared.timeExpired.store(true, std::memory_order_relaxed);
+        shared.stop.store(true, std::memory_order_relaxed);
+        return true;
+    }
+
+    return false;
+}
+
+bool evaluateRootSplitMove(const RootSplitSharedState& shared, std::pair<int, int> move,
+                           int alphaWindow, int betaWindow, int& evalOut, int& nodesOut) {
+    if (shared.depth <= kZero || shared.board == nullptr) {
+        return false;
+    }
+
+    Board newBoard = *shared.board;
+    MoveApplicationData moveData{};
+    if (!applySearchMoveWithData(newBoard, move.first, move.second, true, &moveData)) {
+        return false;
+    }
+
+    if (isInCheck(newBoard, shared.board->turn)) {
+        return false;
+    }
+
+    const uint64_t childZobristKey = computeChildZobrist(
+        shared.rootZobristKey, newBoard, move.first, move.second, moveData);
+    newBoard.turn = (newBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
+                                                               : ChessPieceColor::WHITE;
+
+    ThreadSafeHistory localHistory = shared.historySeed;
+    ParallelSearchContext localContext(kOne);
+    localContext.startTime = shared.startTime;
+    localContext.timeLimitMs = shared.timeLimitMs;
+    localContext.contempt = shared.contempt;
+    localContext.multiPV = kOne;
+    localContext.optimalTimeMs = shared.optimalTimeMs;
+    localContext.maxTimeMs = shared.maxTimeMs;
+    localContext.useSyzygy = shared.useSyzygy;
+    localContext.transTable.resize(std::max(kOne, shared.hashSizeMb));
+    localContext.transTable.newSearch();
+
+    evalOut = AlphaBetaSearch(newBoard, shared.depth - kOne, alphaWindow, betaWindow,
+                              !shared.maximizingPlayer, kOne, localHistory, localContext,
+                              childZobristKey);
+    nodesOut = localContext.nodeCount.load();
+    return true;
+}
+
+void commitRootSplitResult(RootSplitSharedState& shared, int eval, std::pair<int, int> move) {
+    std::lock_guard<std::mutex> lock(shared.bestMutex);
+    if (!shared.hasBestMove ||
+        (shared.maximizingPlayer ? (eval > shared.bestScore) : (eval < shared.bestScore)) ||
+        (eval == shared.bestScore && isPreferredRootMove(move, shared.bestMove))) {
+        shared.bestScore = eval;
+        shared.bestMove = move;
+        shared.hasBestMove = true;
+    }
+
+    if (shared.maximizingPlayer) {
+        shared.alpha = std::max(shared.alpha, eval);
+    } else {
+        shared.beta = std::min(shared.beta, eval);
+    }
+
+    if (shared.alpha >= shared.beta) {
+        shared.stop.store(true, std::memory_order_relaxed);
+    }
+}
+
+void* rootSplitWorkerEntry(void* arg) {
+    auto* workerArgs = static_cast<RootSplitWorkerArgs*>(arg);
+    if (workerArgs == nullptr || workerArgs->shared == nullptr || workerArgs->shared->rootMoves == nullptr) {
+        return nullptr;
+    }
+
+    RootSplitSharedState& shared = *workerArgs->shared;
+    while (!shared.stop.load(std::memory_order_relaxed)) {
+        if (checkRootSplitTimeLimit(shared)) {
+            break;
+        }
+
+        const int moveIndex = shared.nextMoveIndex.fetch_add(kOne, std::memory_order_relaxed);
+        if (moveIndex < kZero ||
+            moveIndex >= static_cast<int>(shared.rootMoves->size())) {
+            break;
+        }
+
+        const std::pair<int, int> move = (*shared.rootMoves)[static_cast<std::size_t>(moveIndex)].move;
+        int alphaWindow = -kMateScore;
+        int betaWindow = kMateScore;
+        {
+            std::lock_guard<std::mutex> lock(shared.bestMutex);
+            alphaWindow = shared.alpha;
+            betaWindow = shared.beta;
+        }
+
+        int eval = kZero;
+        int nodes = kZero;
+        if (!evaluateRootSplitMove(shared, move, alphaWindow, betaWindow, eval, nodes)) {
+            continue;
+        }
+
+        shared.nodes.fetch_add(nodes, std::memory_order_relaxed);
+        commitRootSplitResult(shared, eval, move);
+    }
+
+    return nullptr;
+}
+
+RootSplitResult searchRootMovesYBWC(const Board& board, int depth, int alpha, int beta,
+                                    bool maximizingPlayer, const ThreadSafeHistory& historyTable,
+                                    const ParallelSearchContext& context, int numThreads,
+                                    int hashSizeMb) {
+    RootSplitResult result;
+    if (numThreads <= kOne || depth <= kZero) {
+        return result;
+    }
+
+    Board rootBoard = board;
+    std::vector<std::pair<int, int>> moves = GetAllMoves(rootBoard, rootBoard.turn);
+    if (moves.empty()) {
+        return result;
+    }
+
+    std::vector<ScoredMove> scoredMoves =
+        scoreMovesOptimized(rootBoard, moves, historyTable, context.killerMoves, kZero,
+                            {kInvalidSquare, kInvalidSquare}, {kInvalidSquare, kInvalidSquare},
+                            &context);
+    std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
+
+    std::vector<ScoredMove> rootMoves;
+    rootMoves.reserve(scoredMoves.size());
+    for (const auto& scoredMove : scoredMoves) {
+        bool excluded = false;
+        for (const auto& excludedMove : context.excludedRootMoves) {
+            if (excludedMove == scoredMove.move) {
+                excluded = true;
+                break;
+            }
+        }
+        if (!excluded) {
+            rootMoves.push_back(scoredMove);
+        }
+    }
+    if (rootMoves.empty()) {
+        return result;
+    }
+    if (static_cast<int>(rootMoves.size()) < kRootSplitMinMoves) {
+        return result;
+    }
+
+    RootSplitSharedState shared;
+    shared.board = &board;
+    shared.rootMoves = &rootMoves;
+    shared.rootZobristKey = ComputeZobrist(board);
+    shared.depth = depth;
+    shared.maximizingPlayer = maximizingPlayer;
+    shared.hashSizeMb = std::max(kOne, hashSizeMb);
+    shared.historySeed = historyTable;
+    shared.startTime = context.startTime;
+    shared.timeLimitMs = context.timeLimitMs;
+    shared.contempt = context.contempt;
+    shared.optimalTimeMs = context.optimalTimeMs;
+    shared.maxTimeMs = context.maxTimeMs;
+    shared.useSyzygy = context.useSyzygy;
+    shared.alpha = alpha;
+    shared.beta = beta;
+    shared.bestScore = maximizingPlayer ? -kMateScore : kMateScore;
+
+    int seededIndex = kInvalidSquare;
+    for (int i = kZero; i < static_cast<int>(rootMoves.size()); ++i) {
+        int eval = kZero;
+        int nodes = kZero;
+        if (!evaluateRootSplitMove(shared, rootMoves[static_cast<std::size_t>(i)].move, shared.alpha,
+                                   shared.beta, eval, nodes)) {
+            continue;
+        }
+
+        shared.nodes.fetch_add(nodes, std::memory_order_relaxed);
+        commitRootSplitResult(shared, eval, rootMoves[static_cast<std::size_t>(i)].move);
+        seededIndex = i;
+        break;
+    }
+
+    if (seededIndex == kInvalidSquare) {
+        return result;
+    }
+
+    shared.nextMoveIndex.store(seededIndex + kOne, std::memory_order_relaxed);
+
+    const int remainingMoves = static_cast<int>(rootMoves.size()) - (seededIndex + kOne);
+    const int workerCount = chooseRootSplitWorkerCount(depth, numThreads, remainingMoves);
+    if (workerCount > kZero && !shared.stop.load(std::memory_order_relaxed)) {
+        std::vector<pthread_t> workers(static_cast<std::size_t>(workerCount));
+        std::vector<RootSplitWorkerArgs> workerArgs(static_cast<std::size_t>(workerCount));
+        std::vector<bool> created(static_cast<std::size_t>(workerCount), false);
+
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setstacksize(&attr, kRootSplitThreadStackBytes);
+
+        for (int i = kZero; i < workerCount; ++i) {
+            workerArgs[static_cast<std::size_t>(i)] = {&shared};
+            if (pthread_create(&workers[static_cast<std::size_t>(i)], &attr, &rootSplitWorkerEntry,
+                               &workerArgs[static_cast<std::size_t>(i)]) == 0) {
+                created[static_cast<std::size_t>(i)] = true;
+            } else {
+                rootSplitWorkerEntry(&workerArgs[static_cast<std::size_t>(i)]);
+            }
+        }
+
+        pthread_attr_destroy(&attr);
+
+        for (int i = kZero; i < workerCount; ++i) {
+            if (created[static_cast<std::size_t>(i)]) {
+                pthread_join(workers[static_cast<std::size_t>(i)], nullptr);
+            }
+        }
+    }
+
+    if (!shared.hasBestMove) {
+        return result;
+    }
+
+    result.hasLegalMove = true;
+    result.bestMove = shared.bestMove;
+    result.score = shared.bestScore;
+    const long long totalNodes = shared.nodes.load(std::memory_order_relaxed);
+    result.nodes = (totalNodes > std::numeric_limits<int>::max()) ? std::numeric_limits<int>::max()
+                                                                   : static_cast<int>(totalNodes);
+    result.timeExpired = shared.timeExpired.load(std::memory_order_relaxed);
+    return result;
 }
 
 MovePicker::MovePicker(Board& b, std::pair<int, int> hm, const KillerMoves& km, int p,
@@ -2254,6 +2565,25 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
     std::pair<int, int> previousBestMove = {kInvalidSquare, kInvalidSquare};
     int bestMoveStableCount = kZero;
     int bestMoveChangeCount = kZero;
+    const bool rootSplitEnabled = numThreads > kOne;
+    auto selectRootBestMove = [&](std::pair<int, int> candidateMove) {
+        if (candidateMove.first >= kZero) {
+            return candidateMove;
+        }
+        uint64_t rootHash = ComputeZobrist(board);
+        TTEntry rootEntry;
+        if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= kZero) {
+            return rootEntry.bestMove;
+        }
+        std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
+        if (!moves.empty()) {
+            std::vector<ScoredMove> scoredMoves =
+                scoreMovesOptimized(board, moves, context.historyTable, context.killerMoves, kZero);
+            std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
+            return scoredMoves[kZero].move;
+        }
+        return std::pair<int, int>{kInvalidSquare, kInvalidSquare};
+    };
 
     for (int pvIdx = kZero; pvIdx < context.multiPV; ++pvIdx) {
 
@@ -2280,11 +2610,34 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             int searchAttempts = kZero;
             const int maxSearchAttempts = kMaxSearchAttempts;
             const uint64_t rootZobristKey = ComputeZobrist(board);
+            std::pair<int, int> depthBestMove = {kInvalidSquare, kInvalidSquare};
 
             do {
-                searchScore = PrincipalVariationSearch(
-                    board, depth, alpha, beta, board.turn == ChessPieceColor::WHITE, kZero,
-                    context.historyTable, context, true, rootZobristKey);
+                const bool shouldUseRootSplitAttempt =
+                    rootSplitEnabled && depth >= kRootSplitMinDepth &&
+                    searchAttempts <= kRootSplitMaxAspirationSplitAttempt;
+                if (shouldUseRootSplitAttempt) {
+                    RootSplitResult rootSplitResult =
+                        searchRootMovesYBWC(board, depth, alpha, beta,
+                                            board.turn == ChessPieceColor::WHITE, context.historyTable,
+                                            context, numThreads, hashSizeMb);
+                    if (rootSplitResult.hasLegalMove) {
+                        searchScore = rootSplitResult.score;
+                        depthBestMove = rootSplitResult.bestMove;
+                        context.nodeCount.fetch_add(rootSplitResult.nodes);
+                        if (rootSplitResult.timeExpired) {
+                            context.stopSearch = true;
+                        }
+                    } else {
+                        searchScore = PrincipalVariationSearch(
+                            board, depth, alpha, beta, board.turn == ChessPieceColor::WHITE, kZero,
+                            context.historyTable, context, true, rootZobristKey);
+                    }
+                } else {
+                    searchScore = PrincipalVariationSearch(
+                        board, depth, alpha, beta, board.turn == ChessPieceColor::WHITE, kZero,
+                        context.historyTable, context, true, rootZobristKey);
+                }
                 searchAttempts++;
 
                 if (context.stopSearch.load()) {
@@ -2323,19 +2676,7 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             result.score = searchScore;
             result.depth = depth;
             result.nodes = context.nodeCount.load();
-            uint64_t rootHash = ComputeZobrist(board);
-            TTEntry rootEntry;
-            if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= kZero) {
-                result.bestMove = rootEntry.bestMove;
-            } else {
-                std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
-                if (!moves.empty()) {
-                    std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
-                        board, moves, context.historyTable, context.killerMoves, kZero);
-                    std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
-                    result.bestMove = scoredMoves[kZero].move;
-                }
-            }
+            result.bestMove = selectRootBestMove(depthBestMove);
 
             if (pvIdx == kZero) {
                 if (result.bestMove == previousBestMove) {
@@ -2397,21 +2738,7 @@ SearchResult iterativeDeepeningParallel(Board& board, int maxDepth, int timeLimi
             }
         }
 
-        if (result.bestMove.first < kZero) {
-            uint64_t rootHash = ComputeZobrist(board);
-            TTEntry rootEntry;
-            if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= kZero) {
-                result.bestMove = rootEntry.bestMove;
-            } else {
-                std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
-                if (!moves.empty()) {
-                    std::vector<ScoredMove> scoredMoves = scoreMovesOptimized(
-                        board, moves, context.historyTable, context.killerMoves, kZero);
-                    std::ranges::sort(scoredMoves, std::greater<ScoredMove>());
-                    result.bestMove = scoredMoves[kZero].move;
-                }
-            }
-        }
+        result.bestMove = selectRootBestMove(result.bestMove);
 
         if (pvIdx < context.multiPV - kOne && result.bestMove.first >= kZero) {
             context.excludedRootMoves.push_back(result.bestMove);

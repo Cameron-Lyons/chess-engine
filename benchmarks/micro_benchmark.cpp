@@ -2,36 +2,16 @@
 #include "src/core/ChessBoard.h"
 #include "src/search/AdvancedSearch.h"
 #include "src/search/search.h"
+#include "benchmark_args.h"
 
 #include <algorithm>
-#include <cerrno>
 #include <chrono>
-#include <cstdlib>
 #include <iostream>
-#include <limits>
 #include <string>
 #include <vector>
 
 namespace {
 constexpr int kDefaultIterations = 2000000;
-
-int parseIntArg(int argc, char** argv, const std::string& key, int fallback) {
-    const std::string prefix = key + "=";
-    for (int i = 1; i < argc; ++i) {
-        const std::string arg(argv[i]);
-        if (arg.starts_with(prefix)) {
-            const std::string value = arg.substr(prefix.size());
-            char* end = nullptr;
-            errno = 0;
-            const long parsed = std::strtol(value.c_str(), &end, 10);
-            if (errno == 0 && end != value.c_str() && *end == '\0' && parsed > 0 &&
-                parsed <= std::numeric_limits<int>::max()) {
-                return static_cast<int>(parsed);
-            }
-        }
-    }
-    return fallback;
-}
 
 long long benchNullMovePruning(const std::vector<Board>& boards, int iterations) {
     volatile int sink = 0;
@@ -80,7 +60,8 @@ long long benchBookKeyPath(const std::vector<Board>& boards, int iterations) {
 } // namespace
 
 int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
-    const int iterations = parseIntArg(argc, argv, "--iterations", kDefaultIterations);
+    const int iterations =
+        BenchmarkArgs::parsePositiveIntArg(argc, argv, "--iterations", kDefaultIterations);
 
     initKnightAttacks();
     initKingAttacks();

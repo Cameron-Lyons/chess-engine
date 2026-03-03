@@ -1,19 +1,16 @@
 #include "LazySMP.h"
 #include "../evaluation/Evaluation.h"
-#include "AdvancedSearch.h"
 
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <pthread.h>
-#include <random>
-#include <unordered_map>
 
 namespace {
 constexpr int kZero = 0;
 constexpr int kOne = 1;
 constexpr int kDefaultThreadCount = 4;
-constexpr int kSingleMillisecondSleep = 1;
 constexpr int kMonitorSleepMs = 10;
 constexpr int kInvalidScore = -999999;
 constexpr int kSearchWindowLimit = 32000;
@@ -39,14 +36,22 @@ constexpr int kDepthOffsetPositiveBucket = 2;
 constexpr int kDepthOffsetNegativeValue = -1;
 constexpr int kDepthOffsetPositiveValue = 1;
 constexpr int kNullMoveModulus = 8;
-constexpr int kNullMoveDisabledBucket = 7;
-constexpr int kFallbackRemainingTime = 0;
 constexpr int kAspirationDeltas[] = {0, 25, 50, 100, 150, 200, 300, 500};
 constexpr std::size_t kSearchThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
 
 bool isValidMove(std::pair<int, int> move) {
     return move.first >= kZero && move.first < kMoveSquareLimit && move.second >= kZero &&
            move.second < kMoveSquareLimit && move.first != move.second;
+}
+
+bool isPreferredMove(std::pair<int, int> lhs, std::pair<int, int> rhs) {
+    if (rhs.first < kZero) {
+        return true;
+    }
+    if (lhs.first != rhs.first) {
+        return lhs.first < rhs.first;
+    }
+    return lhs.second < rhs.second;
 }
 
 int clampScore(int score) {
@@ -81,8 +86,7 @@ std::uint16_t packMoveKey(std::pair<int, int> move) {
 LazySMP::LazySMP(int threadCount, int hashMb, int contemptValue)
     : numThreads(threadCount > kZero ? threadCount
                                      : static_cast<int>(std::thread::hardware_concurrency())),
-      hashSizeMb(std::max(SearchConstants::kOne, hashMb)), contempt(contemptValue),
-      shouldTerminate(false) {
+      hashSizeMb(std::max(SearchConstants::kOne, hashMb)), contempt(contemptValue) {
 
     if (numThreads == kZero) {
         numThreads = kDefaultThreadCount;
@@ -95,63 +99,29 @@ LazySMP::LazySMP(int threadCount, int hashMb, int contemptValue)
         threads.push_back(std::make_unique<ThreadData>(i));
         threads[i]->aspirationDelta = getAspirationDelta(i);
         threads[i]->depthOffset = getDepthOffset(i);
-        threads[i]->useNullMove = shouldUseNullMove(i);
     }
 
-    for (int i = kZero; i < numThreads; ++i) {
-        workers.emplace_back(&LazySMP::workerThread, this, threads[i].get());
-    }
 }
 
-LazySMP::~LazySMP() {
-
-    shouldTerminate = true;
-    poolCV.notify_all();
-
-    for (auto& worker : workers) {
-        if (worker.joinable()) {
-            worker.join();
-        }
-    }
-}
-
-void LazySMP::workerThread(ThreadData* data) {
-    while (!shouldTerminate) {
-        std::unique_lock<std::mutex> lock(poolMutex);
-        poolCV.wait(lock, [this, data] { return shouldTerminate || data->searching.load(); });
-
-        if (shouldTerminate) {
-            break;
-        }
-
-        if (data->searching) {
-
-            lock.unlock();
-
-            while (data->searching && !data->stopFlag && !shared->globalStop) {
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(kSingleMillisecondSleep));
-            }
-        }
-    }
-}
+LazySMP::~LazySMP() = default;
 
 void* LazySMP::searchThreadEntry(void* arg) {
     auto* args = static_cast<SearchThreadArgs*>(arg);
-    args->self->searchThread(args->data, args->maxDepth, args->timeLimit);
+    args->self->searchThread(args->data, args->maxDepth, args->timeLimit, *args->excludedRootMoves);
     return nullptr;
 }
 
-void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit) const {
+void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit,
+                           const std::vector<std::pair<int, int>>& excludedRootMoves) const {
     auto context = std::make_unique<ParallelSearchContext>(numThreads);
     context->startTime = std::chrono::steady_clock::now();
     context->timeLimitMs = timeLimit;
     context->contempt = contempt;
+    context->excludedRootMoves = excludedRootMoves;
     context->transTable.resize(
         std::max(SearchConstants::kOne, hashSizeMb / std::max(SearchConstants::kOne, numThreads)));
     context->transTable.newSearch();
     context->nodeCount = kZero;
-    data->context = context.get();
     int aspirationDelta = kDefaultAspirationDelta + data->aspirationDelta;
     int startDepth = std::max(kStartDepthBase, kStartDepthBase + data->depthOffset);
     const uint64_t rootHash = ComputeZobrist(data->board);
@@ -209,7 +179,9 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit) const 
 
             std::lock_guard<std::mutex> lock(shared->bestMoveMutex);
             if (depth > shared->bestDepth ||
-                (depth == shared->bestDepth && score > shared->bestScore)) {
+                (depth == shared->bestDepth && score > shared->bestScore) ||
+                (depth == shared->bestDepth && score == shared->bestScore &&
+                 isPreferredMove(candidateMove, shared->bestMove))) {
                 shared->bestDepth = depth;
                 shared->bestScore = score;
                 shared->bestMove = candidateMove;
@@ -234,7 +206,8 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit) const 
     data->searching = false;
 }
 
-SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit) {
+SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit,
+                             const std::vector<std::pair<int, int>>& excludedRootMoves) {
     const int effectiveMaxDepth = std::max(kStartDepthBase, std::min(maxDepth, kMaxSmpSearchDepth));
 
     shared->globalStop = false;
@@ -262,7 +235,7 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit) {
 
     for (int i = kZero; i < numThreads; ++i) {
         searchArgs[static_cast<std::size_t>(i)] = {this, threads[i].get(), effectiveMaxDepth,
-                                                   timeLimit};
+                                                   timeLimit, &excludedRootMoves};
         if (pthread_create(&searchThreads[static_cast<std::size_t>(i)], &attr,
                            &LazySMP::searchThreadEntry,
                            &searchArgs[static_cast<std::size_t>(i)]) != 0) {
@@ -315,7 +288,7 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit) {
             int depth = kZero;
             int score = kInvalidScore;
         };
-        std::unordered_map<std::uint16_t, MoveStats> moveVotes;
+        std::map<std::uint16_t, MoveStats> moveVotes;
 
         for (const auto& thread : threads) {
             const std::pair<int, int> move = thread->bestMove;
@@ -336,10 +309,16 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit) {
         bool foundConsensus = false;
         MoveStats chosenStats{};
         for (const auto& [key, stats] : moveVotes) {
+            const std::pair<int, int> decodedMove = {key >> kMovePackShift,
+                                                     key & ((kOne << kMovePackShift) - kOne)};
+            const std::pair<int, int> chosenMove = {chosenKey >> kMovePackShift,
+                                                    chosenKey & ((kOne << kMovePackShift) - kOne)};
             if (!foundConsensus || stats.votes > chosenStats.votes ||
                 (stats.votes == chosenStats.votes && stats.depth > chosenStats.depth) ||
                 (stats.votes == chosenStats.votes && stats.depth == chosenStats.depth &&
-                 stats.score > chosenStats.score)) {
+                 stats.score > chosenStats.score) ||
+                (stats.votes == chosenStats.votes && stats.depth == chosenStats.depth &&
+                 stats.score == chosenStats.score && isPreferredMove(decodedMove, chosenMove))) {
                 chosenKey = key;
                 chosenStats = stats;
                 foundConsensus = true;
@@ -393,17 +372,10 @@ int LazySMP::getDepthOffset(int threadId) {
     return kZero;
 }
 
-bool LazySMP::shouldUseNullMove(int threadId) {
-    return threadId % kNullMoveModulus != kNullMoveDisabledBucket;
-}
-
 SMPTimeManager::SMPTimeManager(int timeMs)
-    : startTime(std::chrono::steady_clock::now()), allocatedTime(timeMs), hardStop(false) {}
+    : startTime(std::chrono::steady_clock::now()), allocatedTime(timeMs) {}
 
 bool SMPTimeManager::shouldStop() const {
-    if (hardStop) {
-        return true;
-    }
     return getElapsedTime() >= allocatedTime;
 }
 
@@ -411,8 +383,4 @@ int SMPTimeManager::getElapsedTime() const {
     auto now = std::chrono::steady_clock::now();
     return static_cast<int>(
         std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count());
-}
-
-int SMPTimeManager::getRemainingTime() const {
-    return std::max(kFallbackRemainingTime, allocatedTime - getElapsedTime());
 }

@@ -5,6 +5,8 @@
 #include "protocol/uci.h"
 #include "utils/engine_globals.h"
 
+#include <thread>
+
 using ChessClock = std::chrono::steady_clock;
 using ChessDuration = std::chrono::milliseconds;
 using ChessTimePoint = ChessClock::time_point;
@@ -39,7 +41,7 @@ constexpr int kVeryCaptureRichThreshold = 8;
 constexpr int kCaptureRichDepthBonus = 2;
 constexpr int kVeryCaptureRichDepthBonus = 1;
 constexpr int kHangingPieceDepthBonus = 1;
-constexpr int kSearchThreads = 1;
+constexpr int kSearchThreadsFallback = 1;
 constexpr int kSearchContempt = 0;
 constexpr int kSearchMultiPv = 1;
 constexpr int kInvalidSquare = -1;
@@ -218,7 +220,9 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = kDefaultComp
               << ", captures: " << numCaptures << ")\n";
 
     SearchResult result =
-        iterativeDeepeningParallel(board, searchDepth, adaptiveTime, kSearchThreads,
+        iterativeDeepeningParallel(
+            board, searchDepth, adaptiveTime,
+            std::max(kSearchThreadsFallback, static_cast<int>(std::thread::hardware_concurrency())),
                                    kSearchContempt, kSearchMultiPv, adaptiveTime, adaptiveTime);
 
     if (result.bestMove.first != kInvalidSquare && result.bestMove.second != kInvalidSquare) {

@@ -39,10 +39,10 @@ constexpr std::size_t kTypicalMoveCapacity = 96;
 
 } // namespace
 
-bool BlackAttackBoard[kValidMovesBoardSquareCount] = {false};
-bool WhiteAttackBoard[kValidMovesBoardSquareCount] = {false};
-int BlackKingPosition = kZero;
-int WhiteKingPosition = kZero;
+thread_local bool BlackAttackBoard[kValidMovesBoardSquareCount] = {false};
+thread_local bool WhiteAttackBoard[kValidMovesBoardSquareCount] = {false};
+thread_local int BlackKingPosition = kZero;
+thread_local int WhiteKingPosition = kZero;
 
 bool IsKingInCheck(const Board& board, ChessPieceColor color) {
     int kingSq = kInvalidSquare;

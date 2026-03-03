@@ -1,13 +1,11 @@
 #include "src/core/BitboardMoves.h"
 #include "src/core/ChessBoard.h"
 #include "src/search/search.h"
+#include "benchmark_args.h"
 
 #include <algorithm>
-#include <cerrno>
 #include <chrono>
-#include <cstdlib>
 #include <iostream>
-#include <limits>
 #include <string>
 #include <vector>
 
@@ -16,31 +14,14 @@ constexpr int kDefaultDepthLimit = 12;
 constexpr int kDefaultTimeMs = 2000;
 constexpr int kDefaultThreads = 1;
 constexpr int kDefaultRounds = 3;
-
-int parseIntArg(const std::vector<std::string>& args, const std::string& key, int fallback) {
-    const std::string prefix = key + "=";
-    for (const std::string& arg : args) {
-        if (arg.starts_with(prefix)) {
-            const std::string value = arg.substr(prefix.size());
-            char* end = nullptr;
-            errno = 0;
-            const long parsed = std::strtol(value.c_str(), &end, 10);
-            if (errno == 0 && end != value.c_str() && *end == '\0' && parsed > 0 &&
-                parsed <= std::numeric_limits<int>::max()) {
-                return static_cast<int>(parsed);
-            }
-        }
-    }
-    return fallback;
-}
 } // namespace
 
 int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
     const std::vector<std::string> args(argv + 1, argv + argc);
-    const int depthLimit = parseIntArg(args, "--depth", kDefaultDepthLimit);
-    const int timeMs = parseIntArg(args, "--time_ms", kDefaultTimeMs);
-    const int threads = parseIntArg(args, "--threads", kDefaultThreads);
-    const int rounds = parseIntArg(args, "--rounds", kDefaultRounds);
+    const int depthLimit = BenchmarkArgs::parsePositiveIntArg(args, "--depth", kDefaultDepthLimit);
+    const int timeMs = BenchmarkArgs::parsePositiveIntArg(args, "--time_ms", kDefaultTimeMs);
+    const int threads = BenchmarkArgs::parsePositiveIntArg(args, "--threads", kDefaultThreads);
+    const int rounds = BenchmarkArgs::parsePositiveIntArg(args, "--rounds", kDefaultRounds);
 
     initKnightAttacks();
     initKingAttacks();

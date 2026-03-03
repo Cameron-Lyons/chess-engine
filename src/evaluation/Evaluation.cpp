@@ -7,6 +7,7 @@
 #include "NNUE.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <vector>
@@ -15,7 +16,7 @@ extern uint64_t ZobristTable[64][12];
 
 using namespace EvaluationParams;
 
-static bool useNNUE = false;
+static std::atomic<bool> useNNUE{false};
 thread_local bool useFastEval = false;
 
 namespace {
@@ -564,7 +565,7 @@ int evaluateEndgame(const Board& board) {
     return score;
 }
 
-static PawnHashTable pawnHashTable;
+thread_local PawnHashTable pawnHashTable;
 
 uint64_t computePawnHash(const Board& board) {
     uint64_t h = 0;
@@ -580,7 +581,7 @@ uint64_t computePawnHash(const Board& board) {
 
 int evaluatePosition(const Board& board, int contempt) {
 
-    if (useNNUE && NNUE::globalEvaluator) {
+    if (useNNUE.load(std::memory_order_relaxed) && NNUE::globalEvaluator) {
         return NNUE::evaluate(board);
     }
 
@@ -1198,11 +1199,11 @@ int evaluateTacticalSafety(const Board& board) {
 }
 
 bool isNNUEEnabled() {
-    return useNNUE;
+    return useNNUE.load(std::memory_order_relaxed);
 }
 
 void setNNUEEnabled(bool enabled) {
-    useNNUE = enabled;
+    useNNUE.store(enabled, std::memory_order_relaxed);
 }
 
 void setFastEvaluationMode(bool enabled) {
@@ -1214,14 +1215,8 @@ bool isFastEvaluationMode() {
 }
 
 int evaluatePositionNNUE(const Board& board) {
-    if (!NNUE::globalEvaluator) {
-
-        return evaluatePosition(board);
+    if (NNUE::globalEvaluator) {
+        return NNUE::evaluate(board);
     }
-
-    bool oldUseNNUE = useNNUE;
-    useNNUE = true;
-    int eval = evaluatePosition(board);
-    useNNUE = oldUseNNUE;
-    return eval;
+    return evaluatePosition(board);
 }
