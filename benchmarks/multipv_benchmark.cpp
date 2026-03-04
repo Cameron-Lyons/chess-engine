@@ -1,7 +1,7 @@
+#include "benchmark_args.h"
 #include "src/core/BitboardMoves.h"
 #include "src/core/ChessBoard.h"
 #include "src/search/search.h"
-#include "benchmark_args.h"
 
 #include <algorithm>
 #include <array>
@@ -57,6 +57,17 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
             continue;
         }
 
+        SearchConfig config;
+        config.maxDepth = depthLimit;
+        config.timeLimitMs = timeMs;
+        config.contempt = 0;
+        config.multiPV = multiPV;
+        config.optimalTimeMs = timeMs;
+        config.maxTimeMs = timeMs;
+
+        SearchContext searchContext;
+        searchContext.threads = candidateThreads;
+
         BenchRow row;
         row.threads = candidateThreads;
         for (int round = 0; round < rounds; ++round) {
@@ -66,8 +77,7 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
 
                 const auto start = std::chrono::steady_clock::now();
                 const SearchResult result =
-                    iterativeDeepeningParallel(board, depthLimit, timeMs, candidateThreads, 0, multiPV,
-                                               timeMs, timeMs);
+                    iterativeDeepeningParallel(board, config, searchContext);
                 const auto end = std::chrono::steady_clock::now();
                 const auto elapsedMs =
                     std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -92,8 +102,8 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
     std::cout << "threads\tnodes\telapsed_ms\tnps\tspeedup_vs_1" << '\n';
     for (const auto& row : rows) {
         const long long nps = (row.nodes * 1000LL) / std::max(1LL, row.elapsedMs);
-        const double speedup = (baseNps > 0) ? static_cast<double>(nps) / static_cast<double>(baseNps)
-                                             : 0.0;
+        const double speedup =
+            (baseNps > 0) ? static_cast<double>(nps) / static_cast<double>(baseNps) : 0.0;
         std::cout << row.threads << '\t' << row.nodes << '\t' << row.elapsedMs << '\t' << nps
                   << '\t' << speedup << '\n';
     }

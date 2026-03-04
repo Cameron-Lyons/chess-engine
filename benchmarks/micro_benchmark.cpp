@@ -1,8 +1,8 @@
+#include "benchmark_args.h"
 #include "src/core/BitboardMoves.h"
 #include "src/core/ChessBoard.h"
 #include "src/search/AdvancedSearch.h"
 #include "src/search/search.h"
-#include "benchmark_args.h"
 
 #include <algorithm>
 #include <chrono>

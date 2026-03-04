@@ -1,4 +1,5 @@
 #include "ChessBoard.h"
+#include "../search/ValidMoves.h"
 #include "Bitboard.h"
 #include "CastlingConstants.h"
 #include "ChessPiece.h"
@@ -6,6 +7,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <expected>
 #include <sstream>
 #include <string>
 
@@ -284,29 +286,33 @@ bool Board::movePiece(int from, int to) {
 
     if (movingPieceBefore.PieceType == ChessPieceType::KING) {
         if (movingPieceBefore.PieceColor == ChessPieceColor::WHITE) {
-            whiteCanCastle = false;
+            clearCastlingRights(CastlingConstants::kWhiteCastlingRightsMask);
         } else {
-            blackCanCastle = false;
+            clearCastlingRights(CastlingConstants::kBlackCastlingRightsMask);
         }
     }
 
     if (movingPieceBefore.PieceType == ChessPieceType::ROOK) {
-        if (from == CastlingConstants::kWhiteQueensideRookSquare ||
-            from == CastlingConstants::kWhiteKingsideRookSquare) {
-            whiteCanCastle = false;
-        } else if (from == CastlingConstants::kBlackQueensideRookSquare ||
-                   from == CastlingConstants::kBlackKingsideRookSquare) {
-            blackCanCastle = false;
+        if (from == CastlingConstants::kWhiteQueensideRookSquare) {
+            clearCastlingRights(CastlingConstants::kWhiteQueensideCastlingRight);
+        } else if (from == CastlingConstants::kWhiteKingsideRookSquare) {
+            clearCastlingRights(CastlingConstants::kWhiteKingsideCastlingRight);
+        } else if (from == CastlingConstants::kBlackQueensideRookSquare) {
+            clearCastlingRights(CastlingConstants::kBlackQueensideCastlingRight);
+        } else if (from == CastlingConstants::kBlackKingsideRookSquare) {
+            clearCastlingRights(CastlingConstants::kBlackKingsideCastlingRight);
         }
     }
 
     if (capturedPieceBefore.PieceType == ChessPieceType::ROOK) {
-        if (to == CastlingConstants::kWhiteQueensideRookSquare ||
-            to == CastlingConstants::kWhiteKingsideRookSquare) {
-            whiteCanCastle = false;
-        } else if (to == CastlingConstants::kBlackQueensideRookSquare ||
-                   to == CastlingConstants::kBlackKingsideRookSquare) {
-            blackCanCastle = false;
+        if (to == CastlingConstants::kWhiteQueensideRookSquare) {
+            clearCastlingRights(CastlingConstants::kWhiteQueensideCastlingRight);
+        } else if (to == CastlingConstants::kWhiteKingsideRookSquare) {
+            clearCastlingRights(CastlingConstants::kWhiteKingsideCastlingRight);
+        } else if (to == CastlingConstants::kBlackQueensideRookSquare) {
+            clearCastlingRights(CastlingConstants::kBlackQueensideCastlingRight);
+        } else if (to == CastlingConstants::kBlackKingsideRookSquare) {
+            clearCastlingRights(CastlingConstants::kBlackKingsideCastlingRight);
         }
     }
 
@@ -318,28 +324,6 @@ bool Board::movePiece(int from, int to) {
         enPassantSquare = (from + to) / 2;
     }
     return true;
-}
-
-ChessError Board::validateMove(int from, int to) const {
-    if (from < 0 || from >= NUM_SQUARES || to < 0 || to >= NUM_SQUARES) {
-        return ChessError::InvalidPosition;
-    }
-
-    const Piece& fromPiece = squares[from].piece;
-    if (fromPiece.PieceType == ChessPieceType::NONE) {
-        return ChessError::NoPieceAtSource;
-    }
-
-    if (fromPiece.PieceColor != turn) {
-        return ChessError::WrongTurn;
-    }
-
-    const auto& validMoves = squares[from].ValidMoves;
-    if (std::ranges::find(validMoves, to) == validMoves.end()) {
-        return ChessError::InvalidMove;
-    }
-
-    return ChessError::InvalidMove;
 }
 
 std::string Board::toFEN() const {
@@ -381,13 +365,17 @@ std::string Board::toFEN() const {
 
     fen += " " + std::string(turn == ChessPieceColor::WHITE ? "w" : "b");
     std::string castling;
-    if (whiteCanCastle) {
-        castling += "K";
-        castling += "Q";
+    if (hasCastlingRight(CastlingConstants::kWhiteKingsideCastlingRight)) {
+        castling += 'K';
     }
-    if (blackCanCastle) {
-        castling += "k";
-        castling += "q";
+    if (hasCastlingRight(CastlingConstants::kWhiteQueensideCastlingRight)) {
+        castling += 'Q';
+    }
+    if (hasCastlingRight(CastlingConstants::kBlackKingsideCastlingRight)) {
+        castling += 'k';
+    }
+    if (hasCastlingRight(CastlingConstants::kBlackQueensideCastlingRight)) {
+        castling += 'q';
     }
     fen += " " + (castling.empty() ? "-" : castling);
     if (enPassantSquare >= 0 && enPassantSquare < NUM_SQUARES) {
@@ -403,9 +391,39 @@ std::string Board::toFEN() const {
     return fen;
 }
 
-bool Board::fromFEN(ChessString fen) {
+std::expected<void, ChessError> Board::fromFEN(ChessString fen) {
+    std::string fenString(fen);
+    std::istringstream iss(fenString);
+    std::string placement;
+    std::string activeColor;
+    std::string castling;
+    std::string enPassant;
+    std::string halfmoveClock;
+    std::string fullmoveNumber;
+
+    if (!(iss >> placement >> activeColor >> castling >> enPassant >> halfmoveClock >>
+          fullmoveNumber)) {
+        return std::unexpected(ChessError::InvalidFEN);
+    }
+
+    if (activeColor != "w" && activeColor != "b") {
+        return std::unexpected(ChessError::InvalidFEN);
+    }
+
+    if (castling != "-") {
+        for (char c : castling) {
+            if (c != 'K' && c != 'Q' && c != 'k' && c != 'q') {
+                return std::unexpected(ChessError::InvalidFEN);
+            }
+        }
+    }
+
+    if (enPassant != "-" && enPassant.size() != 2) {
+        return std::unexpected(ChessError::InvalidFEN);
+    }
+
     InitializeFromFEN(fen);
-    return true;
+    return {};
 }
 
 void Board::InitializeFromFEN(ChessString fen) {
@@ -415,8 +433,7 @@ void Board::InitializeFromFEN(ChessString fen) {
     }
 
     turn = ChessPieceColor::WHITE;
-    whiteCanCastle = false;
-    blackCanCastle = false;
+    state.castlingRights = 0;
     enPassantSquare = CastlingConstants::kNoEnPassantSquareMailbox;
     whiteChecked = false;
     blackChecked = false;
@@ -473,8 +490,18 @@ void Board::InitializeFromFEN(ChessString fen) {
 
     turn = (activeColor == "b") ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
     if (castling != "-") {
-        whiteCanCastle = castling.contains('K') || castling.contains('Q');
-        blackCanCastle = castling.contains('k') || castling.contains('q');
+        if (castling.contains('K')) {
+            setCastlingRight(CastlingConstants::kWhiteKingsideCastlingRight);
+        }
+        if (castling.contains('Q')) {
+            setCastlingRight(CastlingConstants::kWhiteQueensideCastlingRight);
+        }
+        if (castling.contains('k')) {
+            setCastlingRight(CastlingConstants::kBlackKingsideCastlingRight);
+        }
+        if (castling.contains('q')) {
+            setCastlingRight(CastlingConstants::kBlackQueensideCastlingRight);
+        }
     }
 
     if (enPassant != "-" && enPassant.size() == 2) {

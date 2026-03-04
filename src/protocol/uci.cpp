@@ -27,9 +27,6 @@
 #include <utility>
 #include <vector>
 
-extern Board ChessBoard;
-extern Board PrevBoard;
-
 namespace {
 constexpr int kDefaultBaseTimeMs = 300000;
 constexpr int kDefaultIncrementMs = 0;
@@ -51,16 +48,9 @@ constexpr int kMateScoreThreshold = 30000;
 constexpr int kMatePlyDivisor = 2;
 constexpr int kMatePlyOffset = 1;
 constexpr int kBoardDimension = 8;
-constexpr int kBoardSquareCount = kBoardDimension * kBoardDimension;
-constexpr int kMaxSquareIndex = kBoardSquareCount - 1;
 constexpr int kUciMoveLength = 4;
-constexpr int kAlgebraicSquareLength = 2;
-constexpr int kEnPassantTokenLength = 2;
 constexpr char kMinFileChar = 'a';
-constexpr char kMaxFileChar = 'h';
 constexpr char kMinRankChar = '1';
-constexpr char kEnPassantWhiteRankChar = '3';
-constexpr char kEnPassantBlackRankChar = '6';
 constexpr int kTablebaseMateScore = 30000;
 constexpr const char* kStartingFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 } // namespace
@@ -81,6 +71,8 @@ UCIEngine::UCIEngine() {
     tc.movesToGo = kDefaultMovesToGo;
     tc.isInfinite = false;
     timeManager = std::make_unique<TimeManager>(tc);
+    searchContext.threads = options.threads;
+    searchContext.hashSizeMb = options.hashSize;
     setUseNeuralNetwork(options.useNeuralNetwork);
 }
 
@@ -94,20 +86,7 @@ void UCIEngine::searchThreadEntry(const std::stop_token& stopToken, const Search
                                             task.optimalTime, task.maxTime);
 
         if (!stopToken.stop_requested() && isSearching.load()) {
-            std::optional<std::pair<int, int>> ponderMove;
-            if (result.bestMove.first >= 0) {
-                Board tempBoard = task.boardSnapshot;
-                if (applySearchMove(tempBoard, result.bestMove.first, result.bestMove.second)) {
-                    tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE)
-                                         ? ChessPieceColor::BLACK
-                                         : ChessPieceColor::WHITE;
-                    uint64_t hash = ComputeZobrist(tempBoard);
-                    TTEntry ttEntry;
-                    if (TransTable.find(hash, ttEntry) && ttEntry.bestMove.first >= 0) {
-                        ponderMove = ttEntry.bestMove;
-                    }
-                }
-            }
+            std::optional<Move> ponderMove;
             reportBestMove(result.bestMove, ponderMove);
             int nps = result.timeMs > 0 ? result.nodes * kNpsMillisScale / result.timeMs : 0;
             reportInfo(result.depth, result.depth, result.timeMs, result.nodes, nps, {},
@@ -253,7 +232,6 @@ void UCIEngine::handleNewGame() {
 
     board = Board();
     board.InitializeFromFEN(kStartingFen);
-    TransTable.clear();
     std::cout << "info string New game started" << '\n';
 }
 
@@ -287,8 +265,12 @@ void UCIEngine::handlePosition(const std::string& command) {
         if (!fen.empty()) {
 
             board = Board();
-            board.InitializeFromFEN(fen);
-            std::cout << "info string FEN position set: " << fen << '\n';
+            if (auto parsed = board.fromFEN(fen); parsed.has_value()) {
+                std::cout << "info string FEN position set: " << fen << '\n';
+            } else {
+                std::cout << "info string Error: Invalid FEN string" << '\n';
+                return;
+            }
         } else {
             std::cout << "info string Error: Invalid FEN string" << '\n';
             return;
@@ -303,7 +285,7 @@ void UCIEngine::handlePosition(const std::string& command) {
         while (iss >> move) {
             if (const auto movePos = UCINotation::uciToMove(move)) {
 
-                std::vector<std::pair<int, int>> validMoves = GetAllMoves(board, board.turn);
+                std::vector<Move> validMoves = GetAllMoves(board, board.turn);
                 bool isValid = false;
                 for (const auto& validMove : validMoves) {
                     if (validMove.first == movePos->first && validMove.second == movePos->second) {
@@ -481,14 +463,13 @@ void UCIEngine::handleBookStats() {
     std::cout << "info string   Average Rating: " << stats.averageRating << '\n';
 }
 
-void UCIEngine::reportBestMove(const std::pair<int, int>& move,
-                               const std::optional<std::pair<int, int>>& ponderMove) {
+void UCIEngine::reportBestMove(const Move& move, const std::optional<Move>& ponderMove) {
     std::cout << "bestmove " << UCINotation::moveToUCI(move)
               << (ponderMove ? " ponder " + UCINotation::moveToUCI(*ponderMove) : "") << '\n';
 }
 
 void UCIEngine::reportInfo(int depth, int seldepth, int time, int nodes, int nps,
-                           const std::vector<std::pair<int, int>>& pv, int score, int hashfull) {
+                           const std::vector<Move>& pv, int score, int hashfull) {
     std::cout << "info depth " << depth;
     if (seldepth > 0) {
         std::cout << " seldepth " << seldepth;
@@ -555,7 +536,7 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
 
     if (options.ownBook && openingBook) {
         if (openingBook->isInBook(board)) {
-            std::pair<int, int> bookMove = openingBook->getBestMove(board, false);
+            Move bookMove = openingBook->getBestMove(board, false);
             if (bookMove.first != kInvalidSquare && bookMove.second != kInvalidSquare) {
                 result.bestMove = bookMove;
                 result.score = 0;
@@ -569,20 +550,28 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
 
     Board searchBoard = board;
 
-    result =
-        iterativeDeepeningParallel(searchBoard, depth, timeLimit, options.threads, options.contempt,
-                                   options.multiPV, optimalTime, maxTime, options.hashSize);
+    SearchConfig config;
+    config.maxDepth = depth;
+    config.timeLimitMs = timeLimit;
+    config.contempt = options.contempt;
+    config.multiPV = options.multiPV;
+    config.optimalTimeMs = optimalTime;
+    config.maxTimeMs = maxTime;
+    searchContext.threads = options.threads;
+    searchContext.hashSizeMb = options.hashSize;
+    result = iterativeDeepeningParallel(searchBoard, config, searchContext);
 
     return result;
 }
 
 void UCIEngine::setHashSize(int size) {
     options.hashSize = size;
-    TransTable.resize(size);
+    searchContext.hashSizeMb = size;
 }
 
 void UCIEngine::setThreads(int num) {
     options.threads = std::clamp(num, 1, 16);
+    searchContext.threads = options.threads;
 }
 
 void UCIEngine::setMultiPV(int num) {
@@ -635,7 +624,7 @@ void UCIEngine::setShowCurrLine(bool enabled) {
     options.showCurrLine = enabled;
 }
 
-std::string UCINotation::moveToUCI(const std::pair<int, int>& move) {
+std::string UCINotation::moveToUCI(const Move& move) {
     if (move.first == kInvalidSquare || move.second == kInvalidSquare) {
         return "0000";
     }
@@ -652,7 +641,7 @@ std::string UCINotation::moveToUCI(const std::pair<int, int>& move) {
     return result;
 }
 
-std::optional<std::pair<int, int>> UCINotation::uciToMove(const std::string& uciMove) {
+std::optional<Move> UCINotation::uciToMove(const std::string& uciMove) {
     if (uciMove.length() != kUciMoveLength) {
         return std::nullopt;
     }
@@ -670,195 +659,7 @@ std::optional<std::pair<int, int>> UCINotation::uciToMove(const std::string& uci
 
     int from = (fromRank * kBoardDimension) + fromFile;
     int to = (toRank * kBoardDimension) + toFile;
-    return std::pair<int, int>{from, to};
-}
-
-std::string UCINotation::squareToAlgebraic(int square) {
-    if (square < 0 || square > kMaxSquareIndex) {
-        return "";
-    }
-
-    int file{square % kBoardDimension};
-    int rank{square / kBoardDimension};
-    std::string result;
-    result += static_cast<char>(kMinFileChar + file);
-    result += static_cast<char>(kMinRankChar + rank);
-    return result;
-}
-
-int UCINotation::algebraicToSquare(const std::string& algebraic) {
-    if (algebraic.length() != kAlgebraicSquareLength) {
-        return kInvalidSquare;
-    }
-
-    int file{algebraic[0] - kMinFileChar};
-    int rank{algebraic[1] - kMinRankChar};
-
-    if (file < 0 || file >= kBoardDimension || rank < 0 || rank >= kBoardDimension) {
-        return kInvalidSquare;
-    }
-
-    return (rank * kBoardDimension) + file;
-}
-
-bool UCINotation::isValidUCIMove(const std::string& uciMove) {
-    return uciMove.length() == kUciMoveLength && uciToMove(uciMove).has_value();
-}
-
-std::string UCINotation::getMoveType(const Board& board, const std::pair<int, int>& move) {
-    const Piece& piece = board.squares[move.first].piece;
-    const Piece& target = board.squares[move.second].piece;
-
-    if (target.PieceType != ChessPieceType::NONE) {
-        return "capture";
-    }
-
-    if (piece.PieceType == ChessPieceType::KING) {
-        int fileDiff = abs((move.second % kBoardDimension) - (move.first % kBoardDimension));
-        if (fileDiff == 2) {
-            return "castling";
-        }
-    }
-
-    if (piece.PieceType == ChessPieceType::PAWN) {
-        int rank = move.second / kBoardDimension;
-        if ((piece.PieceColor == ChessPieceColor::WHITE && rank == kBoardDimension - 1) ||
-            (piece.PieceColor == ChessPieceColor::BLACK && rank == 0)) {
-            return "promotion";
-        }
-    }
-
-    if (piece.PieceType == ChessPieceType::PAWN) {
-        int fileDiff = abs((move.second % kBoardDimension) - (move.first % kBoardDimension));
-        if (fileDiff == 1 && target.PieceType == ChessPieceType::NONE) {
-            return "enpassant";
-        }
-    }
-
-    return "normal";
-}
-
-void UCIPosition::parseFEN(const std::string& fen, Board& board) {
-    board.InitializeFromFEN(fen);
-}
-
-void UCIPosition::parseMoves(const std::string& moves, Board& board) {
-    std::istringstream iss(moves);
-    std::string move;
-    while (iss >> move) {
-        if (const auto movePos = UCINotation::uciToMove(move)) {
-            if (!applySearchMove(board, movePos->first, movePos->second)) {
-                continue;
-            }
-            board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                : ChessPieceColor::WHITE;
-        }
-    }
-}
-
-std::string UCIPosition::generateFEN(const Board& board) {
-    (void)board;
-    return kStartingFen;
-}
-
-bool UCIPosition::isValidFEN(const std::string& fen) {
-    if (fen.empty()) {
-        return false;
-    }
-
-    std::istringstream iss(fen);
-    std::string token;
-
-    if (!(iss >> token)) {
-        return false;
-    }
-
-    int rank = kBoardDimension - 1;
-    int file = 0;
-    for (char c : token) {
-        if (c == '/') {
-            if (file != kBoardDimension) {
-                return false;
-            }
-            rank--;
-            file = 0;
-            if (rank < 0) {
-                return false;
-            }
-        } else if (isdigit(c)) {
-            int count = c - '0';
-            if (count == 0 || file + count > kBoardDimension) {
-                return false;
-            }
-            file += count;
-        } else if (isalpha(c)) {
-            if (file >= kBoardDimension) {
-                return false;
-            }
-            char piece = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-            if (piece != 'p' && piece != 'n' && piece != 'b' && piece != 'r' && piece != 'q' &&
-                piece != 'k') {
-                return false;
-            }
-            file++;
-        } else {
-            return false;
-        }
-    }
-
-    if (rank != 0 || file != kBoardDimension) {
-        return false;
-    }
-
-    if (!(iss >> token)) {
-        return false;
-    }
-    if (token != "w" && token != "b") {
-        return false;
-    }
-
-    if (!(iss >> token)) {
-        return false;
-    }
-    for (char c : token) {
-        if (c != 'K' && c != 'Q' && c != 'k' && c != 'q' && c != '-') {
-            return false;
-        }
-    }
-
-    if (!(iss >> token)) {
-        return false;
-    }
-    if (token != "-") {
-        if (token.length() != kEnPassantTokenLength) {
-            return false;
-        }
-        if (token[0] < kMinFileChar || token[0] > kMaxFileChar) {
-            return false;
-        }
-        if (token[1] != kEnPassantWhiteRankChar && token[1] != kEnPassantBlackRankChar) {
-            return false;
-        }
-    }
-
-    if (!(iss >> token)) {
-        return false;
-    }
-    if (!isdigit(token[0])) {
-        return false;
-    }
-
-    if (iss >> token) {
-        if (!isdigit(token[0])) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-uint64_t UCIPosition::getPositionHash(const Board& board) {
-    return ComputeZobrist(board);
+    return Move{from, to};
 }
 
 int runUCIEngine() {

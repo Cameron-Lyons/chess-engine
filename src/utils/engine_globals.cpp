@@ -16,8 +16,6 @@
 #include <vector>
 
 namespace {
-constexpr int kBoardSquares = BOARD_SIZE * BOARD_SIZE;
-constexpr int kZobristPieceStates = 12;
 constexpr int kBottomRank = 0;
 constexpr int kTopRank = BOARD_SIZE - 1;
 constexpr int kLeftFile = 0;
@@ -51,10 +49,6 @@ constexpr char kCaptureMarker = 'x';
 constexpr char kPromotionMarker = '=';
 constexpr char kCheckMarker = '+';
 constexpr char kMateMarker = '#';
-constexpr char kRankSeparator = '/';
-constexpr char kEmptySquareSymbol = '.';
-constexpr const char* kWhiteTurnFenToken = " w";
-constexpr const char* kBlackTurnFenToken = " b";
 constexpr const char* kKingsideCastleNotation = "O-O";
 constexpr const char* kKingsideCastleNotationAlt = "0-0";
 constexpr const char* kQueensideCastleNotation = "O-O-O";
@@ -144,82 +138,8 @@ std::unordered_map<std::string, std::vector<std::string>> OpeningBookOptions = {
 
 std::unordered_map<std::string, std::string> OpeningBook;
 
-uint64_t ZobristTable[kBoardSquares][kZobristPieceStates];
-uint64_t ZobristBlackToMove;
-uint64_t ZobristCastling[4];
-uint64_t ZobristEnPassant[kBoardSquares];
-TranspositionTableAdapter TransTable;
-
 std::string getFEN(const Board& board) {
-    std::string fen;
-    for (int row = kTopRank; row >= kBottomRank; --row) {
-        int emptyCount = kBottomRank;
-        for (int col = 0; col < BOARD_SIZE; ++col) {
-            int pos = toBoardIndex(row, col);
-            const Piece& piece = board.squares[pos].piece;
-            if (piece.PieceType == ChessPieceType::NONE) {
-                emptyCount++;
-            } else {
-                if (emptyCount > kBottomRank) {
-                    fen += std::to_string(emptyCount);
-                    emptyCount = kBottomRank;
-                }
-                char symbol = kEmptySquareSymbol;
-                switch (piece.PieceType) {
-                    case ChessPieceType::PAWN:
-                        symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'P' : 'p';
-                        break;
-                    case ChessPieceType::KNIGHT:
-                        symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'N' : 'n';
-                        break;
-                    case ChessPieceType::BISHOP:
-                        symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'B' : 'b';
-                        break;
-                    case ChessPieceType::ROOK:
-                        symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'R' : 'r';
-                        break;
-                    case ChessPieceType::QUEEN:
-                        symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'Q' : 'q';
-                        break;
-                    case ChessPieceType::KING:
-                        symbol = piece.PieceColor == ChessPieceColor::WHITE ? 'K' : 'k';
-                        break;
-                    default:
-                        symbol = kEmptySquareSymbol;
-                        break;
-                }
-                fen += symbol;
-            }
-        }
-        if (emptyCount > kBottomRank) {
-            fen += std::to_string(emptyCount);
-        }
-        if (row > kBottomRank) {
-            fen += kRankSeparator;
-        }
-    }
-    fen += board.turn == ChessPieceColor::WHITE ? kWhiteTurnFenToken : kBlackTurnFenToken;
-    std::string castling;
-    if (board.whiteCanCastle) {
-        castling += "KQ";
-    }
-    if (board.blackCanCastle) {
-        castling += "kq";
-    }
-    fen += " " + (castling.empty() ? "-" : castling);
-
-    if (board.enPassantSquare >= 0 && board.enPassantSquare < kBoardSquares) {
-        int epFile = board.enPassantSquare % BOARD_SIZE;
-        int epRank = board.enPassantSquare / BOARD_SIZE;
-        fen += " ";
-        fen += static_cast<char>(kFileCharOffset + epFile);
-        fen += static_cast<char>(kRankCharOffset + epRank);
-    } else {
-        fen += " -";
-    }
-
-    fen += " 0 1";
-    return fen;
+    return board.toFEN();
 }
 
 static bool parseAlgebraicMoveLegacy(std::string_view move, const Board& board, int& srcCol,
@@ -547,7 +467,7 @@ static bool parseAlgebraicMoveLegacy(std::string_view move, const Board& board, 
             }
         }
 
-        std::vector<std::pair<int, int>> candidates;
+        std::vector<Move> candidates;
 
         for (int row = kBottomRank; row < BOARD_SIZE; row++) {
             for (int col = kLeftFile; col < BOARD_SIZE; col++) {
@@ -697,19 +617,6 @@ std::expected<ParsedAlgebraicMove, ParseAlgebraicMoveError> parseAlgebraicMove(
         return std::unexpected(ParseAlgebraicMoveError::InvalidNotation);
     }
     return parsed;
-}
-
-bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& srcRow, int& destCol,
-                        int& destRow) {
-    auto parsed = parseAlgebraicMove(move, static_cast<const Board&>(board));
-    if (!parsed) {
-        return false;
-    }
-    srcCol = parsed->srcCol;
-    srcRow = parsed->srcRow;
-    destCol = parsed->destCol;
-    destRow = parsed->destRow;
-    return true;
 }
 
 ChessPieceType getPromotionPiece(std::string_view move) {

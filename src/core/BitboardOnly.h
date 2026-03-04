@@ -108,8 +108,6 @@ public:
     }
 
     void makeMove(int from, int to, ChessPieceType promotion = ChessPieceType::NONE);
-    void unmakeMove(int from, int to, ChessPieceType captured,
-                    ChessPieceType promotion = ChessPieceType::NONE);
 
     ChessPieceColor getSideToMove() const {
         return sideToMove == WHITE ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
@@ -177,57 +175,4 @@ private:
     void removePiece(int square, ChessPieceColor color, ChessPieceType type);
     void placePiece(int square, ChessPieceColor color, ChessPieceType type);
     void updateHash(int square, ChessPieceColor color, ChessPieceType type);
-};
-
-class BitboardAdapter {
-private:
-    BitboardPosition position;
-
-public:
-    ChessPieceType getPieceType(int pos) const {
-        return position.getPieceAt(pos);
-    }
-
-    ChessPieceColor getPieceColor(int pos) const {
-        return position.getColorAt(pos);
-    }
-
-    Bitboard getPieceBitboard(ChessPieceType type, ChessPieceColor color) const {
-        return position.getPieceBitboard(type, color);
-    }
-
-    ChessPieceColor getTurn() const {
-        return position.getSideToMove();
-    }
-
-    void setTurn(ChessPieceColor color) {
-        position.setSideToMove(color);
-    }
-
-    bool movePiece(int from, int to) {
-        ChessPieceType movingPiece{position.getPieceAt(from)};
-        if (movingPiece == ChessPieceType::NONE) {
-            return false;
-        }
-
-        position.makeMove(from, to);
-        return true;
-    }
-
-    void updateBitboards() {}
-
-    std::string toFEN() const {
-        return position.toFEN();
-    }
-
-    void InitializeFromFEN(const std::string& fen) {
-        position.setFromFEN(fen);
-    }
-
-    BitboardPosition& getPosition() {
-        return position;
-    }
-    const BitboardPosition& getPosition() const {
-        return position;
-    }
 };

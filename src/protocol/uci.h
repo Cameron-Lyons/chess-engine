@@ -51,10 +51,9 @@ public:
     void handleInfo(const std::string& command);
     void handleBookStats();
 
-    void reportBestMove(const std::pair<int, int>& move,
-                        const std::optional<std::pair<int, int>>& ponderMove = std::nullopt);
+    void reportBestMove(const Move& move, const std::optional<Move>& ponderMove = std::nullopt);
     void reportInfo(int depth, int seldepth, int time, int nodes, int nps,
-                    const std::vector<std::pair<int, int>>& pv, int score, int hashfull);
+                    const std::vector<Move>& pv, int score, int hashfull);
     void reportInfo(const std::string& info);
 
 private:
@@ -80,6 +79,7 @@ private:
     int searchTimeLimit = 0;
     int searchDepthLimit = 0;
     std::jthread searchThread;
+    SearchContext searchContext;
 
     SearchResult performSearch(const Board& board, int depth, int timeLimit, int optimalTime = 0,
                                int maxTime = 0);
@@ -100,19 +100,8 @@ private:
 
 class UCINotation {
 public:
-    static std::string moveToUCI(const std::pair<int, int>& move);
-    static std::optional<std::pair<int, int>> uciToMove(const std::string& uciMove);
-    static std::string squareToAlgebraic(int square);
-    static int algebraicToSquare(const std::string& algebraic);
-    static bool isValidUCIMove(const std::string& uciMove);
-    static std::string getMoveType(const Board& board, const std::pair<int, int>& move);
+    static std::string moveToUCI(const Move& move);
+    static std::optional<Move> uciToMove(const std::string& uciMove);
 };
 
-class UCIPosition {
-public:
-    static void parseFEN(const std::string& fen, Board& board);
-    static void parseMoves(const std::string& moves, Board& board);
-    static std::string generateFEN(const Board& board);
-    static bool isValidFEN(const std::string& fen);
-    static uint64_t getPositionHash(const Board& board);
-};
+int runUCIEngine();

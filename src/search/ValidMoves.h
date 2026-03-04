@@ -21,13 +21,13 @@ void GenValidMoves(Board& board);
 bool IsMoveLegal(Board& board, int srcPos, int destPos);
 bool IsKingInCheck(const Board& board, ChessPieceColor color);
 
-std::vector<std::pair<int, int>> generatePawnMoves(Board& board, ChessPieceColor color);
-std::vector<std::pair<int, int>> generateKnightMoves(Board& board, ChessPieceColor color);
-std::vector<std::pair<int, int>> generateBishopMoves(Board& board, ChessPieceColor color);
-std::vector<std::pair<int, int>> generateRookMoves(Board& board, ChessPieceColor color);
-std::vector<std::pair<int, int>> generateQueenMoves(Board& board, ChessPieceColor color);
-std::vector<std::pair<int, int>> generateKingMoves(Board& board, ChessPieceColor color);
-std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color);
+std::vector<Move> generatePawnMoves(Board& board, ChessPieceColor color);
+std::vector<Move> generateKnightMoves(Board& board, ChessPieceColor color);
+std::vector<Move> generateBishopMoves(Board& board, ChessPieceColor color);
+std::vector<Move> generateRookMoves(Board& board, ChessPieceColor color);
+std::vector<Move> generateQueenMoves(Board& board, ChessPieceColor color);
+std::vector<Move> generateKingMoves(Board& board, ChessPieceColor color);
+std::vector<Move> generateBitboardMoves(Board& board, ChessPieceColor color);
 
 void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
-                              std::vector<std::pair<int, int>>* generatedMoves = nullptr);
+                              std::vector<Move>* generatedMoves = nullptr);

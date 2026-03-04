@@ -140,21 +140,6 @@ float HybridEvaluator::getHybridEvaluation(const Board& board) {
     return (config.nnWeight * nnEval) + (config.traditionalWeight * traditionalEval);
 }
 
-void HybridEvaluator::setConfig(const EvaluationConfig& newConfig) {
-    config = newConfig;
-
-    if (config.useNeuralNetwork && !neuralNetwork) {
-        neuralNetwork = std::make_unique<NeuralNetworkEvaluator>();
-        if (std::filesystem::exists(config.modelPath)) {
-            loadNeuralNetwork(config.modelPath);
-        }
-    }
-}
-
-const HybridEvaluator::EvaluationConfig& HybridEvaluator::getConfig() const {
-    return config;
-}
-
 bool HybridEvaluator::loadNeuralNetwork(const std::string& path) {
     if (!neuralNetwork) {
         neuralNetwork = std::make_unique<NeuralNetworkEvaluator>();
@@ -167,10 +152,6 @@ bool HybridEvaluator::loadNeuralNetwork(const std::string& path) {
         std::cerr << "Error loading neural network: " << e.what() << "\n";
         return false;
     }
-}
-
-bool HybridEvaluator::isNeuralNetworkLoaded() const {
-    return neuralNetwork != nullptr;
 }
 
 NeuralNetworkEvaluator* HybridEvaluator::getNeuralNetwork() const {
@@ -192,62 +173,12 @@ float HybridEvaluator::getGamePhase(const Board& board) {
     return std::max(kNoEvalFloat, std::min(kFullPhase, phase));
 }
 
-int HybridEvaluator::interpolateEvaluation(int openingEval, int endgameEval, float phase) {
-    return static_cast<int>(((kFullPhase - phase) * static_cast<float>(openingEval)) +
-                            (phase * static_cast<float>(endgameEval)));
-}
-
 void initializeHybridEvaluator(const HybridEvaluator::EvaluationConfig& config) {
     g_hybridEvaluator = std::make_unique<HybridEvaluator>(config);
 }
 
 HybridEvaluator* getHybridEvaluator() {
     return g_hybridEvaluator.get();
-}
-
-int evaluateHybridPosition(const Board& board) {
-    if (g_hybridEvaluator) {
-        return g_hybridEvaluator->evaluatePosition(board);
-    } else {
-
-        return evaluatePosition(board);
-    }
-}
-
-int evaluateHybridMaterial(const Board& board) {
-    if (g_hybridEvaluator) {
-        return g_hybridEvaluator->evaluateMaterial(board);
-    } else {
-
-        return evaluatePosition(board);
-    }
-}
-
-int evaluateHybridPositional(const Board& board) {
-    if (g_hybridEvaluator) {
-        return g_hybridEvaluator->evaluatePositional(board);
-    } else {
-
-        return evaluatePosition(board);
-    }
-}
-
-int evaluateHybridTactical(const Board& board) {
-    if (g_hybridEvaluator) {
-        return g_hybridEvaluator->evaluateTactical(board);
-    } else {
-
-        return evaluatePosition(board);
-    }
-}
-
-int evaluateHybridEndgame(const Board& board) {
-    if (g_hybridEvaluator) {
-        return g_hybridEvaluator->evaluateEndgame(board);
-    } else {
-
-        return evaluatePosition(board);
-    }
 }
 
 float evaluateWithNeuralNetwork(const Board& board) {

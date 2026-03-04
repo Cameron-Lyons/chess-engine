@@ -6,7 +6,8 @@
 
 namespace BenchmarkArgs {
 
-int parsePositiveIntArg(const std::vector<std::string>& args, const std::string& key, int fallback) {
+int parsePositiveIntArg(const std::vector<std::string>& args, const std::string& key,
+                        int fallback) {
     const std::string prefix = key + "=";
     for (const std::string& arg : args) {
         if (!arg.starts_with(prefix)) {

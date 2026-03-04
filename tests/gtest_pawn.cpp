@@ -5,7 +5,7 @@
 TEST(PawnMoves, StartingPosition) {
     Board testBoard;
     testBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    std::vector<std::pair<int, int>> allMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
+    std::vector<Move> allMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
     int pawnMoveCount = 0;
     for (const auto& move : allMoves) {
         const Piece& piece = testBoard.squares[move.first].piece;
@@ -24,8 +24,7 @@ TEST(PawnMoves, Promotion) {
     testBoard.squares[61].piece = Piece();
     testBoard.updateBitboards();
 
-    std::vector<std::pair<int, int>> promotionMoves =
-        GetAllMoves(testBoard, ChessPieceColor::WHITE);
+    std::vector<Move> promotionMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
 
     bool foundPromotionMove = false;
     for (const auto& move : promotionMoves) {
@@ -41,7 +40,7 @@ TEST(PawnMoves, Promotion) {
 TEST(PawnMoves, EdgeFileCaptureIsGenerated) {
     Board testBoard;
     testBoard.InitializeFromFEN("4k3/8/8/8/8/p7/1P6/4K3 w - - 0 1");
-    std::vector<std::pair<int, int>> allMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
+    std::vector<Move> allMoves = GetAllMoves(testBoard, ChessPieceColor::WHITE);
 
     constexpr int b2 = 9;
     constexpr int a3 = 16;

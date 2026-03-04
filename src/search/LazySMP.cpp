@@ -49,12 +49,12 @@ constexpr int kNullMoveModulus = 8;
 constexpr int kAspirationDeltas[] = {0, 25, 50, 100, 150, 200, 300, 500};
 constexpr std::size_t kSearchThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
 
-bool isValidMove(std::pair<int, int> move) {
+bool isValidMove(Move move) {
     return move.first >= kZero && move.first < kMoveSquareLimit && move.second >= kZero &&
            move.second < kMoveSquareLimit && move.first != move.second;
 }
 
-bool isPreferredMove(std::pair<int, int> lhs, std::pair<int, int> rhs) {
+bool isPreferredMove(Move lhs, Move rhs) {
     if (rhs.first < kZero) {
         return true;
     }
@@ -68,7 +68,7 @@ int clampScore(int score) {
     return std::clamp(score, -kScoreClampLimit, kScoreClampLimit);
 }
 
-std::pair<int, int> selectFallbackRootMove(const Board& board) {
+Move selectFallbackRootMove(const Board& board) {
     Board rootBoard = board;
     GenValidMoves(rootBoard);
     const auto moves = GetAllMoves(rootBoard, rootBoard.turn);
@@ -87,7 +87,7 @@ std::pair<int, int> selectFallbackRootMove(const Board& board) {
     return {LazySMP::kInvalidMoveSquare, LazySMP::kInvalidMoveSquare};
 }
 
-std::uint16_t packMoveKey(std::pair<int, int> move) {
+std::uint16_t packMoveKey(Move move) {
     return static_cast<std::uint16_t>((move.first << kMovePackShift) | move.second);
 }
 
@@ -121,7 +121,7 @@ void* LazySMP::searchThreadEntry(void* arg) {
 }
 
 void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit,
-                           const std::vector<std::pair<int, int>>& excludedRootMoves) const {
+                           const std::vector<Move>& excludedRootMoves) const {
     auto context = std::make_unique<ParallelSearchContext>(numThreads);
     context->startTime = std::chrono::steady_clock::now();
     context->timeLimitMs = timeLimit;
@@ -172,7 +172,7 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit,
         }
 
         score = clampScore(score);
-        std::pair<int, int> candidateMove = {kInvalidMoveSquare, kInvalidMoveSquare};
+        Move candidateMove = {kInvalidMoveSquare, kInvalidMoveSquare};
         TTEntry entry;
         if (context->transTable.find(rootHash, entry) && isValidMove(entry.bestMove)) {
             candidateMove = entry.bestMove;
@@ -216,7 +216,7 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit,
 }
 
 SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit,
-                             const std::vector<std::pair<int, int>>& excludedRootMoves) {
+                             const std::vector<Move>& excludedRootMoves) {
     const int effectiveMaxDepth = std::max(kStartDepthBase, std::min(maxDepth, kMaxSmpSearchDepth));
 
     shared->globalStop = false;
@@ -300,7 +300,7 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit,
         std::map<std::uint16_t, MoveStats> moveVotes;
 
         for (const auto& thread : threads) {
-            const std::pair<int, int> move = thread->bestMove;
+            const Move move = thread->bestMove;
             if (!isValidMove(move)) {
                 continue;
             }
@@ -318,10 +318,10 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit,
         bool foundConsensus = false;
         MoveStats chosenStats{};
         for (const auto& [key, stats] : moveVotes) {
-            const std::pair<int, int> decodedMove = {key >> kMovePackShift,
-                                                     key & ((kOne << kMovePackShift) - kOne)};
-            const std::pair<int, int> chosenMove = {chosenKey >> kMovePackShift,
-                                                    chosenKey & ((kOne << kMovePackShift) - kOne)};
+            const Move decodedMove = {key >> kMovePackShift,
+                                      key & ((kOne << kMovePackShift) - kOne)};
+            const Move chosenMove = {chosenKey >> kMovePackShift,
+                                     chosenKey & ((kOne << kMovePackShift) - kOne)};
             if (!foundConsensus || stats.votes > chosenStats.votes ||
                 (stats.votes == chosenStats.votes && stats.depth > chosenStats.depth) ||
                 (stats.votes == chosenStats.votes && stats.depth == chosenStats.depth &&

@@ -1,7 +1,7 @@
+#include "benchmark_args.h"
 #include "src/core/BitboardMoves.h"
 #include "src/core/ChessBoard.h"
 #include "src/search/search.h"
-#include "benchmark_args.h"
 
 #include <algorithm>
 #include <chrono>
@@ -37,6 +37,15 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
     std::cout << "rounds=" << rounds << " depth=" << depthLimit << " time_ms=" << timeMs
               << " threads=" << threads << '\n';
 
+    SearchConfig config;
+    config.maxDepth = depthLimit;
+    config.timeLimitMs = timeMs;
+    config.optimalTimeMs = timeMs;
+    config.maxTimeMs = timeMs;
+
+    SearchContext searchContext;
+    searchContext.threads = threads;
+
     long long totalNodes = 0;
     long long totalElapsedMs = 0;
 
@@ -47,8 +56,7 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
             board.InitializeFromFEN(fens[i]);
 
             const auto start = std::chrono::steady_clock::now();
-            const SearchResult result =
-                iterativeDeepeningParallel(board, depthLimit, timeMs, threads);
+            const SearchResult result = iterativeDeepeningParallel(board, config, searchContext);
             const auto end = std::chrono::steady_clock::now();
             const auto elapsedMs =
                 std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();

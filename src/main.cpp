@@ -8,7 +8,6 @@
 #include "evaluation/EvaluationTuning.h"
 #include "evaluation/HybridEvaluator.h"
 #include "evaluation/PositionAnalysis.h"
-#include "protocol/uci.h"
 #include "search/ValidMoves.h"
 #include "search/search.h"
 #include "utils/engine_globals.h"
@@ -73,10 +72,6 @@ constexpr int kDefaultDataGenerationGames = 50;
 constexpr int kDefaultTuneIterations = 100;
 constexpr const char* kStartingFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 } // namespace
-
-Board ChessBoard;
-Board PrevBoard;
-std::stack<int> MoveHistory;
 
 void printBoard(const Board& board) {
     std::cout << "  a b c d e f g h\n";
@@ -153,7 +148,7 @@ int calculateTimeForMove(Board& board, int totalTimeMs, int movesPlayed) {
     return static_cast<int>(static_cast<float>(baseTime) * complexityMultiplier);
 }
 
-std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = kDefaultComputerMoveTimeMs) {
+Move getComputerMove(Board& board, int timeLimitMs = kDefaultComputerMoveTimeMs) {
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {
@@ -185,7 +180,7 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = kDefaultComp
         searchDepth = kMinSearchDepth;
     }
 
-    std::vector<std::pair<int, int>> moves = GetAllMoves(board, board.turn);
+    std::vector<Move> moves = GetAllMoves(board, board.turn);
     int numMoves = static_cast<int>(moves.size());
 
     if (numMoves > kCrowdedPositionMoveThreshold) {
@@ -238,10 +233,17 @@ std::pair<int, int> getComputerMove(Board& board, int timeLimitMs = kDefaultComp
     std::cout << "Search depth: " << searchDepth << " (moves: " << numMoves
               << ", captures: " << numCaptures << ")\n";
 
-    SearchResult result = iterativeDeepeningParallel(
-        board, searchDepth, adaptiveTime,
-        std::max(kSearchThreadsFallback, static_cast<int>(std::thread::hardware_concurrency())),
-        kSearchContempt, kSearchMultiPv, adaptiveTime, adaptiveTime);
+    SearchConfig searchConfig;
+    searchConfig.maxDepth = searchDepth;
+    searchConfig.timeLimitMs = adaptiveTime;
+    searchConfig.contempt = kSearchContempt;
+    searchConfig.multiPV = kSearchMultiPv;
+    searchConfig.optimalTimeMs = adaptiveTime;
+    searchConfig.maxTimeMs = adaptiveTime;
+    SearchContext searchContext;
+    searchContext.threads =
+        std::max(kSearchThreadsFallback, static_cast<int>(std::thread::hardware_concurrency()));
+    SearchResult result = iterativeDeepeningParallel(board, searchConfig, searchContext);
 
     if (result.bestMove.first != kInvalidSquare && result.bestMove.second != kInvalidSquare) {
         return result.bestMove;
@@ -326,7 +328,7 @@ std::string legalMoveDisambiguation(const Board& board, int from, int to,
 }
 
 bool hasAnyLegalMoves(Board& board, ChessPieceColor sideToMove) {
-    std::vector<std::pair<int, int>> moves = GetAllMoves(board, sideToMove);
+    std::vector<Move> moves = GetAllMoves(board, sideToMove);
     for (const auto& move : moves) {
         const Piece& piece = board.squares[move.first].piece;
         if (piece.PieceType == ChessPieceType::NONE || piece.PieceColor != sideToMove) {
@@ -422,8 +424,8 @@ enum class GameState : std::uint8_t {
 
 GameState checkGameState(Board& board) {
     ChessPieceColor currentPlayer = board.turn;
-    std::vector<std::pair<int, int>> moves = GetAllMoves(board, currentPlayer);
-    std::vector<std::pair<int, int>> legalMoves;
+    std::vector<Move> moves = GetAllMoves(board, currentPlayer);
+    std::vector<Move> legalMoves;
     for (const auto& move : moves) {
         Board testBoard = board;
         if (testBoard.movePiece(move.first, move.second)) {
@@ -524,9 +526,8 @@ int main(int argc, char* argv[]) {
             std::string mode = argv[1];
 
             if (mode == "uci") {
-                UCIEngine engine;
-                engine.run();
-                return 0;
+                std::cout << "UCI mode moved to the dedicated 'engine_uci' binary.\n";
+                return 1;
             } else if (mode == "train") {
                 std::cout << "Neural Network Training Mode\n";
                 std::cout << "============================\n\n";
@@ -615,7 +616,7 @@ int main(int argc, char* argv[]) {
                 return 0;
             } else if (mode == "--tune" || mode == "tune") {
                 if (argc < 3) {
-                    std::cout << "Usage: chess_engine --tune <positions_file> [iterations]\n";
+                    std::cout << "Usage: engine_cli --tune <positions_file> [iterations]\n";
                     return 1;
                 }
                 std::string posFile = argv[2];
@@ -662,12 +663,14 @@ int main(int argc, char* argv[]) {
         std::cout << "Chess Engine v2.0 - Advanced Features Edition\n";
         std::cout << "=============================================\n";
         std::cout << "Features: Magic bitboards, Neural network evaluation, Pattern recognition\n";
-        std::cout << "Use './chess_engine uci' for UCI mode\n\n";
-        ChessBoard.InitializeFromFEN(kStartingFen);
+        std::cout << "Use './engine_uci' for UCI mode\n\n";
+        Engine gameEngine;
+        gameEngine.newGame(kStartingFen);
+        Board& gameBoard = gameEngine.mutableBoard();
         std::string input;
         while (true) {
-            printBoard(ChessBoard);
-            GameState gameState = checkGameState(ChessBoard);
+            printBoard(gameBoard);
+            GameState gameState = checkGameState(gameBoard);
             if (gameState != GameState::ONGOING) {
                 announceGameResult(gameState);
                 std::string dummy;
@@ -677,7 +680,7 @@ int main(int argc, char* argv[]) {
             }
 
             std::string checkIndicator;
-            if (IsKingInCheck(ChessBoard, ChessBoard.turn)) {
+            if (IsKingInCheck(gameBoard, gameBoard.turn)) {
                 checkIndicator = " [CHECK!] ";
             }
 
@@ -689,14 +692,15 @@ int main(int argc, char* argv[]) {
             }
 
             ChessTimePoint moveStartTime = ChessClock::now();
-            if (auto parsed = parseAlgebraicMove(input, ChessBoard)) {
+            if (auto parsed = parseAlgebraicMove(input, gameBoard)) {
                 ChessPieceType promotionPiece = ChessPieceType::QUEEN;
                 if (input.contains('=')) {
                     promotionPiece = getPromotionPiece(input);
                 }
 
-                if (MovePiece(parsed->srcCol, parsed->srcRow, parsed->destCol, parsed->destRow,
-                              promotionPiece)) {
+                const int fromSquare = parsed->srcCol + (parsed->srcRow * BOARD_SIZE);
+                const int toSquare = parsed->destCol + (parsed->destRow * BOARD_SIZE);
+                if (gameEngine.applyMove(fromSquare, toSquare, promotionPiece).has_value()) {
                     std::cout << "✓ Move played successfully!\n";
                 } else {
                     std::cout << "❌ Invalid move. Try again.\n";
@@ -706,36 +710,33 @@ int main(int argc, char* argv[]) {
                              "e8=Q).\n";
             }
 
-            if (ChessBoard.turn == ChessPieceColor::BLACK) {
+            if (gameBoard.turn == ChessPieceColor::BLACK) {
                 std::cout << "\nComputer is thinking...\n";
                 ChessTimePoint computerStartTime = ChessClock::now();
-                auto computerMove = getComputerMove(ChessBoard, kDefaultComputerMoveTimeMs);
+                auto computerMove = getComputerMove(gameBoard, kDefaultComputerMoveTimeMs);
                 auto computerTime = ChessClock::now() - computerStartTime;
 
                 if (computerMove.first != kInvalidSquare && computerMove.second != kInvalidSquare) {
                     int from = computerMove.first;
                     int to = computerMove.second;
-                    int srcCol = from % BOARD_SIZE;
-                    int srcRow = from / BOARD_SIZE;
-                    int destCol = to % BOARD_SIZE;
                     int destRow = to / BOARD_SIZE;
                     ChessPieceType computerPromotionPiece = ChessPieceType::QUEEN;
-                    const Piece& movingPiece = ChessBoard.squares[from].piece;
+                    const Piece& movingPiece = gameBoard.squares[from].piece;
                     if (movingPiece.PieceType == ChessPieceType::PAWN &&
                         (destRow == 0 || destRow == 7)) {
                         computerPromotionPiece = ChessPieceType::QUEEN;
                     }
                     std::string computerMoveSan =
-                        moveToSan(ChessBoard, from, to, computerPromotionPiece);
+                        moveToSan(gameBoard, from, to, computerPromotionPiece);
 
-                    if (MovePiece(srcCol, srcRow, destCol, destRow, computerPromotionPiece)) {
+                    if (gameEngine.applyMove(from, to, computerPromotionPiece).has_value()) {
                         std::cout << "Computer played: " << computerMoveSan << " (took "
                                   << std::chrono::duration_cast<ChessDuration>(computerTime).count()
                                   << "ms)\n";
 
-                        GameState postMoveState = checkGameState(ChessBoard);
+                        GameState postMoveState = checkGameState(gameBoard);
                         if (postMoveState != GameState::ONGOING) {
-                            printBoard(ChessBoard);
+                            printBoard(gameBoard);
                             announceGameResult(postMoveState);
                             std::string dummy;
                             std::getline(std::cin, dummy);
@@ -746,7 +747,7 @@ int main(int argc, char* argv[]) {
                     }
                 } else {
                     std::cout << "Computer couldn't find a valid move!\n";
-                    GameState state = checkGameState(ChessBoard);
+                    GameState state = checkGameState(gameBoard);
                     if (state != GameState::ONGOING) {
                         announceGameResult(state);
                         std::string dummy;

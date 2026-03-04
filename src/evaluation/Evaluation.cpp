@@ -11,8 +11,6 @@
 #include <cmath>
 #include <cstdint>
 
-extern uint64_t ZobristTable[64][12];
-
 using namespace EvaluationParams;
 
 static std::atomic<bool> useNNUE{false};
@@ -567,12 +565,15 @@ int evaluateEndgame(const Board& board) {
 thread_local PawnHashTable pawnHashTable;
 
 uint64_t computePawnHash(const Board& board) {
-    uint64_t h = 0;
+    uint64_t h = 1469598103934665603ULL;
     for (int sq = 0; sq < NUM_SQUARES; ++sq) {
         const Piece& p = board.squares[sq].piece;
         if (p.PieceType == ChessPieceType::PAWN) {
-            int idx = (p.PieceColor == ChessPieceColor::WHITE) ? 0 : kPieceTypeCount;
-            h ^= ZobristTable[sq][idx];
+            const std::uint64_t pawnKey =
+                static_cast<std::uint64_t>(sq + 1) |
+                (static_cast<std::uint64_t>(p.PieceColor == ChessPieceColor::BLACK) << 8);
+            h ^= pawnKey;
+            h *= 1099511628211ULL;
         }
     }
     return h;
@@ -1197,10 +1198,6 @@ int evaluateTacticalSafety(const Board& board) {
     return score;
 }
 
-bool isNNUEEnabled() {
-    return useNNUE.load(std::memory_order_relaxed);
-}
-
 void setNNUEEnabled(bool enabled) {
     useNNUE.store(enabled, std::memory_order_relaxed);
 }
@@ -1211,11 +1208,4 @@ void setFastEvaluationMode(bool enabled) {
 
 bool isFastEvaluationMode() {
     return useFastEval;
-}
-
-int evaluatePositionNNUE(const Board& board) {
-    if (NNUE::globalEvaluator) {
-        return NNUE::evaluate(board);
-    }
-    return evaluatePosition(board);
 }

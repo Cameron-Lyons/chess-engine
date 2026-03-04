@@ -13,7 +13,7 @@ public:
 
     struct TablebaseResult {
         int distanceToMate;
-        std::vector<std::pair<int, int>> bestMoves;
+        std::vector<Move> bestMoves;
         bool isExact;
     };
     EndgameTablebase(const std::string& tablebasePath = "tablebases/");
@@ -24,13 +24,11 @@ public:
     auto operator=(EndgameTablebase&&) -> EndgameTablebase& = delete;
     auto isInTablebase(const Board& board) -> bool;
     auto probe(const Board& board, TablebaseResult& result) -> bool;
-    auto getBestMove(const Board& board, std::pair<int, int>& bestMove) -> bool;
+    auto getBestMove(const Board& board, Move& bestMove) -> bool;
     auto isWinning(const Board& board) -> bool;
     auto isLosing(const Board& board) -> bool;
     auto isDraw(const Board& board) -> bool;
-    void loadTablebase(const std::string& pieceCombination);
     auto getAvailableTablebases() -> std::vector<std::string>;
-    void setTablebaseType(TablebaseType type);
 
 private:
     class Impl;

@@ -85,7 +85,7 @@ auto EndgameTablebase::probe(const Board& board, TablebaseResult& result) -> boo
     return true;
 }
 
-auto EndgameTablebase::getBestMove(const Board& board, std::pair<int, int>& bestMove) -> bool {
+auto EndgameTablebase::getBestMove(const Board& board, Move& bestMove) -> bool {
     if (m_pImpl->type != TablebaseType::SYZYGY) {
         return false;
     }
@@ -124,20 +124,9 @@ auto EndgameTablebase::isDraw(const Board& board) -> bool {
     return false;
 }
 
-void EndgameTablebase::loadTablebase(const std::string& pieceCombination) {
-    (void)pieceCombination;
-}
-
 auto EndgameTablebase::getAvailableTablebases() -> std::vector<std::string> {
 
     return {};
-}
-
-void EndgameTablebase::setTablebaseType(TablebaseType type) {
-    m_pImpl->type = type;
-    if (type == TablebaseType::SYZYGY) {
-        Syzygy::init(m_pImpl->tablebasePath);
-    }
 }
 
 auto EndgameTablebase::boardToTablebaseKey(const Board& board) -> std::string {

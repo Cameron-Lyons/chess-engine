@@ -7,13 +7,6 @@ x86_avx2_copts = select({
     "//conditions:default": [],
 })
 
-nnue_bitboard_srcs = select({
-    "@bazel_tools//src/conditions:darwin_x86_64": ["src/evaluation/NNUEBitboard.cpp"],
-    "@bazel_tools//src/conditions:linux_x86_64": ["src/evaluation/NNUEBitboard.cpp"],
-    "@bazel_tools//src/conditions:windows_x64": ["src/evaluation/NNUEBitboard.cpp"],
-    "//conditions:default": [],
-})
-
 cc_library(
     name = "engine_lib",
     srcs = [
@@ -28,6 +21,7 @@ cc_library(
         "src/evaluation/HybridEvaluator.cpp",
         "src/evaluation/EvaluationTuning.cpp",
         "src/evaluation/NNUE.cpp",
+        "src/evaluation/NNUEBitboard.cpp",
         "src/evaluation/PositionAnalysis.cpp",
         "src/protocol/uci.cpp",
         "src/search/AdvancedSearch.cpp",
@@ -38,7 +32,7 @@ cc_library(
         "src/search/ValidMoves.cpp",
         "src/search/search.cpp",
         "src/utils/engine_globals.cpp",
-    ] + nnue_bitboard_srcs,
+    ],
     copts = ["-Werror"] + x86_avx2_copts,
     hdrs = glob(["src/**/*.h"]),
     includes = ["src", "src/core"],
@@ -47,8 +41,15 @@ cc_library(
 )
 
 cc_binary(
-    name = "chess_engine",
+    name = "engine_cli",
     copts = ["-Werror"],
     srcs = ["src/main.cpp"],
+    deps = [":engine_lib"],
+)
+
+cc_binary(
+    name = "engine_uci",
+    copts = ["-Werror"],
+    srcs = ["src/protocol/uci_main.cpp"],
     deps = [":engine_lib"],
 )

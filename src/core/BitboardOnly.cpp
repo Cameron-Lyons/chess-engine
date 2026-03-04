@@ -180,29 +180,6 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
     recordMoveTime();
 }
 
-void BitboardPosition::unmakeMove(int from, int to, ChessPieceType captured,
-                                  ChessPieceType promotion) {
-
-    ChessPieceType movedPiece = getPieceAt(to);
-    ChessPieceColor movedColor = getColorAt(to);
-    removePiece(to, movedColor, movedPiece);
-
-    ChessPieceType originalPiece =
-        (promotion != ChessPieceType::NONE) ? ChessPieceType::PAWN : movedPiece;
-    placePiece(from, movedColor, originalPiece);
-
-    if (captured != ChessPieceType::NONE) {
-        ChessPieceColor capturedColor = (movedColor == ChessPieceColor::WHITE)
-                                            ? ChessPieceColor::BLACK
-                                            : ChessPieceColor::WHITE;
-        placePiece(to, capturedColor, captured);
-    }
-
-    sideToMove = 1 - sideToMove;
-    hash ^= zobristSideToMove;
-    updateOccupancy();
-}
-
 void BitboardPosition::setFromFEN(const std::string& fen) {
 
     for (auto& color : pieces) {

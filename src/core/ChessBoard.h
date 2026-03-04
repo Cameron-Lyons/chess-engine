@@ -1,17 +1,22 @@
 #pragma once
 
 #include "Bitboard.h"
+#include "CastlingConstants.h"
 #include "ChessPiece.h"
+#include "Move.h"
 
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <concepts>
+#include <cstdint>
+#include <expected>
 #include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 using ChessString = std::string_view;
@@ -21,6 +26,7 @@ using ChessDuration = std::chrono::milliseconds;
 using ChessTimePoint = ChessClock::time_point;
 
 enum class ChessError : std::uint8_t {
+    None,
     InvalidMove,
     NoPieceAtSource,
     WrongTurn,
@@ -34,7 +40,6 @@ enum class ChessError : std::uint8_t {
 struct Square {
     Piece piece;
     int loc;
-    std::vector<int> ValidMoves;
 
     Square() : loc(0) {}
     Square(int location) : loc(location) {}
@@ -50,89 +55,157 @@ struct Square {
     }
 };
 
-struct Board {
+struct Position {
     std::array<Square, 64> squares;
-    ChessPieceColor turn;
-    bool whiteCanCastle;
-    bool blackCanCastle;
-    int enPassantSquare;
-    bool whiteChecked;
-    bool blackChecked;
-    int LastMove;
-    Bitboard whitePawns, whiteKnights, whiteBishops, whiteRooks, whiteQueens, whiteKings;
-    Bitboard blackPawns, blackKnights, blackBishops, blackRooks, blackQueens, blackKings;
-    Bitboard whitePieces, blackPieces, allPieces;
-    ChessTimePoint lastMoveTime;
+    Bitboard whitePawns = EMPTY;
+    Bitboard whiteKnights = EMPTY;
+    Bitboard whiteBishops = EMPTY;
+    Bitboard whiteRooks = EMPTY;
+    Bitboard whiteQueens = EMPTY;
+    Bitboard whiteKings = EMPTY;
+    Bitboard blackPawns = EMPTY;
+    Bitboard blackKnights = EMPTY;
+    Bitboard blackBishops = EMPTY;
+    Bitboard blackRooks = EMPTY;
+    Bitboard blackQueens = EMPTY;
+    Bitboard blackKings = EMPTY;
+    Bitboard whitePieces = EMPTY;
+    Bitboard blackPieces = EMPTY;
+    Bitboard allPieces = EMPTY;
+};
+
+struct StateInfo {
+    ChessPieceColor turn = ChessPieceColor::WHITE;
+    std::uint8_t castlingRights = CastlingConstants::kAllCastlingRightsMask;
+    int enPassantSquare = CastlingConstants::kNoEnPassantSquareMailbox;
+    bool whiteChecked = false;
+    bool blackChecked = false;
+    int lastMove = 0;
+    ChessTimePoint lastMoveTime = ChessClock::now();
+};
+
+struct Board {
+    class CastlingSideProxy {
+    public:
+        CastlingSideProxy(StateInfo& stateRef, std::uint8_t maskRef)
+            : state(&stateRef), mask(maskRef) {}
+
+        CastlingSideProxy(const CastlingSideProxy&) = default;
+        CastlingSideProxy& operator=(const CastlingSideProxy&) = default;
+
+        CastlingSideProxy& operator=(bool enabled) {
+            if (enabled) {
+                state->castlingRights |= mask;
+            } else {
+                state->castlingRights &= static_cast<std::uint8_t>(~mask);
+            }
+            return *this;
+        }
+
+        operator bool() const {
+            return (state->castlingRights & mask) != 0;
+        }
+
+    private:
+        StateInfo* state;
+        std::uint8_t mask;
+    };
+
+    Position position;
+    StateInfo state;
+
+    // Transitional flattened members backed by Position/StateInfo.
+    std::array<Square, 64>& squares;
+    ChessPieceColor& turn;
+    int& enPassantSquare;
+    bool& whiteChecked;
+    bool& blackChecked;
+    int& LastMove;
+    Bitboard& whitePawns;
+    Bitboard& whiteKnights;
+    Bitboard& whiteBishops;
+    Bitboard& whiteRooks;
+    Bitboard& whiteQueens;
+    Bitboard& whiteKings;
+    Bitboard& blackPawns;
+    Bitboard& blackKnights;
+    Bitboard& blackBishops;
+    Bitboard& blackRooks;
+    Bitboard& blackQueens;
+    Bitboard& blackKings;
+    Bitboard& whitePieces;
+    Bitboard& blackPieces;
+    Bitboard& allPieces;
+    ChessTimePoint& lastMoveTime;
+    CastlingSideProxy whiteCanCastle;
+    CastlingSideProxy blackCanCastle;
 
     Board()
-        : turn(ChessPieceColor::WHITE), whiteCanCastle(true), blackCanCastle(true),
-          enPassantSquare(-1), whiteChecked(false), blackChecked(false), LastMove(0),
-          lastMoveTime(ChessClock::now()) {
-        for (int i = 0; i < 64; i++) {
+        : squares(position.squares), turn(state.turn), enPassantSquare(state.enPassantSquare),
+          whiteChecked(state.whiteChecked), blackChecked(state.blackChecked),
+          LastMove(state.lastMove), whitePawns(position.whitePawns),
+          whiteKnights(position.whiteKnights), whiteBishops(position.whiteBishops),
+          whiteRooks(position.whiteRooks), whiteQueens(position.whiteQueens),
+          whiteKings(position.whiteKings), blackPawns(position.blackPawns),
+          blackKnights(position.blackKnights), blackBishops(position.blackBishops),
+          blackRooks(position.blackRooks), blackQueens(position.blackQueens),
+          blackKings(position.blackKings), whitePieces(position.whitePieces),
+          blackPieces(position.blackPieces), allPieces(position.allPieces),
+          lastMoveTime(state.lastMoveTime),
+          whiteCanCastle(state, CastlingConstants::kWhiteCastlingRightsMask),
+          blackCanCastle(state, CastlingConstants::kBlackCastlingRightsMask) {
+        for (int i = 0; i < 64; ++i) {
             squares[i] = Square(i);
         }
     }
 
-    // ValidMoves is a transient cache and intentionally not copied.
     Board(const Board& other)
-        : turn(other.turn), whiteCanCastle(other.whiteCanCastle),
-          blackCanCastle(other.blackCanCastle), enPassantSquare(other.enPassantSquare),
-          whiteChecked(other.whiteChecked), blackChecked(other.blackChecked),
-          LastMove(other.LastMove), whitePawns(other.whitePawns), whiteKnights(other.whiteKnights),
-          whiteBishops(other.whiteBishops), whiteRooks(other.whiteRooks),
-          whiteQueens(other.whiteQueens), whiteKings(other.whiteKings),
-          blackPawns(other.blackPawns), blackKnights(other.blackKnights),
-          blackBishops(other.blackBishops), blackRooks(other.blackRooks),
-          blackQueens(other.blackQueens), blackKings(other.blackKings),
-          whitePieces(other.whitePieces), blackPieces(other.blackPieces),
-          allPieces(other.allPieces), lastMoveTime(other.lastMoveTime) {
-        for (int i = 0; i < 64; ++i) {
-            squares[i].piece = other.squares[i].piece;
-            squares[i].loc = other.squares[i].loc;
-            squares[i].ValidMoves.clear();
-        }
-    }
+        : position(other.position), state(other.state), squares(position.squares), turn(state.turn),
+          enPassantSquare(state.enPassantSquare), whiteChecked(state.whiteChecked),
+          blackChecked(state.blackChecked), LastMove(state.lastMove),
+          whitePawns(position.whitePawns), whiteKnights(position.whiteKnights),
+          whiteBishops(position.whiteBishops), whiteRooks(position.whiteRooks),
+          whiteQueens(position.whiteQueens), whiteKings(position.whiteKings),
+          blackPawns(position.blackPawns), blackKnights(position.blackKnights),
+          blackBishops(position.blackBishops), blackRooks(position.blackRooks),
+          blackQueens(position.blackQueens), blackKings(position.blackKings),
+          whitePieces(position.whitePieces), blackPieces(position.blackPieces),
+          allPieces(position.allPieces), lastMoveTime(state.lastMoveTime),
+          whiteCanCastle(state, CastlingConstants::kWhiteCastlingRightsMask),
+          blackCanCastle(state, CastlingConstants::kBlackCastlingRightsMask) {}
 
     Board& operator=(const Board& other) {
         if (this == &other) {
             return *this;
         }
-
-        turn = other.turn;
-        whiteCanCastle = other.whiteCanCastle;
-        blackCanCastle = other.blackCanCastle;
-        enPassantSquare = other.enPassantSquare;
-        whiteChecked = other.whiteChecked;
-        blackChecked = other.blackChecked;
-        LastMove = other.LastMove;
-        whitePawns = other.whitePawns;
-        whiteKnights = other.whiteKnights;
-        whiteBishops = other.whiteBishops;
-        whiteRooks = other.whiteRooks;
-        whiteQueens = other.whiteQueens;
-        whiteKings = other.whiteKings;
-        blackPawns = other.blackPawns;
-        blackKnights = other.blackKnights;
-        blackBishops = other.blackBishops;
-        blackRooks = other.blackRooks;
-        blackQueens = other.blackQueens;
-        blackKings = other.blackKings;
-        whitePieces = other.whitePieces;
-        blackPieces = other.blackPieces;
-        allPieces = other.allPieces;
-        lastMoveTime = other.lastMoveTime;
-
-        for (int i = 0; i < 64; ++i) {
-            squares[i].piece = other.squares[i].piece;
-            squares[i].loc = other.squares[i].loc;
-            squares[i].ValidMoves.clear();
-        }
-
+        position = other.position;
+        state = other.state;
         return *this;
     }
 
-    Board(Board&&) = default;
-    Board& operator=(Board&&) = default;
+    Board(Board&& other) noexcept
+        : position(other.position), state(other.state), squares(position.squares), turn(state.turn),
+          enPassantSquare(state.enPassantSquare), whiteChecked(state.whiteChecked),
+          blackChecked(state.blackChecked), LastMove(state.lastMove),
+          whitePawns(position.whitePawns), whiteKnights(position.whiteKnights),
+          whiteBishops(position.whiteBishops), whiteRooks(position.whiteRooks),
+          whiteQueens(position.whiteQueens), whiteKings(position.whiteKings),
+          blackPawns(position.blackPawns), blackKnights(position.blackKnights),
+          blackBishops(position.blackBishops), blackRooks(position.blackRooks),
+          blackQueens(position.blackQueens), blackKings(position.blackKings),
+          whitePieces(position.whitePieces), blackPieces(position.blackPieces),
+          allPieces(position.allPieces), lastMoveTime(state.lastMoveTime),
+          whiteCanCastle(state, CastlingConstants::kWhiteCastlingRightsMask),
+          blackCanCastle(state, CastlingConstants::kBlackCastlingRightsMask) {}
+
+    Board& operator=(Board&& other) noexcept {
+        if (this == &other) {
+            return *this;
+        }
+        position = other.position;
+        state = other.state;
+        return *this;
+    }
 
     template <std::integral T>
     bool isValidIndex(T index) const {
@@ -200,24 +273,55 @@ struct Board {
         return std::chrono::duration_cast<ChessDuration>(ChessClock::now() - lastMoveTime);
     }
 
+    std::uint8_t castlingRights() const {
+        return state.castlingRights;
+    }
+
+    bool hasCastlingRight(std::uint8_t mask) const {
+        return (state.castlingRights & mask) != 0;
+    }
+
+    void setCastlingRight(std::uint8_t mask, bool enabled = true) {
+        if (enabled) {
+            state.castlingRights |= mask;
+        } else {
+            state.castlingRights &= static_cast<std::uint8_t>(~mask);
+        }
+    }
+
+    void clearCastlingRights(std::uint8_t mask) {
+        state.castlingRights &= static_cast<std::uint8_t>(~mask);
+    }
+
+    bool canCastleAny(ChessPieceColor color) const {
+        const std::uint8_t mask = (color == ChessPieceColor::WHITE)
+                                      ? CastlingConstants::kWhiteCastlingRightsMask
+                                      : CastlingConstants::kBlackCastlingRightsMask;
+        return hasCastlingRight(mask);
+    }
+
+    bool canCastleKingside(ChessPieceColor color) const {
+        const std::uint8_t mask = (color == ChessPieceColor::WHITE)
+                                      ? CastlingConstants::kWhiteKingsideCastlingRight
+                                      : CastlingConstants::kBlackKingsideCastlingRight;
+        return hasCastlingRight(mask);
+    }
+
+    bool canCastleQueenside(ChessPieceColor color) const {
+        const std::uint8_t mask = (color == ChessPieceColor::WHITE)
+                                      ? CastlingConstants::kWhiteQueensideCastlingRight
+                                      : CastlingConstants::kBlackQueensideCastlingRight;
+        return hasCastlingRight(mask);
+    }
+
     std::string toFEN() const;
-    bool fromFEN(ChessString fen);
+    std::expected<void, ChessError> fromFEN(ChessString fen);
     void InitializeFromFEN(ChessString fen);
     bool movePiece(int from, int to);
     void clearBitboards();
     void updateBitboards();
     void updateOccupancy();
     Bitboard getPieceBitboard(ChessPieceType type, ChessPieceColor color) const;
-
-    template <typename Func>
-    std::vector<int> generateMovesForPiece(int pos, Func&& filter) const {
-        std::vector<int> result;
-        if (isValidIndex(pos)) {
-            auto moves = squares[pos].ValidMoves;
-            std::copy_if(moves.begin(), moves.end(), std::back_inserter(result), filter);
-        }
-        return result;
-    }
 
     template <typename Func>
     void forEachPiece(Func&& func) const {
@@ -238,8 +342,6 @@ struct Board {
         }
         return result;
     }
-
-    ChessError validateMove(int from, int to) const;
 
     void recordMoveTime() {
         lastMoveTime = ChessClock::now();
@@ -274,6 +376,8 @@ inline std::string formatMove(int from, int to) {
 
 inline std::string formatError(ChessError error) {
     switch (error) {
+        case ChessError::None:
+            return "No error";
         case ChessError::InvalidMove:
             return "Invalid move";
         case ChessError::NoPieceAtSource:

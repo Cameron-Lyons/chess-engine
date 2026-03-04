@@ -55,14 +55,12 @@ enum class ParseAlgebraicMoveError : std::uint8_t {
 
 std::expected<ParsedAlgebraicMove, ParseAlgebraicMoveError> parseAlgebraicMove(
     std::string_view move, const Board& board);
-bool parseAlgebraicMove(std::string_view move, Board& board, int& srcCol, int& srcRow, int& destCol,
-                        int& destRow);
 
 struct TTEntry {
     int depth;
     int value;
     int flag;
-    std::pair<int, int> bestMove;
+    Move bestMove;
     uint64_t zobristKey;
 
     TTEntry()
@@ -71,8 +69,7 @@ struct TTEntry {
           bestMove({SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare}),
           zobristKey(SearchConstants::kZero) {}
     TTEntry(int d, int v, int f,
-            std::pair<int, int> move = {SearchConstants::kInvalidSquare,
-                                        SearchConstants::kInvalidSquare},
+            Move move = {SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare},
             uint64_t key = SearchConstants::kZero)
         : depth(d), value(v), flag(f), bestMove(move), zobristKey(key) {}
 };
@@ -195,11 +192,11 @@ private:
 struct KillerMoves {
     static const int MAX_KILLER_MOVES = SearchConstants::kTwo;
     static const int MAX_PLY = SearchConstants::kBoardSquareCount;
-    std::pair<int, int> killers[MAX_PLY][MAX_KILLER_MOVES];
+    Move killers[MAX_PLY][MAX_KILLER_MOVES];
     KillerMoves();
-    void store(int ply, std::pair<int, int> move);
-    bool isKiller(int ply, std::pair<int, int> move) const;
-    int getKillerScore(int ply, std::pair<int, int> move) const;
+    void store(int ply, Move move);
+    bool isKiller(int ply, Move move) const;
+    int getKillerScore(int ply, Move move) const;
 };
 
 struct ParallelSearchContext {
@@ -212,10 +209,10 @@ struct ParallelSearchContext {
     int timeLimitMs;
     int numThreads;
     int ply;
-    std::pair<int, int> counterMoves[SearchConstants::kTwo][SearchConstants::kBoardSquareCount];
+    Move counterMoves[SearchConstants::kTwo][SearchConstants::kBoardSquareCount];
     int contempt = SearchConstants::kZero;
     int multiPV = SearchConstants::kOne;
-    std::vector<std::pair<int, int>> excludedRootMoves;
+    std::vector<Move> excludedRootMoves;
     int optimalTimeMs = SearchConstants::kZero;
     int maxTimeMs = SearchConstants::kZero;
     std::atomic<int> tbHits{SearchConstants::kZero};
@@ -279,9 +276,9 @@ struct ParallelSearchContext {
 };
 
 struct ScoredMove {
-    std::pair<int, int> move;
+    Move move;
     int score;
-    ScoredMove(std::pair<int, int> m, int s) : move(m), score(s) {}
+    ScoredMove(Move m, int s) : move(m), score(s) {}
     std::strong_ordering operator<=>(const ScoredMove& other) const {
         if (const auto scoreCmp = score <=> other.score; scoreCmp != 0) {
             return scoreCmp;
@@ -292,7 +289,7 @@ struct ScoredMove {
 };
 
 struct SearchResult {
-    std::pair<int, int> bestMove;
+    Move bestMove;
     int score;
     int depth;
     int nodes;
@@ -300,11 +297,19 @@ struct SearchResult {
     SearchResult();
 };
 
-extern uint64_t ZobristTable[64][12];
-extern uint64_t ZobristBlackToMove;
-extern uint64_t ZobristCastling[4];
-extern uint64_t ZobristEnPassant[64];
-extern TranspositionTableAdapter TransTable;
+struct SearchConfig {
+    int maxDepth = SearchConstants::kOne;
+    int timeLimitMs = SearchConstants::kZero;
+    int contempt = SearchConstants::kZero;
+    int multiPV = SearchConstants::kOne;
+    int optimalTimeMs = SearchConstants::kZero;
+    int maxTimeMs = SearchConstants::kZero;
+};
+
+struct SearchContext {
+    int threads = SearchConstants::kOne;
+    int hashSizeMb = SearchConstants::kDefaultTranspositionTableMb;
+};
 
 void InitZobrist();
 int pieceToZobristIndex(const Piece& p);
@@ -341,14 +346,10 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
                      ThreadSafeHistory& historyTable, ParallelSearchContext& context, int ply,
                      uint64_t zobristKey = std::numeric_limits<uint64_t>::max());
-std::vector<std::pair<int, int>> GetAllMoves(Board& board, ChessPieceColor color);
+std::vector<Move> GetAllMoves(Board& board, ChessPieceColor color);
 std::string getBookMove(const std::string& fen);
-SearchResult iterativeDeepeningParallel(
-    Board& board, int maxDepth, int timeLimitMs, int numThreads = SearchConstants::kZero,
-    int contempt = SearchConstants::kZero, int multiPV = SearchConstants::kOne,
-    int optimalTimeMs = SearchConstants::kZero, int maxTimeMs = SearchConstants::kZero,
-    int hashSizeMb = SearchConstants::kDefaultTranspositionTableMb);
-std::pair<int, int> findBestMove(Board& board, int depth);
+SearchResult iterativeDeepeningParallel(Board& board, const SearchConfig& config,
+                                        SearchContext& searchContext);
 int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer,
                              int ply, ThreadSafeHistory& historyTable,
                              ParallelSearchContext& context, bool isPVNode = true,
@@ -359,12 +360,10 @@ int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare);
 bool isPromotion(const Board& board, int from, int to);
 bool isCastling(const Board& board, int from, int to);
 std::vector<ScoredMove> scoreMovesOptimized(
-    const Board& board, const std::vector<std::pair<int, int>>& moves,
-    const ThreadSafeHistory& historyTable, const KillerMoves& killerMoves, int ply,
-    const std::pair<int, int>& ttMove = {SearchConstants::kInvalidSquare,
-                                         SearchConstants::kInvalidSquare},
-    const std::pair<int, int>& counterMove = {SearchConstants::kInvalidSquare,
-                                              SearchConstants::kInvalidSquare},
+    const Board& board, const std::vector<Move>& moves, const ThreadSafeHistory& historyTable,
+    const KillerMoves& killerMoves, int ply,
+    const Move& ttMove = {SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare},
+    const Move& counterMove = {SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare},
     const ParallelSearchContext* context = nullptr);
 
 enum class MovePickerStage : std::uint8_t {
@@ -381,7 +380,7 @@ enum class MovePickerStage : std::uint8_t {
 
 class MovePicker {
     Board& board;
-    std::pair<int, int> hashMove;
+    Move hashMove;
     const KillerMoves& killerMoves;
     int ply;
     const ThreadSafeHistory& history;
@@ -397,13 +396,13 @@ class MovePicker {
     static constexpr std::size_t MOVE_MASK_SIZE = SearchConstants::kMoveMaskSize;
     std::array<bool, MOVE_MASK_SIZE> returnedMask{};
 
-    static constexpr std::size_t moveIndex(const std::pair<int, int>& m) {
+    static constexpr std::size_t moveIndex(const Move& m) {
         return (static_cast<std::size_t>(m.first) *
                 static_cast<std::size_t>(SearchConstants::kMoveMaskDimension)) +
                static_cast<std::size_t>(m.second);
     }
 
-    bool alreadyReturned(const std::pair<int, int>& m) const {
+    bool alreadyReturned(const Move& m) const {
         if (m.first < SearchConstants::kZero || m.first >= SearchConstants::kBoardSquareCount ||
             m.second < SearchConstants::kZero || m.second >= SearchConstants::kBoardSquareCount) {
             return false;
@@ -411,7 +410,7 @@ class MovePicker {
         return returnedMask[moveIndex(m)];
     }
 
-    void markReturned(const std::pair<int, int>& m) {
+    void markReturned(const Move& m) {
         if (m.first < SearchConstants::kZero || m.first >= SearchConstants::kBoardSquareCount ||
             m.second < SearchConstants::kZero || m.second >= SearchConstants::kBoardSquareCount) {
             return;
@@ -422,10 +421,10 @@ class MovePicker {
     void generateAndPartitionMoves();
 
 public:
-    MovePicker(Board& b, std::pair<int, int> hm, const KillerMoves& km, int p,
-               const ThreadSafeHistory& h, ParallelSearchContext& ctx);
+    MovePicker(Board& b, Move hm, const KillerMoves& km, int p, const ThreadSafeHistory& h,
+               ParallelSearchContext& ctx);
 
-    std::pair<int, int> next();
+    Move next();
 };
 
 struct SearchTechniques {

@@ -21,8 +21,6 @@ public:
     static uint64_t generateBishopMask(int square);
     static uint64_t generateRookAttacks(int square, uint64_t occupancy);
     static uint64_t generateBishopAttacks(int square, uint64_t occupancy);
-    static uint64_t findMagicNumber(int square, bool isRook);
-    static bool isMagicNumberValid(int square, uint64_t magic, bool isRook);
 
 private:
     static uint64_t generateSlidingAttacks(int square,

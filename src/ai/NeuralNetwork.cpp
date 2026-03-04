@@ -631,7 +631,7 @@ auto TrainingDataGenerator::playGame(int maxMoves, std::mt19937& rng)
         TrainingExample example;
         example.position = board;
         example.gameLength = moveCount;
-        std::vector<std::pair<int, int>> legalMoves;
+        std::vector<Move> legalMoves;
         for (int src = 0; src < 64; ++src) {
             for (int dest = 0; dest < 64; ++dest) {
                 if (IsMoveLegal(board, src, dest)) {
@@ -648,7 +648,7 @@ auto TrainingDataGenerator::playGame(int maxMoves, std::mt19937& rng)
             break;
         }
 
-        std::pair<int, int> bestMove = legalMoves[0];
+        Move bestMove = legalMoves[0];
         float bestScore = -10000.0F;
 
         for (const auto& move : legalMoves) {
@@ -873,23 +873,6 @@ void NNTrainer::trainOnSelfPlayData(int numGames) {
     std::cout << "Training completed. Best validation loss: " << bestValidationLoss << '\n';
 }
 
-void NNTrainer::trainOnFile(const std::string& dataPath) {
-    std::cout << "Training on data from: " << dataPath << '\n';
-    auto trainingExamples = m_dataGenerator.loadTrainingData(dataPath);
-    auto nnData = m_dataGenerator.convertToNNFormat(trainingExamples);
-    auto trainingData = splitData(nnData, 1.0F - m_config.validationSplit, true);
-    auto validationData = splitData(nnData, m_config.validationSplit, false);
-    std::cout << "Training set: " << trainingData.size() << " examples" << '\n';
-    std::cout << "Validation set: " << validationData.size() << " examples" << '\n';
-    m_neuralNetwork.train(trainingData);
-    validateModel(validationData);
-}
-
-void NNTrainer::validateModel(const std::vector<std::pair<Board, float>>& validationData) {
-    float loss = calculateLoss(validationData);
-    std::cout << "Validation loss: " << loss << '\n';
-}
-
 auto NNTrainer::evaluateModel(const std::vector<std::pair<Board, float>>& testData) -> float {
     if (testData.empty()) {
         std::cout << "Test loss: 0\n";
@@ -1056,70 +1039,4 @@ bool NeuralNetworkEvaluator::ModelVersion::operator<(const ModelVersion& other) 
 
 bool NeuralNetworkEvaluator::ModelVersion::operator==(const ModelVersion& other) const {
     return major == other.major && minor == other.minor && patch == other.patch;
-}
-
-std::string NeuralNetworkEvaluator::ModelVersion::toString() const {
-    return std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch) +
-           " (" + timestamp + ")";
-}
-
-NeuralNetworkEvaluator::ModelVersion NeuralNetworkEvaluator::getModelVersion() const {
-    return m_pImpl->version;
-}
-
-void NeuralNetworkEvaluator::setModelVersion(const ModelVersion& version) {
-    m_pImpl->version = version;
-}
-
-bool NeuralNetworkEvaluator::compareModels(const std::string& path1, const std::string& path2) {
-    ModelVersion v1;
-    ModelVersion v2;
-    std::ifstream file1(path1, std::ios::binary);
-    if (file1.is_open()) {
-        file1.read(reinterpret_cast<char*>(&v1.major), sizeof(int));
-        file1.read(reinterpret_cast<char*>(&v1.minor), sizeof(int));
-        file1.read(reinterpret_cast<char*>(&v1.patch), sizeof(int));
-        file1.close();
-    }
-
-    std::ifstream file2(path2, std::ios::binary);
-    if (file2.is_open()) {
-        file2.read(reinterpret_cast<char*>(&v2.major), sizeof(int));
-        file2.read(reinterpret_cast<char*>(&v2.minor), sizeof(int));
-        file2.read(reinterpret_cast<char*>(&v2.patch), sizeof(int));
-        file2.close();
-    }
-
-    return v1 == v2;
-}
-
-std::vector<std::string> NeuralNetworkEvaluator::listModelVersions(const std::string& directory) {
-    std::vector<std::string> versions;
-
-    if (!std::filesystem::exists(directory)) {
-        return versions;
-    }
-
-    for (const auto& entry : std::filesystem::directory_iterator(directory)) {
-        if (entry.is_regular_file() && entry.path().extension() == ".bin") {
-            std::ifstream file(entry.path(), std::ios::binary);
-            if (file.is_open()) {
-                ModelVersion version;
-                file.read(reinterpret_cast<char*>(&version.major), sizeof(int));
-                file.read(reinterpret_cast<char*>(&version.minor), sizeof(int));
-                file.read(reinterpret_cast<char*>(&version.patch), sizeof(int));
-                size_t timestampLen = 0;
-                file.read(reinterpret_cast<char*>(&timestampLen), sizeof(size_t));
-                version.timestamp.resize(timestampLen);
-                file.read(version.timestamp.data(), static_cast<std::streamsize>(timestampLen));
-                file.read(reinterpret_cast<char*>(&version.validationLoss), sizeof(float));
-                file.close();
-
-                versions.push_back(entry.path().string() + " - " + version.toString() +
-                                   " (loss: " + std::to_string(version.validationLoss) + ")");
-            }
-        }
-    }
-
-    return versions;
 }

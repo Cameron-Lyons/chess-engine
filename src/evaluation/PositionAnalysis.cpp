@@ -297,8 +297,8 @@ int PositionAnalyzer::evaluatePieceActivity(const Board& board) {
     int activity = 0;
     Board mutableBoard = board;
     GenValidMoves(mutableBoard);
-    std::vector<std::pair<int, int>> whiteMoves = GetAllMoves(mutableBoard, ChessPieceColor::WHITE);
-    std::vector<std::pair<int, int>> blackMoves = GetAllMoves(mutableBoard, ChessPieceColor::BLACK);
+    std::vector<Move> whiteMoves = GetAllMoves(mutableBoard, ChessPieceColor::WHITE);
+    std::vector<Move> blackMoves = GetAllMoves(mutableBoard, ChessPieceColor::BLACK);
     activity = static_cast<int>(whiteMoves.size() - blackMoves.size());
     return activity * kPieceActivityScale;
 }
@@ -404,7 +404,7 @@ std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
 
     Board mutableBoard = board;
     GenValidMoves(mutableBoard);
-    std::vector<std::pair<int, int>> enemyMoves = GetAllMoves(mutableBoard, enemyColor);
+    std::vector<Move> enemyMoves = GetAllMoves(mutableBoard, enemyColor);
 
     for (const auto& move : enemyMoves) {
         Board testBoard = board;
@@ -428,7 +428,7 @@ std::vector<std::string> PositionAnalyzer::identifyOpportunities(const Board& bo
     std::vector<std::string> opportunities;
     Board mutableBoard = board;
     GenValidMoves(mutableBoard);
-    std::vector<std::pair<int, int>> moves = GetAllMoves(mutableBoard, board.turn);
+    std::vector<Move> moves = GetAllMoves(mutableBoard, board.turn);
 
     for (const auto& move : moves) {
         const Piece& target = board.squares[move.second].piece;

@@ -2,133 +2,129 @@
 
 #include "core/CastlingConstants.h"
 #include "core/ChessBoard.h"
-#include "core/ChessPiece.h"
+#include "core/Move.h"
 #include "search/ValidMoves.h"
 
-#include <iostream>
-#include <stack>
-#include <string>
-#include <utility>
+#include <expected>
+#include <string_view>
 
-extern Board ChessBoard;
-extern Board PrevBoard;
-extern std::stack<int> MoveHistory;
+class Engine {
+public:
+    static constexpr std::string_view kDefaultStartingFen =
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-void Engine() {
-    ChessBoard = Board();
-    ChessBoard.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    MoveHistory = std::stack<int>();
-}
-
-void RegisterPiece(int col, int row, Piece piece) {
-    int position = col + (row * BOARD_SIZE);
-    ChessBoard.squares[position].piece = piece;
-}
-
-bool MovePiece(int srcCol, int srcRow, int destCol, int destRow, ChessPieceType promotionPiece) {
-    int src = srcCol + (srcRow * BOARD_SIZE);
-    int dest = destCol + (destRow * BOARD_SIZE);
-
-    if (src < 0 || src >= NUM_SQUARES || dest < 0 || dest >= NUM_SQUARES) {
-        return false;
+    Engine() {
+        newGame();
     }
 
-    Piece piece = ChessBoard.squares[src].piece;
-
-    if (piece.PieceType == ChessPieceType::NONE) {
-        return false;
+    const Board& board() const {
+        return board_;
     }
 
-    if (piece.PieceColor != ChessBoard.turn) {
-        return false;
+    Board& mutableBoard() {
+        return board_;
     }
 
-    if (!IsMoveLegal(ChessBoard, src, dest)) {
-        return false;
+    void newGame(std::string_view fen = kDefaultStartingFen) {
+        board_ = Board();
+        board_.InitializeFromFEN(fen);
+        previousBoard_ = board_;
     }
 
-    PrevBoard = ChessBoard;
-    bool promotePawn =
-        (piece.PieceType == ChessPieceType::PAWN && (destRow == 0 || destRow == (BOARD_SIZE - 1)));
-    ChessBoard.movePiece(src, dest);
-
-    if (promotePawn) {
-        const bool isValidPromotion =
-            promotionPiece == ChessPieceType::QUEEN || promotionPiece == ChessPieceType::ROOK ||
-            promotionPiece == ChessPieceType::BISHOP || promotionPiece == ChessPieceType::KNIGHT;
-        const ChessPieceType finalPromotion =
-            isValidPromotion ? promotionPiece : ChessPieceType::QUEEN;
-        ChessBoard.squares[dest].piece.PieceType = finalPromotion;
-        ChessBoard.updateBitboards();
-        const char* promotedPieceName = "Queen";
-        switch (finalPromotion) {
-            case ChessPieceType::QUEEN:
-                promotedPieceName = "Queen";
-                break;
-            case ChessPieceType::ROOK:
-                promotedPieceName = "Rook";
-                break;
-            case ChessPieceType::BISHOP:
-                promotedPieceName = "Bishop";
-                break;
-            case ChessPieceType::KNIGHT:
-                promotedPieceName = "Knight";
-                break;
-            default:
-                promotedPieceName = "Queen";
-                break;
+    std::expected<void, ChessError> setPositionFromFEN(std::string_view fen) {
+        auto parsed = board_.fromFEN(fen);
+        if (!parsed.has_value()) {
+            return std::unexpected(parsed.error());
         }
-        std::cout << "Pawn promoted to " << promotedPieceName << "!\n";
+        previousBoard_ = board_;
+        return {};
     }
 
-    if (piece.PieceType == ChessPieceType::KING &&
-        srcCol == CastlingConstants::kWhiteKingStartCol) {
-        if (piece.PieceColor == ChessPieceColor::WHITE) {
-            if (destCol == CastlingConstants::kKingsideKingDestCol) {
-                ChessBoard.movePiece(CastlingConstants::kWhiteKingsideRookSquare,
+    std::expected<void, ChessError> applyMove(
+        const Move& move, ChessPieceType promotionPiece = ChessPieceType::QUEEN) {
+        if (!move.isValid()) {
+            return std::unexpected(ChessError::InvalidPosition);
+        }
+        return applyMove(move.first, move.second, promotionPiece);
+    }
+
+    std::expected<void, ChessError> applyMove(
+        int fromSquare, int toSquare, ChessPieceType promotionPiece = ChessPieceType::QUEEN) {
+        if (fromSquare < 0 || fromSquare >= NUM_SQUARES || toSquare < 0 ||
+            toSquare >= NUM_SQUARES) {
+            return std::unexpected(ChessError::InvalidPosition);
+        }
+
+        Piece piece = board_.squares[fromSquare].piece;
+        if (piece.PieceType == ChessPieceType::NONE) {
+            return std::unexpected(ChessError::NoPieceAtSource);
+        }
+        if (piece.PieceColor != board_.turn) {
+            return std::unexpected(ChessError::WrongTurn);
+        }
+        if (!IsMoveLegal(board_, fromSquare, toSquare)) {
+            return std::unexpected(ChessError::InvalidMove);
+        }
+
+        previousBoard_ = board_;
+
+        const int destRow = toSquare / BOARD_SIZE;
+        const bool promotePawn = (piece.PieceType == ChessPieceType::PAWN &&
+                                  (destRow == 0 || destRow == (BOARD_SIZE - 1)));
+        board_.movePiece(fromSquare, toSquare);
+
+        if (promotePawn) {
+            const bool isValidPromotion = promotionPiece == ChessPieceType::QUEEN ||
+                                          promotionPiece == ChessPieceType::ROOK ||
+                                          promotionPiece == ChessPieceType::BISHOP ||
+                                          promotionPiece == ChessPieceType::KNIGHT;
+            const ChessPieceType finalPromotion =
+                isValidPromotion ? promotionPiece : ChessPieceType::QUEEN;
+            board_.squares[toSquare].piece.PieceType = finalPromotion;
+            board_.updateBitboards();
+        }
+
+        const int srcCol = fromSquare % BOARD_SIZE;
+        const int destCol = toSquare % BOARD_SIZE;
+
+        if (piece.PieceType == ChessPieceType::KING &&
+            srcCol == CastlingConstants::kWhiteKingStartCol) {
+            if (piece.PieceColor == ChessPieceColor::WHITE) {
+                if (destCol == CastlingConstants::kKingsideKingDestCol) {
+                    board_.movePiece(CastlingConstants::kWhiteKingsideRookSquare,
                                      CastlingConstants::kWhiteKingsideRookCastleDest);
-                ChessBoard.whiteCanCastle = false;
-            } else if (destCol == CastlingConstants::kQueensideKingDestCol) {
-                ChessBoard.movePiece(CastlingConstants::kWhiteQueensideRookSquare,
+                    board_.clearCastlingRights(CastlingConstants::kWhiteCastlingRightsMask);
+                } else if (destCol == CastlingConstants::kQueensideKingDestCol) {
+                    board_.movePiece(CastlingConstants::kWhiteQueensideRookSquare,
                                      CastlingConstants::kWhiteQueensideRookCastleDest);
-                ChessBoard.whiteCanCastle = false;
-            }
-        } else {
-            if (destCol == CastlingConstants::kKingsideKingDestCol) {
-                ChessBoard.movePiece(CastlingConstants::kBlackKingsideRookSquare,
+                    board_.clearCastlingRights(CastlingConstants::kWhiteCastlingRightsMask);
+                }
+            } else {
+                if (destCol == CastlingConstants::kKingsideKingDestCol) {
+                    board_.movePiece(CastlingConstants::kBlackKingsideRookSquare,
                                      CastlingConstants::kBlackKingsideRookCastleDest);
-                ChessBoard.blackCanCastle = false;
-            } else if (destCol == CastlingConstants::kQueensideKingDestCol) {
-                ChessBoard.movePiece(CastlingConstants::kBlackQueensideRookSquare,
+                    board_.clearCastlingRights(CastlingConstants::kBlackCastlingRightsMask);
+                } else if (destCol == CastlingConstants::kQueensideKingDestCol) {
+                    board_.movePiece(CastlingConstants::kBlackQueensideRookSquare,
                                      CastlingConstants::kBlackQueensideRookCastleDest);
-                ChessBoard.blackCanCastle = false;
+                    board_.clearCastlingRights(CastlingConstants::kBlackCastlingRightsMask);
+                }
             }
         }
-    }
 
-    if (piece.PieceType == ChessPieceType::KING) {
-        if (piece.PieceColor == ChessPieceColor::WHITE) {
-            WhiteKingPosition = dest;
-        } else {
-            BlackKingPosition = dest;
+        GenValidMoves(board_);
+        if (IsKingInCheck(board_, piece.PieceColor)) {
+            board_ = previousBoard_;
+            GenValidMoves(board_);
+            return std::unexpected(ChessError::MoveLeavesKingInCheck);
         }
+
+        board_.turn = (board_.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
+                                                              : ChessPieceColor::WHITE;
+        return {};
     }
 
-    GenValidMoves(ChessBoard);
-
-    if (IsKingInCheck(ChessBoard, piece.PieceColor)) {
-        ChessBoard = PrevBoard;
-        GenValidMoves(ChessBoard);
-        return false;
-    }
-
-    ChessBoard.turn = (ChessBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                  : ChessPieceColor::WHITE;
-
-    MoveHistory.push(ChessBoard.LastMove);
-    return true;
-}
-
-bool MovePiece(int srcCol, int srcRow, int destCol, int destRow) {
-    return MovePiece(srcCol, srcRow, destCol, destRow, ChessPieceType::QUEEN);
-}
+private:
+    Board board_;
+    Board previousBoard_;
+};

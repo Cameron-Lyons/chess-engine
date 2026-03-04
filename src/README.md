@@ -89,7 +89,7 @@ Bazel with `MODULE.bazel` (bzlmod) for dependency management. C++23 standard wit
 
 To build the project:
 ```bash
-bazel build //:chess_engine
+bazel build //:engine_cli //:engine_uci
 ```
 
 To run tests:
@@ -97,7 +97,7 @@ To run tests:
 bazel test //tests/...
 ```
 
-The main executable will be built as `chess_engine` and can be run directly or through UCI-compatible chess GUIs.
+The CLI executable is built as `engine_cli` and the UCI executable as `engine_uci`.
 
 ## Next Steps
 

@@ -39,12 +39,7 @@ public:
         float validationLoss{0.0F};
         bool operator<(const ModelVersion& other) const;
         bool operator==(const ModelVersion& other) const;
-        std::string toString() const;
     };
-    ModelVersion getModelVersion() const;
-    void setModelVersion(const ModelVersion& version);
-    bool compareModels(const std::string& path1, const std::string& path2);
-    std::vector<std::string> listModelVersions(const std::string& directory);
     auto hybridEvaluate(const Board& board, float nnWeight = 0.7F) -> float;
 
 private:
@@ -127,8 +122,6 @@ public:
     NNTrainer(NeuralNetworkEvaluator& nn);
     NNTrainer(NeuralNetworkEvaluator& nn, const TrainingConfig& config);
     void trainOnSelfPlayData(int numGames);
-    void trainOnFile(const std::string& dataPath);
-    void validateModel(const std::vector<std::pair<Board, float>>& validationData);
     auto evaluateModel(const std::vector<std::pair<Board, float>>& testData) -> float;
     void generateTrainingReport(const std::string& outputPath);
 

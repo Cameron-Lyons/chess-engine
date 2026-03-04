@@ -22,7 +22,7 @@ public:
         std::atomic<int> depth;
         std::atomic<int> bestScore;
         std::atomic<int> bestDepth;
-        std::pair<int, int> bestMove;
+        Move bestMove;
         ThreadSafeHistory historyTable;
         int aspirationDelta;
         int depthOffset;
@@ -39,7 +39,7 @@ public:
         std::atomic<int> nodesSearched;
         std::atomic<int> bestDepth;
         std::atomic<int> bestScore;
-        std::pair<int, int> bestMove;
+        Move bestMove;
         std::mutex bestMoveMutex;
 
         SharedData()
@@ -53,7 +53,7 @@ private:
         ThreadData* data;
         int maxDepth;
         int timeLimit;
-        const std::vector<std::pair<int, int>>* excludedRootMoves;
+        const std::vector<Move>* excludedRootMoves;
     };
 
     static void* searchThreadEntry(void* arg);
@@ -64,7 +64,7 @@ private:
     std::vector<std::unique_ptr<ThreadData>> threads;
     std::unique_ptr<SharedData> shared;
     void searchThread(ThreadData* data, int maxDepth, int timeLimit,
-                      const std::vector<std::pair<int, int>>& excludedRootMoves) const;
+                      const std::vector<Move>& excludedRootMoves) const;
 
 public:
     explicit LazySMP(int threadCount = kAutoThreadCount,
@@ -72,7 +72,7 @@ public:
                      int contemptValue = SearchConstants::kZero);
     ~LazySMP();
     SearchResult search(const Board& board, int maxDepth, int timeLimit,
-                        const std::vector<std::pair<int, int>>& excludedRootMoves = {});
+                        const std::vector<Move>& excludedRootMoves = {});
     void stop();
 
     int getNodesSearched() const {

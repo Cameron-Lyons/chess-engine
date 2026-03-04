@@ -32,17 +32,13 @@ public:
     int evaluateEndgame(const Board& board);
     float getNeuralNetworkEvaluation(const Board& board);
     float getHybridEvaluation(const Board& board);
-    void setConfig(const EvaluationConfig& config);
-    const EvaluationConfig& getConfig() const;
     bool loadNeuralNetwork(const std::string& path);
-    bool isNeuralNetworkLoaded() const;
     NeuralNetworkEvaluator* getNeuralNetwork() const;
 
 private:
     EvaluationConfig config;
     std::unique_ptr<NeuralNetworkEvaluator> neuralNetwork;
     float getGamePhase(const Board& board);
-    int interpolateEvaluation(int openingEval, int endgameEval, float phase);
 };
 
 extern std::unique_ptr<HybridEvaluator> g_hybridEvaluator;
@@ -51,12 +47,6 @@ void initializeHybridEvaluator(
     const HybridEvaluator::EvaluationConfig& config = HybridEvaluator::EvaluationConfig{});
 
 HybridEvaluator* getHybridEvaluator();
-
-int evaluateHybridPosition(const Board& board);
-int evaluateHybridMaterial(const Board& board);
-int evaluateHybridPositional(const Board& board);
-int evaluateHybridTactical(const Board& board);
-int evaluateHybridEndgame(const Board& board);
 
 float evaluateWithNeuralNetwork(const Board& board);
 float evaluateHybrid(const Board& board, float nnWeight = 0.7F);

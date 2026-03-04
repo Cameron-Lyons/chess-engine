@@ -13,12 +13,12 @@ Modern C++23 chess engine with:
 
 ### 2) Build
 ```bash
-bazel build //:chess_engine
+bazel build //:engine_cli
 ```
 
 ### 3) Start the engine (console play mode)
 ```bash
-bazel run //:chess_engine
+bazel run //:engine_cli
 ```
 
 You will play as White, and the engine plays as Black.
@@ -38,12 +38,12 @@ Type `quit` or `exit` to end the game.
 
 Run the engine in UCI mode:
 ```bash
-bazel run //:chess_engine -- uci
+bazel run //:engine_uci
 ```
 
 If your GUI needs a binary path, build first and use:
 ```bash
-./bazel-bin/chess_engine uci
+./bazel-bin/engine_uci
 ```
 
 ## Tests
@@ -51,6 +51,11 @@ If your GUI needs a binary path, build first and use:
 Run all tests:
 ```bash
 bazel test //tests/...
+```
+
+Run dead-code checks (unused-warning build + low-reference scan):
+```bash
+./scripts/check_dead_code.sh
 ```
 
 ## Benchmarks
@@ -77,7 +82,8 @@ bazel run //benchmarks:multipv_benchmark -- --rounds=2 --time_ms=1200 --depth=10
 
 ## Useful Targets
 
-- Engine binary: `//:chess_engine`
+- CLI engine binary: `//:engine_cli`
+- UCI engine binary: `//:engine_uci`
 - Core engine library: `//:engine_lib`
 - Search benchmark: `//benchmarks:search_benchmark`
 - Micro benchmark: `//benchmarks:micro_benchmark`
@@ -94,4 +100,4 @@ bazel run //benchmarks:multipv_benchmark -- --rounds=2 --time_ms=1200 --depth=10
 
 ## Notes
 
-- Use Bazel outputs (`bazel run` or `bazel-bin/chess_engine`) instead of the checked-in `bin/chess_engine` binaries, which may not match your machine architecture.
+- Use Bazel outputs (`bazel run` or `bazel-bin/engine_cli`/`bazel-bin/engine_uci`) instead of the checked-in `bin/chess_engine` binaries, which may not match your machine architecture.

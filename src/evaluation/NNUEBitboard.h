@@ -2,10 +2,12 @@
 
 #include "core/BitboardOnly.h"
 
+#include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
-#include <immintrin.h>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace NNUEBitboard {
@@ -101,7 +103,7 @@ private:
     const int outputSize;
     alignas(SIMD_ALIGN) std::vector<int8_t> weights;
     alignas(SIMD_ALIGN) std::vector<int32_t> biases;
-    enum SIMDType : std::uint8_t { AVX2, AVX512, AVX512_VNNI };
+    enum SIMDType : std::uint8_t { SCALAR, AVX2, AVX512, AVX512_VNNI };
     static SIMDType detectSIMD();
     SIMDType simdType;
 
@@ -154,39 +156,6 @@ public:
         accumulator.refresh(pos);
     }
 };
-
-namespace SIMDOps {
-
-inline int32_t hadd_epi32_avx2(__m256i v) {
-    __m128i sum128 = _mm_add_epi32(_mm256_extracti128_si256(v, 1), _mm256_castsi256_si128(v));
-    __m128i sum64 = _mm_add_epi32(sum128, _mm_srli_si128(sum128, 8));
-    __m128i sum32 = _mm_add_epi32(sum64, _mm_srli_si128(sum64, 4));
-    return _mm_cvtsi128_si32(sum32);
-}
-
-inline __m256i dpbusd_epi32(__m256i acc, __m256i a, __m256i b) {
-#ifdef __AVX512VNNI__
-    return _mm256_dpbusd_epi32(acc, a, b);
-#else
-
-    __m256i a_lo = _mm256_unpacklo_epi8(a, _mm256_setzero_si256());
-    __m256i a_hi = _mm256_unpackhi_epi8(a, _mm256_setzero_si256());
-    __m256i b_lo = _mm256_unpacklo_epi8(b, _mm256_setzero_si256());
-    __m256i b_hi = _mm256_unpackhi_epi8(b, _mm256_setzero_si256());
-    __m256i prod_lo = _mm256_madd_epi16(a_lo, b_lo);
-    __m256i prod_hi = _mm256_madd_epi16(a_hi, b_hi);
-    return _mm256_add_epi32(acc, _mm256_add_epi32(prod_lo, prod_hi));
-#endif
-}
-
-inline __m256i clip_epi32(__m256i v, int32_t max_val) {
-    __m256i zero = _mm256_setzero_si256();
-    __m256i max = _mm256_set1_epi32(max_val);
-    v = _mm256_max_epi32(v, zero);
-    v = _mm256_min_epi32(v, max);
-    return v;
-}
-} // namespace SIMDOps
 
 extern std::unique_ptr<NNUEEvaluator> globalEvaluator;
 

@@ -119,7 +119,7 @@ bool IsMoveLegal(Board& board, int srcPos, int destPos) {
         return false;
     }
 
-    std::vector<std::pair<int, int>> moves;
+    std::vector<Move> moves;
     switch (piece.PieceType) {
         case ChessPieceType::PAWN:
             moves = generatePawnMoves(board, piece.PieceColor);
@@ -161,7 +161,7 @@ bool IsMoveLegal(Board& board, int srcPos, int destPos) {
 }
 
 void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
-                              std::vector<std::pair<int, int>>* generatedMoves) {
+                              std::vector<Move>* generatedMoves) {
     int kingStart =
         (color == ChessPieceColor::WHITE) ? kWhiteKingStartSquare : kBlackKingStartSquare;
     const Piece& king = board.squares[kingStart].piece;
@@ -172,11 +172,15 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
     Bitboard occ = board.allPieces;
     bool canCastleKingside = false;
     bool canCastleQueenside = false;
-    if (color == ChessPieceColor::WHITE && board.whiteCanCastle) {
+    if (color == ChessPieceColor::WHITE) {
         const Piece& kingsideRook = board.squares[kWhiteKingsideRookSquare].piece;
         const Piece& queensideRook = board.squares[kWhiteQueensideRookSquare].piece;
+        const bool hasKingsideRight =
+            board.hasCastlingRight(CastlingConstants::kWhiteKingsideCastlingRight);
+        const bool hasQueensideRight =
+            board.hasCastlingRight(CastlingConstants::kWhiteQueensideCastlingRight);
 
-        if (!(occ & (1ULL << kWhiteKingsideTransitSquare)) &&
+        if (hasKingsideRight && !(occ & (1ULL << kWhiteKingsideTransitSquare)) &&
             !(occ & (1ULL << kWhiteKingsideDestination)) &&
             kingsideRook.PieceType == ChessPieceType::ROOK &&
             kingsideRook.PieceColor == ChessPieceColor::WHITE && !kingsideRook.moved) {
@@ -193,7 +197,7 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
                 }
             }
         }
-        if (!(occ & (1ULL << kWhiteQueensideEmptySquare)) &&
+        if (hasQueensideRight && !(occ & (1ULL << kWhiteQueensideEmptySquare)) &&
             !(occ & (1ULL << kWhiteQueensideSecondTransit)) &&
             !(occ & (1ULL << kWhiteQueensideFirstTransit)) &&
             queensideRook.PieceType == ChessPieceType::ROOK &&
@@ -211,11 +215,15 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
                 }
             }
         }
-    } else if (color == ChessPieceColor::BLACK && board.blackCanCastle) {
+    } else if (color == ChessPieceColor::BLACK) {
         const Piece& kingsideRook = board.squares[kBlackKingsideRookSquare].piece;
         const Piece& queensideRook = board.squares[kBlackQueensideRookSquare].piece;
+        const bool hasKingsideRight =
+            board.hasCastlingRight(CastlingConstants::kBlackKingsideCastlingRight);
+        const bool hasQueensideRight =
+            board.hasCastlingRight(CastlingConstants::kBlackQueensideCastlingRight);
 
-        if (!(occ & (1ULL << kBlackKingsideTransitSquare)) &&
+        if (hasKingsideRight && !(occ & (1ULL << kBlackKingsideTransitSquare)) &&
             !(occ & (1ULL << kBlackKingsideDestination)) &&
             kingsideRook.PieceType == ChessPieceType::ROOK &&
             kingsideRook.PieceColor == ChessPieceColor::BLACK && !kingsideRook.moved) {
@@ -232,7 +240,7 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
                 }
             }
         }
-        if (!(occ & (1ULL << kBlackQueensideEmptySquare)) &&
+        if (hasQueensideRight && !(occ & (1ULL << kBlackQueensideEmptySquare)) &&
             !(occ & (1ULL << kBlackQueensideSecondTransit)) &&
             !(occ & (1ULL << kBlackQueensideFirstTransit)) &&
             queensideRook.PieceType == ChessPieceType::ROOK &&
@@ -268,7 +276,7 @@ void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
 }
 
 namespace {
-void appendPawnMoves(Board& board, ChessPieceColor color, std::vector<std::pair<int, int>>& moves) {
+void appendPawnMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
     Bitboard pawns = board.getPieceBitboard(ChessPieceType::PAWN, color);
     const Bitboard occupied = board.allPieces;
     const Bitboard enemyPieces =
@@ -341,8 +349,7 @@ void appendPawnMoves(Board& board, ChessPieceColor color, std::vector<std::pair<
     }
 }
 
-void appendKnightMoves(Board& board, ChessPieceColor color,
-                       std::vector<std::pair<int, int>>& moves) {
+void appendKnightMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
     Bitboard knights = board.getPieceBitboard(ChessPieceType::KNIGHT, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
     while (knights) {
@@ -357,8 +364,7 @@ void appendKnightMoves(Board& board, ChessPieceColor color,
     }
 }
 
-void appendBishopMoves(Board& board, ChessPieceColor color,
-                       std::vector<std::pair<int, int>>& moves) {
+void appendBishopMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
     Bitboard bishops = board.getPieceBitboard(ChessPieceType::BISHOP, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
     while (bishops) {
@@ -373,7 +379,7 @@ void appendBishopMoves(Board& board, ChessPieceColor color,
     }
 }
 
-void appendRookMoves(Board& board, ChessPieceColor color, std::vector<std::pair<int, int>>& moves) {
+void appendRookMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
     Bitboard rooks = board.getPieceBitboard(ChessPieceType::ROOK, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
     while (rooks) {
@@ -388,8 +394,7 @@ void appendRookMoves(Board& board, ChessPieceColor color, std::vector<std::pair<
     }
 }
 
-void appendQueenMoves(Board& board, ChessPieceColor color,
-                      std::vector<std::pair<int, int>>& moves) {
+void appendQueenMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
     Bitboard queens = board.getPieceBitboard(ChessPieceType::QUEEN, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
     while (queens) {
@@ -404,7 +409,7 @@ void appendQueenMoves(Board& board, ChessPieceColor color,
     }
 }
 
-void appendKingMoves(Board& board, ChessPieceColor color, std::vector<std::pair<int, int>>& moves) {
+void appendKingMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
     Bitboard king = board.getPieceBitboard(ChessPieceType::KING, color);
     Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
 
@@ -420,50 +425,50 @@ void appendKingMoves(Board& board, ChessPieceColor color, std::vector<std::pair<
 }
 } // namespace
 
-std::vector<std::pair<int, int>> generatePawnMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+std::vector<Move> generatePawnMoves(Board& board, ChessPieceColor color) {
+    std::vector<Move> moves;
     moves.reserve(kTypicalMoveCapacity);
     appendPawnMoves(board, color, moves);
     return moves;
 }
 
-std::vector<std::pair<int, int>> generateKnightMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+std::vector<Move> generateKnightMoves(Board& board, ChessPieceColor color) {
+    std::vector<Move> moves;
     moves.reserve(kTypicalMoveCapacity);
     appendKnightMoves(board, color, moves);
     return moves;
 }
 
-std::vector<std::pair<int, int>> generateBishopMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+std::vector<Move> generateBishopMoves(Board& board, ChessPieceColor color) {
+    std::vector<Move> moves;
     moves.reserve(kTypicalMoveCapacity);
     appendBishopMoves(board, color, moves);
     return moves;
 }
 
-std::vector<std::pair<int, int>> generateRookMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+std::vector<Move> generateRookMoves(Board& board, ChessPieceColor color) {
+    std::vector<Move> moves;
     moves.reserve(kTypicalMoveCapacity);
     appendRookMoves(board, color, moves);
     return moves;
 }
 
-std::vector<std::pair<int, int>> generateQueenMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+std::vector<Move> generateQueenMoves(Board& board, ChessPieceColor color) {
+    std::vector<Move> moves;
     moves.reserve(kTypicalMoveCapacity);
     appendQueenMoves(board, color, moves);
     return moves;
 }
 
-std::vector<std::pair<int, int>> generateKingMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+std::vector<Move> generateKingMoves(Board& board, ChessPieceColor color) {
+    std::vector<Move> moves;
     moves.reserve(16);
     appendKingMoves(board, color, moves);
     return moves;
 }
 
-std::vector<std::pair<int, int>> generateBitboardMoves(Board& board, ChessPieceColor color) {
-    std::vector<std::pair<int, int>> moves;
+std::vector<Move> generateBitboardMoves(Board& board, ChessPieceColor color) {
+    std::vector<Move> moves;
     moves.reserve(kTypicalMoveCapacity);
     appendPawnMoves(board, color, moves);
     appendKnightMoves(board, color, moves);
@@ -485,10 +490,6 @@ void GenValidMoves(Board& board) {
     }
 
     for (int i = kZero; i < kBoardSquareCount; i++) {
-        board.squares[i].ValidMoves.clear();
-    }
-
-    for (int i = kZero; i < kBoardSquareCount; i++) {
         Square& square = board.squares[i];
         if (square.piece.PieceType == ChessPieceType::KING) {
             if (square.piece.PieceColor == ChessPieceColor::WHITE) {
@@ -497,14 +498,6 @@ void GenValidMoves(Board& board) {
                 BlackKingPosition = i;
             }
         }
-    }
-
-    auto moves = generateBitboardMoves(board, board.turn);
-
-    for (const auto& move : moves) {
-        int src = move.first;
-        int dest = move.second;
-        board.squares[src].ValidMoves.push_back(dest);
     }
 
     board.whiteChecked = IsKingInCheck(board, ChessPieceColor::WHITE);
