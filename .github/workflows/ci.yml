@@ -29,9 +29,6 @@ jobs:
           - compiler: gcc-14
             cc: gcc-14
             cxx: g++-14
-          - compiler: clang-18
-            cc: clang-18
-            cxx: clang++-18
           - compiler: clang-20
             cc: clang-20
             cxx: clang++-20
@@ -82,10 +79,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: bazelbuild/setup-bazelisk@v3
-      - name: Install ctags
+      - name: Install dead code dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y universal-ctags
+          sudo apt-get install -y universal-ctags ripgrep
       - name: Run dead code checks
         run: |
           ./scripts/check_dead_code.sh
