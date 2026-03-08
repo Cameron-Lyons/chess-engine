@@ -44,9 +44,11 @@ constexpr unsigned int kCpuidFeatureSubLeaf = 0;
 #if NNUEBITBOARD_X86_SIMD
 constexpr int kAvx2FeatureStride = 16;
 constexpr int kAvx2DotProductStride = 32;
-constexpr int kAvx512DotProductStride = 64;
 constexpr int kAvx2ReluStride = 8;
+#ifdef __AVX512F__
+constexpr int kAvx512DotProductStride = 64;
 constexpr int kAvx512ReluStride = 16;
+#endif
 #endif
 constexpr int kActivationShiftBits = 6;
 constexpr int kMaxOutputActivation = 127;
@@ -54,6 +56,7 @@ constexpr int kScoreScale = 100;
 constexpr uint32_t kNetworkMagic = 0x4E4E5545;
 constexpr uint32_t kNetworkVersion = 2;
 
+#if !NNUEBITBOARD_X86_SIMD
 int32_t dotProductScalar(const int8_t* input, const int8_t* weights, int size) {
     int32_t sum = 0;
     for (int i = NO_INDEX; i < size; ++i) {
@@ -70,6 +73,7 @@ void applyClippedReluScalar(const int32_t* input, int8_t* output, int size) {
         output[i] = static_cast<int8_t>(clamped >> kActivationShiftBits);
     }
 }
+#endif
 } // namespace
 
 #if NNUEBITBOARD_X86_SIMD
