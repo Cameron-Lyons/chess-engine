@@ -2,3 +2,4 @@ build/
 build-debug/
 .cache/
 bazel-*
+compiler/target/
