@@ -3,6 +3,7 @@ load("@rules_cc//cc:defs.bzl", "cc_test")
 common_test_copts = [
     "-Werror",
     "-Wno-sign-compare",
+    "-Wno-unknown-warning-option",
     "-Wno-character-conversion",
     "-std=c++23",
 ]
