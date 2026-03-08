@@ -1,16 +1,18 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
+common_benchmark_copts = ["-Werror", "-std=c++23"]
+
 cc_library(
     name = "benchmark_args",
     srcs = ["benchmark_args.cpp"],
     hdrs = ["benchmark_args.h"],
-    copts = ["-Werror"],
+    copts = common_benchmark_copts,
 )
 
 cc_binary(
     name = "search_benchmark",
     srcs = ["search_benchmark.cpp"],
-    copts = ["-Werror"],
+    copts = common_benchmark_copts,
     deps = [
         ":benchmark_args",
         "//:engine_lib",
@@ -20,7 +22,7 @@ cc_binary(
 cc_binary(
     name = "micro_benchmark",
     srcs = ["micro_benchmark.cpp"],
-    copts = ["-Werror"],
+    copts = common_benchmark_copts,
     deps = [
         ":benchmark_args",
         "//:engine_lib",
@@ -30,7 +32,7 @@ cc_binary(
 cc_binary(
     name = "multipv_benchmark",
     srcs = ["multipv_benchmark.cpp"],
-    copts = ["-Werror"],
+    copts = common_benchmark_copts,
     deps = [
         ":benchmark_args",
         "//:engine_lib",

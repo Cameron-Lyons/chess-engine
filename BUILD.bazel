@@ -7,6 +7,8 @@ x86_avx2_copts = select({
     "//conditions:default": [],
 })
 
+common_copts = ["-Werror", "-std=c++23"]
+
 cc_library(
     name = "engine_lib",
     srcs = [
@@ -33,7 +35,7 @@ cc_library(
         "src/search/search.cpp",
         "src/utils/engine_globals.cpp",
     ],
-    copts = ["-Werror"] + x86_avx2_copts,
+    copts = common_copts + x86_avx2_copts,
     hdrs = glob(["src/**/*.h"]),
     includes = ["src", "src/core"],
     linkopts = ["-lpthread"],
@@ -42,14 +44,14 @@ cc_library(
 
 cc_binary(
     name = "engine_cli",
-    copts = ["-Werror"],
+    copts = common_copts,
     srcs = ["src/main.cpp"],
     deps = [":engine_lib"],
 )
 
 cc_binary(
     name = "engine_uci",
-    copts = ["-Werror"],
+    copts = common_copts,
     srcs = ["src/protocol/uci_main.cpp"],
     deps = [":engine_lib"],
 )

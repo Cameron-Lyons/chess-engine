@@ -38,11 +38,11 @@ static void initializeZobrist() {
 
     zobristSideToMove = next();
 
-    for (unsigned long long& i : zobristCastling) {
+    for (auto& i : zobristCastling) {
         i = next();
     }
 
-    for (unsigned long long& i : zobristEnPassant) {
+    for (auto& i : zobristEnPassant) {
         i = next();
     }
 
@@ -56,12 +56,12 @@ BitboardPosition::BitboardPosition()
     initializeZobrist();
 
     for (auto& color : pieces) {
-        for (unsigned long long& piece : color) {
+        for (auto& piece : color) {
             piece = 0;
         }
     }
 
-    for (unsigned long long& i : occupancy) {
+    for (auto& i : occupancy) {
         i = 0;
     }
 
@@ -183,7 +183,7 @@ void BitboardPosition::makeMove(int from, int to, ChessPieceType promotion) {
 void BitboardPosition::setFromFEN(const std::string& fen) {
 
     for (auto& color : pieces) {
-        for (unsigned long long& piece : color) {
+        for (auto& piece : color) {
             piece = 0;
         }
     }
