@@ -12,6 +12,13 @@
 #include <string>
 #include <vector>
 
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
+#include <arm_neon.h>
+#define NNUE_ARM_NEON 1
+#else
+#define NNUE_ARM_NEON 0
+#endif
+
 namespace NNUE {
 
 std::unique_ptr<NNUEEvaluator> globalEvaluator;
@@ -65,6 +72,14 @@ void Accumulator::addFeature(int feature) {
         _mm256_store_si256((__m256i*)&white[i], acc_w);
         _mm256_store_si256((__m256i*)&black[i], acc_b);
     }
+#elif NNUE_ARM_NEON
+    for (int i = 0; i < L1_SIZE; i += 8) {
+        int16x8_t acc_w = vld1q_s16(&white[static_cast<std::size_t>(i)]);
+        int16x8_t acc_b = vld1q_s16(&black[static_cast<std::size_t>(i)]);
+        int16x8_t wt = vld1q_s16(&w[static_cast<std::size_t>(i)]);
+        vst1q_s16(&white[static_cast<std::size_t>(i)], vaddq_s16(acc_w, wt));
+        vst1q_s16(&black[static_cast<std::size_t>(i)], vaddq_s16(acc_b, wt));
+    }
 #else
     for (int i = 0; i < L1_SIZE; ++i) {
         white[i] = static_cast<int16_t>(white[i] + w[i]);
@@ -94,6 +109,14 @@ void Accumulator::removeFeature(int feature) {
         acc_b = _mm256_sub_epi16(acc_b, wt);
         _mm256_store_si256((__m256i*)&white[i], acc_w);
         _mm256_store_si256((__m256i*)&black[i], acc_b);
+    }
+#elif NNUE_ARM_NEON
+    for (int i = 0; i < L1_SIZE; i += 8) {
+        int16x8_t acc_w = vld1q_s16(&white[static_cast<std::size_t>(i)]);
+        int16x8_t acc_b = vld1q_s16(&black[static_cast<std::size_t>(i)]);
+        int16x8_t wt = vld1q_s16(&w[static_cast<std::size_t>(i)]);
+        vst1q_s16(&white[static_cast<std::size_t>(i)], vsubq_s16(acc_w, wt));
+        vst1q_s16(&black[static_cast<std::size_t>(i)], vsubq_s16(acc_b, wt));
     }
 #else
     for (int i = 0; i < L1_SIZE; ++i) {
@@ -131,6 +154,23 @@ void LinearLayer::forward(const void* input, void* output) const {
         __m128i sum_64 = _mm_add_epi32(sum_128, _mm_srli_si128(sum_128, 8));
         __m128i sum_32 = _mm_add_epi32(sum_64, _mm_srli_si128(sum_64, 4));
         out[i] = _mm_cvtsi128_si32(sum_32) + biases[i];
+#elif NNUE_ARM_NEON
+        const auto rowOffset = static_cast<std::size_t>(i) * static_cast<std::size_t>(inputSize);
+        const int16_t* wRow = weights.data() + rowOffset;
+        int32x4_t sumNeon = vdupq_n_s32(0);
+        int j = 0;
+        for (; j + 8 <= inputSize; j += 8) {
+            const int16x8_t wVec = vld1q_s16(&wRow[static_cast<std::size_t>(j)]);
+            const int16x8_t xVec = vld1q_s16(&in[static_cast<std::size_t>(j)]);
+            sumNeon = vaddq_s32(sumNeon, vmull_s16(vget_low_s16(wVec), vget_low_s16(xVec)));
+            sumNeon = vaddq_s32(sumNeon, vmull_s16(vget_high_s16(wVec), vget_high_s16(xVec)));
+        }
+        int32_t sum = vaddvq_s32(sumNeon);
+        for (; j < inputSize; ++j) {
+            sum += static_cast<int32_t>(wRow[static_cast<std::size_t>(j)]) *
+                   static_cast<int32_t>(in[static_cast<std::size_t>(j)]);
+        }
+        out[i] = sum + biases[static_cast<std::size_t>(i)];
 #else
         int32_t sum = 0;
         const auto rowOffset = static_cast<std::size_t>(i) * static_cast<std::size_t>(inputSize);

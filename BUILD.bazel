@@ -8,6 +8,12 @@ x86_avx2_copts = select({
 })
 
 common_copts = ["-Werror", "-std=c++23"]
+arm64_tune_copts = select({
+    "@bazel_tools//src/conditions:darwin_arm64": ["-mcpu=apple-m1"],
+    "@bazel_tools//src/conditions:darwin_arm64e": ["-mcpu=apple-m1"],
+    "@bazel_tools//src/conditions:linux_aarch64": ["-march=armv8-a"],
+    "//conditions:default": [],
+})
 
 cc_library(
     name = "engine_lib",
@@ -35,7 +41,7 @@ cc_library(
         "src/search/search.cpp",
         "src/utils/engine_globals.cpp",
     ],
-    copts = common_copts + x86_avx2_copts,
+    copts = common_copts + x86_avx2_copts + arm64_tune_copts,
     hdrs = glob(["src/**/*.h"]),
     includes = ["src", "src/core"],
     linkopts = ["-lpthread"],

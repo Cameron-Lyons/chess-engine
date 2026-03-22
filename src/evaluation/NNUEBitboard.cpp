@@ -31,6 +31,54 @@
 #define NNUEBITBOARD_HAS_CPUID_H 0
 #endif
 
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
+#define NNUEBITBOARD_ARM_NEON 1
+#include <arm_neon.h>
+#else
+#define NNUEBITBOARD_ARM_NEON 0
+#endif
+
+#if NNUEBITBOARD_ARM_NEON && defined(__APPLE__)
+#include <sys/sysctl.h>
+#endif
+
+#if NNUEBITBOARD_ARM_NEON && defined(__linux__)
+#include <sys/auxv.h>
+#if defined(__has_include)
+#if __has_include(<asm/hwcap.h>)
+#include <asm/hwcap.h>
+#define NNUEBITBOARD_HAS_LINUX_HWCAP 1
+#else
+#define NNUEBITBOARD_HAS_LINUX_HWCAP 0
+#endif
+#else
+#define NNUEBITBOARD_HAS_LINUX_HWCAP 0
+#endif
+#else
+#define NNUEBITBOARD_HAS_LINUX_HWCAP 0
+#endif
+
+#if NNUEBITBOARD_ARM_NEON
+#if defined(__has_builtin)
+#if __has_builtin(__builtin_neon_vdotq_s32)
+#define NNUEBITBOARD_HAS_VDOTQ 1
+#else
+#define NNUEBITBOARD_HAS_VDOTQ 0
+#endif
+#if __has_builtin(__builtin_neon_vusdotq_s32)
+#define NNUEBITBOARD_HAS_VUSDOTQ 1
+#else
+#define NNUEBITBOARD_HAS_VUSDOTQ 0
+#endif
+#else
+#define NNUEBITBOARD_HAS_VDOTQ 1
+#define NNUEBITBOARD_HAS_VUSDOTQ 1
+#endif
+#else
+#define NNUEBITBOARD_HAS_VDOTQ 0
+#define NNUEBITBOARD_HAS_VUSDOTQ 0
+#endif
+
 namespace NNUEBitboard {
 
 std::unique_ptr<NNUEEvaluator> globalEvaluator;
@@ -50,6 +98,11 @@ constexpr int kAvx512DotProductStride = 64;
 constexpr int kAvx512ReluStride = 16;
 #endif
 #endif
+#if NNUEBITBOARD_ARM_NEON
+constexpr int kNeonFeatureStride = 8;
+constexpr int kNeonDotProductStride = 16;
+constexpr int kNeonReluStride = 8;
+#endif
 constexpr int kActivationShiftBits = 6;
 constexpr int kMaxOutputActivation = 127;
 constexpr int kScoreScale = 100;
@@ -58,6 +111,34 @@ constexpr uint32_t kNetworkVersion = 2;
 
 #if !NNUEBITBOARD_X86_SIMD
 int32_t dotProductScalar(const int8_t* input, const int8_t* weights, int size) {
+#if NNUEBITBOARD_ARM_NEON
+    int32x4_t sumVec = vdupq_n_s32(0);
+    int i = NO_INDEX;
+    for (; i + kNeonDotProductStride <= size; i += kNeonDotProductStride) {
+        const uint8x16_t inU8 =
+            vld1q_u8(reinterpret_cast<const uint8_t*>(input + static_cast<std::ptrdiff_t>(i)));
+        const int8x16_t wS8 = vld1q_s8(weights + static_cast<std::ptrdiff_t>(i));
+
+        const int16x8_t inLo = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(inU8)));
+        const int16x8_t inHi = vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(inU8)));
+        const int16x8_t wLo = vmovl_s8(vget_low_s8(wS8));
+        const int16x8_t wHi = vmovl_s8(vget_high_s8(wS8));
+
+        sumVec = vaddq_s32(sumVec, vmull_s16(vget_low_s16(inLo), vget_low_s16(wLo)));
+        sumVec = vaddq_s32(sumVec, vmull_s16(vget_high_s16(inLo), vget_high_s16(wLo)));
+        sumVec = vaddq_s32(sumVec, vmull_s16(vget_low_s16(inHi), vget_low_s16(wHi)));
+        sumVec = vaddq_s32(sumVec, vmull_s16(vget_high_s16(inHi), vget_high_s16(wHi)));
+    }
+
+    int32_t sum = vaddvq_s32(sumVec);
+    for (; i < size; ++i) {
+        const auto activation =
+            static_cast<int32_t>(static_cast<uint8_t>(input[static_cast<std::ptrdiff_t>(i)]));
+        const auto weight = static_cast<int32_t>(weights[static_cast<std::ptrdiff_t>(i)]); // NOLINT
+        sum += activation * weight;
+    }
+    return sum;
+#else
     int32_t sum = 0;
     for (int i = NO_INDEX; i < size; ++i) {
         const auto activation = static_cast<int32_t>(static_cast<uint8_t>(input[i]));
@@ -65,13 +146,36 @@ int32_t dotProductScalar(const int8_t* input, const int8_t* weights, int size) {
         sum += activation * weight;
     }
     return sum;
+#endif
 }
 
 void applyClippedReluScalar(const int32_t* input, int8_t* output, int size) {
+#if NNUEBITBOARD_ARM_NEON
+    int i = NO_INDEX;
+    const int32x4_t zero = vdupq_n_s32(NO_INDEX);
+    const int32x4_t maxVal = vdupq_n_s32(QA);
+    for (; i + kNeonReluStride <= size; i += kNeonReluStride) {
+        int32x4_t lo = vld1q_s32(input + static_cast<std::ptrdiff_t>(i));
+        int32x4_t hi = vld1q_s32(input + static_cast<std::ptrdiff_t>(i + 4));
+        lo = vshrq_n_s32(vminq_s32(vmaxq_s32(lo, zero), maxVal), kActivationShiftBits);
+        hi = vshrq_n_s32(vminq_s32(vmaxq_s32(hi, zero), maxVal), kActivationShiftBits);
+
+        int16x8_t packed16 = vcombine_s16(vqmovn_s32(lo), vqmovn_s32(hi));
+        int8x8_t packed8 = vqmovn_s16(packed16);
+        vst1_s8(output + static_cast<std::ptrdiff_t>(i), packed8);
+    }
+
+    for (; i < size; ++i) {
+        const int32_t clamped = std::clamp(input[static_cast<std::ptrdiff_t>(i)], NO_INDEX, QA);
+        output[static_cast<std::ptrdiff_t>(i)] =
+            static_cast<int8_t>(clamped >> kActivationShiftBits);
+    }
+#else
     for (int i = NO_INDEX; i < size; ++i) {
         const int32_t clamped = std::clamp(input[i], NO_INDEX, QA);
         output[i] = static_cast<int8_t>(clamped >> kActivationShiftBits);
     }
+#endif
 }
 #endif
 } // namespace
@@ -129,6 +233,49 @@ static bool hasAVX512VNNI() {
 }
 #endif
 
+#if NNUEBITBOARD_ARM_NEON
+bool queryArmFeature(const char* featureName) {
+#if defined(__APPLE__)
+    int value = 0;
+    size_t size = sizeof(value);
+    return sysctlbyname(featureName, &value, &size, nullptr, 0) == 0 && value != 0;
+#else
+    (void)featureName;
+    return false;
+#endif
+}
+
+bool hasArmDotProd() {
+#if defined(__APPLE__)
+    return queryArmFeature("hw.optional.arm.FEAT_DotProd");
+#elif NNUEBITBOARD_HAS_LINUX_HWCAP
+#if defined(HWCAP_ASIMDDP) && defined(AT_HWCAP)
+    const unsigned long hwcap = getauxval(AT_HWCAP);
+    return (hwcap & HWCAP_ASIMDDP) != 0;
+#else
+    return false;
+#endif
+#else
+    return false;
+#endif
+}
+
+bool hasArmI8MM() {
+#if defined(__APPLE__)
+    return queryArmFeature("hw.optional.arm.FEAT_I8MM");
+#elif NNUEBITBOARD_HAS_LINUX_HWCAP
+#if defined(HWCAP2_I8MM) && defined(AT_HWCAP2)
+    const unsigned long hwcap2 = getauxval(AT_HWCAP2);
+    return (hwcap2 & HWCAP2_I8MM) != 0;
+#else
+    return false;
+#endif
+#else
+    return false;
+#endif
+}
+#endif
+
 void Accumulator::refresh(const BitboardPosition& pos) {
     reset();
 
@@ -170,6 +317,12 @@ void Accumulator::addFeature(int color, int featureIdx) {
         __m256i sum = _mm256_add_epi16(acc_vec, weight_vec);
         _mm256_storeu_si256(reinterpret_cast<__m256i*>(acc + i), sum);
     }
+#elif NNUEBITBOARD_ARM_NEON
+    for (int i = NO_INDEX; i < L1_SIZE; i += kNeonFeatureStride) {
+        int16x8_t accVec = vld1q_s16(acc + static_cast<std::ptrdiff_t>(i));
+        int16x8_t weightVec = vld1q_s16(featureWeights + static_cast<std::ptrdiff_t>(i));
+        vst1q_s16(acc + static_cast<std::ptrdiff_t>(i), vaddq_s16(accVec, weightVec));
+    }
 #else
     for (int i = NO_INDEX; i < L1_SIZE; ++i) {
         acc[i] = static_cast<int16_t>(acc[i] + featureWeights[i]);
@@ -191,6 +344,12 @@ void Accumulator::removeFeature(int color, int featureIdx) {
             _mm256_loadu_si256(reinterpret_cast<const __m256i*>(featureWeights + i));
         __m256i diff = _mm256_sub_epi16(acc_vec, weight_vec);
         _mm256_storeu_si256(reinterpret_cast<__m256i*>(acc + i), diff);
+    }
+#elif NNUEBITBOARD_ARM_NEON
+    for (int i = NO_INDEX; i < L1_SIZE; i += kNeonFeatureStride) {
+        int16x8_t accVec = vld1q_s16(acc + static_cast<std::ptrdiff_t>(i));
+        int16x8_t weightVec = vld1q_s16(featureWeights + static_cast<std::ptrdiff_t>(i));
+        vst1q_s16(acc + static_cast<std::ptrdiff_t>(i), vsubq_s16(accVec, weightVec));
     }
 #else
     for (int i = NO_INDEX; i < L1_SIZE; ++i) {
@@ -217,6 +376,15 @@ void Accumulator::moveFeature(int color, int fromIdx, int toIdx) {
         acc_vec = _mm256_add_epi16(acc_vec, to_vec);
         _mm256_storeu_si256(reinterpret_cast<__m256i*>(acc + i), acc_vec);
     }
+#elif NNUEBITBOARD_ARM_NEON
+    for (int i = NO_INDEX; i < L1_SIZE; i += kNeonFeatureStride) {
+        int16x8_t accVec = vld1q_s16(acc + static_cast<std::ptrdiff_t>(i));
+        int16x8_t fromVec = vld1q_s16(fromWeights + static_cast<std::ptrdiff_t>(i));
+        int16x8_t toVec = vld1q_s16(toWeights + static_cast<std::ptrdiff_t>(i));
+        accVec = vsubq_s16(accVec, fromVec);
+        accVec = vaddq_s16(accVec, toVec);
+        vst1q_s16(acc + static_cast<std::ptrdiff_t>(i), accVec);
+    }
 #else
     for (int i = NO_INDEX; i < L1_SIZE; ++i) {
         acc[i] = static_cast<int16_t>((acc[i] - fromWeights[i]) + toWeights[i]);
@@ -237,6 +405,18 @@ LinearLayer::SIMDType LinearLayer::detectSIMD() {
     }
 #endif
     return AVX2;
+#elif NNUEBITBOARD_ARM_NEON
+#if NNUEBITBOARD_HAS_VUSDOTQ
+    if (hasArmI8MM()) {
+        return ARM_I8MM;
+    }
+#endif
+#if NNUEBITBOARD_HAS_VDOTQ
+    if (hasArmDotProd()) {
+        return ARM_DOTPROD;
+    }
+#endif
+    return ARM_NEON;
 #else
     return SCALAR;
 #endif
@@ -244,11 +424,91 @@ LinearLayer::SIMDType LinearLayer::detectSIMD() {
 
 LinearLayer::LinearLayer(int in, int out)
     : inputSize(in), outputSize(out), weights(static_cast<size_t>(in) * static_cast<size_t>(out)),
-      biases(out), simdType(detectSIMD()) {}
+      biases(out), dotprodBiasAdjust(out), simdType(detectSIMD()) {}
 
 void LinearLayer::loadWeights(const int8_t* w, const int32_t* b) {
     std::copy(w, w + weights.size(), weights.begin());
     std::copy(b, b + biases.size(), biases.begin());
+
+    // vdotq_s32 uses signed-signed products; inputs are unsigned activations in [0, 255].
+    // Convert u8 -> s8 by subtracting 128 and compensate with this per-row constant:
+    // sum(u*w) = sum((u-128)*w) + 128*sum(w).
+    for (int i = NO_INDEX; i < outputSize; ++i) {
+        const auto rowOffset = static_cast<std::size_t>(i) * static_cast<std::size_t>(inputSize);
+        int32_t weightSum = 0;
+        for (int j = NO_INDEX; j < inputSize; ++j) {
+            weightSum += static_cast<int32_t>(weights[rowOffset + static_cast<std::size_t>(j)]);
+        }
+        dotprodBiasAdjust[static_cast<std::size_t>(i)] = 128 * weightSum;
+    }
+}
+
+void LinearLayer::forward_arm_neon(const int8_t* input, int32_t* output) const {
+    for (int i = NO_INDEX; i < outputSize; ++i) {
+        const auto* w = weights.data() +
+                        (static_cast<std::ptrdiff_t>(i) * static_cast<std::ptrdiff_t>(inputSize));
+        output[i] = dotProductScalar(input, w, inputSize) + biases[static_cast<std::size_t>(i)];
+    }
+}
+
+void LinearLayer::forward_arm_dotprod(const int8_t* input, int32_t* output) const {
+#if NNUEBITBOARD_ARM_NEON && NNUEBITBOARD_HAS_VDOTQ
+    const uint8x16_t signFlip = vdupq_n_u8(0x80);
+    for (int i = NO_INDEX; i < outputSize; ++i) {
+        const auto* w = weights.data() +
+                        (static_cast<std::ptrdiff_t>(i) * static_cast<std::ptrdiff_t>(inputSize));
+
+        int32x4_t sumVec = vdupq_n_s32(0);
+        int j = NO_INDEX;
+        for (; j + kNeonDotProductStride <= inputSize; j += kNeonDotProductStride) {
+            const uint8x16_t inU8 =
+                vld1q_u8(reinterpret_cast<const uint8_t*>(input + static_cast<std::ptrdiff_t>(j)));
+            const int8x16_t inS8 = vreinterpretq_s8_u8(veorq_u8(inU8, signFlip));
+            const int8x16_t wS8 = vld1q_s8(w + static_cast<std::ptrdiff_t>(j));
+            sumVec = vdotq_s32(sumVec, inS8, wS8);
+        }
+
+        int32_t sum = vaddvq_s32(sumVec) + dotprodBiasAdjust[static_cast<std::size_t>(i)];
+        for (; j < inputSize; ++j) {
+            const auto inputVal =
+                static_cast<int32_t>(static_cast<uint8_t>(input[static_cast<std::ptrdiff_t>(j)]));
+            const auto weightVal = static_cast<int32_t>(w[static_cast<std::ptrdiff_t>(j)]);
+            sum += inputVal * weightVal;
+        }
+        output[i] = sum + biases[static_cast<std::size_t>(i)];
+    }
+#else
+    forward_arm_neon(input, output);
+#endif
+}
+
+void LinearLayer::forward_arm_i8mm(const int8_t* input, int32_t* output) const {
+#if NNUEBITBOARD_ARM_NEON && NNUEBITBOARD_HAS_VUSDOTQ
+    for (int i = NO_INDEX; i < outputSize; ++i) {
+        const auto* w = weights.data() +
+                        (static_cast<std::ptrdiff_t>(i) * static_cast<std::ptrdiff_t>(inputSize));
+
+        int32x4_t sumVec = vdupq_n_s32(0);
+        int j = NO_INDEX;
+        for (; j + kNeonDotProductStride <= inputSize; j += kNeonDotProductStride) {
+            const uint8x16_t inU8 =
+                vld1q_u8(reinterpret_cast<const uint8_t*>(input + static_cast<std::ptrdiff_t>(j)));
+            const int8x16_t wS8 = vld1q_s8(w + static_cast<std::ptrdiff_t>(j));
+            sumVec = vusdotq_s32(sumVec, inU8, wS8);
+        }
+
+        int32_t sum = vaddvq_s32(sumVec);
+        for (; j < inputSize; ++j) {
+            const auto inputVal =
+                static_cast<int32_t>(static_cast<uint8_t>(input[static_cast<std::ptrdiff_t>(j)]));
+            const auto weightVal = static_cast<int32_t>(w[static_cast<std::ptrdiff_t>(j)]);
+            sum += inputVal * weightVal;
+        }
+        output[i] = sum + biases[static_cast<std::size_t>(i)];
+    }
+#else
+    forward_arm_dotprod(input, output);
+#endif
 }
 
 void LinearLayer::forward_avx2(const int8_t* input, int32_t* output) const {
@@ -325,6 +585,15 @@ void LinearLayer::forward(const void* input, void* output) const {
     auto* out = static_cast<int32_t*>(output);
 
     switch (simdType) {
+        case ARM_I8MM:
+            forward_arm_i8mm(in, out);
+            break;
+        case ARM_DOTPROD:
+            forward_arm_dotprod(in, out);
+            break;
+        case ARM_NEON:
+            forward_arm_neon(in, out);
+            break;
         case SCALAR:
             forward_avx2(in, out);
             break;

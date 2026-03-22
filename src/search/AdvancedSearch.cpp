@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <fstream>
 #include <ios>
+#include <memory>
 #include <random>
 #include <ranges>
 #include <string>
@@ -196,11 +197,11 @@ bool AdvancedSearch::multiCutPruning(Board& board, int depth, int alpha, int bet
         tempBoard.turn = (tempBoard.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                     : ChessPieceColor::WHITE;
 
-        ThreadSafeHistory historyTable;
-        ParallelSearchContext context(kSingleThreadContextCount);
+        auto historyTable = std::make_unique<ThreadSafeHistory>();
+        auto context = std::make_unique<ParallelSearchContext>(kSingleThreadContextCount);
         int nullScore = -AlphaBetaSearch(
             tempBoard, depth - kMultiCutDepthReduction, -beta, -beta + kNarrowWindowWidth,
-            !(board.turn == ChessPieceColor::WHITE), kRootPly, historyTable, context);
+            !(board.turn == ChessPieceColor::WHITE), kRootPly, *historyTable, *context);
 
         if (nullScore >= beta) {
             nullMoveCount++;

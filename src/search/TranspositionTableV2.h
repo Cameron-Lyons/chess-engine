@@ -154,6 +154,8 @@ public:
 #ifdef __SSE__
         char* addr = reinterpret_cast<char*>(&table[mulhi64(key, clusterCount)]);
         _mm_prefetch(addr, _MM_HINT_T0);
+#elif defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+        __builtin_prefetch(&table[mulhi64(key, clusterCount)], 0, 3);
 #else
         (void)key;
 #endif

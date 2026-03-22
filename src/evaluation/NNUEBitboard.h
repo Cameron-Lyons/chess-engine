@@ -103,13 +103,25 @@ private:
     const int outputSize;
     alignas(SIMD_ALIGN) std::vector<int8_t> weights;
     alignas(SIMD_ALIGN) std::vector<int32_t> biases;
-    enum SIMDType : std::uint8_t { SCALAR, AVX2, AVX512, AVX512_VNNI };
+    std::vector<int32_t> dotprodBiasAdjust;
+    enum SIMDType : std::uint8_t {
+        SCALAR,
+        AVX2,
+        AVX512,
+        AVX512_VNNI,
+        ARM_NEON,
+        ARM_DOTPROD,
+        ARM_I8MM
+    };
     static SIMDType detectSIMD();
     SIMDType simdType;
 
 public:
     LinearLayer(int in, int out);
     void loadWeights(const int8_t* w, const int32_t* b);
+    void forward_arm_neon(const int8_t* input, int32_t* output) const;
+    void forward_arm_dotprod(const int8_t* input, int32_t* output) const;
+    void forward_arm_i8mm(const int8_t* input, int32_t* output) const;
     void forward_avx2(const int8_t* input, int32_t* output) const;
     void forward_avx512(const int8_t* input, int32_t* output) const;
     void forward_avx512_vnni(const int8_t* input, int32_t* output) const;
