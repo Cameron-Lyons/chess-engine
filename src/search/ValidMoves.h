@@ -28,6 +28,8 @@ std::vector<Move> generateRookMoves(Board& board, ChessPieceColor color);
 std::vector<Move> generateQueenMoves(Board& board, ChessPieceColor color);
 std::vector<Move> generateKingMoves(Board& board, ChessPieceColor color);
 std::vector<Move> generateBitboardMoves(Board& board, ChessPieceColor color);
+std::vector<Move> generateBitboardCaptureMoves(Board& board, ChessPieceColor color);
+bool hasAnyLegalMove(Board& board, ChessPieceColor color);
 
 void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
                               std::vector<Move>* generatedMoves = nullptr);

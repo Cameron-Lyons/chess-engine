@@ -200,8 +200,8 @@ struct KillerMoves {
 };
 
 struct ParallelSearchContext {
-    std::atomic<bool> stopSearch;
-    std::atomic<int> nodeCount;
+    bool stopSearch;
+    int nodeCount;
     TranspositionTableAdapter transTable;
     ThreadSafeHistory historyTable;
     KillerMoves killerMoves;
@@ -215,7 +215,7 @@ struct ParallelSearchContext {
     std::vector<Move> excludedRootMoves;
     int optimalTimeMs = SearchConstants::kZero;
     int maxTimeMs = SearchConstants::kZero;
-    std::atomic<int> tbHits{SearchConstants::kZero};
+    int tbHits = SearchConstants::kZero;
     bool useSyzygy = false;
 
     int continuationHistory[SearchConstants::kPieceTypeCount][SearchConstants::kBoardSquareCount]
@@ -394,6 +394,7 @@ class MovePicker {
     size_t badCaptureIdx = 0;
     bool movesGenerated = false;
     static constexpr std::size_t MOVE_MASK_SIZE = SearchConstants::kMoveMaskSize;
+    std::array<bool, MOVE_MASK_SIZE> availableMask{};
     std::array<bool, MOVE_MASK_SIZE> returnedMask{};
 
     static constexpr std::size_t moveIndex(const Move& m) {
@@ -408,6 +409,22 @@ class MovePicker {
             return false;
         }
         return returnedMask[moveIndex(m)];
+    }
+
+    bool isAvailable(const Move& m) const {
+        if (m.first < SearchConstants::kZero || m.first >= SearchConstants::kBoardSquareCount ||
+            m.second < SearchConstants::kZero || m.second >= SearchConstants::kBoardSquareCount) {
+            return false;
+        }
+        return availableMask[moveIndex(m)];
+    }
+
+    void markAvailable(const Move& m) {
+        if (m.first < SearchConstants::kZero || m.first >= SearchConstants::kBoardSquareCount ||
+            m.second < SearchConstants::kZero || m.second >= SearchConstants::kBoardSquareCount) {
+            return;
+        }
+        availableMask[moveIndex(m)] = true;
     }
 
     void markReturned(const Move& m) {

@@ -50,17 +50,11 @@ thread_local int BlackKingPosition = kZero;
 thread_local int WhiteKingPosition = kZero;
 
 bool IsKingInCheck(const Board& board, ChessPieceColor color) {
-    int kingSq = kInvalidSquare;
-    for (int i = kZero; i < kBoardSquareCount; i++) {
-        if (board.squares[i].piece.PieceType == ChessPieceType::KING &&
-            board.squares[i].piece.PieceColor == color) {
-            kingSq = i;
-            break;
-        }
-    }
-    if (kingSq == kInvalidSquare) {
+    const Bitboard king = (color == ChessPieceColor::WHITE) ? board.whiteKings : board.blackKings;
+    if (king == EMPTY) {
         return false;
     }
+    const int kingSq = lsb(king);
 
     Bitboard occ = board.allPieces;
     Bitboard enemyPawns = board.getPieceBitboard(
@@ -423,6 +417,174 @@ void appendKingMoves(Board& board, ChessPieceColor color, std::vector<Move>& mov
         }
     }
 }
+
+void appendPawnCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
+    Bitboard pawns = board.getPieceBitboard(ChessPieceType::PAWN, color);
+    const Bitboard enemyPieces =
+        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
+
+    while (pawns) {
+        int src = lsb(pawns);
+        clear_bit(pawns, src);
+
+        Bitboard captures = pawnAttacks(color, src) & enemyPieces;
+        while (captures) {
+            int dest = lsb(captures);
+            moves.emplace_back(src, dest);
+            clear_bit(captures, dest);
+        }
+
+        if (board.enPassantSquare >= kZero && board.enPassantSquare < kBoardSquareCount) {
+            int epSquare = board.enPassantSquare;
+            int srcFile = src % kBoardDimension;
+            if (color == ChessPieceColor::WHITE) {
+                if ((srcFile > kMinFile && epSquare == src + kWhiteEnPassantCaptureLeftOffset) ||
+                    (srcFile < kMaxFile && epSquare == src + kWhiteEnPassantCaptureRightOffset)) {
+                    int capturedPawnSquare = epSquare - kSinglePawnPush;
+                    if (capturedPawnSquare >= kZero &&
+                        board.squares[capturedPawnSquare].piece.PieceType == ChessPieceType::PAWN &&
+                        board.squares[capturedPawnSquare].piece.PieceColor ==
+                            ChessPieceColor::BLACK &&
+                        board.squares[epSquare].piece.PieceType == ChessPieceType::NONE) {
+                        moves.emplace_back(src, epSquare);
+                    }
+                }
+            } else {
+                if ((srcFile > kMinFile && epSquare == src - kBlackEnPassantCaptureLeftOffset) ||
+                    (srcFile < kMaxFile && epSquare == src - kBlackEnPassantCaptureRightOffset)) {
+                    int capturedPawnSquare = epSquare + kSinglePawnPush;
+                    if (capturedPawnSquare < kBoardSquareCount &&
+                        board.squares[capturedPawnSquare].piece.PieceType == ChessPieceType::PAWN &&
+                        board.squares[capturedPawnSquare].piece.PieceColor ==
+                            ChessPieceColor::WHITE &&
+                        board.squares[epSquare].piece.PieceType == ChessPieceType::NONE) {
+                        moves.emplace_back(src, epSquare);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void appendKnightCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
+    Bitboard knights = board.getPieceBitboard(ChessPieceType::KNIGHT, color);
+    Bitboard enemyPieces =
+        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
+    while (knights) {
+        int src = lsb(knights);
+        clear_bit(knights, src);
+        Bitboard attacks = KnightAttacks[src] & enemyPieces;
+        while (attacks) {
+            int dest = lsb(attacks);
+            moves.emplace_back(src, dest);
+            clear_bit(attacks, dest);
+        }
+    }
+}
+
+void appendBishopCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
+    Bitboard bishops = board.getPieceBitboard(ChessPieceType::BISHOP, color);
+    Bitboard enemyPieces =
+        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
+    while (bishops) {
+        int src = lsb(bishops);
+        clear_bit(bishops, src);
+        Bitboard attacks = bishopAttacks(src, board.allPieces) & enemyPieces;
+        while (attacks) {
+            int dest = lsb(attacks);
+            moves.emplace_back(src, dest);
+            clear_bit(attacks, dest);
+        }
+    }
+}
+
+void appendRookCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
+    Bitboard rooks = board.getPieceBitboard(ChessPieceType::ROOK, color);
+    Bitboard enemyPieces =
+        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
+    while (rooks) {
+        int src = lsb(rooks);
+        clear_bit(rooks, src);
+        Bitboard attacks = rookAttacks(src, board.allPieces) & enemyPieces;
+        while (attacks) {
+            int dest = lsb(attacks);
+            moves.emplace_back(src, dest);
+            clear_bit(attacks, dest);
+        }
+    }
+}
+
+void appendQueenCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
+    Bitboard queens = board.getPieceBitboard(ChessPieceType::QUEEN, color);
+    Bitboard enemyPieces =
+        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
+    while (queens) {
+        int src = lsb(queens);
+        clear_bit(queens, src);
+        Bitboard attacks = queenAttacks(src, board.allPieces) & enemyPieces;
+        while (attacks) {
+            int dest = lsb(attacks);
+            moves.emplace_back(src, dest);
+            clear_bit(attacks, dest);
+        }
+    }
+}
+
+void appendKingCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
+    Bitboard king = board.getPieceBitboard(ChessPieceType::KING, color);
+    Bitboard enemyPieces =
+        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
+
+    if (king) {
+        Bitboard kingMovesBB = KingAttacks[lsb(king)] & enemyPieces;
+        while (kingMovesBB) {
+            int dest = lsb(kingMovesBB);
+            int src = lsb(king);
+            moves.emplace_back(src, dest);
+            clear_bit(kingMovesBB, dest);
+        }
+    }
+}
+
+bool hasLegalMoveFromCandidates(Board& board, ChessPieceColor color,
+                                const std::vector<Move>& moves) {
+    for (const auto& move : moves) {
+        const Piece& piece = board.squares[move.first].piece;
+        if (piece.PieceType == ChessPieceType::NONE || piece.PieceColor != color) {
+            continue;
+        }
+
+        if (piece.PieceType == ChessPieceType::KING &&
+            (move.second == move.first + 2 || move.second == move.first - 2)) {
+            return true;
+        }
+
+        Board tempBoard = board;
+        if (!tempBoard.movePiece(move.first, move.second)) {
+            continue;
+        }
+
+        const bool isEnPassantCapture =
+            piece.PieceType == ChessPieceType::PAWN && move.second == board.enPassantSquare &&
+            board.squares[move.second].piece.PieceType == ChessPieceType::NONE &&
+            ((move.first % kBoardDimension) != (move.second % kBoardDimension));
+        if (isEnPassantCapture) {
+            const int capturedPawnSquare =
+                move.second +
+                ((color == ChessPieceColor::WHITE) ? -kSinglePawnPush : kSinglePawnPush);
+            if (capturedPawnSquare >= kZero && capturedPawnSquare < kBoardSquareCount) {
+                tempBoard.squares[capturedPawnSquare].piece = Piece();
+            }
+        }
+
+        tempBoard.updateBitboards();
+        if (!IsKingInCheck(tempBoard, color)) {
+            return true;
+        }
+    }
+
+    return false;
+}
 } // namespace
 
 std::vector<Move> generatePawnMoves(Board& board, ChessPieceColor color) {
@@ -480,6 +642,57 @@ std::vector<Move> generateBitboardMoves(Board& board, ChessPieceColor color) {
     return moves;
 }
 
+std::vector<Move> generateBitboardCaptureMoves(Board& board, ChessPieceColor color) {
+    std::vector<Move> moves;
+    moves.reserve(32);
+    appendPawnCaptures(board, color, moves);
+    appendKnightCaptures(board, color, moves);
+    appendBishopCaptures(board, color, moves);
+    appendRookCaptures(board, color, moves);
+    appendQueenCaptures(board, color, moves);
+    appendKingCaptures(board, color, moves);
+    return moves;
+}
+
+bool hasAnyLegalMove(Board& board, ChessPieceColor color) {
+    std::vector<Move> moves;
+    moves.reserve(kTypicalMoveCapacity);
+
+    appendPawnMoves(board, color, moves);
+    if (hasLegalMoveFromCandidates(board, color, moves)) {
+        return true;
+    }
+
+    moves.clear();
+    appendKnightMoves(board, color, moves);
+    if (hasLegalMoveFromCandidates(board, color, moves)) {
+        return true;
+    }
+
+    moves.clear();
+    appendBishopMoves(board, color, moves);
+    if (hasLegalMoveFromCandidates(board, color, moves)) {
+        return true;
+    }
+
+    moves.clear();
+    appendRookMoves(board, color, moves);
+    if (hasLegalMoveFromCandidates(board, color, moves)) {
+        return true;
+    }
+
+    moves.clear();
+    appendQueenMoves(board, color, moves);
+    if (hasLegalMoveFromCandidates(board, color, moves)) {
+        return true;
+    }
+
+    moves.clear();
+    appendKingMoves(board, color, moves);
+    addCastlingMovesBitboard(board, color, &moves);
+    return hasLegalMoveFromCandidates(board, color, moves);
+}
+
 void GenValidMoves(Board& board) {
     board.whiteChecked = false;
     board.blackChecked = false;
@@ -489,16 +702,8 @@ void GenValidMoves(Board& board) {
         WhiteAttackBoard[i] = false;
     }
 
-    for (int i = kZero; i < kBoardSquareCount; i++) {
-        Square& square = board.squares[i];
-        if (square.piece.PieceType == ChessPieceType::KING) {
-            if (square.piece.PieceColor == ChessPieceColor::WHITE) {
-                WhiteKingPosition = i;
-            } else {
-                BlackKingPosition = i;
-            }
-        }
-    }
+    WhiteKingPosition = board.whiteKings ? lsb(board.whiteKings) : kInvalidSquare;
+    BlackKingPosition = board.blackKings ? lsb(board.blackKings) : kInvalidSquare;
 
     board.whiteChecked = IsKingInCheck(board, ChessPieceColor::WHITE);
     board.blackChecked = IsKingInCheck(board, ChessPieceColor::BLACK);

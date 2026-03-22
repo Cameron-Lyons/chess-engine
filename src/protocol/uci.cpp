@@ -20,8 +20,8 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <pthread.h>
 #include <sstream>
-#include <stop_token>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -80,12 +80,21 @@ UCIEngine::~UCIEngine() {
     handleStop();
 }
 
-void UCIEngine::searchThreadEntry(const std::stop_token& stopToken, const SearchTask& task) {
+void* UCIEngine::searchThreadStart(void* arg) {
+    auto* engine = static_cast<UCIEngine*>(arg);
+    if (engine == nullptr) {
+        return nullptr;
+    }
+    engine->searchThreadEntry(engine->activeSearchTask);
+    return nullptr;
+}
+
+void UCIEngine::searchThreadEntry(const SearchTask& task) {
     try {
         SearchResult result = performSearch(task.boardSnapshot, task.depth, task.timeForMove,
                                             task.optimalTime, task.maxTime);
 
-        if (!stopToken.stop_requested() && isSearching.load()) {
+        if (isSearching.load()) {
             std::optional<Move> ponderMove;
             reportBestMove(result.bestMove, ponderMove);
             int nps = result.timeMs > 0 ? result.nodes * kNpsMillisScale / result.timeMs : 0;
@@ -98,6 +107,14 @@ void UCIEngine::searchThreadEntry(const std::stop_token& stopToken, const Search
 
     isSearching.store(false);
     isPondering.store(false);
+}
+
+void UCIEngine::joinSearchThread() {
+    if (!searchThreadRunning) {
+        return;
+    }
+    pthread_join(searchThread, nullptr);
+    searchThreadRunning = false;
 }
 
 void UCIEngine::run() {
@@ -392,31 +409,33 @@ void UCIEngine::handleGo(const std::string& command) {
     searchTimeLimit = timeForMove;
     searchDepthLimit = searchDepth;
 
-    if (searchThread.joinable()) {
-        searchThread.request_stop();
-        searchThread.join();
-    }
+    joinSearchThread();
 
-    try {
-        searchThread =
-            std::jthread([this](const std::stop_token& stopToken,
-                                const SearchTask& task) { searchThreadEntry(stopToken, task); },
-                         SearchTask{searchDepth, timeForMove, optimalTime, maxTime, board});
-    } catch (const std::system_error&) {
+    activeSearchTask = SearchTask{searchDepth, timeForMove, optimalTime, maxTime, board};
+
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    const int stackResult = pthread_attr_setstacksize(&attr, kSearchThreadStackBytes);
+    const int createResult =
+        (stackResult == 0)
+            ? pthread_create(&searchThread, &attr, &UCIEngine::searchThreadStart, this)
+            : stackResult;
+    pthread_attr_destroy(&attr);
+
+    if (createResult != 0) {
         isSearching.store(false);
         isPondering.store(false);
         std::cout << "info string Search thread creation failed" << '\n';
         return;
     }
+
+    searchThreadRunning = true;
 }
 
 void UCIEngine::handleStop() {
     isSearching.store(false);
     isPondering.store(false);
-    if (searchThread.joinable()) {
-        searchThread.request_stop();
-        searchThread.join();
-    }
+    joinSearchThread();
 }
 
 void UCIEngine::handlePonderHit() {
@@ -426,10 +445,7 @@ void UCIEngine::handlePonderHit() {
 void UCIEngine::handleQuit() {
     isSearching.store(false);
     isPondering.store(false);
-    if (searchThread.joinable()) {
-        searchThread.request_stop();
-        searchThread.join();
-    }
+    joinSearchThread();
     std::exit(0);
 }
 

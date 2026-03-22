@@ -207,7 +207,7 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit,
             }
         }
 
-        shared->nodesSearched += context->nodeCount.load();
+        shared->nodesSearched += context->nodeCount;
         context->nodeCount = kZero;
         aspirationDelta = std::min(aspirationDelta * kAspirationGrowthFactor, kMaxAspirationDelta);
     }

@@ -7,11 +7,11 @@
 #include "../search/search.h"
 
 #include <atomic>
+#include <cstddef>
 #include <memory>
 #include <optional>
-#include <stop_token>
+#include <pthread.h>
 #include <string>
-#include <thread>
 #include <vector>
 
 class UCIEngine {
@@ -65,7 +65,11 @@ private:
         Board boardSnapshot;
     };
 
-    void searchThreadEntry(const std::stop_token& stopToken, const SearchTask& task);
+    static constexpr std::size_t kSearchThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
+
+    static void* searchThreadStart(void* arg);
+    void searchThreadEntry(const SearchTask& task);
+    void joinSearchThread();
 
     Board board;
     UCIOptions options;
@@ -78,7 +82,9 @@ private:
     std::chrono::steady_clock::time_point searchStartTime;
     int searchTimeLimit = 0;
     int searchDepthLimit = 0;
-    std::jthread searchThread;
+    pthread_t searchThread{};
+    bool searchThreadRunning = false;
+    SearchTask activeSearchTask{};
     SearchContext searchContext;
 
     SearchResult performSearch(const Board& board, int depth, int timeLimit, int optimalTime = 0,

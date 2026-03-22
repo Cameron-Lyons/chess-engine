@@ -38,3 +38,13 @@ cc_binary(
         "//:engine_lib",
     ],
 )
+
+cc_binary(
+    name = "search_probe",
+    srcs = ["search_probe.cpp"],
+    copts = ["-Werror"],
+    deps = [
+        ":benchmark_args",
+        "//:engine_lib",
+    ],
+)
