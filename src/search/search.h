@@ -1,10 +1,5 @@
 #pragma once
 
-#include "../core/ChessBoard.h"
-#include "../evaluation/Evaluation.h"
-#include "TranspositionTableV2.h"
-#include "ValidMoves.h"
-
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -24,6 +19,11 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+
+#include "../core/ChessBoard.h"
+#include "../evaluation/Evaluation.h"
+#include "TranspositionTableV2.h"
+#include "ValidMoves.h"
 
 namespace SearchConstants {
 constexpr int kZero = 0;
@@ -275,19 +275,6 @@ struct ParallelSearchContext {
     }
 };
 
-struct ScoredMove {
-    Move move;
-    int score;
-    ScoredMove(Move m, int s) : move(m), score(s) {}
-    std::strong_ordering operator<=>(const ScoredMove& other) const {
-        if (const auto scoreCmp = score <=> other.score; scoreCmp != 0) {
-            return scoreCmp;
-        }
-        return move <=> other.move;
-    }
-    bool operator==(const ScoredMove& other) const = default;
-};
-
 struct SearchResult {
     Move bestMove;
     int score;
@@ -338,8 +325,6 @@ inline int pieceTypeIndex(ChessPieceType pt) {
 }
 bool givesCheck(const Board& board, int srcPos, int destPos);
 bool isInCheck(const Board& board, ChessPieceColor color);
-void updateHistoryTable(ThreadSafeHistory& historyTable, int fromSquare, int toSquare, int depth);
-bool isTimeUp(const std::chrono::steady_clock::time_point& startTime, int timeLimitMs);
 int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizingPlayer, int ply,
                     ThreadSafeHistory& historyTable, ParallelSearchContext& context,
                     uint64_t zobristKey = std::numeric_limits<uint64_t>::max());
@@ -354,121 +339,3 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                              int ply, ThreadSafeHistory& historyTable,
                              ParallelSearchContext& context, bool isPVNode = true,
                              uint64_t zobristKey = std::numeric_limits<uint64_t>::max());
-
-int staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare);
-
-bool isPromotion(const Board& board, int from, int to);
-bool isCastling(const Board& board, int from, int to);
-std::vector<ScoredMove> scoreMovesOptimized(
-    const Board& board, const std::vector<Move>& moves, const ThreadSafeHistory& historyTable,
-    const KillerMoves& killerMoves, int ply,
-    const Move& ttMove = {SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare},
-    const Move& counterMove = {SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare},
-    const ParallelSearchContext* context = nullptr);
-
-enum class MovePickerStage : std::uint8_t {
-    HASH_MOVE,
-    GEN_CAPTURES,
-    GOOD_CAPTURES,
-    KILLERS,
-    COUNTERMOVE,
-    GEN_QUIETS,
-    QUIETS,
-    BAD_CAPTURES,
-    DONE
-};
-
-class MovePicker {
-    Board& board;
-    Move hashMove;
-    const KillerMoves& killerMoves;
-    int ply;
-    const ThreadSafeHistory& history;
-    ParallelSearchContext& context;
-    MovePickerStage stage;
-    std::vector<ScoredMove> goodCaptures;
-    std::vector<ScoredMove> badCaptures;
-    std::vector<ScoredMove> quietMoves;
-    size_t captureIdx = 0;
-    size_t quietIdx = 0;
-    size_t badCaptureIdx = 0;
-    bool movesGenerated = false;
-    static constexpr std::size_t MOVE_MASK_SIZE = SearchConstants::kMoveMaskSize;
-    std::array<bool, MOVE_MASK_SIZE> availableMask{};
-    std::array<bool, MOVE_MASK_SIZE> returnedMask{};
-
-    static constexpr std::size_t moveIndex(const Move& m) {
-        return (static_cast<std::size_t>(m.first) *
-                static_cast<std::size_t>(SearchConstants::kMoveMaskDimension)) +
-               static_cast<std::size_t>(m.second);
-    }
-
-    bool alreadyReturned(const Move& m) const {
-        if (m.first < SearchConstants::kZero || m.first >= SearchConstants::kBoardSquareCount ||
-            m.second < SearchConstants::kZero || m.second >= SearchConstants::kBoardSquareCount) {
-            return false;
-        }
-        return returnedMask[moveIndex(m)];
-    }
-
-    bool isAvailable(const Move& m) const {
-        if (m.first < SearchConstants::kZero || m.first >= SearchConstants::kBoardSquareCount ||
-            m.second < SearchConstants::kZero || m.second >= SearchConstants::kBoardSquareCount) {
-            return false;
-        }
-        return availableMask[moveIndex(m)];
-    }
-
-    void markAvailable(const Move& m) {
-        if (m.first < SearchConstants::kZero || m.first >= SearchConstants::kBoardSquareCount ||
-            m.second < SearchConstants::kZero || m.second >= SearchConstants::kBoardSquareCount) {
-            return;
-        }
-        availableMask[moveIndex(m)] = true;
-    }
-
-    void markReturned(const Move& m) {
-        if (m.first < SearchConstants::kZero || m.first >= SearchConstants::kBoardSquareCount ||
-            m.second < SearchConstants::kZero || m.second >= SearchConstants::kBoardSquareCount) {
-            return;
-        }
-        returnedMask[moveIndex(m)] = true;
-    }
-
-    void generateAndPartitionMoves();
-
-public:
-    MovePicker(Board& b, Move hm, const KillerMoves& km, int p, const ThreadSafeHistory& h,
-               ParallelSearchContext& ctx);
-
-    Move next();
-};
-
-struct SearchTechniques {
-    static const int FUTILITY_MARGIN_PAWN = 100;
-    static const int FUTILITY_MARGIN_KNIGHT = 300;
-    static const int FUTILITY_MARGIN_BISHOP = 300;
-    static const int FUTILITY_MARGIN_ROOK = 500;
-    static const int FUTILITY_MARGIN_QUEEN = 900;
-    static const int NULL_MOVE_R = 3;
-    static const int NULL_MOVE_MARGIN = 300;
-    static const int LMR_MIN_DEPTH = 3;
-    static const int LMR_MIN_MOVE = 4;
-    static const int STATIC_NULL_MARGIN = 900;
-    static const int IID_MIN_DEPTH = 4;
-};
-
-namespace EnhancedMoveOrdering {
-static const int HASH_MOVE_SCORE = 1000000;
-static const int CAPTURE_SCORE_BASE = 900000;
-static const int KILLER_SCORE = 800000;
-static const int HISTORY_SCORE_BASE = 0;
-static const int QUIET_SCORE_BASE = -1000000;
-
-extern const int MVV_LVA_SCORES[6][6];
-
-int getMVVLVA_Score(const Board& board, int fromSquare, int toSquare);
-int getHistoryScore(const ThreadSafeHistory& history, int fromSquare, int toSquare);
-int getKillerScore(const KillerMoves& killers, int ply, int fromSquare, int toSquare);
-int getPositionalScore(const Board& board, int fromSquare, int toSquare);
-} // namespace EnhancedMoveOrdering
