@@ -92,16 +92,10 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
                                       : generateBitboardCaptureMoves(board, currentColor);
 
     if (inCheck && moves.empty()) {
-        if (inCheck) {
-            int mateScore = maximizingPlayer ? -kMateScore + ply : kMateScore - ply;
-            storeTtEntry(context, nodeZobristKey, kZero, mateScore, kExactFlag,
-                         {kInvalidSquare, kInvalidSquare}, ply);
-            return mateScore;
-        }
-        int drawScore = -context.contempt;
-        storeTtEntry(context, nodeZobristKey, kZero, drawScore, kExactFlag,
+        int mateScore = maximizingPlayer ? -kMateScore + ply : kMateScore - ply;
+        storeTtEntry(context, nodeZobristKey, kZero, mateScore, kExactFlag,
                      {kInvalidSquare, kInvalidSquare}, ply);
-        return drawScore;
+        return mateScore;
     }
 
     const bool useFastEval = !inCheck && ply > kFastEvalQuiescencePlyThreshold;

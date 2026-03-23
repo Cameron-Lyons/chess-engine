@@ -806,12 +806,8 @@ bool SearchInternal::moveMatches(const Move& lhs, const Move& rhs) {
 }
 
 bool SearchInternal::moveExistsInList(const std::vector<Move>& moves, const Move& candidate) {
-    for (const auto& move : moves) {
-        if (moveMatches(move, candidate)) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(moves,
+                               [&](const Move& move) { return moveMatches(move, candidate); });
 }
 
 int SearchInternal::staticExchangeEvaluation(const Board& board, int fromSquare, int toSquare) {

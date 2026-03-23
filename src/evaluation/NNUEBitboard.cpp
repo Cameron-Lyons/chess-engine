@@ -59,7 +59,7 @@
 #endif
 
 #if NNUEBITBOARD_ARM_NEON
-#if defined(__has_builtin)
+#ifdef __has_builtin
 #if __has_builtin(__builtin_neon_vdotq_s32)
 #define NNUEBITBOARD_HAS_VDOTQ 1
 #else
@@ -235,7 +235,7 @@ static bool hasAVX512VNNI() {
 
 #if NNUEBITBOARD_ARM_NEON
 bool queryArmFeature(const char* featureName) {
-#if defined(__APPLE__)
+#ifdef __APPLE__
     int value = 0;
     size_t size = sizeof(value);
     return sysctlbyname(featureName, &value, &size, nullptr, 0) == 0 && value != 0;
@@ -246,7 +246,7 @@ bool queryArmFeature(const char* featureName) {
 }
 
 bool hasArmDotProd() {
-#if defined(__APPLE__)
+#ifdef __APPLE__
     return queryArmFeature("hw.optional.arm.FEAT_DotProd");
 #elif NNUEBITBOARD_HAS_LINUX_HWCAP
 #if defined(HWCAP_ASIMDDP) && defined(AT_HWCAP)
@@ -261,7 +261,7 @@ bool hasArmDotProd() {
 }
 
 bool hasArmI8MM() {
-#if defined(__APPLE__)
+#ifdef __APPLE__
     return queryArmFeature("hw.optional.arm.FEAT_I8MM");
 #elif NNUEBITBOARD_HAS_LINUX_HWCAP
 #if defined(HWCAP2_I8MM) && defined(AT_HWCAP2)
@@ -472,7 +472,8 @@ void LinearLayer::forward_arm_dotprod(const int8_t* input, int32_t* output) cons
         for (; j < inputSize; ++j) {
             const auto inputVal =
                 static_cast<int32_t>(static_cast<uint8_t>(input[static_cast<std::ptrdiff_t>(j)]));
-            const auto weightVal = static_cast<int32_t>(w[static_cast<std::ptrdiff_t>(j)]);
+            const auto weightVal = static_cast<int32_t>(
+                w[static_cast<std::ptrdiff_t>(j)]); // NOLINT(bugprone-signed-char-misuse)
             sum += inputVal * weightVal;
         }
         output[i] = sum + biases[static_cast<std::size_t>(i)];
