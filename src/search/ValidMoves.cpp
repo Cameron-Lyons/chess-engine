@@ -38,9 +38,9 @@ bool IsKingInCheck(const Board& board, ChessPieceColor color) {
 
     Bitboard pawnAttacksBB = kZero;
     if (color == ChessPieceColor::WHITE) {
-        pawnAttacksBB = pawnAttacks(ChessPieceColor::BLACK, kingSq);
-    } else {
         pawnAttacksBB = pawnAttacks(ChessPieceColor::WHITE, kingSq);
+    } else {
+        pawnAttacksBB = pawnAttacks(ChessPieceColor::BLACK, kingSq);
     }
     if (pawnAttacksBB & enemyPawns) {
         return true;
@@ -50,11 +50,11 @@ bool IsKingInCheck(const Board& board, ChessPieceColor color) {
         return true;
     }
 
-    if (fastBishopAttacks(kingSq, occ) & (enemyBishops | enemyQueens)) {
+    if (bishopAttacks(kingSq, occ) & (enemyBishops | enemyQueens)) {
         return true;
     }
 
-    if (fastRookAttacks(kingSq, occ) & (enemyRooks | enemyQueens)) {
+    if (rookAttacks(kingSq, occ) & (enemyRooks | enemyQueens)) {
         return true;
     }
 

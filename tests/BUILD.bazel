@@ -24,12 +24,15 @@ common_test_copts = [
         "gtest_crash",
         "gtest_engine_improvements",
         "gtest_fen",
+        "gtest_legality_regressions",
         "gtest_killer_moves",
         "gtest_king_safety",
         "gtest_parallel",
         "gtest_pawn",
         "gtest_quiescence",
+        "gtest_search_invariants",
         "gtest_tactical_suite",
+        "gtest_uci",
         "gtest_wac",
     ]
 ]
