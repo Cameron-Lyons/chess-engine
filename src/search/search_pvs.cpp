@@ -35,6 +35,11 @@ bool countNodeAndCheckTime(ParallelSearchContext& context) {
         return false;
     }
 
+    if (context.externalStop != nullptr && context.externalStop->load()) {
+        context.stopSearch = true;
+        return false;
+    }
+
     ++context.nodeCount;
     if ((context.nodeCount & kTimeCheckMask) != kZero) {
         return true;
@@ -47,6 +52,36 @@ bool countNodeAndCheckTime(ParallelSearchContext& context) {
 
     return true;
 }
+
+bool isRepetitionDraw(const Board& board, uint64_t nodeZobristKey,
+                      const ParallelSearchContext& context, int ply) {
+    if (board.halfmoveClock <= 0) {
+        return false;
+    }
+
+    int priorMatches = 0;
+    int remainingPlies = board.halfmoveClock;
+    for (int i = static_cast<int>(context.repetitionHistory.size()) - 1;
+         i >= 0 && remainingPlies > 0; --i, --remainingPlies) {
+        if (context.repetitionHistory[static_cast<std::size_t>(i)] == nodeZobristKey) {
+            ++priorMatches;
+            if (priorMatches >= 2) {
+                return true;
+            }
+        }
+    }
+
+    for (int i = ply - 1; i >= 0 && remainingPlies > 0; --i, --remainingPlies) {
+        if (context.pathHashes[static_cast<std::size_t>(i)] == nodeZobristKey) {
+            ++priorMatches;
+            if (priorMatches >= 2) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 } // namespace SearchInternal
 
 int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
@@ -57,6 +92,10 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
         return evaluatePosition(board, context.contempt);
     }
 
+    if (board.halfmoveClock >= 100) {
+        return -context.contempt;
+    }
+
     if (!countNodeAndCheckTime(context)) {
         return kZero;
     }
@@ -65,6 +104,10 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
     const int originalBeta = beta;
 
     const uint64_t nodeZobristKey = resolveZobristKey(board, zobristKey);
+    if (isRepetitionDraw(board, nodeZobristKey, context, ply)) {
+        return -context.contempt;
+    }
+    context.pathHashes[static_cast<std::size_t>(ply)] = nodeZobristKey;
     context.transTable.prefetch(nodeZobristKey);
     TTEntry ttEntry;
     Move hashMove = {kInvalidSquare, kInvalidSquare};
@@ -264,6 +307,10 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         return kZero;
     }
 
+    if (board.halfmoveClock >= 100) {
+        return -context.contempt;
+    }
+
     if (depth == kZero) {
         return QuiescenceSearch(board, alpha, beta, maximizingPlayer, historyTable, context, ply,
                                 resolveZobristKey(board, zobristKey));
@@ -273,6 +320,10 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         return kZero;
     }
     const uint64_t nodeZobristKey = resolveZobristKey(board, zobristKey);
+    if (isRepetitionDraw(board, nodeZobristKey, context, ply)) {
+        return -context.contempt;
+    }
+    context.pathHashes[static_cast<std::size_t>(ply)] = nodeZobristKey;
     context.transTable.prefetch(nodeZobristKey);
     TTEntry ttEntry;
     bool ttHit = context.transTable.find(nodeZobristKey, ttEntry);
@@ -604,6 +655,10 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         return kZero;
     }
 
+    if (board.halfmoveClock >= 100) {
+        return -context.contempt;
+    }
+
     if (!countNodeAndCheckTime(context)) {
         return kZero;
     }
@@ -647,6 +702,10 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     }
 
     const uint64_t nodeZobristKey = resolveZobristKey(board, zobristKey);
+    if (isRepetitionDraw(board, nodeZobristKey, context, ply)) {
+        return -context.contempt;
+    }
+    context.pathHashes[static_cast<std::size_t>(ply)] = nodeZobristKey;
     context.transTable.prefetch(nodeZobristKey);
     TTEntry entry;
     Move hashMove = {kInvalidSquare, kInvalidSquare};

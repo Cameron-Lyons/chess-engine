@@ -4,6 +4,7 @@
 #include "ChessPiece.h"
 #include "ai/NeuralNetwork.h"
 #include "core/ChessEngine.h"
+#include "core/GameRules.h"
 #include "evaluation/Evaluation.h"
 #include "evaluation/EvaluationTuning.h"
 #include "evaluation/HybridEvaluator.h"
@@ -327,20 +328,6 @@ std::string legalMoveDisambiguation(const Board& board, int from, int to,
     return std::string(1, static_cast<char>('a' + fromFile)) + std::to_string(fromRank + 1);
 }
 
-bool hasAnyLegalMoves(Board& board, ChessPieceColor sideToMove) {
-    std::vector<Move> moves = GetAllMoves(board, sideToMove);
-    for (const auto& move : moves) {
-        const Piece& piece = board.squares[move.first].piece;
-        if (piece.PieceType == ChessPieceType::NONE || piece.PieceColor != sideToMove) {
-            continue;
-        }
-        if (IsMoveLegal(board, move.first, move.second)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 std::string moveToSan(const Board& board, int from, int to,
                       ChessPieceType promotionPiece = ChessPieceType::QUEEN) {
     if (from < 0 || from >= NUM_SQUARES || to < 0 || to >= NUM_SQUARES) {
@@ -412,112 +399,6 @@ std::string moveToSan(const Board& board, int from, int to,
     }
 
     return san;
-}
-
-enum class GameState : std::uint8_t {
-    ONGOING,
-    CHECKMATE_WHITE_WINS,
-    CHECKMATE_BLACK_WINS,
-    STALEMATE,
-    DRAW_INSUFFICIENT_MATERIAL
-};
-
-GameState checkGameState(Board& board) {
-    ChessPieceColor currentPlayer = board.turn;
-    std::vector<Move> moves = GetAllMoves(board, currentPlayer);
-    std::vector<Move> legalMoves;
-    for (const auto& move : moves) {
-        Board testBoard = board;
-        if (testBoard.movePiece(move.first, move.second)) {
-            if (!IsKingInCheck(testBoard, currentPlayer)) {
-                legalMoves.push_back(move);
-            }
-        }
-    }
-
-    bool isInCheck = IsKingInCheck(board, currentPlayer);
-
-    if (legalMoves.empty()) {
-        if (isInCheck) {
-            if (currentPlayer == ChessPieceColor::WHITE) {
-                return GameState::CHECKMATE_BLACK_WINS;
-            } else {
-                return GameState::CHECKMATE_WHITE_WINS;
-            }
-        } else {
-            return GameState::STALEMATE;
-        }
-    }
-
-    std::vector<ChessPieceType> whitePieces;
-    std::vector<ChessPieceType> blackPieces;
-    for (int i = 0; i < NUM_SQUARES; i++) {
-        const Piece& piece = board.squares[i].piece;
-        if (piece.PieceType != ChessPieceType::NONE && piece.PieceType != ChessPieceType::KING) {
-            if (piece.PieceColor == ChessPieceColor::WHITE) {
-                whitePieces.push_back(piece.PieceType);
-            } else {
-                blackPieces.push_back(piece.PieceType);
-            }
-        }
-    }
-
-    const bool bareKings = whitePieces.empty() && blackPieces.empty();
-    const bool loneMinorVsKing =
-        (whitePieces.size() == 1 && blackPieces.empty() &&
-         (whitePieces[0] == ChessPieceType::BISHOP || whitePieces[0] == ChessPieceType::KNIGHT)) ||
-        (blackPieces.size() == 1 && whitePieces.empty() &&
-         (blackPieces[0] == ChessPieceType::BISHOP || blackPieces[0] == ChessPieceType::KNIGHT));
-    const bool bishopsOnly = whitePieces.size() == 1 && blackPieces.size() == 1 &&
-                             whitePieces[0] == ChessPieceType::BISHOP &&
-                             blackPieces[0] == ChessPieceType::BISHOP;
-
-    if (bareKings || loneMinorVsKing || bishopsOnly) {
-        return GameState::DRAW_INSUFFICIENT_MATERIAL;
-    }
-
-    return GameState::ONGOING;
-}
-
-void announceGameResult(GameState state) {
-    std::cout << "\n" << std::string(50, '=') << "\n";
-    std::cout << "                GAME OVER                \n";
-    std::cout << std::string(50, '=') << "\n";
-
-    switch (state) {
-        case GameState::CHECKMATE_WHITE_WINS:
-            std::cout << "🏆 CHECKMATE! WHITE WINS! 🏆\n";
-            std::cout << "Black king is in checkmate.\n";
-            std::cout << "White has successfully cornered the black king!\n";
-            break;
-
-        case GameState::CHECKMATE_BLACK_WINS:
-            std::cout << "🏆 CHECKMATE! BLACK WINS! 🏆\n";
-            std::cout << "White king is in checkmate.\n";
-            std::cout << "Black has successfully cornered the white king!\n";
-            break;
-
-        case GameState::STALEMATE:
-            std::cout << "🤝 STALEMATE - DRAW! 🤝\n";
-            std::cout << "The current player has no legal moves but is not in check.\n";
-            std::cout << "The game ends in a draw by stalemate.\n";
-            break;
-
-        case GameState::DRAW_INSUFFICIENT_MATERIAL:
-            std::cout << "🤝 DRAW - INSUFFICIENT MATERIAL! 🤝\n";
-            std::cout << "Neither side has enough material to force checkmate.\n";
-            std::cout << "The game ends in a draw.\n";
-            break;
-
-        case GameState::ONGOING:
-            break;
-    }
-
-    if (state != GameState::ONGOING) {
-        std::cout << std::string(50, '=') << "\n";
-        std::cout << "Thank you for playing!\n";
-        std::cout << "Press Enter to exit...\n";
-    }
 }
 
 int main(int argc, char* argv[]) {
@@ -670,7 +551,7 @@ int main(int argc, char* argv[]) {
         std::string input;
         while (true) {
             printBoard(gameBoard);
-            GameState gameState = checkGameState(gameBoard);
+            GameState gameState = checkGameState(gameEngine);
             if (gameState != GameState::ONGOING) {
                 announceGameResult(gameState);
                 std::string dummy;
@@ -734,7 +615,7 @@ int main(int argc, char* argv[]) {
                                   << std::chrono::duration_cast<ChessDuration>(computerTime).count()
                                   << "ms)\n";
 
-                        GameState postMoveState = checkGameState(gameBoard);
+                        GameState postMoveState = checkGameState(gameEngine);
                         if (postMoveState != GameState::ONGOING) {
                             printBoard(gameBoard);
                             announceGameResult(postMoveState);
@@ -747,7 +628,7 @@ int main(int argc, char* argv[]) {
                     }
                 } else {
                     std::cout << "Computer couldn't find a valid move!\n";
-                    GameState state = checkGameState(gameBoard);
+                    GameState state = checkGameState(gameEngine);
                     if (state != GameState::ONGOING) {
                         announceGameResult(state);
                         std::string dummy;

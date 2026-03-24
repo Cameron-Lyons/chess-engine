@@ -62,6 +62,7 @@ UCIEngine::UCIEngine() {
     InitZobrist();
     board = Board();
     board.InitializeFromFEN(kStartingFen);
+    positionHistoryHashes = {ComputeZobrist(board)};
     nnEvaluator = std::make_unique<NeuralNetworkEvaluator>();
     tablebase = std::make_unique<EndgameTablebase>();
     openingBook = std::make_unique<EnhancedOpeningBook>();
@@ -249,6 +250,7 @@ void UCIEngine::handleNewGame() {
 
     board = Board();
     board.InitializeFromFEN(kStartingFen);
+    positionHistoryHashes = {ComputeZobrist(board)};
     std::cout << "info string New game started" << '\n';
 }
 
@@ -266,6 +268,7 @@ void UCIEngine::handlePosition(const std::string& command) {
 
         board = Board();
         board.InitializeFromFEN(kStartingFen);
+        positionHistoryHashes = {ComputeZobrist(board)};
     } else if (word == "fen") {
 
         std::string fen;
@@ -283,6 +286,7 @@ void UCIEngine::handlePosition(const std::string& command) {
 
             board = Board();
             if (auto parsed = board.fromFEN(fen); parsed.has_value()) {
+                positionHistoryHashes = {ComputeZobrist(board)};
                 std::cout << "info string FEN position set: " << fen << '\n';
             } else {
                 std::cout << "info string Error: Invalid FEN string" << '\n';
@@ -318,6 +322,7 @@ void UCIEngine::handlePosition(const std::string& command) {
                     board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                         : ChessPieceColor::WHITE;
                     board.updateBitboards();
+                    positionHistoryHashes.push_back(ComputeZobrist(board));
                 } else {
                     std::cout << "info string Warning: Invalid move " << move << '\n';
                 }
@@ -405,6 +410,7 @@ void UCIEngine::handleGo(const std::string& command) {
 
     isSearching.store(true);
     isPondering.store(isPonder);
+    stopRequested.store(false);
     searchStartTime = std::chrono::steady_clock::now();
     searchTimeLimit = timeForMove;
     searchDepthLimit = searchDepth;
@@ -433,6 +439,7 @@ void UCIEngine::handleGo(const std::string& command) {
 }
 
 void UCIEngine::handleStop() {
+    stopRequested.store(true);
     isSearching.store(false);
     isPondering.store(false);
     joinSearchThread();
@@ -573,6 +580,11 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
     config.multiPV = options.multiPV;
     config.optimalTimeMs = optimalTime;
     config.maxTimeMs = maxTime;
+    if (positionHistoryHashes.size() > 1) {
+        config.previousPositionHashes.assign(positionHistoryHashes.begin(),
+                                             positionHistoryHashes.end() - 1);
+    }
+    config.externalStop = &stopRequested;
     searchContext.threads = options.threads;
     searchContext.hashSizeMb = options.hashSize;
     result = iterativeDeepeningParallel(searchBoard, config, searchContext);

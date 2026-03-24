@@ -4,9 +4,12 @@
 #include "core/ChessBoard.h"
 #include "core/Move.h"
 #include "search/ValidMoves.h"
+#include "search/search.h"
 
 #include <expected>
+#include <string>
 #include <string_view>
+#include <vector>
 
 class Engine {
 public:
@@ -25,10 +28,36 @@ public:
         return board_;
     }
 
+    bool isDrawByThreefoldRepetition() const {
+        if (positionHistory_.empty()) {
+            return false;
+        }
+        const uint64_t currentKey = positionHistory_.back();
+        int count = 0;
+        for (const auto& key : positionHistory_) {
+            if (key == currentKey) {
+                ++count;
+            }
+        }
+        return count >= 3;
+    }
+
+    bool isDrawByFiftyMoveRule() const {
+        return board_.halfmoveClock >= 100;
+    }
+
+    std::vector<uint64_t> previousPositionHashes() const {
+        if (positionHistory_.size() <= 1) {
+            return {};
+        }
+        return std::vector<uint64_t>(positionHistory_.begin(), positionHistory_.end() - 1);
+    }
+
     void newGame(std::string_view fen = kDefaultStartingFen) {
         board_ = Board();
         board_.InitializeFromFEN(fen);
         previousBoard_ = board_;
+        resetPositionHistory();
     }
 
     std::expected<void, ChessError> setPositionFromFEN(std::string_view fen) {
@@ -37,6 +66,7 @@ public:
             return std::unexpected(parsed.error());
         }
         previousBoard_ = board_;
+        resetPositionHistory();
         return {};
     }
 
@@ -67,6 +97,9 @@ public:
         }
 
         previousBoard_ = board_;
+        const int previousHalfmoveClock = board_.halfmoveClock;
+        const int previousFullmoveNumber = board_.fullmoveNumber;
+        const Piece capturedPiece = board_.squares[toSquare].piece;
 
         const int destRow = toSquare / BOARD_SIZE;
         const bool promotePawn = (piece.PieceType == ChessPieceType::PAWN &&
@@ -112,6 +145,14 @@ public:
             }
         }
 
+        board_.halfmoveClock = (piece.PieceType == ChessPieceType::PAWN ||
+                                capturedPiece.PieceType != ChessPieceType::NONE)
+                                   ? 0
+                                   : (previousHalfmoveClock + 1);
+        board_.fullmoveNumber = (piece.PieceColor == ChessPieceColor::BLACK)
+                                    ? (previousFullmoveNumber + 1)
+                                    : previousFullmoveNumber;
+
         GenValidMoves(board_);
         if (IsKingInCheck(board_, piece.PieceColor)) {
             board_ = previousBoard_;
@@ -121,10 +162,17 @@ public:
 
         board_.turn = (board_.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                               : ChessPieceColor::WHITE;
+        positionHistory_.push_back(ComputeZobrist(board_));
         return {};
     }
 
 private:
+    void resetPositionHistory() {
+        positionHistory_.clear();
+        positionHistory_.push_back(ComputeZobrist(board_));
+    }
+
     Board board_;
     Board previousBoard_;
+    std::vector<uint64_t> positionHistory_;
 };

@@ -80,6 +80,8 @@ bool evaluateRootSplitMove(const RootSplitSharedState& shared, Move move, int al
     localContext.timeLimitMs = shared.timeLimitMs;
     localContext.contempt = shared.contempt;
     localContext.multiPV = kOne;
+    localContext.repetitionHistory = shared.repetitionHistory;
+    localContext.pathHashes[0] = shared.rootZobristKey;
     localContext.optimalTimeMs = shared.optimalTimeMs;
     localContext.maxTimeMs = shared.maxTimeMs;
     localContext.useSyzygy = shared.useSyzygy;
@@ -203,6 +205,7 @@ RootSplitResult searchRootMovesYBWC(const Board& board, int depth, int alpha, in
     shared.maximizingPlayer = maximizingPlayer;
     shared.hashSizeMb = std::max(kOne, hashSizeMb);
     shared.historySeed = historyTable;
+    shared.repetitionHistory = context.repetitionHistory;
     shared.startTime = context.startTime;
     shared.timeLimitMs = context.timeLimitMs;
     shared.contempt = context.contempt;
@@ -318,8 +321,10 @@ SearchResult iterativeDeepeningParallel(Board& board, const SearchConfig& config
     context.timeLimitMs = timeLimitMs;
     context.contempt = contempt;
     context.multiPV = multiPV;
+    context.repetitionHistory = config.previousPositionHashes;
     context.optimalTimeMs = optimalTimeMs;
     context.maxTimeMs = maxTimeMs;
+    context.externalStop = config.externalStop;
     context.useSyzygy = !Syzygy::getPath().empty();
     context.transTable.resize(std::max(SearchConstants::kOne, hashSizeMb));
     context.transTable.newSearch();
@@ -343,8 +348,19 @@ SearchResult iterativeDeepeningParallel(Board& board, const SearchConfig& config
     int bestMoveStableCount = kZero;
     int bestMoveChangeCount = kZero;
     const bool rootSplitEnabled = numThreads > kOne;
+    auto getLegalRootMoves = [&]() {
+        std::vector<Move> pseudoMoves = GetAllMoves(board, board.turn);
+        std::vector<Move> legalMoves;
+        legalMoves.reserve(pseudoMoves.size());
+        for (const auto& move : pseudoMoves) {
+            if (IsMoveLegal(board, move.first, move.second)) {
+                legalMoves.push_back(move);
+            }
+        }
+        return legalMoves;
+    };
     auto selectRootBestMove = [&](Move candidateMove) {
-        std::vector<Move> moves = GetAllMoves(board, board.turn);
+        std::vector<Move> moves = getLegalRootMoves();
         if (candidateMove.first >= kZero && moveExistsInList(moves, candidateMove)) {
             return candidateMove;
         }

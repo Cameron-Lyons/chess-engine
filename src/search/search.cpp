@@ -296,6 +296,8 @@ bool applySearchMoveWithData(Board& board, int fromSquare, int toSquare, bool au
     moveData.previousTurn = board.turn;
     moveData.previousCastlingRights = board.castlingRights();
     moveData.previousEnPassantSquare = board.enPassantSquare;
+    moveData.previousHalfmoveClock = board.halfmoveClock;
+    moveData.previousFullmoveNumber = board.fullmoveNumber;
     moveData.previousWhiteChecked = board.whiteChecked;
     moveData.previousBlackChecked = board.blackChecked;
     moveData.previousLastMove = board.LastMove;
@@ -454,6 +456,8 @@ void undoSearchMoveWithData(Board& board, const MoveApplicationData& moveData) {
     board.turn = moveData.previousTurn;
     board.state.castlingRights = moveData.previousCastlingRights;
     board.enPassantSquare = moveData.previousEnPassantSquare;
+    board.halfmoveClock = moveData.previousHalfmoveClock;
+    board.fullmoveNumber = moveData.previousFullmoveNumber;
     board.whiteChecked = moveData.previousWhiteChecked;
     board.blackChecked = moveData.previousBlackChecked;
     board.LastMove = moveData.previousLastMove;

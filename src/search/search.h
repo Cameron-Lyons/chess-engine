@@ -201,6 +201,7 @@ struct KillerMoves {
 
 struct ParallelSearchContext {
     bool stopSearch;
+    std::atomic<bool>* externalStop = nullptr;
     int nodeCount;
     TranspositionTableAdapter transTable;
     ThreadSafeHistory historyTable;
@@ -213,6 +214,8 @@ struct ParallelSearchContext {
     int contempt = SearchConstants::kZero;
     int multiPV = SearchConstants::kOne;
     std::vector<Move> excludedRootMoves;
+    std::vector<uint64_t> repetitionHistory;
+    std::array<uint64_t, SearchConstants::kBoardSquareCount> pathHashes{};
     int optimalTimeMs = SearchConstants::kZero;
     int maxTimeMs = SearchConstants::kZero;
     int tbHits = SearchConstants::kZero;
@@ -291,6 +294,8 @@ struct SearchConfig {
     int multiPV = SearchConstants::kOne;
     int optimalTimeMs = SearchConstants::kZero;
     int maxTimeMs = SearchConstants::kZero;
+    std::vector<uint64_t> previousPositionHashes;
+    std::atomic<bool>* externalStop = nullptr;
 };
 
 struct SearchContext {

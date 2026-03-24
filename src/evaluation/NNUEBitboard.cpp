@@ -777,7 +777,11 @@ void NNUEEvaluator::updateAfterMove(const BitboardPosition& pos, int from, int t
 
 bool init(const std::string& networkPath) {
     globalEvaluator = std::make_unique<NNUEEvaluator>();
-    return globalEvaluator->loadNetwork(networkPath);
+    if (!globalEvaluator->loadNetwork(networkPath)) {
+        globalEvaluator.reset();
+        return false;
+    }
+    return true;
 }
 
 int evaluate(const BitboardPosition& pos) {

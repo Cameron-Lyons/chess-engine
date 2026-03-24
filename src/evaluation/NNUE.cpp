@@ -330,7 +330,11 @@ void NNUEEvaluator::resetAccumulator(const Board& board) {
 
 bool init(const std::string& networkPath) {
     globalEvaluator = std::make_unique<NNUEEvaluator>();
-    return globalEvaluator->loadNetwork(networkPath);
+    if (!globalEvaluator->loadNetwork(networkPath)) {
+        globalEvaluator.reset();
+        return false;
+    }
+    return true;
 }
 
 int evaluate(const Board& board) {

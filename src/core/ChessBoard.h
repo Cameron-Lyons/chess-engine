@@ -78,6 +78,8 @@ struct StateInfo {
     ChessPieceColor turn = ChessPieceColor::WHITE;
     std::uint8_t castlingRights = CastlingConstants::kAllCastlingRightsMask;
     int enPassantSquare = CastlingConstants::kNoEnPassantSquareMailbox;
+    int halfmoveClock = 0;
+    int fullmoveNumber = 1;
     bool whiteChecked = false;
     bool blackChecked = false;
     int lastMove = 0;
@@ -118,6 +120,8 @@ struct Board {
     std::array<Square, 64>& squares;
     ChessPieceColor& turn;
     int& enPassantSquare;
+    int& halfmoveClock;
+    int& fullmoveNumber;
     bool& whiteChecked;
     bool& blackChecked;
     int& LastMove;
@@ -142,6 +146,7 @@ struct Board {
 
     Board()
         : squares(position.squares), turn(state.turn), enPassantSquare(state.enPassantSquare),
+          halfmoveClock(state.halfmoveClock), fullmoveNumber(state.fullmoveNumber),
           whiteChecked(state.whiteChecked), blackChecked(state.blackChecked),
           LastMove(state.lastMove), whitePawns(position.whitePawns),
           whiteKnights(position.whiteKnights), whiteBishops(position.whiteBishops),
@@ -161,7 +166,8 @@ struct Board {
 
     Board(const Board& other)
         : position(other.position), state(other.state), squares(position.squares), turn(state.turn),
-          enPassantSquare(state.enPassantSquare), whiteChecked(state.whiteChecked),
+          enPassantSquare(state.enPassantSquare), halfmoveClock(state.halfmoveClock),
+          fullmoveNumber(state.fullmoveNumber), whiteChecked(state.whiteChecked),
           blackChecked(state.blackChecked), LastMove(state.lastMove),
           whitePawns(position.whitePawns), whiteKnights(position.whiteKnights),
           whiteBishops(position.whiteBishops), whiteRooks(position.whiteRooks),
@@ -185,7 +191,8 @@ struct Board {
 
     Board(Board&& other) noexcept
         : position(other.position), state(other.state), squares(position.squares), turn(state.turn),
-          enPassantSquare(state.enPassantSquare), whiteChecked(state.whiteChecked),
+          enPassantSquare(state.enPassantSquare), halfmoveClock(state.halfmoveClock),
+          fullmoveNumber(state.fullmoveNumber), whiteChecked(state.whiteChecked),
           blackChecked(state.blackChecked), LastMove(state.lastMove),
           whitePawns(position.whitePawns), whiteKnights(position.whiteKnights),
           whiteBishops(position.whiteBishops), whiteRooks(position.whiteRooks),

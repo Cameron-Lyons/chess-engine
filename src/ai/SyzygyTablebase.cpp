@@ -93,12 +93,16 @@ Position Position::fromBoard(const Board& board) {
 }
 
 bool init(const std::string& path) {
+    tbPath.clear();
+    tbEntries.clear();
+    tbMaxPieces = 0;
+    tbInitialized = false;
+
     if (!std::filesystem::exists(path)) {
         return false;
     }
 
     tbPath = path;
-    tbEntries.clear();
 
     for (const auto& entry : std::filesystem::directory_iterator(path)) {
         if (entry.is_regular_file()) {
@@ -165,18 +169,24 @@ ProbeResult probeWDL(const Board& board, int* success) {
 
     Position pos = Position::fromBoard(board);
 
-    int whiteMaterial = (popcount(pos.queens) * 9) + (popcount(pos.rooks) * 5) +
-                        (popcount(pos.bishops) * 3) + (popcount(pos.knights) * 3) +
-                        popcount(pos.pawns);
-    int blackMaterial = (popcount(pos.queens & pos.black) * 9) +
-                        (popcount(pos.rooks & pos.black) * 5) +
-                        (popcount(pos.bishops & pos.black) * 3) +
-                        (popcount(pos.knights & pos.black) * 3) + popcount(pos.pawns & pos.black);
+    const int totalQueenMaterial = popcount(pos.queens) * 9;
+    const int totalRookMaterial = popcount(pos.rooks) * 5;
+    const int totalBishopMaterial = popcount(pos.bishops) * 3;
+    const int totalKnightMaterial = popcount(pos.knights) * 3;
+    const int totalPawnMaterial = popcount(pos.pawns);
 
-    int whitePieces = popcount(pos.white);
-    int blackPieces = popcount(pos.black);
-    whiteMaterial -= blackMaterial;
-    whitePieces -= blackPieces;
+    const int blackMaterial =
+        (popcount(pos.queens & pos.black) * 9) + (popcount(pos.rooks & pos.black) * 5) +
+        (popcount(pos.bishops & pos.black) * 3) + (popcount(pos.knights & pos.black) * 3) +
+        popcount(pos.pawns & pos.black);
+    const int whiteMaterial = (totalQueenMaterial + totalRookMaterial + totalBishopMaterial +
+                               totalKnightMaterial + totalPawnMaterial) -
+                              blackMaterial;
+
+    const int whitePieces = popcount(pos.white);
+    const int blackPieces = popcount(pos.black);
+    const int materialDiff = whiteMaterial - blackMaterial;
+    const int pieceDiff = whitePieces - blackPieces;
     *success = 1;
 
     if (whiteMaterial == 0 && blackMaterial == 0) {
@@ -185,17 +195,17 @@ ProbeResult probeWDL(const Board& board, int* success) {
     }
 
     if (pos.turn) {
-        if (whiteMaterial > 4 && whitePieces > blackPieces) {
+        if (materialDiff > 4 && pieceDiff > 0) {
             return PROBE_WIN;
         }
-        if (whiteMaterial < -4 && whitePieces < blackPieces) {
+        if (materialDiff < -4 && pieceDiff < 0) {
             return PROBE_LOSS;
         }
     } else {
-        if (blackMaterial > 4 && blackPieces > whitePieces) {
+        if (materialDiff < -4 && pieceDiff < 0) {
             return PROBE_WIN;
         }
-        if (blackMaterial < -4 && blackPieces < whitePieces) {
+        if (materialDiff > 4 && pieceDiff > 0) {
             return PROBE_LOSS;
         }
     }

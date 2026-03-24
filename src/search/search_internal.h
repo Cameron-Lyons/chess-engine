@@ -183,6 +183,8 @@ struct MoveApplicationData {
     ChessPieceColor previousTurn = ChessPieceColor::WHITE;
     std::uint8_t previousCastlingRights = 0;
     int previousEnPassantSquare = kNoEpSquare;
+    int previousHalfmoveClock = 0;
+    int previousFullmoveNumber = 1;
     bool previousWhiteChecked = false;
     bool previousBlackChecked = false;
     int previousLastMove = kZero;
@@ -342,6 +344,7 @@ struct RootSplitSharedState {
     bool maximizingPlayer = true;
     int hashSizeMb = SearchConstants::kDefaultTranspositionTableMb;
     ThreadSafeHistory historySeed;
+    std::vector<uint64_t> repetitionHistory;
     std::chrono::steady_clock::time_point startTime;
     int timeLimitMs = kZero;
     int contempt = kZero;

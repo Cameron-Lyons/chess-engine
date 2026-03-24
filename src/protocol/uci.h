@@ -72,6 +72,7 @@ private:
     void joinSearchThread();
 
     Board board;
+    std::vector<uint64_t> positionHistoryHashes;
     UCIOptions options;
     std::unique_ptr<NeuralNetworkEvaluator> nnEvaluator;
     std::unique_ptr<EndgameTablebase> tablebase;
@@ -79,6 +80,7 @@ private:
     std::unique_ptr<TimeManager> timeManager;
     std::atomic_bool isSearching{false};
     std::atomic_bool isPondering{false};
+    std::atomic_bool stopRequested{false};
     std::chrono::steady_clock::time_point searchStartTime;
     int searchTimeLimit = 0;
     int searchDepthLimit = 0;

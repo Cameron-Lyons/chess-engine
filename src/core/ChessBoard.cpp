@@ -323,6 +323,16 @@ bool Board::movePiece(int from, int to) {
          moveDelta == -CastlingConstants::kPawnDoublePushDistance)) {
         enPassantSquare = (from + to) / 2;
     }
+
+    if (movingPieceBefore.PieceType == ChessPieceType::PAWN ||
+        capturedPieceBefore.PieceType != ChessPieceType::NONE) {
+        halfmoveClock = 0;
+    } else {
+        ++halfmoveClock;
+    }
+    if (movingPieceBefore.PieceColor == ChessPieceColor::BLACK) {
+        ++fullmoveNumber;
+    }
     return true;
 }
 
@@ -387,7 +397,8 @@ std::string Board::toFEN() const {
     } else {
         fen += " -";
     }
-    fen += " 0 1";
+    fen += " " + std::to_string(halfmoveClock);
+    fen += " " + std::to_string(fullmoveNumber);
     return fen;
 }
 
@@ -435,6 +446,8 @@ void Board::InitializeFromFEN(ChessString fen) {
     turn = ChessPieceColor::WHITE;
     state.castlingRights = 0;
     enPassantSquare = CastlingConstants::kNoEnPassantSquareMailbox;
+    halfmoveClock = 0;
+    fullmoveNumber = 1;
     whiteChecked = false;
     blackChecked = false;
     LastMove = 0;
@@ -445,6 +458,8 @@ void Board::InitializeFromFEN(ChessString fen) {
     std::string activeColor;
     std::string castling;
     std::string enPassant;
+    std::string halfmoveClockText;
+    std::string fullmoveNumberText;
     if (!(iss >> placement)) {
         updateBitboards();
         return;
@@ -457,6 +472,12 @@ void Board::InitializeFromFEN(ChessString fen) {
     }
     if (!(iss >> enPassant)) {
         enPassant = "-";
+    }
+    if (!(iss >> halfmoveClockText)) {
+        halfmoveClockText = "0";
+    }
+    if (!(iss >> fullmoveNumberText)) {
+        fullmoveNumberText = "1";
     }
 
     size_t pos = 0;
@@ -510,6 +531,18 @@ void Board::InitializeFromFEN(ChessString fen) {
         if (epFile >= 0 && epFile < BOARD_SIZE && epRank >= 0 && epRank < BOARD_SIZE) {
             enPassantSquare = (epRank * BOARD_SIZE) + epFile;
         }
+    }
+
+    try {
+        halfmoveClock = std::max(0, std::stoi(halfmoveClockText));
+    } catch (...) {
+        halfmoveClock = 0;
+    }
+
+    try {
+        fullmoveNumber = std::max(1, std::stoi(fullmoveNumberText));
+    } catch (...) {
+        fullmoveNumber = 1;
     }
 
     updateBitboards();

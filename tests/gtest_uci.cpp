@@ -1,10 +1,12 @@
 #include "gtest/gtest.h"
 #include "protocol/uci.h"
 
+#include <chrono>
 #include <iostream>
 #include <sstream>
 #include <streambuf>
 #include <string>
+#include <thread>
 
 namespace {
 class CoutCapture {
@@ -74,4 +76,90 @@ TEST(UCI, ReportsUnknownCommand) {
 
     const std::string output = capture.str();
     EXPECT_NE(output.find("info string Unknown command: notacommand"), std::string::npos);
+}
+
+TEST(UCI, ConvertsMovesToAndFromUciNotation) {
+    const Move move{12, 28};
+    EXPECT_EQ(UCINotation::moveToUCI(move), "e2e4");
+
+    const auto parsed = UCINotation::uciToMove("e2e4");
+    ASSERT_TRUE(parsed.has_value());
+    EXPECT_EQ(parsed->first, 12);
+    EXPECT_EQ(parsed->second, 28);
+
+    EXPECT_EQ(UCINotation::moveToUCI({-1, -1}), "0000");
+    EXPECT_FALSE(UCINotation::uciToMove("e9e4").has_value());
+}
+
+TEST(UCI, ReportsNnueFallbackWhenNoModelIsLoaded) {
+    UCIEngine engine;
+    CoutCapture capture;
+
+    engine.processCommand("setoption name Use Neural Network value true");
+
+    const std::string output = capture.str();
+    EXPECT_NE(output.find("info string NNUE requested but no model loaded; using classical eval"),
+              std::string::npos);
+}
+
+TEST(UCI, ReturnsBestmove0000OnStalematePosition) {
+    UCIEngine engine;
+    CoutCapture capture;
+
+    engine.processCommand("position fen 7k/5Q2/6K1/8/8/8/8/8 b - - 0 1");
+    engine.processCommand("go movetime 30");
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+    const std::string output = capture.str();
+    EXPECT_NE(output.find("bestmove 0000"), std::string::npos);
+}
+
+TEST(UCI, RejectsSecondGoWhileSearchIsRunning) {
+    UCIEngine engine;
+    CoutCapture capture;
+
+    engine.processCommand("position startpos");
+    engine.processCommand("go movetime 200");
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    engine.processCommand("go movetime 20");
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+    const std::string output = capture.str();
+    EXPECT_NE(output.find("info string Search already in progress"), std::string::npos);
+}
+
+TEST(UCI, CanSearchAgainAfterStop) {
+    UCIEngine engine;
+    CoutCapture capture;
+
+    engine.processCommand("position startpos");
+    engine.processCommand("go movetime 200");
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    engine.processCommand("stop");
+    capture.clear();
+
+    engine.processCommand("go movetime 30");
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+    const std::string output = capture.str();
+    EXPECT_NE(output.find("bestmove "), std::string::npos);
+    EXPECT_NE(output.find("info depth "), std::string::npos);
+}
+
+TEST(UCI, SearchStillWorksAfterOptionUpdates) {
+    UCIEngine engine;
+    CoutCapture capture;
+
+    engine.processCommand("setoption name Hash value 64");
+    engine.processCommand("setoption name Threads value 2");
+    engine.processCommand("setoption name MultiPV value 2");
+    engine.processCommand("setoption name Move Overhead value 0");
+    engine.processCommand("setoption name Minimum Thinking Time value 0");
+    engine.processCommand("setoption name OwnBook value false");
+    engine.processCommand("position startpos");
+    engine.processCommand("go movetime 30");
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+    const std::string output = capture.str();
+    EXPECT_NE(output.find("bestmove "), std::string::npos);
 }

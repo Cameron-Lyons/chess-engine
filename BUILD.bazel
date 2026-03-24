@@ -24,6 +24,7 @@ cc_library(
         "src/core/BitboardMoves.cpp",
         "src/core/BitboardOnly.cpp",
         "src/core/ChessBoard.cpp",
+        "src/core/GameRules.cpp",
         "src/core/MagicBitboards.cpp",
         "src/evaluation/Evaluation.cpp",
         "src/evaluation/HybridEvaluator.cpp",
