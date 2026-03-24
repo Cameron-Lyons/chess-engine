@@ -1,5 +1,5 @@
 #include "benchmark_args.h"
-#include "src/core/BitboardMoves.h"
+#include "benchmark_suite.h"
 #include "src/core/ChessBoard.h"
 #include "src/search/AdvancedSearch.h"
 #include "src/search/search.h"
@@ -12,6 +12,11 @@
 
 namespace {
 constexpr int kDefaultIterations = 2000000;
+
+struct MicroRow {
+    std::string id;
+    long long elapsedMs = 0;
+};
 
 long long benchNullMovePruning(const std::vector<Board>& boards, int iterations) {
     volatile int sink = 0;
@@ -57,40 +62,82 @@ long long benchBookKeyPath(const std::vector<Board>& boards, int iterations) {
     }
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 }
+
+void printTextReport(const std::vector<MicroRow>& rows, int iterations, std::size_t corpusSize) {
+    long long totalMs = 0;
+    std::cout << "Micro benchmark\n";
+    std::cout << "iterations=" << iterations << " corpus_size=" << corpusSize << '\n';
+    std::cout << "id\telapsed_ms\n";
+    for (const auto& row : rows) {
+        totalMs += row.elapsedMs;
+        std::cout << row.id << '\t' << row.elapsedMs << '\n';
+    }
+    std::cout << "TOTAL\ttotal_ms=" << totalMs << '\n';
+}
+
+void printJsonReport(const std::vector<MicroRow>& rows, int iterations, std::size_t corpusSize) {
+    long long totalMs = 0;
+    for (const auto& row : rows) {
+        totalMs += row.elapsedMs;
+    }
+    std::cout << "{\n";
+    std::cout << "  \"benchmark\": \"micro_benchmark\",\n";
+    std::cout << "  \"config\": {\"iterations\": " << iterations
+              << ", \"corpus_size\": " << corpusSize << "},\n";
+    std::cout << "  \"results\": [\n";
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        std::cout << "    {\"id\": \"" << BenchmarkSuite::jsonEscape(rows[i].id)
+                  << "\", \"elapsed_ms\": " << rows[i].elapsedMs << "}";
+        if (i + 1 < rows.size()) {
+            std::cout << ',';
+        }
+        std::cout << '\n';
+    }
+    std::cout << "  ],\n";
+    std::cout << "  \"summary\": {\"total_ms\": " << totalMs << "}\n";
+    std::cout << "}\n";
+}
 } // namespace
 
 int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
+    const std::vector<std::string> args(argv + 1, argv + argc);
     const int iterations =
-        BenchmarkArgs::parsePositiveIntArg(argc, argv, "--iterations", kDefaultIterations);
+        BenchmarkArgs::parsePositiveIntArg(args, "--iterations", kDefaultIterations);
+    const BenchmarkSuite::OutputFormat format = BenchmarkSuite::parseOutputFormat(args);
+    const std::vector<BenchmarkSuite::PositionCase> positions =
+        BenchmarkSuite::selectPositions(args);
 
-    initKnightAttacks();
-    initKingAttacks();
-    InitZobrist();
-
-    const std::vector<std::string> fens = {
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-        "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"};
-
-    std::vector<Board> boards;
-    boards.reserve(fens.size());
-    for (const std::string& fen : fens) {
-        Board board;
-        board.InitializeFromFEN(fen);
-        boards.push_back(board);
+    if (positions.empty()) {
+        std::cerr << "No benchmark positions matched the requested filters.\n";
+        return 1;
     }
 
-    const long long nullMoveMs = benchNullMovePruning(boards, iterations);
-    const long long gamePhaseMs = benchGamePhase(boards, iterations);
-    const long long bookKeyMs = benchBookKeyPath(boards, iterations);
+    std::vector<Board> boards;
+    std::vector<MicroRow> rows;
 
-    std::cout << "Micro benchmark" << '\n';
-    std::cout << "iterations=" << iterations << '\n';
-    std::cout << "nullMovePruning_ms=" << nullMoveMs << '\n';
-    std::cout << "getGamePhase_ms=" << gamePhaseMs << '\n';
-    std::cout << "bookKeyPath_ms=" << bookKeyMs << '\n';
-    std::cout << "total_ms=" << (nullMoveMs + gamePhaseMs + bookKeyMs) << '\n';
+    {
+        BenchmarkSuite::ScopedStdoutSilencer silencer(format == BenchmarkSuite::OutputFormat::JSON);
+        BenchmarkSuite::initializeEngineState();
+
+        boards.reserve(positions.size());
+        for (const auto& position : positions) {
+            Board board;
+            board.InitializeFromFEN(position.fen);
+            boards.push_back(board);
+        }
+
+        rows = {
+            {"nullMovePruning", benchNullMovePruning(boards, iterations)},
+            {"getGamePhase", benchGamePhase(boards, iterations)},
+            {"bookKeyPath", benchBookKeyPath(boards, iterations)},
+        };
+    }
+
+    if (format == BenchmarkSuite::OutputFormat::JSON) {
+        printJsonReport(rows, iterations, positions.size());
+    } else {
+        printTextReport(rows, iterations, positions.size());
+    }
 
     return 0;
 }

@@ -1,5 +1,5 @@
 #include "benchmark_args.h"
-#include "src/core/BitboardMoves.h"
+#include "benchmark_suite.h"
 #include "src/core/ChessBoard.h"
 #include "src/search/search.h"
 
@@ -14,6 +14,98 @@ constexpr int kDefaultDepthLimit = 12;
 constexpr int kDefaultTimeMs = 2000;
 constexpr int kDefaultThreads = 1;
 constexpr int kDefaultRounds = 3;
+
+struct SearchRow {
+    std::string id;
+    std::string positionName;
+    std::string fen;
+    std::vector<std::string> tags;
+    int round = 0;
+    int depthReached = 0;
+    int score = 0;
+    int nodes = 0;
+    long long elapsedMs = 0;
+    long long nps = 0;
+    Move bestMove{SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare};
+};
+
+std::string moveToUci(const Move& move) {
+    if (move.first < 0 || move.second < 0) {
+        return "0000";
+    }
+
+    std::string uci;
+    uci += static_cast<char>('a' + (move.first % 8));
+    uci += static_cast<char>('1' + (move.first / 8));
+    uci += static_cast<char>('a' + (move.second % 8));
+    uci += static_cast<char>('1' + (move.second / 8));
+    return uci;
+}
+
+void printTextReport(const std::vector<SearchRow>& rows, int rounds, int depthLimit, int timeMs,
+                     int threads) {
+    long long totalNodes = 0;
+    long long totalElapsedMs = 0;
+
+    std::cout << "Search benchmark\n";
+    std::cout << "rounds=" << rounds << " depth=" << depthLimit << " time_ms=" << timeMs
+              << " threads=" << threads << "\n";
+    std::cout << "id\tdepth\tscore\tnodes\telapsed_ms\tnps\tbestmove\ttags\n";
+
+    for (const auto& row : rows) {
+        totalNodes += row.nodes;
+        totalElapsedMs += row.elapsedMs;
+        std::cout << row.id << '\t' << row.depthReached << '\t' << row.score << '\t' << row.nodes
+                  << '\t' << row.elapsedMs << '\t' << row.nps << '\t' << moveToUci(row.bestMove)
+                  << '\t' << BenchmarkSuite::joinTags(row.tags, ",") << '\n';
+    }
+
+    const long long totalNps = (totalNodes * 1000LL) / std::max(1LL, totalElapsedMs);
+    std::cout << "TOTAL\tnodes=" << totalNodes << "\telapsed_ms=" << totalElapsedMs
+              << "\tnps=" << totalNps << '\n';
+}
+
+void printJsonReport(const std::vector<SearchRow>& rows, int rounds, int depthLimit, int timeMs,
+                     int threads) {
+    long long totalNodes = 0;
+    long long totalElapsedMs = 0;
+    for (const auto& row : rows) {
+        totalNodes += row.nodes;
+        totalElapsedMs += row.elapsedMs;
+    }
+    const long long totalNps = (totalNodes * 1000LL) / std::max(1LL, totalElapsedMs);
+
+    std::cout << "{\n";
+    std::cout << "  \"benchmark\": \"search_benchmark\",\n";
+    std::cout << "  \"config\": {\"rounds\": " << rounds << ", \"depth\": " << depthLimit
+              << ", \"time_ms\": " << timeMs << ", \"threads\": " << threads << "},\n";
+    std::cout << "  \"results\": [\n";
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        const auto& row = rows[i];
+        std::cout << "    {\"id\": \"" << BenchmarkSuite::jsonEscape(row.id)
+                  << "\", \"position_name\": \"" << BenchmarkSuite::jsonEscape(row.positionName)
+                  << "\", \"round\": " << row.round << ", \"depth_reached\": " << row.depthReached
+                  << ", \"score\": " << row.score << ", \"nodes\": " << row.nodes
+                  << ", \"elapsed_ms\": " << row.elapsedMs << ", \"nps\": " << row.nps
+                  << ", \"bestmove\": \"" << BenchmarkSuite::jsonEscape(moveToUci(row.bestMove))
+                  << "\", \"fen\": \"" << BenchmarkSuite::jsonEscape(row.fen) << "\", \"tags\": [";
+        for (std::size_t tagIndex = 0; tagIndex < row.tags.size(); ++tagIndex) {
+            if (tagIndex > 0) {
+                std::cout << ", ";
+            }
+            std::cout << "\"" << BenchmarkSuite::jsonEscape(row.tags[tagIndex]) << "\"";
+        }
+        std::cout << "]}";
+        if (i + 1 < rows.size()) {
+            std::cout << ',';
+        }
+        std::cout << '\n';
+    }
+    std::cout << "  ],\n";
+    std::cout << "  \"summary\": {\"nodes\": " << totalNodes
+              << ", \"elapsed_ms\": " << totalElapsedMs << ", \"nps\": " << totalNps << "}\n";
+    std::cout << "}\n";
+}
 } // namespace
 
 int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
@@ -22,58 +114,65 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
     const int timeMs = BenchmarkArgs::parsePositiveIntArg(args, "--time_ms", kDefaultTimeMs);
     const int threads = BenchmarkArgs::parsePositiveIntArg(args, "--threads", kDefaultThreads);
     const int rounds = BenchmarkArgs::parsePositiveIntArg(args, "--rounds", kDefaultRounds);
+    const BenchmarkSuite::OutputFormat format = BenchmarkSuite::parseOutputFormat(args);
+    const std::vector<BenchmarkSuite::PositionCase> positions =
+        BenchmarkSuite::selectPositions(args);
 
-    initKnightAttacks();
-    initKingAttacks();
-    InitZobrist();
+    if (positions.empty()) {
+        std::cerr << "No benchmark positions matched the requested filters.\n";
+        return 1;
+    }
 
-    const std::vector<std::string> fens = {
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-        "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"};
+    std::vector<SearchRow> rows;
+    rows.reserve(static_cast<std::size_t>(rounds) * positions.size());
 
-    std::cout << "Search benchmark" << '\n';
-    std::cout << "rounds=" << rounds << " depth=" << depthLimit << " time_ms=" << timeMs
-              << " threads=" << threads << '\n';
+    {
+        BenchmarkSuite::ScopedStdoutSilencer silencer(format == BenchmarkSuite::OutputFormat::JSON);
+        BenchmarkSuite::initializeEngineState();
 
-    SearchConfig config;
-    config.maxDepth = depthLimit;
-    config.timeLimitMs = timeMs;
-    config.optimalTimeMs = timeMs;
-    config.maxTimeMs = timeMs;
+        SearchConfig config;
+        config.maxDepth = depthLimit;
+        config.timeLimitMs = timeMs;
+        config.optimalTimeMs = timeMs;
+        config.maxTimeMs = timeMs;
 
-    SearchContext searchContext;
-    searchContext.threads = threads;
+        SearchContext searchContext;
+        searchContext.threads = threads;
 
-    long long totalNodes = 0;
-    long long totalElapsedMs = 0;
+        for (int round = 1; round <= rounds; ++round) {
+            for (const auto& position : positions) {
+                Board board;
+                board.InitializeFromFEN(position.fen);
 
-    for (int round = 1; round <= rounds; ++round) {
-        std::cout << "round=" << round << '\n';
-        for (std::size_t i = 0; i < fens.size(); ++i) {
-            Board board;
-            board.InitializeFromFEN(fens[i]);
+                const auto start = std::chrono::steady_clock::now();
+                const SearchResult result =
+                    iterativeDeepeningParallel(board, config, searchContext);
+                const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                           std::chrono::steady_clock::now() - start)
+                                           .count();
 
-            const auto start = std::chrono::steady_clock::now();
-            const SearchResult result = iterativeDeepeningParallel(board, config, searchContext);
-            const auto end = std::chrono::steady_clock::now();
-            const auto elapsedMs =
-                std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-            const long long nps = (result.nodes * 1000LL) / std::max(1LL, elapsedMs);
-
-            totalNodes += result.nodes;
-            totalElapsedMs += elapsedMs;
-
-            std::cout << "pos=" << (i + 1) << " depth_reached=" << result.depth
-                      << " nodes=" << result.nodes << " elapsed_ms=" << elapsedMs << " nps=" << nps
-                      << '\n';
+                SearchRow row;
+                row.id = "round" + std::to_string(round) + ":" + position.id;
+                row.positionName = position.name;
+                row.fen = position.fen;
+                row.tags = position.tags;
+                row.round = round;
+                row.depthReached = result.depth;
+                row.score = result.score;
+                row.nodes = result.nodes;
+                row.elapsedMs = elapsedMs;
+                row.nps = (result.nodes * 1000LL) / std::max(1LL, elapsedMs);
+                row.bestMove = result.bestMove;
+                rows.push_back(row);
+            }
         }
     }
 
-    const long long totalNps = (totalNodes * 1000LL) / std::max(1LL, totalElapsedMs);
-    std::cout << "TOTAL nodes=" << totalNodes << " elapsed_ms=" << totalElapsedMs
-              << " nps=" << totalNps << '\n';
+    if (format == BenchmarkSuite::OutputFormat::JSON) {
+        printJsonReport(rows, rounds, depthLimit, timeMs, threads);
+    } else {
+        printTextReport(rows, rounds, depthLimit, timeMs, threads);
+    }
 
     return 0;
 }

@@ -4,14 +4,12 @@
 #include "search/ValidMoves.h"
 #include "search/search.h"
 
+#include <ranges>
+
 namespace {
 bool containsMove(const std::vector<Move>& moves, int from, int to) {
-    for (const auto& move : moves) {
-        if (move.first == from && move.second == to) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(
+        moves, [&](const Move& move) { return move.first == from && move.second == to; });
 }
 } // namespace
 

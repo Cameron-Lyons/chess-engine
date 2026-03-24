@@ -1,134 +1,134 @@
+#include "benchmark_args.h"
+#include "benchmark_suite.h"
 #include "src/core/ChessBoard.h"
 #include "src/search/search.h"
-#include "src/utils/engine_globals.h"
+
 #include <algorithm>
-#include <atomic>
 #include <chrono>
-#include <future>
 #include <iostream>
 #include <thread>
 #include <vector>
 
 namespace {
-constexpr int kThreadFallback = 4;
+constexpr int kDefaultDepthLimit = 8;
+constexpr int kDefaultTimeMs = 5000;
 
-int getWorkerCount(std::size_t taskCount, int perTaskThreads = 1) {
-    if (taskCount == 0U) {
-        return 1;
+struct LazySmpRow {
+    std::string id;
+    std::string positionName;
+    long long regularNodes = 0;
+    long long regularElapsedMs = 0;
+    long long smpNodes = 0;
+    long long smpElapsedMs = 0;
+    long long regularNps = 0;
+    long long smpNps = 0;
+    double speedup = 0.0;
+};
+
+void printTextReport(const std::vector<LazySmpRow>& rows, int threads, int depthLimit, int timeMs) {
+    std::cout << "Lazy SMP benchmark\n";
+    std::cout << "threads=" << threads << " depth=" << depthLimit << " time_ms=" << timeMs << '\n';
+    std::cout << "id\tregular_nps\tsmp_nps\tspeedup\n";
+    for (const auto& row : rows) {
+        std::cout << row.id << '\t' << row.regularNps << '\t' << row.smpNps << '\t' << row.speedup
+                  << '\n';
     }
-    const unsigned int hardware = std::thread::hardware_concurrency();
-    const int available = (hardware == 0U) ? kThreadFallback : static_cast<int>(hardware);
-    const int boundedByCpu = std::max(1, available / std::max(1, perTaskThreads));
-    return std::max(1, std::min(static_cast<int>(taskCount), boundedByCpu));
+}
+
+void printJsonReport(const std::vector<LazySmpRow>& rows, int threads, int depthLimit, int timeMs) {
+    std::cout << "{\n";
+    std::cout << "  \"benchmark\": \"lazy_smp_benchmark\",\n";
+    std::cout << "  \"config\": {\"threads\": " << threads << ", \"depth\": " << depthLimit
+              << ", \"time_ms\": " << timeMs << "},\n";
+    std::cout << "  \"results\": [\n";
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        const auto& row = rows[i];
+        std::cout << "    {\"id\": \"" << BenchmarkSuite::jsonEscape(row.id)
+                  << "\", \"position_name\": \"" << BenchmarkSuite::jsonEscape(row.positionName)
+                  << "\", \"regular_nps\": " << row.regularNps << ", \"smp_nps\": " << row.smpNps
+                  << ", \"speedup\": " << row.speedup << "}";
+        if (i + 1 < rows.size()) {
+            std::cout << ',';
+        }
+        std::cout << '\n';
+    }
+    std::cout << "  ]\n";
+    std::cout << "}\n";
 }
 } // namespace
 
-int main() { // NOLINT(bugprone-exception-escape)
-    InitZobrist();
+int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
+    const std::vector<std::string> args(argv + 1, argv + argc);
+    const int hardwareThreads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));
+    const int threads =
+        BenchmarkArgs::parsePositiveIntArg(args, "--threads", std::max(2, hardwareThreads));
+    const int depthLimit = BenchmarkArgs::parsePositiveIntArg(args, "--depth", kDefaultDepthLimit);
+    const int timeMs = BenchmarkArgs::parsePositiveIntArg(args, "--time_ms", kDefaultTimeMs);
+    const BenchmarkSuite::OutputFormat format = BenchmarkSuite::parseOutputFormat(args);
+    const std::vector<BenchmarkSuite::PositionCase> positions =
+        BenchmarkSuite::selectPositions(args);
 
-    std::vector<std::string> testPositions = {
-
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-
-        "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
-
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-
-        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"};
-
-    const auto hardwareThreads = std::thread::hardware_concurrency();
-    int numThreads = (hardwareThreads == 0U) ? 0 : static_cast<int>(hardwareThreads);
-    if (numThreads == 0) {
-        numThreads = 4;
+    if (positions.empty()) {
+        std::cerr << "No benchmark positions matched the requested filters.\n";
+        return 1;
     }
 
-    std::cout << "Lazy SMP Benchmark" << '\n';
-    std::cout << "==================" << '\n';
-    std::cout << "Threads available: " << numThreads << '\n';
-    std::cout << '\n';
+    std::vector<LazySmpRow> rows;
+    rows.reserve(positions.size());
 
-    struct TimedSearch {
-        SearchResult result;
-        long long timeMs = 0;
-    };
-    std::vector<TimedSearch> regularResults(testPositions.size());
-    std::vector<TimedSearch> smpResults(testPositions.size());
+    {
+        BenchmarkSuite::ScopedStdoutSilencer silencer(format == BenchmarkSuite::OutputFormat::JSON);
+        BenchmarkSuite::initializeEngineState();
 
-    auto runRegularSearch = [&testPositions, &regularResults](std::size_t index) {
-        Board board;
-        board.InitializeFromFEN(testPositions[index]);
-        auto start = std::chrono::high_resolution_clock::now();
-        SearchResult result = iterativeDeepeningParallel(board, 8, 5000, 1);
-        auto end = std::chrono::high_resolution_clock::now();
-        regularResults[index] = {
-            result, std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()};
-    };
+        SearchConfig regularConfig;
+        regularConfig.maxDepth = depthLimit;
+        regularConfig.timeLimitMs = timeMs;
+        regularConfig.optimalTimeMs = timeMs;
+        regularConfig.maxTimeMs = timeMs;
 
-    auto runSMPSearch = [&testPositions, &smpResults, numThreads](std::size_t index) {
-        Board board;
-        board.InitializeFromFEN(testPositions[index]);
-        auto start = std::chrono::high_resolution_clock::now();
-        SearchResult result = iterativeDeepeningParallel(board, 8, 5000, numThreads);
-        auto end = std::chrono::high_resolution_clock::now();
-        smpResults[index] = {
-            result, std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()};
-    };
+        SearchConfig smpConfig = regularConfig;
 
-    const int regularWorkers = getWorkerCount(testPositions.size(), 1);
-    const int smpWorkers = getWorkerCount(testPositions.size(), numThreads);
+        SearchContext regularContext;
+        regularContext.threads = 1;
+        SearchContext smpContext;
+        smpContext.threads = threads;
 
-    auto runStage = [&testPositions](int workerCount, auto&& task) {
-        std::atomic<std::size_t> nextIndex{0};
-        std::vector<std::future<void>> workers;
-        workers.reserve(static_cast<std::size_t>(workerCount));
-        for (int worker = 0; worker < workerCount; ++worker) {
-            workers.emplace_back(
-                std::async(std::launch::async, [&nextIndex, &testPositions, &task] {
-                    while (true) {
-                        const std::size_t index = nextIndex.fetch_add(1, std::memory_order_relaxed);
-                        if (index >= testPositions.size()) {
-                            break;
-                        }
-                        task(index);
-                    }
-                }));
+        for (const auto& position : positions) {
+            LazySmpRow row;
+            row.id = position.id;
+            row.positionName = position.name;
+
+            Board regularBoard;
+            regularBoard.InitializeFromFEN(position.fen);
+            auto start = std::chrono::steady_clock::now();
+            const SearchResult regularResult =
+                iterativeDeepeningParallel(regularBoard, regularConfig, regularContext);
+            row.regularElapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::steady_clock::now() - start)
+                                       .count();
+            row.regularNodes = regularResult.nodes;
+            row.regularNps = (row.regularNodes * 1000LL) / std::max(1LL, row.regularElapsedMs);
+
+            Board smpBoard;
+            smpBoard.InitializeFromFEN(position.fen);
+            start = std::chrono::steady_clock::now();
+            const SearchResult smpResult =
+                iterativeDeepeningParallel(smpBoard, smpConfig, smpContext);
+            row.smpElapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::steady_clock::now() - start)
+                                   .count();
+            row.smpNodes = smpResult.nodes;
+            row.smpNps = (row.smpNodes * 1000LL) / std::max(1LL, row.smpElapsedMs);
+            row.speedup = static_cast<double>(row.regularElapsedMs) /
+                          static_cast<double>(std::max(1LL, row.smpElapsedMs));
+            rows.push_back(row);
         }
-        for (auto& future : workers) {
-            future.get();
-        }
-    };
+    }
 
-    runStage(regularWorkers, runRegularSearch);
-    runStage(smpWorkers, runSMPSearch);
-
-    for (std::size_t i = 0; i < testPositions.size(); ++i) {
-        const auto& regular = regularResults[i];
-        const auto& smp = smpResults[i];
-        std::cout << "Position: " << testPositions[i] << '\n';
-        std::cout << "Regular search (1 thread):" << '\n';
-        std::cout << "  Depth: " << regular.result.depth << '\n';
-        std::cout << "  Score: " << regular.result.score << '\n';
-        std::cout << "  Nodes: " << regular.result.nodes << '\n';
-        std::cout << "  Time: " << regular.timeMs << " ms" << '\n';
-        std::cout << "  NPS: "
-                  << ((static_cast<long long>(regular.result.nodes) * 1000LL) /
-                      std::max(1LL, regular.timeMs))
-                  << '\n';
-        std::cout << "Lazy SMP (" << numThreads << " threads):" << '\n';
-        std::cout << "  Depth: " << smp.result.depth << '\n';
-        std::cout << "  Score: " << smp.result.score << '\n';
-        std::cout << "  Nodes: " << smp.result.nodes << '\n';
-        std::cout << "  Time: " << smp.timeMs << " ms" << '\n';
-        std::cout << "  NPS: "
-                  << ((static_cast<long long>(smp.result.nodes) * 1000LL) /
-                      std::max(1LL, smp.timeMs))
-                  << '\n';
-        double speedup =
-            static_cast<double>(regular.timeMs) / static_cast<double>(std::max(1LL, smp.timeMs));
-        double efficiency = speedup / numThreads * 100.0;
-        std::cout << "Speedup: " << speedup << "x" << '\n';
-        std::cout << "Efficiency: " << efficiency << "%" << '\n';
-        std::cout << '\n';
+    if (format == BenchmarkSuite::OutputFormat::JSON) {
+        printJsonReport(rows, threads, depthLimit, timeMs);
+    } else {
+        printTextReport(rows, threads, depthLimit, timeMs);
     }
 
     return 0;

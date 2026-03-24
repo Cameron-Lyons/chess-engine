@@ -56,7 +56,7 @@ TEST(EngineImprovements, SearchReturnsLegalMoveAfterFourPlyOpening) {
     ASSERT_EQ(searchBoard.toFEN(), originalFen);
     ASSERT_GE(result.bestMove.first, 0);
     ASSERT_GE(result.bestMove.second, 0);
-    ASSERT_FALSE(result.bestMove.first == 2 && result.bestMove.second == 38);
+    ASSERT_TRUE(result.bestMove.first != 2 || result.bestMove.second != 38);
 
     std::vector<Move> legalMoves = GetAllMoves(board, board.turn);
     bool found = false;

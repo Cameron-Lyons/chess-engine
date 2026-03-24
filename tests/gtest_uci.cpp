@@ -83,9 +83,11 @@ TEST(UCI, ConvertsMovesToAndFromUciNotation) {
     EXPECT_EQ(UCINotation::moveToUCI(move), "e2e4");
 
     const auto parsed = UCINotation::uciToMove("e2e4");
-    ASSERT_TRUE(parsed.has_value());
-    EXPECT_EQ(parsed->first, 12);
-    EXPECT_EQ(parsed->second, 28);
+    const Move parsedMove = parsed.value_or(Move{-1, -1});
+    ASSERT_GE(parsedMove.first, 0);
+    ASSERT_GE(parsedMove.second, 0);
+    EXPECT_EQ(parsedMove.first, 12);
+    EXPECT_EQ(parsedMove.second, 28);
 
     EXPECT_EQ(UCINotation::moveToUCI({-1, -1}), "0000");
     EXPECT_FALSE(UCINotation::uciToMove("e9e4").has_value());

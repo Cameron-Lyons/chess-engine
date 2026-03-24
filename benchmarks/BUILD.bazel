@@ -9,13 +9,23 @@ cc_library(
     copts = common_benchmark_copts,
 )
 
+cc_library(
+    name = "benchmark_suite",
+    srcs = ["benchmark_suite.cpp"],
+    hdrs = ["benchmark_suite.h"],
+    copts = common_benchmark_copts,
+    deps = [
+        ":benchmark_args",
+        "//:engine_lib",
+    ],
+)
+
 cc_binary(
     name = "search_benchmark",
     srcs = ["search_benchmark.cpp"],
     copts = common_benchmark_copts,
     deps = [
-        ":benchmark_args",
-        "//:engine_lib",
+        ":benchmark_suite",
     ],
 )
 
@@ -24,8 +34,7 @@ cc_binary(
     srcs = ["micro_benchmark.cpp"],
     copts = common_benchmark_copts,
     deps = [
-        ":benchmark_args",
-        "//:engine_lib",
+        ":benchmark_suite",
     ],
 )
 
@@ -34,17 +43,33 @@ cc_binary(
     srcs = ["multipv_benchmark.cpp"],
     copts = common_benchmark_copts,
     deps = [
-        ":benchmark_args",
-        "//:engine_lib",
+        ":benchmark_suite",
+    ],
+)
+
+cc_binary(
+    name = "lazy_smp_benchmark",
+    srcs = ["LazySMPBenchmark.cpp"],
+    copts = common_benchmark_copts,
+    deps = [
+        ":benchmark_suite",
+    ],
+)
+
+cc_binary(
+    name = "perft_benchmark",
+    srcs = ["perft_test.cpp"],
+    copts = common_benchmark_copts,
+    deps = [
+        ":benchmark_suite",
     ],
 )
 
 cc_binary(
     name = "search_probe",
     srcs = ["search_probe.cpp"],
-    copts = ["-Werror"],
+    copts = common_benchmark_copts,
     deps = [
-        ":benchmark_args",
-        "//:engine_lib",
+        ":benchmark_suite",
     ],
 )

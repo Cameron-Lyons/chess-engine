@@ -289,11 +289,11 @@ struct Board {
     }
 
     void setCastlingRight(std::uint8_t mask, bool enabled = true) {
-        if (enabled) {
-            state.castlingRights |= mask;
-        } else {
-            state.castlingRights &= static_cast<std::uint8_t>(~mask);
-        }
+        const std::uint8_t updatedRights =
+            enabled ? static_cast<std::uint8_t>(state.castlingRights | mask)
+                    : static_cast<std::uint8_t>(state.castlingRights &
+                                                static_cast<std::uint8_t>(~mask));
+        state.castlingRights = updatedRights;
     }
 
     void clearCastlingRights(std::uint8_t mask) {
