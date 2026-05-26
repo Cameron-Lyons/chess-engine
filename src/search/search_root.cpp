@@ -249,9 +249,8 @@ RootSplitResult searchRootMovesYBWC(const Board& board, int depth, int alpha, in
 
         for (int i = kZero; i < workerCount; ++i) {
             workerArgs[static_cast<std::size_t>(i)] = {&shared};
-            const int createResult =
-                workers[static_cast<std::size_t>(i)].start(attr.get(), &rootSplitWorkerEntry,
-                                                           &workerArgs[static_cast<std::size_t>(i)]);
+            const int createResult = workers[static_cast<std::size_t>(i)].start(
+                attr.get(), &rootSplitWorkerEntry, &workerArgs[static_cast<std::size_t>(i)]);
             if (createResult != 0) {
                 rootSplitWorkerEntry(&workerArgs[static_cast<std::size_t>(i)]);
             }

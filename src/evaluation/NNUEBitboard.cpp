@@ -109,7 +109,6 @@ constexpr int kScoreScale = 100;
 constexpr uint32_t kNetworkMagic = 0x4E4E5545;
 constexpr uint32_t kNetworkVersion = 2;
 
-#if !NNUEBITBOARD_X86_SIMD
 int32_t dotProductScalar(const int8_t* input, const int8_t* weights, int size) {
 #if NNUEBITBOARD_ARM_NEON
     int32x4_t sumVec = vdupq_n_s32(0);
@@ -177,7 +176,6 @@ void applyClippedReluScalar(const int32_t* input, int8_t* output, int size) {
     }
 #endif
 }
-#endif
 } // namespace
 
 #if NNUEBITBOARD_X86_SIMD

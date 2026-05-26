@@ -91,9 +91,8 @@ int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor 
     }
 
     static constexpr std::array<const std::array<int, NUM_SQUARES>*, kPieceTypeCount> tables = {
-        &PieceSquareTables::PAWN_MG,   &PieceSquareTables::KNIGHT_MG,
-        &PieceSquareTables::BISHOP_MG, &PieceSquareTables::ROOK_MG,
-        &PieceSquareTables::QUEEN_MG,  &PieceSquareTables::KING_MG};
+        &PieceSquareTables::PAWN_MG, &PieceSquareTables::KNIGHT_MG, &PieceSquareTables::BISHOP_MG,
+        &PieceSquareTables::ROOK_MG, &PieceSquareTables::QUEEN_MG,  &PieceSquareTables::KING_MG};
     int idx = static_cast<int>(pieceType);
     int value = (idx >= 0 && idx < kPieceTypeCount) ? (*tables[idx])[position] : 0;
     if (color == ChessPieceColor::BLACK) {
