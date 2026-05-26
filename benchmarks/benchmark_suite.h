@@ -1,9 +1,11 @@
 #pragma once
 
 #include <memory>
+#include <span>
 #include <sstream>
 #include <streambuf>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace BenchmarkSuite {
@@ -18,11 +20,11 @@ struct PositionCase {
 };
 
 std::vector<PositionCase> defaultCorpus();
-std::vector<PositionCase> selectPositions(const std::vector<std::string>& args);
-OutputFormat parseOutputFormat(const std::vector<std::string>& args);
+std::vector<PositionCase> selectPositions(std::span<const std::string> args);
+OutputFormat parseOutputFormat(std::span<const std::string> args);
 std::string outputFormatName(OutputFormat format);
 std::string jsonEscape(const std::string& value);
-std::string joinTags(const std::vector<std::string>& tags, const std::string& separator);
+std::string joinTags(std::span<const std::string> tags, std::string_view separator);
 void initializeEngineState();
 
 class ScopedStdoutSilencer {

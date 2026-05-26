@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <limits>
 #include <mutex>
-#include <pthread.h>
+#include <span>
 #include <thread>
 
 namespace SearchInternal {
@@ -237,7 +237,7 @@ struct RootSplitResult {
 };
 
 std::vector<ScoredMove> scoreMovesOptimized(
-    const Board& board, const std::vector<Move>& moves, const ThreadSafeHistory& historyTable,
+    const Board& board, std::span<const Move> moves, const ThreadSafeHistory& historyTable,
     const KillerMoves& killerMoves, int ply,
     const Move& ttMove = {SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare},
     const Move& counterMove = {SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare},
@@ -328,7 +328,8 @@ inline constexpr int KILLER_SCORE = 800000;
 inline constexpr int HISTORY_SCORE_BASE = 0;
 inline constexpr int QUIET_SCORE_BASE = -1000000;
 
-extern const int MVV_LVA_SCORES[6][6];
+using MvvLvaTable = std::array<std::array<int, kPieceTypePerColorCount>, kPieceTypePerColorCount>;
+extern const MvvLvaTable MVV_LVA_SCORES;
 
 int getMVVLVA_Score(const Board& board, int fromSquare, int toSquare);
 int getHistoryScore(const ThreadSafeHistory& history, int fromSquare, int toSquare);
@@ -395,7 +396,7 @@ int getPieceValue(ChessPieceType pieceType);
 bool isBetterScoredMove(const ScoredMove& lhs, const ScoredMove& rhs);
 const ScoredMove& pickNextScoredMove(std::vector<ScoredMove>& scoredMoves, std::size_t nextIndex);
 bool moveMatches(const Move& lhs, const Move& rhs);
-bool moveExistsInList(const std::vector<Move>& moves, const Move& candidate);
+bool moveExistsInList(std::span<const Move> moves, const Move& candidate);
 int chooseRootSplitWorkerCount(int depth, int numThreads, int remainingMoves);
 bool isPreferredRootMove(Move lhs, Move rhs);
 bool checkRootSplitTimeLimit(RootSplitSharedState& shared);

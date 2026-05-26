@@ -75,39 +75,12 @@ constexpr int kQueenEscapeSearchRadius = 2;
 
 namespace PieceSquareTables {
 
-const int PAWN_MG[64] = {0,  0,  0,  0,   0,   0,  0,  0,  50, 50, 50,  50, 50, 50,  50, 50,
-                         10, 10, 20, 30,  30,  20, 10, 10, 5,  5,  10,  25, 25, 10,  5,  5,
-                         0,  0,  0,  20,  20,  0,  0,  0,  5,  -5, -10, 0,  0,  -10, -5, 5,
-                         5,  10, 10, -20, -20, 10, 10, 5,  0,  0,  0,   0,  0,  0,   0,  0};
-
-const int KNIGHT_MG[64] = {-50, -40, -30, -30, -30, -30, -40, -50, -40, -20, 0,   0,   0,
-                           0,   -20, -40, -30, 0,   10,  15,  15,  10,  0,   -30, -30, 5,
-                           15,  20,  20,  15,  5,   -30, -30, 0,   15,  20,  20,  15,  0,
-                           -30, -30, 5,   10,  15,  15,  10,  5,   -30, -40, -20, 0,   5,
-                           5,   0,   -20, -40, -50, -40, -30, -30, -30, -30, -40, -50};
-
-const int BISHOP_MG[64] = {-20, -10, -10, -10, -10, -10, -10, -20, -10, 0,   0,   0,   0,
-                           0,   0,   -10, -10, 0,   5,   10,  10,  5,   0,   -10, -10, 5,
-                           5,   10,  10,  5,   5,   -10, -10, 0,   10,  10,  10,  10,  0,
-                           -10, -10, 10,  10,  10,  10,  10,  10,  -10, -10, 5,   0,   0,
-                           0,   0,   5,   -10, -20, -10, -10, -10, -10, -10, -10, -20};
-
-const int ROOK_MG[64] = {0,  0, 0, 0, 0, 0, 0, 0,  5,  10, 10, 10, 10, 10, 10, 5,
-                         -5, 0, 0, 0, 0, 0, 0, -5, -5, 0,  0,  0,  0,  0,  0,  -5,
-                         -5, 0, 0, 0, 0, 0, 0, -5, -5, 0,  0,  0,  0,  0,  0,  -5,
-                         -5, 0, 0, 0, 0, 0, 0, -5, 0,  0,  0,  5,  5,  0,  0,  0};
-
-const int QUEEN_MG[64] = {-20, -10, -10, -5,  -5,  -10, -10, -20, -10, 0,   0,   0,  0,
-                          0,   0,   -10, -10, 0,   5,   5,   5,   5,   0,   -10, -5, 0,
-                          5,   5,   5,   5,   0,   -5,  0,   0,   5,   5,   5,   5,  0,
-                          -5,  -10, 5,   5,   5,   5,   5,   0,   -10, -10, 0,   5,  0,
-                          0,   0,   0,   -10, -20, -10, -10, -5,  -5,  -10, -10, -20};
-
-const int KING_MG[64] = {-30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50,
-                         -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40,
-                         -40, -50, -50, -40, -40, -30, -20, -30, -30, -40, -40, -30, -30,
-                         -20, -10, -20, -20, -20, -20, -20, -20, -10, 20,  20,  0,   0,
-                         0,   0,   20,  20,  20,  30,  10,  0,   0,   10,  30,  20};
+constexpr auto PAWN_MG = PAWN_TABLE;
+constexpr auto KNIGHT_MG = KNIGHT_TABLE;
+constexpr auto BISHOP_MG = BISHOP_TABLE;
+constexpr auto ROOK_MG = ROOK_TABLE;
+constexpr auto QUEEN_MG = QUEEN_TABLE;
+constexpr auto KING_MG = KING_TABLE;
 
 } // namespace PieceSquareTables
 
@@ -117,11 +90,12 @@ int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor 
         return 0;
     }
 
-    static const int* const tables[] = {PieceSquareTables::PAWN_MG,   PieceSquareTables::KNIGHT_MG,
-                                        PieceSquareTables::BISHOP_MG, PieceSquareTables::ROOK_MG,
-                                        PieceSquareTables::QUEEN_MG,  PieceSquareTables::KING_MG};
+    static constexpr std::array<const std::array<int, NUM_SQUARES>*, kPieceTypeCount> tables = {
+        &PieceSquareTables::PAWN_MG,   &PieceSquareTables::KNIGHT_MG,
+        &PieceSquareTables::BISHOP_MG, &PieceSquareTables::ROOK_MG,
+        &PieceSquareTables::QUEEN_MG,  &PieceSquareTables::KING_MG};
     int idx = static_cast<int>(pieceType);
-    int value = (idx >= 0 && idx < kPieceTypeCount) ? tables[idx][position] : 0;
+    int value = (idx >= 0 && idx < kPieceTypeCount) ? (*tables[idx])[position] : 0;
     if (color == ChessPieceColor::BLACK) {
         value = -value;
     }
@@ -564,8 +538,8 @@ int evaluateEndgame(const Board& board) {
 
 thread_local PawnHashTable pawnHashTable;
 
-uint64_t computePawnHash(const Board& board) {
-    uint64_t h = 1469598103934665603ULL;
+std::uint64_t computePawnHash(const Board& board) {
+    std::uint64_t h = 1469598103934665603ULL;
     for (int sq = 0; sq < NUM_SQUARES; ++sq) {
         const Piece& p = board.squares[sq].piece;
         if (p.PieceType == ChessPieceType::PAWN) {
@@ -625,10 +599,12 @@ int evaluatePosition(const Board& board, int contempt) {
     gamePhase = std::min(gamePhase, TOTAL_PHASE);
 
     if (ENABLE_PAWN_STRUCTURE) {
-        uint64_t pawnKey = computePawnHash(board);
+        std::uint64_t pawnKey = computePawnHash(board);
         int pawnMg = 0;
         int pawnEg = 0;
-        if (pawnHashTable.probe(pawnKey, pawnMg, pawnEg)) {
+        if (const auto cachedPawnScore = pawnHashTable.probe(pawnKey)) {
+            pawnMg = cachedPawnScore->mgScore;
+            pawnEg = cachedPawnScore->egScore;
             mgScore += pawnMg;
             egScore += pawnEg;
         } else {

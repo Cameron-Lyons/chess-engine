@@ -1,16 +1,17 @@
 #pragma once
 
+#include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace BenchmarkArgs {
 
-int parsePositiveIntArg(const std::vector<std::string>& args, const std::string& key, int fallback);
-int parsePositiveIntArg(int argc, char** argv, const std::string& key, int fallback);
-std::string parseStringArg(const std::vector<std::string>& args, const std::string& key,
-                           const std::string& fallback);
-std::vector<std::string> parseCsvArg(const std::vector<std::string>& args, const std::string& key);
-std::vector<int> parsePositiveIntListArg(const std::vector<std::string>& args,
-                                         const std::string& key);
+int parsePositiveIntArg(std::span<const std::string> args, std::string_view key, int fallback);
+int parsePositiveIntArg(int argc, char** argv, std::string_view key, int fallback);
+std::string parseStringArg(std::span<const std::string> args, std::string_view key,
+                           std::string_view fallback);
+std::vector<std::string> parseCsvArg(std::span<const std::string> args, std::string_view key);
+std::vector<int> parsePositiveIntListArg(std::span<const std::string> args, std::string_view key);
 
 } // namespace BenchmarkArgs

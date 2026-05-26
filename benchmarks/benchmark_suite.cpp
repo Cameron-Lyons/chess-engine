@@ -11,7 +11,7 @@
 
 namespace BenchmarkSuite {
 namespace {
-bool hasAnyTag(const PositionCase& position, const std::vector<std::string>& tagFilters) {
+bool hasAnyTag(const PositionCase& position, std::span<const std::string> tagFilters) {
     if (tagFilters.empty()) {
         return true;
     }
@@ -20,7 +20,7 @@ bool hasAnyTag(const PositionCase& position, const std::vector<std::string>& tag
     });
 }
 
-bool hasRequestedId(const PositionCase& position, const std::vector<std::string>& idFilters) {
+bool hasRequestedId(const PositionCase& position, std::span<const std::string> idFilters) {
     if (idFilters.empty()) {
         return true;
     }
@@ -54,7 +54,7 @@ std::vector<PositionCase> defaultCorpus() {
     };
 }
 
-std::vector<PositionCase> selectPositions(const std::vector<std::string>& args) {
+std::vector<PositionCase> selectPositions(std::span<const std::string> args) {
     const std::vector<std::string> requestedIds = BenchmarkArgs::parseCsvArg(args, "--positions");
     const std::vector<std::string> requestedTags = BenchmarkArgs::parseCsvArg(args, "--tags");
 
@@ -71,7 +71,7 @@ std::vector<PositionCase> selectPositions(const std::vector<std::string>& args) 
     return selected;
 }
 
-OutputFormat parseOutputFormat(const std::vector<std::string>& args) {
+OutputFormat parseOutputFormat(std::span<const std::string> args) {
     const std::string format = BenchmarkArgs::parseStringArg(args, "--format", "text");
     return (format == "json") ? OutputFormat::JSON : OutputFormat::TEXT;
 }
@@ -107,7 +107,7 @@ std::string jsonEscape(const std::string& value) {
     return escaped.str();
 }
 
-std::string joinTags(const std::vector<std::string>& tags, const std::string& separator) {
+std::string joinTags(std::span<const std::string> tags, std::string_view separator) {
     std::ostringstream out;
     for (std::size_t i = 0; i < tags.size(); ++i) {
         if (i > 0) {

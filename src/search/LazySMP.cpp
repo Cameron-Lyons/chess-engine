@@ -3,6 +3,7 @@
 #include "ChessPiece.h"
 #include "search/ValidMoves.h"
 #include "search/search.h"
+#include "utils/ScopedPThread.h"
 
 #include <algorithm>
 #include <chrono>
@@ -12,7 +13,6 @@
 #include <map>
 #include <memory>
 #include <mutex>
-#include <pthread.h>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -173,9 +173,9 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit,
 
         score = clampScore(score);
         Move candidateMove = {kInvalidMoveSquare, kInvalidMoveSquare};
-        TTEntry entry;
-        if (context->transTable.find(rootHash, entry) && isValidMove(entry.bestMove)) {
-            candidateMove = entry.bestMove;
+        if (const auto entry = context->transTable.find(rootHash);
+            entry && isValidMove(entry->bestMove)) {
+            candidateMove = entry->bestMove;
         }
         if (!isValidMove(candidateMove)) {
             candidateMove = selectFallbackRootMove(data->board);
@@ -235,26 +235,21 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit,
         threads[i]->bestMove = {kInvalidMoveSquare, kInvalidMoveSquare};
     }
 
-    std::vector<pthread_t> searchThreads(static_cast<std::size_t>(numThreads));
+    std::vector<ScopedPThread> searchThreads(static_cast<std::size_t>(numThreads));
     std::vector<SearchThreadArgs> searchArgs(static_cast<std::size_t>(numThreads));
-    std::vector<bool> searchThreadCreated(static_cast<std::size_t>(numThreads), false);
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, kSearchThreadStackBytes);
+    ScopedPThreadAttr attr;
+    (void)attr.setStackSize(kSearchThreadStackBytes);
 
     for (int i = kZero; i < numThreads; ++i) {
         searchArgs[static_cast<std::size_t>(i)] = {this, threads[i].get(), effectiveMaxDepth,
                                                    timeLimit, &excludedRootMoves};
-        if (pthread_create(&searchThreads[static_cast<std::size_t>(i)], &attr,
-                           &LazySMP::searchThreadEntry,
-                           &searchArgs[static_cast<std::size_t>(i)]) != 0) {
+        if (searchThreads[static_cast<std::size_t>(i)].start(
+                attr.get(), &LazySMP::searchThreadEntry,
+                &searchArgs[static_cast<std::size_t>(i)]) != 0) {
             threads[i]->stopFlag = true;
             threads[i]->searching = false;
-        } else {
-            searchThreadCreated[static_cast<std::size_t>(i)] = true;
         }
     }
-    pthread_attr_destroy(&attr);
 
     SMPTimeManager timeManager(timeLimit);
 
@@ -276,10 +271,8 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit,
 
     stop();
 
-    for (int i = kZero; i < numThreads; ++i) {
-        if (searchThreadCreated[static_cast<std::size_t>(i)]) {
-            pthread_join(searchThreads[static_cast<std::size_t>(i)], nullptr);
-        }
+    for (auto& searchThread : searchThreads) {
+        searchThread.join();
     }
 
     SearchResult result;

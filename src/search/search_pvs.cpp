@@ -109,23 +109,22 @@ int QuiescenceSearch(Board& board, int alpha, int beta, bool maximizingPlayer,
     }
     context.pathHashes[static_cast<std::size_t>(ply)] = nodeZobristKey;
     context.transTable.prefetch(nodeZobristKey);
-    TTEntry ttEntry;
     Move hashMove = {kInvalidSquare, kInvalidSquare};
-    if (context.transTable.find(nodeZobristKey, ttEntry)) {
-        int ttValue = fromTtScore(ttEntry.value, ply);
-        ttEntry.value = ttValue;
-        if (ttEntry.depth >= kZero) {
-            if (ttEntry.flag == kExactFlag) {
+    if (auto ttEntry = context.transTable.find(nodeZobristKey)) {
+        int ttValue = fromTtScore(ttEntry->value, ply);
+        ttEntry->value = ttValue;
+        if (ttEntry->depth >= kZero) {
+            if (ttEntry->flag == kExactFlag) {
                 return ttValue;
             }
-            if (ttEntry.flag == kUpperBoundFlag && ttValue <= alpha) {
+            if (ttEntry->flag == kUpperBoundFlag && ttValue <= alpha) {
                 return ttValue;
             }
-            if (ttEntry.flag == kLowerBoundFlag && ttValue >= beta) {
+            if (ttEntry->flag == kLowerBoundFlag && ttValue >= beta) {
                 return ttValue;
             }
         }
-        hashMove = ttEntry.bestMove;
+        hashMove = ttEntry->bestMove;
     }
 
     ChessPieceColor currentColor =
@@ -325,20 +324,20 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
     }
     context.pathHashes[static_cast<std::size_t>(ply)] = nodeZobristKey;
     context.transTable.prefetch(nodeZobristKey);
-    TTEntry ttEntry;
-    bool ttHit = context.transTable.find(nodeZobristKey, ttEntry);
+    auto ttEntry = context.transTable.find(nodeZobristKey);
+    bool ttHit = ttEntry.has_value();
     if (ttHit) {
-        ttEntry.value = fromTtScore(ttEntry.value, ply);
+        ttEntry->value = fromTtScore(ttEntry->value, ply);
     }
-    if (ttHit && ttEntry.depth >= depth) {
-        if (ttEntry.flag == kExactFlag) {
-            return ttEntry.value;
+    if (ttHit && ttEntry->depth >= depth) {
+        if (ttEntry->flag == kExactFlag) {
+            return ttEntry->value;
         }
-        if (ttEntry.flag == kUpperBoundFlag && ttEntry.value <= alpha) {
-            return ttEntry.value;
+        if (ttEntry->flag == kUpperBoundFlag && ttEntry->value <= alpha) {
+            return ttEntry->value;
         }
-        if (ttEntry.flag == kLowerBoundFlag && ttEntry.value >= beta) {
-            return ttEntry.value;
+        if (ttEntry->flag == kLowerBoundFlag && ttEntry->value >= beta) {
+            return ttEntry->value;
         }
     }
 
@@ -368,9 +367,10 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         }
     }
 
-    if (depth >= kLateDepthReductionThreshold && (!ttHit || ttEntry.bestMove.first < kZero)) {
+    if (depth >= kLateDepthReductionThreshold && (!ttHit || ttEntry->bestMove.first < kZero)) {
         depth -= kOne;
     }
+    TTEntry ttData = ttEntry.value_or(TTEntry{});
 
     ScopedFastEvalMode fastEvalScope(!isPVNode && depth <= kFastEvalDepthThreshold);
     int staticEval = evaluatePosition(board, context.contempt);
@@ -431,7 +431,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         }
     }
 
-    MovePicker picker(board, ttEntry.bestMove, context.killerMoves, ply, historyTable, context);
+    MovePicker picker(board, ttData.bestMove, context.killerMoves, ply, historyTable, context);
     int colorIdx = (board.turn == ChessPieceColor::WHITE) ? kWhiteIndex : kBlackIndex;
     int prevDest = board.LastMove;
     const bool sideInCheck = isInCheck(board, board.turn);
@@ -488,11 +488,11 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         int extension = kZero;
         if (basicExtension) {
             extension = kOne;
-        } else if (depth >= kSingularDepthThreshold && move == ttEntry.bestMove &&
-                   ttEntry.depth >= depth - kSingularTtDepthMargin && ttEntry.value > alpha &&
-                   ttEntry.value < beta) {
+        } else if (depth >= kSingularDepthThreshold && move == ttData.bestMove &&
+                   ttData.depth >= depth - kSingularTtDepthMargin && ttData.value > alpha &&
+                   ttData.value < beta) {
             int seMargin = kSingularMarginPerDepth * depth;
-            int seBeta = ttEntry.value - seMargin;
+            int seBeta = ttData.value - seMargin;
             Board seBoard = board;
             int seVal = PrincipalVariationSearch(
                 seBoard, depth / kSingularReducedDepthDivisor, seBeta - kZeroWindowOffset, seBeta,
@@ -530,7 +530,7 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             mc.isCapture = isCaptureMove;
             mc.givesCheck = givesCheckMove;
             mc.isKiller = context.killerMoves.isKiller(ply, move);
-            mc.isHashMove = (move == ttEntry.bestMove);
+            mc.isHashMove = (move == ttData.bestMove);
             mc.isCounter = (prevDest >= kZero && prevDest < kCounterMoveArrayLimit &&
                             context.counterMoves[colorIdx][prevDest] == move);
             mc.isPromotion = isPromotionMove;
@@ -669,15 +669,14 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     if (depth == kOne && ply < kLmrEndgamePhaseThreshold && isInCheck(board, currentColor)) {
         extension = kOne;
     } else if (depth >= kSingularDepthThreshold && ply < kLmrEndgamePhaseThreshold) {
-        TTEntry ttEntry;
         uint64_t hash = resolveZobristKey(board, zobristKey);
-        if (context.transTable.find(hash, ttEntry) &&
-            ttEntry.depth >= depth - kSingularTtDepthMargin) {
-            ttEntry.value = fromTtScore(ttEntry.value, ply);
-            if (ttEntry.bestMove.first != kInvalidSquare && ttEntry.value > alpha &&
-                ttEntry.value < beta) {
+        if (auto ttEntry = context.transTable.find(hash);
+            ttEntry && ttEntry->depth >= depth - kSingularTtDepthMargin) {
+            ttEntry->value = fromTtScore(ttEntry->value, ply);
+            if (ttEntry->bestMove.first != kInvalidSquare && ttEntry->value > alpha &&
+                ttEntry->value < beta) {
                 int singularMargin = kSingularMarginPerDepth * depth;
-                int singularBeta = ttEntry.value - singularMargin;
+                int singularBeta = ttEntry->value - singularMargin;
                 if (singularBeta > alpha) {
                     Board testBoard = board;
                     int singularValue =
@@ -707,24 +706,23 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     }
     context.pathHashes[static_cast<std::size_t>(ply)] = nodeZobristKey;
     context.transTable.prefetch(nodeZobristKey);
-    TTEntry entry;
     Move hashMove = {kInvalidSquare, kInvalidSquare};
-    if (context.transTable.find(nodeZobristKey, entry)) {
-        entry.value = fromTtScore(entry.value, ply);
-        if (entry.depth >= depth) {
-            if (entry.flag == kExactFlag) {
-                return entry.value;
+    if (auto entry = context.transTable.find(nodeZobristKey)) {
+        entry->value = fromTtScore(entry->value, ply);
+        if (entry->depth >= depth) {
+            if (entry->flag == kExactFlag) {
+                return entry->value;
             }
-            if (entry.flag == kUpperBoundFlag && entry.value <= alpha) {
-                return entry.value;
+            if (entry->flag == kUpperBoundFlag && entry->value <= alpha) {
+                return entry->value;
             }
-            if (entry.flag == kLowerBoundFlag && entry.value >= beta) {
-                return entry.value;
+            if (entry->flag == kLowerBoundFlag && entry->value >= beta) {
+                return entry->value;
             }
         }
 
-        if (entry.bestMove.first != kInvalidSquare && entry.bestMove.second != kInvalidSquare) {
-            hashMove = entry.bestMove;
+        if (entry->bestMove.first != kInvalidSquare && entry->bestMove.second != kInvalidSquare) {
+            hashMove = entry->bestMove;
         }
     }
 

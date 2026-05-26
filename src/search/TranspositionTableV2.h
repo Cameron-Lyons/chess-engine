@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <type_traits>
+#include <utility>
 #ifdef __SSE__
 #include <xmmintrin.h>
 #endif
@@ -38,18 +40,28 @@ inline PackedMove packMove(int from, int to, int promotion = kZero) {
                                    ((promotion & kPromotionMask) << kPromotionShift));
 }
 
-inline void unpackMove(PackedMove move, int& from, int& to, int& promotion) {
-    from = move & kSquareMask;
-    to = (move >> kToShift) & kSquareMask;
-    promotion = (move >> kPromotionShift) & kPromotionMask;
+struct UnpackedMove {
+    int from;
+    int to;
+    int promotion;
+};
+
+[[nodiscard]] inline UnpackedMove unpackMove(PackedMove move) {
+    return {move & kSquareMask, (move >> kToShift) & kSquareMask,
+            (move >> kPromotionShift) & kPromotionMask};
 }
 
-enum Bound : uint8_t {
-    BOUND_NONE = kZero,
-    BOUND_UPPER = kBoundUpper,
-    BOUND_LOWER = kBoundLower,
-    BOUND_EXACT = BOUND_UPPER | BOUND_LOWER
+enum class Bound : std::uint8_t {
+    NONE = kZero,
+    UPPER = kBoundUpper,
+    LOWER = kBoundLower,
+    EXACT = kBoundUpper | kBoundLower
 };
+
+inline constexpr Bound BOUND_NONE = Bound::NONE;
+inline constexpr Bound BOUND_UPPER = Bound::UPPER;
+inline constexpr Bound BOUND_LOWER = Bound::LOWER;
+inline constexpr Bound BOUND_EXACT = Bound::EXACT;
 
 struct TTEntry {
     uint32_t key32;
@@ -67,7 +79,8 @@ struct TTEntry {
             move = m;
             value = v;
             eval = ev;
-            genBound = static_cast<uint8_t>((gen & kGenBoundMask) | (b << kBoundShift));
+            genBound = static_cast<uint8_t>((gen & kGenBoundMask) |
+                                            (std::to_underlying(b) << kBoundShift));
             depth = d;
         }
     }
@@ -92,6 +105,7 @@ struct TTCluster {
 };
 
 static_assert(sizeof(TTCluster) == kClusterBytes, "TTCluster must be 64 bytes");
+static_assert(std::is_trivially_copyable_v<TTCluster>, "TTCluster clear assumes byte zeroing");
 
 class TranspositionTable {
 private:

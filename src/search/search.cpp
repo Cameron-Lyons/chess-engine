@@ -24,7 +24,6 @@
 #include <limits>
 #include <memory>
 #include <mutex>
-#include <pthread.h>
 #include <random>
 #include <string>
 #include <thread>
@@ -721,7 +720,7 @@ int SearchInternal::getPieceValue(ChessPieceType pieceType) {
 }
 
 std::vector<ScoredMove> SearchInternal::scoreMovesOptimized(
-    const Board& board, const std::vector<Move>& moves, const ThreadSafeHistory& historyTable,
+    const Board& board, std::span<const Move> moves, const ThreadSafeHistory& historyTable,
     const KillerMoves& killerMoves, int ply, const Move& ttMove, const Move& counterMove,
     const ParallelSearchContext* context) {
     std::vector<ScoredMove> scoredMoves;
@@ -809,7 +808,7 @@ bool SearchInternal::moveMatches(const Move& lhs, const Move& rhs) {
     return lhs.first == rhs.first && lhs.second == rhs.second;
 }
 
-bool SearchInternal::moveExistsInList(const std::vector<Move>& moves, const Move& candidate) {
+bool SearchInternal::moveExistsInList(std::span<const Move> moves, const Move& candidate) {
     return std::ranges::any_of(moves,
                                [&](const Move& move) { return moveMatches(move, candidate); });
 }
@@ -890,13 +889,14 @@ bool SearchInternal::isCastling(const Board& board, int from, int to) {
     return std::abs(to - from) == kCastlingDistance;
 }
 
-const int SearchInternal::EnhancedMoveOrdering::MVV_LVA_SCORES[6][6] = {
-    {kZero, kZero, kZero, kZero, kZero, kZero},
-    {kMvvLvaVictimPawn, kZero, kZero, kZero, kZero, kZero},
-    {kMvvLvaVictimPawn, kZero, kZero, kZero, kZero, kZero},
-    {kMvvLvaVictimKnight, kTwo, kTwo, kZero, kZero, kZero},
-    {kMvvLvaVictimBishop, kFour, kFour, kTwo, kZero, kZero},
-    {kMvvLvaVictimRook, kThree, kThree, kOne, kOne, kZero}};
+const SearchInternal::EnhancedMoveOrdering::MvvLvaTable
+    SearchInternal::EnhancedMoveOrdering::MVV_LVA_SCORES = {
+        {{kZero, kZero, kZero, kZero, kZero, kZero},
+         {kMvvLvaVictimPawn, kZero, kZero, kZero, kZero, kZero},
+         {kMvvLvaVictimPawn, kZero, kZero, kZero, kZero, kZero},
+         {kMvvLvaVictimKnight, kTwo, kTwo, kZero, kZero, kZero},
+         {kMvvLvaVictimBishop, kFour, kFour, kTwo, kZero, kZero},
+         {kMvvLvaVictimRook, kThree, kThree, kOne, kOne, kZero}}};
 
 int SearchInternal::EnhancedMoveOrdering::getMVVLVA_Score(const Board& board, int fromSquare,
                                                           int toSquare) {

@@ -5,12 +5,12 @@
 #include "../core/ChessBoard.h"
 #include "../search/AdvancedSearch.h"
 #include "../search/search.h"
+#include "../utils/ScopedPThread.h"
 
 #include <atomic>
 #include <cstddef>
 #include <memory>
 #include <optional>
-#include <pthread.h>
 #include <string>
 #include <vector>
 
@@ -84,8 +84,7 @@ private:
     std::chrono::steady_clock::time_point searchStartTime;
     int searchTimeLimit = 0;
     int searchDepthLimit = 0;
-    pthread_t searchThread{};
-    bool searchThreadRunning = false;
+    ScopedPThread searchThread;
     SearchTask activeSearchTask{};
     SearchContext searchContext;
 
