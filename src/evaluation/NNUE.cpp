@@ -64,13 +64,13 @@ void Accumulator::addFeature(int feature) {
 
 #ifdef __AVX2__
     for (int i = 0; i < L1_SIZE; i += 16) {
-        __m256i acc_w = _mm256_load_si256((__m256i*)&white[i]);
-        __m256i acc_b = _mm256_load_si256((__m256i*)&black[i]);
-        __m256i wt = _mm256_load_si256((__m256i*)&w[i]);
+        __m256i acc_w = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&white[i]));
+        __m256i acc_b = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&black[i]));
+        __m256i wt = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&w[i]));
         acc_w = _mm256_add_epi16(acc_w, wt);
         acc_b = _mm256_add_epi16(acc_b, wt);
-        _mm256_store_si256((__m256i*)&white[i], acc_w);
-        _mm256_store_si256((__m256i*)&black[i], acc_b);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(&white[i]), acc_w);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(&black[i]), acc_b);
     }
 #elif NNUE_ARM_NEON
     for (int i = 0; i < L1_SIZE; i += 8) {
@@ -102,13 +102,13 @@ void Accumulator::removeFeature(int feature) {
 
 #ifdef __AVX2__
     for (int i = 0; i < L1_SIZE; i += 16) {
-        __m256i acc_w = _mm256_load_si256((__m256i*)&white[i]);
-        __m256i acc_b = _mm256_load_si256((__m256i*)&black[i]);
-        __m256i wt = _mm256_load_si256((__m256i*)&w[i]);
+        __m256i acc_w = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&white[i]));
+        __m256i acc_b = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&black[i]));
+        __m256i wt = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&w[i]));
         acc_w = _mm256_sub_epi16(acc_w, wt);
         acc_b = _mm256_sub_epi16(acc_b, wt);
-        _mm256_store_si256((__m256i*)&white[i], acc_w);
-        _mm256_store_si256((__m256i*)&black[i], acc_b);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(&white[i]), acc_w);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(&black[i]), acc_b);
     }
 #elif NNUE_ARM_NEON
     for (int i = 0; i < L1_SIZE; i += 8) {
@@ -142,8 +142,8 @@ void LinearLayer::forward(const void* input, void* output) const {
         const int16_t* wRow = weights.data() + rowOffset;
 
         for (int j = 0; j < inputSize; j += 16) {
-            __m256i w = _mm256_load_si256((__m256i*)&wRow[j]);
-            __m256i x = _mm256_load_si256((__m256i*)&in[j]);
+            __m256i w = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&wRow[j]));
+            __m256i x = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(&in[j]));
             __m256i prod = _mm256_madd_epi16(w, x);
             sum = _mm256_add_epi32(sum, prod);
         }
