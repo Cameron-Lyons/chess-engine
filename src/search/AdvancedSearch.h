@@ -23,7 +23,6 @@ public:
 
     static bool lateMovePruning(const Board& board, int depth, int moveNumber, bool inCheck);
     static bool recaptureExtension(const Board& board, const Move& move, int depth);
-    static bool checkExtension(const Board& board, const Move& move, int depth);
     static bool pawnPushExtension(const Board& board, const Move& move, int depth);
     static bool passedPawnExtension(const Board& board, const Move& move, int depth);
 };

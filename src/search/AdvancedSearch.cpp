@@ -259,11 +259,6 @@ bool AdvancedSearch::recaptureExtension(const Board& board, const Move& move, in
     return false;
 }
 
-bool AdvancedSearch::checkExtension(const Board& board, const Move& move, int depth) {
-    (void)depth;
-    return givesCheck(board, move.first, move.second);
-}
-
 bool AdvancedSearch::pawnPushExtension(const Board& board, const Move& move, int depth) {
     (void)depth;
     const Piece& piece = board.squares[move.first].piece;
