@@ -148,6 +148,7 @@ int32_t dotProductScalar(const int8_t* input, const int8_t* weights, int size) {
 #endif
 }
 
+#if !NNUEBITBOARD_X86_SIMD
 void applyClippedReluScalar(const int32_t* input, int8_t* output, int size) {
 #if NNUEBITBOARD_ARM_NEON
     int i = NO_INDEX;
@@ -176,6 +177,7 @@ void applyClippedReluScalar(const int32_t* input, int8_t* output, int size) {
     }
 #endif
 }
+#endif
 } // namespace
 
 #if NNUEBITBOARD_X86_SIMD
