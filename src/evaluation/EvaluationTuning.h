@@ -3,6 +3,7 @@
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -18,7 +19,7 @@ constexpr int KING_VALUE = 10000;
 constexpr int DOUBLED_PAWN_PENALTY = 15;
 constexpr int ISOLATED_PAWN_PENALTY = 20;
 constexpr int BACKWARD_PAWN_PENALTY = 12;
-constexpr int PASSED_PAWN_BONUS[8] = {0, 5, 10, 20, 35, 60, 100, 150};
+inline constexpr std::array<int, 8> PASSED_PAWN_BONUS = {0, 5, 10, 20, 35, 60, 100, 150};
 constexpr int CONNECTED_PAWNS_BONUS = 8;
 constexpr int PAWN_CHAIN_BONUS = 12;
 
@@ -29,7 +30,7 @@ constexpr int ROOK_OPEN_FILE_BONUS = 20;
 constexpr int ROOK_SEMI_OPEN_FILE_BONUS = 10;
 constexpr int QUEEN_EARLY_DEVELOPMENT_PENALTY = 30;
 
-constexpr int KING_ATTACK_WEIGHTS[6] = {0, 50, 75, 88, 94, 97};
+inline constexpr std::array<int, 6> KING_ATTACK_WEIGHTS = {0, 50, 75, 88, 94, 97};
 constexpr int KING_DANGER_MULTIPLIER = 15;
 constexpr int CASTLING_BONUS = 40;
 constexpr int KING_PAWN_SHIELD_BONUS = 15;
@@ -49,25 +50,27 @@ constexpr int TEMPO_BONUS = 10;
 constexpr int INITIATIVE_BONUS = 15;
 constexpr int PRESSURE_BONUS = 8;
 
-extern const int TUNED_PAWN_MG[64];
-extern const int TUNED_PAWN_EG[64];
+using PieceSquareTable = std::array<int, 64>;
 
-extern const int TUNED_KNIGHT_MG[64];
-extern const int TUNED_KNIGHT_EG[64];
+extern const PieceSquareTable TUNED_PAWN_MG;
+extern const PieceSquareTable TUNED_PAWN_EG;
 
-extern const int TUNED_BISHOP_MG[64];
-extern const int TUNED_BISHOP_EG[64];
+extern const PieceSquareTable TUNED_KNIGHT_MG;
+extern const PieceSquareTable TUNED_KNIGHT_EG;
 
-extern const int TUNED_ROOK_MG[64];
-extern const int TUNED_ROOK_EG[64];
+extern const PieceSquareTable TUNED_BISHOP_MG;
+extern const PieceSquareTable TUNED_BISHOP_EG;
 
-extern const int TUNED_QUEEN_MG[64];
-extern const int TUNED_QUEEN_EG[64];
+extern const PieceSquareTable TUNED_ROOK_MG;
+extern const PieceSquareTable TUNED_ROOK_EG;
 
-extern const int TUNED_KING_MG[64];
-extern const int TUNED_KING_EG[64];
+extern const PieceSquareTable TUNED_QUEEN_MG;
+extern const PieceSquareTable TUNED_QUEEN_EG;
 
-constexpr int PHASE_WEIGHTS[6] = {0, 1, 1, 2, 4, 0};
+extern const PieceSquareTable TUNED_KING_MG;
+extern const PieceSquareTable TUNED_KING_EG;
+
+inline constexpr std::array<int, 6> PHASE_WEIGHTS = {0, 1, 1, 2, 4, 0};
 constexpr int TOTAL_PHASE = 24;
 
 int getMaterialValue(ChessPieceType piece);

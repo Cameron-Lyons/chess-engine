@@ -1,6 +1,9 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
+#include <utility>
 
 enum class ChessPieceColor : std::uint8_t { WHITE, BLACK };
 
@@ -27,13 +30,15 @@ public:
           moved(false) {}
 
     static constexpr short getPieceValue(ChessPieceType pieceType) {
-        constexpr short values[] = {100, 320, 325, 500, 975, 32767, 0};
-        return values[static_cast<int>(pieceType)];
+        constexpr std::array<short, 7> values = {100, 320, 325, 500, 975, 32767, 0};
+        const auto index = static_cast<std::size_t>(std::to_underlying(pieceType));
+        return index < values.size() ? values[index] : 0;
     }
 
     static constexpr short getPieceActionValue(ChessPieceType pieceType) {
-        constexpr short values[] = {6, 3, 3, 2, 2, 1, 0};
-        return values[static_cast<int>(pieceType)];
+        constexpr std::array<short, 7> values = {6, 3, 3, 2, 2, 1, 0};
+        const auto index = static_cast<std::size_t>(std::to_underlying(pieceType));
+        return index < values.size() ? values[index] : 0;
     }
 
     static constexpr ChessPieceType fromFenChar(char fenChar) {

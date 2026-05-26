@@ -13,6 +13,7 @@
 #include <limits>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <random>
 #include <string>
@@ -127,27 +128,25 @@ public:
                   pm, tt.generation());
     }
 
-    bool find(uint64_t hash, TTEntry& entry) const {
+    std::optional<TTEntry> find(uint64_t hash) const {
         bool found = false;
         // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
         TTv2::TTEntry* tte = const_cast<TTv2::TranspositionTable&>(tt).probe(hash, found);
         if (!found) {
-            return false;
+            return std::nullopt;
         }
+        TTEntry entry;
         entry.depth = static_cast<int>(static_cast<unsigned char>(tte->depth));
         entry.value = tte->value;
         entry.flag = boundToFlag(tte->bound());
         if (tte->move) {
-            int from = SearchConstants::kZero;
-            int to = SearchConstants::kZero;
-            int promo = SearchConstants::kZero;
-            TTv2::unpackMove(tte->move, from, to, promo);
-            entry.bestMove = {from, to};
+            const TTv2::UnpackedMove unpacked = TTv2::unpackMove(tte->move);
+            entry.bestMove = {unpacked.from, unpacked.to};
         } else {
             entry.bestMove = {SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare};
         }
         entry.zobristKey = hash;
-        return true;
+        return entry;
     }
 
     void clear() {

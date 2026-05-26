@@ -20,7 +20,6 @@
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <pthread.h>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -111,11 +110,7 @@ void UCIEngine::searchThreadEntry(const SearchTask& task) {
 }
 
 void UCIEngine::joinSearchThread() {
-    if (!searchThreadRunning) {
-        return;
-    }
-    pthread_join(searchThread, nullptr);
-    searchThreadRunning = false;
+    searchThread.join();
 }
 
 void UCIEngine::run() {
@@ -419,14 +414,11 @@ void UCIEngine::handleGo(const std::string& command) {
 
     activeSearchTask = SearchTask{searchDepth, timeForMove, optimalTime, maxTime, board};
 
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    const int stackResult = pthread_attr_setstacksize(&attr, kSearchThreadStackBytes);
+    ScopedPThreadAttr attr;
+    const int stackResult = attr.setStackSize(kSearchThreadStackBytes);
     const int createResult =
-        (stackResult == 0)
-            ? pthread_create(&searchThread, &attr, &UCIEngine::searchThreadStart, this)
-            : stackResult;
-    pthread_attr_destroy(&attr);
+        (stackResult == 0) ? searchThread.start(attr.get(), &UCIEngine::searchThreadStart, this)
+                           : stackResult;
 
     if (createResult != 0) {
         isSearching.store(false);
@@ -434,8 +426,6 @@ void UCIEngine::handleGo(const std::string& command) {
         std::cout << "info string Search thread creation failed" << '\n';
         return;
     }
-
-    searchThreadRunning = true;
 }
 
 void UCIEngine::handleStop() {

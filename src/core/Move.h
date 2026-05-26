@@ -4,6 +4,29 @@
 
 #include <compare>
 #include <cstdint>
+#include <utility>
+
+struct SquareIndex {
+    int value = -1;
+
+    constexpr SquareIndex() = default;
+    explicit constexpr SquareIndex(int square) : value(square) {}
+
+    constexpr SquareIndex& operator=(int square) {
+        value = square;
+        return *this;
+    }
+
+    [[nodiscard]] constexpr bool isValid() const {
+        return value >= 0 && value < 64;
+    }
+
+    constexpr operator int() const {
+        return value;
+    }
+
+    auto operator<=>(const SquareIndex& other) const = default;
+};
 
 enum class MoveFlag : std::uint8_t {
     NONE = 0,
@@ -15,11 +38,11 @@ enum class MoveFlag : std::uint8_t {
 };
 
 constexpr MoveFlag operator|(MoveFlag lhs, MoveFlag rhs) {
-    return static_cast<MoveFlag>(static_cast<std::uint8_t>(lhs) | static_cast<std::uint8_t>(rhs));
+    return static_cast<MoveFlag>(std::to_underlying(lhs) | std::to_underlying(rhs));
 }
 
 constexpr MoveFlag operator&(MoveFlag lhs, MoveFlag rhs) {
-    return static_cast<MoveFlag>(static_cast<std::uint8_t>(lhs) & static_cast<std::uint8_t>(rhs));
+    return static_cast<MoveFlag>(std::to_underlying(lhs) & std::to_underlying(rhs));
 }
 
 constexpr bool hasFlag(MoveFlag flags, MoveFlag flag) {
@@ -27,31 +50,35 @@ constexpr bool hasFlag(MoveFlag flags, MoveFlag flag) {
 }
 
 struct Move {
-    int first;
-    int second;
-    ChessPieceType promotion;
-    MoveFlag flags;
+    SquareIndex first;
+    SquareIndex second;
+    ChessPieceType promotion = ChessPieceType::NONE;
+    MoveFlag flags = MoveFlag::NONE;
 
-    Move() : first(-1), second(-1), promotion(ChessPieceType::NONE), flags(MoveFlag::NONE) {}
+    Move() = default;
 
-    Move(int from, int to, ChessPieceType promo = ChessPieceType::NONE,
-         MoveFlag moveFlags = MoveFlag::NONE)
+    constexpr Move(int from, int to, ChessPieceType promo = ChessPieceType::NONE,
+                   MoveFlag moveFlags = MoveFlag::NONE)
+        : first(SquareIndex(from)), second(SquareIndex(to)), promotion(promo), flags(moveFlags) {}
+
+    constexpr Move(SquareIndex from, SquareIndex to, ChessPieceType promo = ChessPieceType::NONE,
+                   MoveFlag moveFlags = MoveFlag::NONE)
         : first(from), second(to), promotion(promo), flags(moveFlags) {}
 
-    static Move invalid() {
+    static constexpr Move invalid() {
         return Move();
     }
 
-    [[nodiscard]] bool isValid() const {
-        return first >= 0 && first < 64 && second >= 0 && second < 64;
+    [[nodiscard]] constexpr bool isValid() const {
+        return first.isValid() && second.isValid();
     }
 
     [[nodiscard]] std::uint32_t pack() const {
         std::uint32_t packed = 0;
-        packed |= static_cast<std::uint32_t>(first & 0x3F);
-        packed |= static_cast<std::uint32_t>((second & 0x3F) << 6);
-        packed |= static_cast<std::uint32_t>((static_cast<int>(promotion) & 0x7) << 12);
-        packed |= static_cast<std::uint32_t>((static_cast<int>(flags) & 0xFF) << 16);
+        packed |= static_cast<std::uint32_t>(static_cast<int>(first) & 0x3F);
+        packed |= static_cast<std::uint32_t>((static_cast<int>(second) & 0x3F) << 6);
+        packed |= static_cast<std::uint32_t>((std::to_underlying(promotion) & 0x7) << 12);
+        packed |= static_cast<std::uint32_t>((std::to_underlying(flags) & 0xFF) << 16);
         return packed;
     }
 

@@ -7,19 +7,19 @@
 
 namespace BenchmarkArgs {
 
-std::string parseStringArg(const std::vector<std::string>& args, const std::string& key,
-                           const std::string& fallback) {
-    const std::string prefix = key + "=";
+std::string parseStringArg(std::span<const std::string> args, std::string_view key,
+                           std::string_view fallback) {
+    const std::string prefix = std::string(key) + "=";
     for (const std::string& arg : args) {
         if (!arg.starts_with(prefix)) {
             continue;
         }
         return arg.substr(prefix.size());
     }
-    return fallback;
+    return std::string(fallback);
 }
 
-std::vector<std::string> parseCsvArg(const std::vector<std::string>& args, const std::string& key) {
+std::vector<std::string> parseCsvArg(std::span<const std::string> args, std::string_view key) {
     const std::string raw = parseStringArg(args, key, "");
     if (raw.empty()) {
         return {};
@@ -36,8 +36,7 @@ std::vector<std::string> parseCsvArg(const std::vector<std::string>& args, const
     return values;
 }
 
-std::vector<int> parsePositiveIntListArg(const std::vector<std::string>& args,
-                                         const std::string& key) {
+std::vector<int> parsePositiveIntListArg(std::span<const std::string> args, std::string_view key) {
     std::vector<int> values;
     for (const std::string& item : parseCsvArg(args, key)) {
         char* end = nullptr;
@@ -51,8 +50,7 @@ std::vector<int> parsePositiveIntListArg(const std::vector<std::string>& args,
     return values;
 }
 
-int parsePositiveIntArg(const std::vector<std::string>& args, const std::string& key,
-                        int fallback) {
+int parsePositiveIntArg(std::span<const std::string> args, std::string_view key, int fallback) {
     for (const std::string& value : parseCsvArg(args, key)) {
         char* end = nullptr;
         errno = 0;
@@ -65,7 +63,7 @@ int parsePositiveIntArg(const std::vector<std::string>& args, const std::string&
     return fallback;
 }
 
-int parsePositiveIntArg(int argc, char** argv, const std::string& key, int fallback) {
+int parsePositiveIntArg(int argc, char** argv, std::string_view key, int fallback) {
     std::vector<std::string> args;
     args.reserve(static_cast<std::size_t>(argc > 1 ? argc - 1 : 0));
     for (int i = 1; i < argc; ++i) {

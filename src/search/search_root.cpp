@@ -1,6 +1,7 @@
 #include "search_internal.h"
 
 #include "../ai/SyzygyTablebase.h"
+#include "../utils/ScopedPThread.h"
 #include "../utils/engine_globals.h"
 #include "BookUtils.h"
 #include "LazySMP.h"
@@ -240,30 +241,24 @@ RootSplitResult searchRootMovesYBWC(const Board& board, int depth, int alpha, in
     const int remainingMoves = static_cast<int>(rootMoves.size()) - (seededIndex + kOne);
     const int workerCount = chooseRootSplitWorkerCount(depth, numThreads, remainingMoves);
     if (workerCount > kZero && !shared.stop.load(std::memory_order_relaxed)) {
-        std::vector<pthread_t> workers(static_cast<std::size_t>(workerCount));
+        std::vector<ScopedPThread> workers(static_cast<std::size_t>(workerCount));
         std::vector<RootSplitWorkerArgs> workerArgs(static_cast<std::size_t>(workerCount));
-        std::vector<bool> created(static_cast<std::size_t>(workerCount), false);
 
-        pthread_attr_t attr;
-        pthread_attr_init(&attr);
-        pthread_attr_setstacksize(&attr, kRootSplitThreadStackBytes);
+        ScopedPThreadAttr attr;
+        (void)attr.setStackSize(kRootSplitThreadStackBytes);
 
         for (int i = kZero; i < workerCount; ++i) {
             workerArgs[static_cast<std::size_t>(i)] = {&shared};
-            if (pthread_create(&workers[static_cast<std::size_t>(i)], &attr, &rootSplitWorkerEntry,
-                               &workerArgs[static_cast<std::size_t>(i)]) == 0) {
-                created[static_cast<std::size_t>(i)] = true;
-            } else {
+            const int createResult =
+                workers[static_cast<std::size_t>(i)].start(attr.get(), &rootSplitWorkerEntry,
+                                                           &workerArgs[static_cast<std::size_t>(i)]);
+            if (createResult != 0) {
                 rootSplitWorkerEntry(&workerArgs[static_cast<std::size_t>(i)]);
             }
         }
 
-        pthread_attr_destroy(&attr);
-
-        for (int i = kZero; i < workerCount; ++i) {
-            if (created[static_cast<std::size_t>(i)]) {
-                pthread_join(workers[static_cast<std::size_t>(i)], nullptr);
-            }
+        for (auto& worker : workers) {
+            worker.join();
         }
     }
 
@@ -365,10 +360,10 @@ SearchResult iterativeDeepeningParallel(Board& board, const SearchConfig& config
             return candidateMove;
         }
         uint64_t rootHash = ComputeZobrist(board);
-        TTEntry rootEntry;
-        if (context.transTable.find(rootHash, rootEntry) && rootEntry.bestMove.first >= kZero &&
-            moveExistsInList(moves, rootEntry.bestMove)) {
-            return rootEntry.bestMove;
+        if (const auto rootEntry = context.transTable.find(rootHash);
+            rootEntry && rootEntry->bestMove.first >= kZero &&
+            moveExistsInList(moves, rootEntry->bestMove)) {
+            return rootEntry->bestMove;
         }
         if (!moves.empty()) {
             std::vector<ScoredMove> scoredMoves =
