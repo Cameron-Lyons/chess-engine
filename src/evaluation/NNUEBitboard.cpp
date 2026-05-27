@@ -791,4 +791,11 @@ int evaluate(const BitboardPosition& pos) {
     return globalEvaluator->evaluate(pos);
 }
 
+int evaluate(const Board& board) {
+    if (!globalEvaluator) {
+        return NO_INDEX;
+    }
+    return globalEvaluator->evaluate(board);
+}
+
 } // namespace NNUEBitboard

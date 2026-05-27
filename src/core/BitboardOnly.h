@@ -1,36 +1,35 @@
 #pragma once
 
+// Lightweight bitboard view used by NNUEBitboard feature extraction.
+// Piece placement is synced from the canonical Board via fromBoard(); this type
+// does not parse FEN or apply moves on its own.
+
 #include "Bitboard.h"
-#include "CastlingConstants.h"
 #include "ChessPiece.h"
 
 #include <chrono>
 #include <cstdint>
 #include <string>
-#include <vector>
 
 using ChessClock = std::chrono::steady_clock;
 using ChessDuration = std::chrono::milliseconds;
 using ChessTimePoint = ChessClock::time_point;
+
+struct Board;
 
 class BitboardPosition {
 private:
     Bitboard pieces[2][6];
     Bitboard occupancy[3];
     uint8_t sideToMove;
-    uint8_t castlingRights;
-    uint8_t epSquare;
-    uint8_t halfmoveClock;
-    uint16_t fullmoveNumber;
     ChessTimePoint lastMoveTime;
-    uint64_t hash;
     static constexpr int PAWN = 0, KNIGHT = 1, BISHOP = 2, ROOK = 3, QUEEN = 4, KING = 5;
     static constexpr int WHITE = 0, BLACK = 1;
 
 public:
     BitboardPosition();
-    void setFromFEN(const std::string& fen);
-    std::string toFEN() const;
+
+    static BitboardPosition fromBoard(const Board& board);
 
     ChessPieceType getPieceAt(int square) const {
         Bitboard mask = 1ULL << square;
@@ -107,43 +106,8 @@ public:
         return occupancy[2];
     }
 
-    void makeMove(int from, int to, ChessPieceType promotion = ChessPieceType::NONE);
-
     ChessPieceColor getSideToMove() const {
         return sideToMove == WHITE ? ChessPieceColor::WHITE : ChessPieceColor::BLACK;
-    }
-
-    void setSideToMove(ChessPieceColor color) {
-        sideToMove = (color == ChessPieceColor::WHITE) ? WHITE : BLACK;
-    }
-
-    bool canCastle(ChessPieceColor color, bool kingside) const {
-        int shift = (color == ChessPieceColor::WHITE ? 0 : 2) + (kingside ? 0 : 1);
-        return (castlingRights >> shift) & 1;
-    }
-
-    void setCastlingRights(bool whiteKingside, bool whiteQueenside, bool blackKingside,
-                           bool blackQueenside) {
-        castlingRights = (whiteKingside ? CastlingConstants::kWhiteKingsideCastlingRight : 0) |
-                         (whiteQueenside ? CastlingConstants::kWhiteQueensideCastlingRight : 0) |
-                         (blackKingside ? CastlingConstants::kBlackKingsideCastlingRight : 0) |
-                         (blackQueenside ? CastlingConstants::kBlackQueensideCastlingRight : 0);
-    }
-
-    int getEnPassantSquare() const {
-        return epSquare < CastlingConstants::kNoEnPassantSquareBitboard
-                   ? epSquare
-                   : CastlingConstants::kNoEnPassantSquareMailbox;
-    }
-
-    void setEnPassantSquare(int square) {
-        epSquare = (square >= 0 && square < NUM_SQUARES)
-                       ? square
-                       : CastlingConstants::kNoEnPassantSquareBitboard;
-    }
-
-    uint64_t getHash() const {
-        return hash;
     }
 
     template <typename Func>
@@ -163,16 +127,4 @@ public:
     ChessDuration getTimeSinceLastMove() const {
         return std::chrono::duration_cast<ChessDuration>(ChessClock::now() - lastMoveTime);
     }
-
-    void recordMoveTime() {
-        lastMoveTime = ChessClock::now();
-    }
-
-    std::string toString() const;
-
-private:
-    void updateOccupancy();
-    void removePiece(int square, ChessPieceColor color, ChessPieceType type);
-    void placePiece(int square, ChessPieceColor color, ChessPieceType type);
-    void updateHash(int square, ChessPieceColor color, ChessPieceType type);
 };

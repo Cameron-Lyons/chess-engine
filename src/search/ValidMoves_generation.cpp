@@ -3,279 +3,176 @@
 #include <utility>
 
 namespace ValidMovesInternal {
+namespace {
+
+Bitboard ownPieces(const Board& board, ChessPieceColor color) {
+    return color == ChessPieceColor::WHITE ? board.whitePieces : board.blackPieces;
+}
+
+Bitboard enemyPieces(const Board& board, ChessPieceColor color) {
+    return color == ChessPieceColor::WHITE ? board.blackPieces : board.whitePieces;
+}
+
+using SlidingAttackFn = Bitboard (*)(int square, Bitboard occupancy);
+
+void appendSlidingPieceMoves(Board& board, ChessPieceColor color, ChessPieceType pieceType,
+                             Bitboard targetSquares, SlidingAttackFn attackFn,
+                             std::vector<Move>& moves) {
+    Bitboard pieces = board.getPieceBitboard(pieceType, color);
+    const Bitboard occupancy = board.allPieces;
+    while (pieces) {
+        const int src = lsb(pieces);
+        clear_bit(pieces, src);
+        Bitboard attacks = attackFn(src, occupancy) & targetSquares;
+        while (attacks) {
+            const int dest = lsb(attacks);
+            moves.emplace_back(src, dest);
+            clear_bit(attacks, dest);
+        }
+    }
+}
+
+void appendKnightPieceMoves(Board& board, ChessPieceColor color, Bitboard targetSquares,
+                            std::vector<Move>& moves) {
+    Bitboard knights = board.getPieceBitboard(ChessPieceType::KNIGHT, color);
+    while (knights) {
+        const int src = lsb(knights);
+        clear_bit(knights, src);
+        Bitboard attacks = KnightAttacks[src] & targetSquares;
+        while (attacks) {
+            const int dest = lsb(attacks);
+            moves.emplace_back(src, dest);
+            clear_bit(attacks, dest);
+        }
+    }
+}
+
+void appendPawnQuietPushes(Board& board, ChessPieceColor color, int src,
+                           std::vector<Move>& moves) {
+    const Bitboard occupied = board.allPieces;
+    if (color == ChessPieceColor::WHITE) {
+        const int oneStep = src + kSinglePawnPush;
+        if (oneStep < kBoardSquareCount && !(occupied & (1ULL << oneStep))) {
+            moves.emplace_back(src, oneStep);
+            if ((src / kBoardDimension) == kWhitePawnStartRank) {
+                const int twoStep = src + kDoublePawnPush;
+                if (!(occupied & (1ULL << twoStep))) {
+                    moves.emplace_back(src, twoStep);
+                }
+            }
+        }
+    } else {
+        const int oneStep = src - kSinglePawnPush;
+        if (oneStep >= kZero && !(occupied & (1ULL << oneStep))) {
+            moves.emplace_back(src, oneStep);
+            if ((src / kBoardDimension) == kBlackPawnStartRank) {
+                const int twoStep = src - kDoublePawnPush;
+                if (!(occupied & (1ULL << twoStep))) {
+                    moves.emplace_back(src, twoStep);
+                }
+            }
+        }
+    }
+}
+
+void appendPawnRegularCaptures(Board& board, ChessPieceColor color, int src,
+                               std::vector<Move>& moves) {
+    Bitboard captures = pawnAttacks(color, src) & enemyPieces(board, color);
+    while (captures) {
+        const int dest = lsb(captures);
+        moves.emplace_back(src, dest);
+        clear_bit(captures, dest);
+    }
+}
+
+} // namespace
+
 void appendPawnMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
     Bitboard pawns = board.getPieceBitboard(ChessPieceType::PAWN, color);
-    const Bitboard occupied = board.allPieces;
-    const Bitboard enemyPieces =
-        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
-
     while (pawns) {
-        int src = lsb(pawns);
+        const int src = lsb(pawns);
         clear_bit(pawns, src);
-
-        if (color == ChessPieceColor::WHITE) {
-            int oneStep = src + kSinglePawnPush;
-            if (oneStep < kBoardSquareCount && !(occupied & (1ULL << oneStep))) {
-                moves.emplace_back(src, oneStep);
-                if ((src / kBoardDimension) == kWhitePawnStartRank) {
-                    int twoStep = src + kDoublePawnPush;
-                    if (!(occupied & (1ULL << twoStep))) {
-                        moves.emplace_back(src, twoStep);
-                    }
-                }
-            }
-        } else {
-            int oneStep = src - kSinglePawnPush;
-            if (oneStep >= kZero && !(occupied & (1ULL << oneStep))) {
-                moves.emplace_back(src, oneStep);
-                if ((src / kBoardDimension) == kBlackPawnStartRank) {
-                    int twoStep = src - kDoublePawnPush;
-                    if (!(occupied & (1ULL << twoStep))) {
-                        moves.emplace_back(src, twoStep);
-                    }
-                }
-            }
-        }
-
-        Bitboard captures = pawnAttacks(color, src) & enemyPieces;
-        while (captures) {
-            int dest = lsb(captures);
-            moves.emplace_back(src, dest);
-            clear_bit(captures, dest);
-        }
-
-        if (const auto enPassantTarget = board.enPassantSquare.target()) {
-            const int epSquare = *enPassantTarget;
-            int srcFile = src % kBoardDimension;
-            if (color == ChessPieceColor::WHITE) {
-                if ((srcFile > kMinFile && epSquare == src + kWhiteEnPassantCaptureLeftOffset) ||
-                    (srcFile < kMaxFile && epSquare == src + kWhiteEnPassantCaptureRightOffset)) {
-                    int capturedPawnSquare = epSquare - kSinglePawnPush;
-                    if (capturedPawnSquare >= kZero &&
-                        board.squares[capturedPawnSquare].piece.PieceType == ChessPieceType::PAWN &&
-                        board.squares[capturedPawnSquare].piece.PieceColor ==
-                            ChessPieceColor::BLACK &&
-                        board.squares[epSquare].piece.PieceType == ChessPieceType::NONE) {
-                        moves.emplace_back(src, epSquare);
-                    }
-                }
-            } else {
-                if ((srcFile > kMinFile && epSquare == src - kBlackEnPassantCaptureLeftOffset) ||
-                    (srcFile < kMaxFile && epSquare == src - kBlackEnPassantCaptureRightOffset)) {
-                    int capturedPawnSquare = epSquare + kSinglePawnPush;
-                    if (capturedPawnSquare < kBoardSquareCount &&
-                        board.squares[capturedPawnSquare].piece.PieceType == ChessPieceType::PAWN &&
-                        board.squares[capturedPawnSquare].piece.PieceColor ==
-                            ChessPieceColor::WHITE &&
-                        board.squares[epSquare].piece.PieceType == ChessPieceType::NONE) {
-                        moves.emplace_back(src, epSquare);
-                    }
-                }
-            }
-        }
+        appendPawnQuietPushes(board, color, src, moves);
+        appendPawnRegularCaptures(board, color, src, moves);
+        tryAppendEnPassantMove(board, color, src, moves);
     }
 }
 
 void appendKnightMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
-    Bitboard knights = board.getPieceBitboard(ChessPieceType::KNIGHT, color);
-    Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
-    while (knights) {
-        int src = lsb(knights);
-        clear_bit(knights, src);
-        Bitboard attacks = KnightAttacks[src] & ~ownPieces;
-        while (attacks) {
-            int dest = lsb(attacks);
-            moves.emplace_back(src, dest);
-            clear_bit(attacks, dest);
-        }
-    }
+    appendKnightPieceMoves(board, color, ~ownPieces(board, color), moves);
 }
 
 void appendBishopMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
-    Bitboard bishops = board.getPieceBitboard(ChessPieceType::BISHOP, color);
-    Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
-    while (bishops) {
-        int src = lsb(bishops);
-        clear_bit(bishops, src);
-        Bitboard attacks = bishopAttacks(src, board.allPieces) & ~ownPieces;
-        while (attacks) {
-            int dest = lsb(attacks);
-            moves.emplace_back(src, dest);
-            clear_bit(attacks, dest);
-        }
-    }
+    appendSlidingPieceMoves(board, color, ChessPieceType::BISHOP, ~ownPieces(board, color),
+                            bishopAttacks, moves);
 }
 
 void appendRookMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
-    Bitboard rooks = board.getPieceBitboard(ChessPieceType::ROOK, color);
-    Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
-    while (rooks) {
-        int src = lsb(rooks);
-        clear_bit(rooks, src);
-        Bitboard attacks = rookAttacks(src, board.allPieces) & ~ownPieces;
-        while (attacks) {
-            int dest = lsb(attacks);
-            moves.emplace_back(src, dest);
-            clear_bit(attacks, dest);
-        }
-    }
+    appendSlidingPieceMoves(board, color, ChessPieceType::ROOK, ~ownPieces(board, color),
+                            rookAttacks, moves);
 }
 
 void appendQueenMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
-    Bitboard queens = board.getPieceBitboard(ChessPieceType::QUEEN, color);
-    Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
-    while (queens) {
-        int src = lsb(queens);
-        clear_bit(queens, src);
-        Bitboard attacks = queenAttacks(src, board.allPieces) & ~ownPieces;
-        while (attacks) {
-            int dest = lsb(attacks);
-            moves.emplace_back(src, dest);
-            clear_bit(attacks, dest);
-        }
-    }
+    appendSlidingPieceMoves(board, color, ChessPieceType::QUEEN, ~ownPieces(board, color),
+                            queenAttacks, moves);
 }
 
 void appendKingMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
     Bitboard king = board.getPieceBitboard(ChessPieceType::KING, color);
-    Bitboard ownPieces = (color == ChessPieceColor::WHITE) ? board.whitePieces : board.blackPieces;
+    if (!king) {
+        return;
+    }
 
-    if (king) {
-        Bitboard kingMovesBB = kingMoves(king, ownPieces);
-        while (kingMovesBB) {
-            int dest = lsb(kingMovesBB);
-            int src = lsb(king);
-            moves.emplace_back(src, dest);
-            clear_bit(kingMovesBB, dest);
-        }
+    Bitboard kingMovesBB = kingMoves(king, ownPieces(board, color));
+    const int src = lsb(king);
+    while (kingMovesBB) {
+        const int dest = lsb(kingMovesBB);
+        moves.emplace_back(src, dest);
+        clear_bit(kingMovesBB, dest);
     }
 }
 
 void appendPawnCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
     Bitboard pawns = board.getPieceBitboard(ChessPieceType::PAWN, color);
-    const Bitboard enemyPieces =
-        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
-
     while (pawns) {
-        int src = lsb(pawns);
+        const int src = lsb(pawns);
         clear_bit(pawns, src);
-
-        Bitboard captures = pawnAttacks(color, src) & enemyPieces;
-        while (captures) {
-            int dest = lsb(captures);
-            moves.emplace_back(src, dest);
-            clear_bit(captures, dest);
-        }
-
-        if (const auto enPassantTarget = board.enPassantSquare.target()) {
-            const int epSquare = *enPassantTarget;
-            int srcFile = src % kBoardDimension;
-            if (color == ChessPieceColor::WHITE) {
-                if ((srcFile > kMinFile && epSquare == src + kWhiteEnPassantCaptureLeftOffset) ||
-                    (srcFile < kMaxFile && epSquare == src + kWhiteEnPassantCaptureRightOffset)) {
-                    int capturedPawnSquare = epSquare - kSinglePawnPush;
-                    if (capturedPawnSquare >= kZero &&
-                        board.squares[capturedPawnSquare].piece.PieceType == ChessPieceType::PAWN &&
-                        board.squares[capturedPawnSquare].piece.PieceColor ==
-                            ChessPieceColor::BLACK &&
-                        board.squares[epSquare].piece.PieceType == ChessPieceType::NONE) {
-                        moves.emplace_back(src, epSquare);
-                    }
-                }
-            } else {
-                if ((srcFile > kMinFile && epSquare == src - kBlackEnPassantCaptureLeftOffset) ||
-                    (srcFile < kMaxFile && epSquare == src - kBlackEnPassantCaptureRightOffset)) {
-                    int capturedPawnSquare = epSquare + kSinglePawnPush;
-                    if (capturedPawnSquare < kBoardSquareCount &&
-                        board.squares[capturedPawnSquare].piece.PieceType == ChessPieceType::PAWN &&
-                        board.squares[capturedPawnSquare].piece.PieceColor ==
-                            ChessPieceColor::WHITE &&
-                        board.squares[epSquare].piece.PieceType == ChessPieceType::NONE) {
-                        moves.emplace_back(src, epSquare);
-                    }
-                }
-            }
-        }
+        appendPawnRegularCaptures(board, color, src, moves);
+        tryAppendEnPassantMove(board, color, src, moves);
     }
 }
 
 void appendKnightCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
-    Bitboard knights = board.getPieceBitboard(ChessPieceType::KNIGHT, color);
-    Bitboard enemyPieces =
-        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
-    while (knights) {
-        int src = lsb(knights);
-        clear_bit(knights, src);
-        Bitboard attacks = KnightAttacks[src] & enemyPieces;
-        while (attacks) {
-            int dest = lsb(attacks);
-            moves.emplace_back(src, dest);
-            clear_bit(attacks, dest);
-        }
-    }
+    appendKnightPieceMoves(board, color, enemyPieces(board, color), moves);
 }
 
 void appendBishopCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
-    Bitboard bishops = board.getPieceBitboard(ChessPieceType::BISHOP, color);
-    Bitboard enemyPieces =
-        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
-    while (bishops) {
-        int src = lsb(bishops);
-        clear_bit(bishops, src);
-        Bitboard attacks = bishopAttacks(src, board.allPieces) & enemyPieces;
-        while (attacks) {
-            int dest = lsb(attacks);
-            moves.emplace_back(src, dest);
-            clear_bit(attacks, dest);
-        }
-    }
+    appendSlidingPieceMoves(board, color, ChessPieceType::BISHOP, enemyPieces(board, color),
+                            bishopAttacks, moves);
 }
 
 void appendRookCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
-    Bitboard rooks = board.getPieceBitboard(ChessPieceType::ROOK, color);
-    Bitboard enemyPieces =
-        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
-    while (rooks) {
-        int src = lsb(rooks);
-        clear_bit(rooks, src);
-        Bitboard attacks = rookAttacks(src, board.allPieces) & enemyPieces;
-        while (attacks) {
-            int dest = lsb(attacks);
-            moves.emplace_back(src, dest);
-            clear_bit(attacks, dest);
-        }
-    }
+    appendSlidingPieceMoves(board, color, ChessPieceType::ROOK, enemyPieces(board, color),
+                            rookAttacks, moves);
 }
 
 void appendQueenCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
-    Bitboard queens = board.getPieceBitboard(ChessPieceType::QUEEN, color);
-    Bitboard enemyPieces =
-        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
-    while (queens) {
-        int src = lsb(queens);
-        clear_bit(queens, src);
-        Bitboard attacks = queenAttacks(src, board.allPieces) & enemyPieces;
-        while (attacks) {
-            int dest = lsb(attacks);
-            moves.emplace_back(src, dest);
-            clear_bit(attacks, dest);
-        }
-    }
+    appendSlidingPieceMoves(board, color, ChessPieceType::QUEEN, enemyPieces(board, color),
+                            queenAttacks, moves);
 }
 
 void appendKingCaptures(Board& board, ChessPieceColor color, std::vector<Move>& moves) {
     Bitboard king = board.getPieceBitboard(ChessPieceType::KING, color);
-    Bitboard enemyPieces =
-        (color == ChessPieceColor::WHITE) ? board.blackPieces : board.whitePieces;
+    if (!king) {
+        return;
+    }
 
-    if (king) {
-        Bitboard kingMovesBB = KingAttacks[lsb(king)] & enemyPieces;
-        while (kingMovesBB) {
-            int dest = lsb(kingMovesBB);
-            int src = lsb(king);
-            moves.emplace_back(src, dest);
-            clear_bit(kingMovesBB, dest);
-        }
+    Bitboard kingMovesBB = KingAttacks[lsb(king)] & enemyPieces(board, color);
+    const int src = lsb(king);
+    while (kingMovesBB) {
+        const int dest = lsb(kingMovesBB);
+        moves.emplace_back(src, dest);
+        clear_bit(kingMovesBB, dest);
     }
 }
 

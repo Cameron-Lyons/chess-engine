@@ -1,5 +1,6 @@
 #include "Evaluation.h"
 #include "../ai/EndgameTablebase.h"
+#include "../core/BitboardMoves.h"
 #include "../core/ChessBoard.h"
 #include "../core/ChessPiece.h"
 #include "Bitboard.h"
@@ -17,60 +18,8 @@ static std::atomic<bool> useNNUE{false};
 thread_local bool useFastEval = false;
 
 namespace {
-constexpr int kBoardSquareCount = 64;
 constexpr int kPieceTypeCount = 6;
-constexpr int kMirrorSquareOffset = kBoardSquareCount - 1;
-constexpr int kCenterControlBonus = 30;
-constexpr int kDoublePawnPenalty = 20;
-constexpr int kIsolatedPawnPenalty = 30;
-constexpr int kPassedPawnRankScale = 20;
-constexpr int kPassedPawnBaseBonus = 10;
-constexpr int kBishopPairBonus = 50;
-constexpr int kOpenFileRookBonus = 20;
-constexpr int kSemiOpenFileRookBonus = 10;
-constexpr int kEndgameMaterialThreshold = 2000;
-constexpr int kKingCenterDistanceTarget = 7;
-constexpr int kKingCentralizationScale = 5;
-
-constexpr int kOpeningEndgameBoundaryPhase = 12;
-constexpr float kPawnMgPassedScale = 0.8F;
-constexpr float kPawnEgScale = 1.2F;
-constexpr float kPassedPawnEgScale = 1.5F;
-constexpr float kMobilityEgScale = 0.8F;
-constexpr float kKingSafetyEgScale = 0.3F;
-constexpr float kBishopPairEgScale = 1.5F;
-constexpr float kTacticalSafetyEgScale = 0.7F;
-constexpr float kQueenTrapEgScale = 0.5F;
-constexpr int kQueenGamePhaseIncrement = 4;
-
-constexpr float kHangingPenaltyRatio = 0.8F;
-constexpr int kHangingQueenPenalty = 500;
-constexpr int kQueenUnsupportedPenalty = 300;
-constexpr int kQueenCrowdedPenalty = 200;
-constexpr int kQueenCornerTrapPenalty = 400;
-constexpr int kQueenEdgeTrapPenalty = 150;
-constexpr int kQueenEnemyTerritoryWhiteRow = 5;
-constexpr int kQueenEnemyTerritoryBlackRow = 2;
-constexpr int kNearbyEnemyRadius = 2;
-constexpr int kNearbyEnemyThreshold = 2;
-constexpr int kDangerLevelScale = 300;
-constexpr int kHighValuePieceThreshold = 300;
-constexpr int kPenaltyDivisor = 4;
-constexpr int kQueenTacticalPenalty = 800;
-constexpr int kNearEnemyKingDistance = 2;
-constexpr int kNearEnemyKingLowDefenderThreshold = 2;
-constexpr int kNearEnemyKingPenalty = 250;
-
-constexpr int kQueenTrapNoEscapePenalty = 800;
-constexpr int kQueenTrapLowEscapePenalty = 400;
-constexpr int kQueenTrapMediumEscapePenalty = 200;
-constexpr int kQueenTrapLowEscapeThreshold = 2;
-constexpr int kQueenTrapMediumEscapeThreshold = 4;
-constexpr int kQueenTrapCornerEscapeThreshold = 3;
-constexpr int kQueenTrapEdgeEscapeThreshold = 5;
-constexpr int kQueenTrapCornerPenalty = 600;
-constexpr int kQueenTrapEdgePenalty = 300;
-constexpr int kQueenEscapeSearchRadius = 2;
+constexpr int kMirrorSquareOffset = NUM_SQUARES - 1;
 } // namespace
 
 namespace PieceSquareTables {
@@ -117,10 +66,10 @@ int evaluatePawnStructure(const Board& board) {
             }
         }
         if (whitePawns > 1) {
-            score -= kDoublePawnPenalty * (whitePawns - 1);
+            score -= DOUBLED_PAWN_PENALTY * (whitePawns - 1);
         }
         if (blackPawns > 1) {
-            score += kDoublePawnPenalty * (blackPawns - 1);
+            score += DOUBLED_PAWN_PENALTY * (blackPawns - 1);
         }
     }
     for (int col = 0; col < BOARD_SIZE; col++) {
@@ -147,9 +96,9 @@ int evaluatePawnStructure(const Board& board) {
                 }
                 if (isolated) {
                     if (board.squares[pos].piece.PieceColor == ChessPieceColor::WHITE) {
-                        score -= kIsolatedPawnPenalty;
+                        score -= ISOLATED_PAWN_PENALTY;
                     } else {
-                        score += kIsolatedPawnPenalty;
+                        score += ISOLATED_PAWN_PENALTY;
                     }
                 }
             }
@@ -160,136 +109,62 @@ int evaluatePawnStructure(const Board& board) {
 
 int evaluateMobility(const Board& board) {
     int mobilityScore = 0;
+    const Bitboard occupancy = board.allPieces;
 
     for (int i = 0; i < NUM_SQUARES; i++) {
         const Piece& piece = board.squares[i].piece;
         if (piece.PieceType == ChessPieceType::NONE) {
             continue;
         }
+
+        const Bitboard ownPieces =
+            piece.PieceColor == ChessPieceColor::WHITE ? board.whitePieces : board.blackPieces;
         int mobility = 0;
-        int row = i / BOARD_SIZE;
-        int col = i % BOARD_SIZE;
+        int weight = 0;
 
         switch (piece.PieceType) {
-            case ChessPieceType::KNIGHT: {
-                int knightMoves[][2] = {{-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
-                                        {1, -2},  {1, 2},  {2, -1},  {2, 1}};
-                for (auto& move : knightMoves) {
-                    int newRow = row + move[0];
-                    int newCol = col + move[1];
-                    if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE) {
-                        int pos = (newRow * BOARD_SIZE) + newCol;
-                        if (board.squares[pos].piece.PieceType == ChessPieceType::NONE ||
-                            board.squares[pos].piece.PieceColor != piece.PieceColor) {
-                            mobility++;
-                        }
-                    }
-                }
-                mobilityScore +=
-                    piece.PieceColor == ChessPieceColor::WHITE ? mobility * 4 : -mobility * 4;
+            case ChessPieceType::KNIGHT:
+                mobility = popcount(KnightAttacks[i] & ~ownPieces);
+                weight = 4;
                 break;
-            }
-
-            case ChessPieceType::BISHOP: {
-                int directions[][2] = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
-                for (auto& dir : directions) {
-                    for (int dist = 1; dist < BOARD_SIZE; dist++) {
-                        int newRow = row + (dir[0] * dist);
-                        int newCol = col + (dir[1] * dist);
-                        if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 ||
-                            newCol >= BOARD_SIZE) {
-                            break;
-                        }
-                        int pos = (newRow * BOARD_SIZE) + newCol;
-                        if (board.squares[pos].piece.PieceType == ChessPieceType::NONE) {
-                            mobility++;
-                        } else {
-                            if (board.squares[pos].piece.PieceColor != piece.PieceColor) {
-                                mobility++;
-                            }
-                            break;
-                        }
-                    }
-                }
-                mobilityScore +=
-                    piece.PieceColor == ChessPieceColor::WHITE ? mobility * 3 : -mobility * 3;
+            case ChessPieceType::BISHOP:
+                mobility = popcount(bishopAttacks(i, occupancy) & ~ownPieces);
+                weight = 3;
                 break;
-            }
-
-            case ChessPieceType::ROOK: {
-                int directions[][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-                for (auto& dir : directions) {
-                    for (int dist = 1; dist < BOARD_SIZE; dist++) {
-                        int newRow = row + (dir[0] * dist);
-                        int newCol = col + (dir[1] * dist);
-                        if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 ||
-                            newCol >= BOARD_SIZE) {
-                            break;
-                        }
-                        int pos = (newRow * BOARD_SIZE) + newCol;
-                        if (board.squares[pos].piece.PieceType == ChessPieceType::NONE) {
-                            mobility++;
-                        } else {
-                            if (board.squares[pos].piece.PieceColor != piece.PieceColor) {
-                                mobility++;
-                            }
-                            break;
-                        }
-                    }
-                }
-                mobilityScore +=
-                    piece.PieceColor == ChessPieceColor::WHITE ? mobility * 2 : -mobility * 2;
+            case ChessPieceType::ROOK:
+                mobility = popcount(rookAttacks(i, occupancy) & ~ownPieces);
+                weight = 2;
                 break;
-            }
-
-            case ChessPieceType::QUEEN: {
-                int directions[][2] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1},
-                                       {0, 1},   {1, -1}, {1, 0},  {1, 1}};
-                for (auto& dir : directions) {
-                    for (int dist = 1; dist < BOARD_SIZE; dist++) {
-                        int newRow = row + (dir[0] * dist);
-                        int newCol = col + (dir[1] * dist);
-                        if (newRow < 0 || newRow >= BOARD_SIZE || newCol < 0 ||
-                            newCol >= BOARD_SIZE) {
-                            break;
-                        }
-                        int pos = (newRow * BOARD_SIZE) + newCol;
-                        if (board.squares[pos].piece.PieceType == ChessPieceType::NONE) {
-                            mobility++;
-                        } else {
-                            if (board.squares[pos].piece.PieceColor != piece.PieceColor) {
-                                mobility++;
-                            }
-                            break;
-                        }
-                    }
-                }
-                mobilityScore +=
-                    piece.PieceColor == ChessPieceColor::WHITE ? mobility * 1 : -mobility * 1;
+            case ChessPieceType::QUEEN:
+                mobility = popcount(queenAttacks(i, occupancy) & ~ownPieces);
+                weight = 1;
                 break;
-            }
-
             default:
-                break;
+                continue;
         }
+
+        mobilityScore +=
+            piece.PieceColor == ChessPieceColor::WHITE ? mobility * weight : -mobility * weight;
     }
 
     return mobilityScore;
 }
 
-int evaluateCenterControl(const Board& board) {
+int evaluateCenterControl(const Board& board, ChessPieceColor color) {
     int score = 0;
     int centerSquares[] = {27, 28, 35, 36};
     for (int square : centerSquares) {
-        if (board.squares[square].piece.PieceType != ChessPieceType::NONE) {
-            if (board.squares[square].piece.PieceColor == ChessPieceColor::WHITE) {
-                score += kCenterControlBonus;
-            } else {
-                score -= kCenterControlBonus;
-            }
+        if (board.squares[square].piece.PieceType != ChessPieceType::NONE &&
+            board.squares[square].piece.PieceColor == color) {
+            score += CENTER_CONTROL_BONUS;
         }
     }
     return score;
+}
+
+int evaluateCenterControl(const Board& board) {
+    return evaluateCenterControl(board, ChessPieceColor::WHITE) -
+           evaluateCenterControl(board, ChessPieceColor::BLACK);
 }
 
 int evaluateKingSafety(const Board& board) {
@@ -381,7 +256,7 @@ int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor 
     return score;
 }
 
-int evaluatePassedPawns(const Board& board) {
+int evaluatePassedPawns(const Board& board, ChessPieceColor color) {
     int score = 0;
 
     for (int col = 0; col < BOARD_SIZE; col++) {
@@ -389,56 +264,58 @@ int evaluatePassedPawns(const Board& board) {
             int pos = (row * BOARD_SIZE) + col;
             const Piece& piece = board.squares[pos].piece;
 
-            if (piece.PieceType == ChessPieceType::PAWN) {
-                bool isPassed = true;
+            if (piece.PieceType != ChessPieceType::PAWN || piece.PieceColor != color) {
+                continue;
+            }
 
-                if (piece.PieceColor == ChessPieceColor::WHITE) {
-                    for (int checkCol = std::max(0, col - 1); checkCol <= std::min(7, col + 1);
-                         checkCol++) {
-                        for (int checkRow = row + 1; checkRow < BOARD_SIZE; checkRow++) {
-                            int checkPos = (checkRow * BOARD_SIZE) + checkCol;
-                            if (board.squares[checkPos].piece.PieceType == ChessPieceType::PAWN &&
-                                board.squares[checkPos].piece.PieceColor ==
-                                    ChessPieceColor::BLACK) {
-                                isPassed = false;
-                                break;
-                            }
-                        }
-                        if (!isPassed) {
+            bool isPassed = true;
+
+            if (color == ChessPieceColor::WHITE) {
+                for (int checkCol = std::max(0, col - 1); checkCol <= std::min(7, col + 1);
+                     checkCol++) {
+                    for (int checkRow = row + 1; checkRow < BOARD_SIZE; checkRow++) {
+                        int checkPos = (checkRow * BOARD_SIZE) + checkCol;
+                        if (board.squares[checkPos].piece.PieceType == ChessPieceType::PAWN &&
+                            board.squares[checkPos].piece.PieceColor == ChessPieceColor::BLACK) {
+                            isPassed = false;
                             break;
                         }
                     }
-                    if (isPassed) {
-                        int passedBonus = ((row - 1) * kPassedPawnRankScale) + kPassedPawnBaseBonus;
-                        score += passedBonus;
+                    if (!isPassed) {
+                        break;
                     }
-                } else {
-                    for (int checkCol = std::max(0, col - 1);
-                         checkCol <= std::min(BOARD_SIZE - 1, col + 1); checkCol++) {
-                        for (int checkRow = row - 1; checkRow >= 0; checkRow--) {
-                            int checkPos = (checkRow * BOARD_SIZE) + checkCol;
-                            if (board.squares[checkPos].piece.PieceType == ChessPieceType::PAWN &&
-                                board.squares[checkPos].piece.PieceColor ==
-                                    ChessPieceColor::WHITE) {
-                                isPassed = false;
-                                break;
-                            }
-                        }
-                        if (!isPassed) {
+                }
+                if (isPassed) {
+                    score += ((row - 1) * PASSED_PAWN_RANK_SCALE) + PASSED_PAWN_BASE_BONUS;
+                }
+            } else {
+                for (int checkCol = std::max(0, col - 1);
+                     checkCol <= std::min(BOARD_SIZE - 1, col + 1); checkCol++) {
+                    for (int checkRow = row - 1; checkRow >= 0; checkRow--) {
+                        int checkPos = (checkRow * BOARD_SIZE) + checkCol;
+                        if (board.squares[checkPos].piece.PieceType == ChessPieceType::PAWN &&
+                            board.squares[checkPos].piece.PieceColor == ChessPieceColor::WHITE) {
+                            isPassed = false;
                             break;
                         }
                     }
-                    if (isPassed) {
-                        int passedBonus = (((BOARD_SIZE - 2) - row) * kPassedPawnRankScale) +
-                                          kPassedPawnBaseBonus;
-                        score -= passedBonus;
+                    if (!isPassed) {
+                        break;
                     }
+                }
+                if (isPassed) {
+                    score += (((BOARD_SIZE - 2) - row) * PASSED_PAWN_RANK_SCALE) + PASSED_PAWN_BASE_BONUS;
                 }
             }
         }
     }
 
     return score;
+}
+
+int evaluatePassedPawns(const Board& board) {
+    return evaluatePassedPawns(board, ChessPieceColor::WHITE) -
+           evaluatePassedPawns(board, ChessPieceColor::BLACK);
 }
 
 int evaluateBishopPair(const Board& board) {
@@ -457,10 +334,10 @@ int evaluateBishopPair(const Board& board) {
 
     int score = 0;
     if (whiteBishops >= 2) {
-        score += kBishopPairBonus;
+        score += BISHOP_PAIR_BONUS;
     }
     if (blackBishops >= 2) {
-        score -= kBishopPairBonus;
+        score -= BISHOP_PAIR_BONUS;
     }
     return score;
 }
@@ -486,15 +363,15 @@ int evaluateRooksOnOpenFiles(const Board& board) {
 
             if (isOpenFile) {
                 if (board.squares[i].piece.PieceColor == ChessPieceColor::WHITE) {
-                    score += kOpenFileRookBonus;
+                    score += ROOK_OPEN_FILE_BONUS;
                 } else {
-                    score -= kOpenFileRookBonus;
+                    score -= ROOK_OPEN_FILE_BONUS;
                 }
             } else if (isSemiOpen) {
                 if (board.squares[i].piece.PieceColor == ChessPieceColor::WHITE) {
-                    score += kSemiOpenFileRookBonus;
+                    score += ROOK_SEMI_OPEN_FILE_BONUS;
                 } else {
-                    score -= kSemiOpenFileRookBonus;
+                    score -= ROOK_SEMI_OPEN_FILE_BONUS;
                 }
             }
         }
@@ -513,7 +390,7 @@ int evaluateEndgame(const Board& board) {
     }
 
     int score = 0;
-    if (totalMaterial < kEndgameMaterialThreshold) {
+    if (totalMaterial < ENDGAME_MATERIAL_THRESHOLD) {
         for (int i = 0; i < NUM_SQUARES; i++) {
             if (board.squares[i].piece.PieceType == ChessPieceType::KING) {
                 int file = i % BOARD_SIZE;
@@ -523,10 +400,10 @@ int evaluateEndgame(const Board& board) {
 
                 if (board.squares[i].piece.PieceColor == ChessPieceColor::WHITE) {
                     score +=
-                        (kKingCenterDistanceTarget - centerDistance) * kKingCentralizationScale;
+                        (KING_CENTER_DISTANCE_TARGET - centerDistance) * KING_CENTRALIZATION_SCALE;
                 } else {
                     score -=
-                        (kKingCenterDistanceTarget - centerDistance) * kKingCentralizationScale;
+                        (KING_CENTER_DISTANCE_TARGET - centerDistance) * KING_CENTRALIZATION_SCALE;
                 }
             }
         }
@@ -575,7 +452,7 @@ int evaluatePosition(const Board& board, int contempt) {
                 gamePhase += 2;
                 break;
             case ChessPieceType::QUEEN:
-                gamePhase += kQueenGamePhaseIncrement;
+                gamePhase += QUEEN_GAME_PHASE_INCREMENT;
                 break;
             default:
                 break;
@@ -610,9 +487,9 @@ int evaluatePosition(const Board& board, int contempt) {
             int pawnScore = evaluatePawnStructure(board);
             int passedPawnScore = evaluatePassedPawns(board);
             pawnMg = pawnScore +
-                     static_cast<int>(static_cast<float>(passedPawnScore) * kPawnMgPassedScale);
-            pawnEg = static_cast<int>(static_cast<float>(pawnScore) * kPawnEgScale) +
-                     static_cast<int>(static_cast<float>(passedPawnScore) * kPassedPawnEgScale);
+                     static_cast<int>(static_cast<float>(passedPawnScore) * PAWN_MG_PASSED_SCALE);
+            pawnEg = static_cast<int>(static_cast<float>(pawnScore) * PAWN_EG_SCALE) +
+                     static_cast<int>(static_cast<float>(passedPawnScore) * PASSED_PAWN_EG_SCALE);
             pawnHashTable.store(pawnKey, pawnMg, pawnEg);
             mgScore += pawnMg;
             egScore += pawnEg;
@@ -622,20 +499,20 @@ int evaluatePosition(const Board& board, int contempt) {
     if (ENABLE_PIECE_MOBILITY) {
         int mobilityScore = evaluateMobility(board);
         mgScore += mobilityScore;
-        egScore += static_cast<int>(static_cast<float>(mobilityScore) * kMobilityEgScale);
+        egScore += static_cast<int>(static_cast<float>(mobilityScore) * MOBILITY_EG_SCALE);
     }
 
     if (ENABLE_KING_SAFETY) {
         int kingSafetyScore = evaluateKingSafety(board);
         mgScore += kingSafetyScore;
-        egScore += static_cast<int>(static_cast<float>(kingSafetyScore) * kKingSafetyEgScale);
+        egScore += static_cast<int>(static_cast<float>(kingSafetyScore) * KING_SAFETY_EG_SCALE);
     }
 
     const bool fastEval = useFastEval;
 
     int bishopPairScore = evaluateBishopPair(board);
     mgScore += bishopPairScore;
-    egScore += static_cast<int>(static_cast<float>(bishopPairScore) * kBishopPairEgScale);
+    egScore += static_cast<int>(static_cast<float>(bishopPairScore) * BISHOP_PAIR_EG_SCALE);
     int rookFileScore = evaluateRooksOnOpenFiles(board);
     mgScore += rookFileScore;
     egScore += rookFileScore;
@@ -645,20 +522,20 @@ int evaluatePosition(const Board& board, int contempt) {
         mgScore += tacticalSafetyScore;
     }
     int endgameScore = 0;
-    if (gamePhase < kOpeningEndgameBoundaryPhase) {
+    if (gamePhase < OPENING_ENDGAME_BOUNDARY_PHASE) {
         endgameScore = evaluateEndgame(board);
         egScore += endgameScore;
         int endgameKnowledgeScore = EndgameKnowledge::evaluateEndgame(board);
         egScore += endgameKnowledgeScore;
     }
-    egScore += static_cast<int>(static_cast<float>(tacticalSafetyScore) * kTacticalSafetyEgScale);
+    egScore += static_cast<int>(static_cast<float>(tacticalSafetyScore) * TACTICAL_SAFETY_EG_SCALE);
     if (!fastEval) {
         int hangingPiecesScore = evaluateHangingPieces(board);
         mgScore += hangingPiecesScore;
         egScore += hangingPiecesScore;
         int queenTrapScore = evaluateQueenTrapDanger(board);
         mgScore += queenTrapScore;
-        egScore += static_cast<int>(static_cast<float>(queenTrapScore) * kQueenTrapEgScale);
+        egScore += static_cast<int>(static_cast<float>(queenTrapScore) * QUEEN_TRAP_EG_SCALE);
     }
 
     if (board.turn == ChessPieceColor::WHITE) {
@@ -681,12 +558,12 @@ int evaluatePosition(const Board& board, int contempt) {
     return finalScore;
 }
 
-int evaluateHangingPieces(const Board& board) {
-    int score = 0;
+int evaluateHangingPieces(const Board& board, ChessPieceColor color) {
+    int penalty = 0;
 
     for (int i = 0; i < NUM_SQUARES; i++) {
         const Piece& piece = board.squares[i].piece;
-        if (piece.PieceType == ChessPieceType::NONE) {
+        if (piece.PieceType == ChessPieceType::NONE || piece.PieceColor != color) {
             continue;
         }
         if (piece.PieceType == ChessPieceType::PAWN || piece.PieceType == ChessPieceType::KING) {
@@ -695,9 +572,8 @@ int evaluateHangingPieces(const Board& board) {
         bool isUnderAttack = false;
         bool isDefended = false;
 
-        ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE)
-                                         ? ChessPieceColor::BLACK
-                                         : ChessPieceColor::WHITE;
+        ChessPieceColor enemyColor = (color == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
+                                                                       : ChessPieceColor::WHITE;
 
         for (int j = 0; j < NUM_SQUARES; j++) {
             const Piece& enemyPiece = board.squares[j].piece;
@@ -715,7 +591,7 @@ int evaluateHangingPieces(const Board& board) {
             for (int j = 0; j < NUM_SQUARES; j++) {
                 const Piece& friendlyPiece = board.squares[j].piece;
                 if (friendlyPiece.PieceType == ChessPieceType::NONE ||
-                    friendlyPiece.PieceColor != piece.PieceColor || j == i) {
+                    friendlyPiece.PieceColor != color || j == i) {
                     continue;
                 }
                 if (canPieceAttackSquare(board, j, i)) {
@@ -725,21 +601,11 @@ int evaluateHangingPieces(const Board& board) {
             }
 
             if (!isDefended) {
-                const int hangingPenalty =
-                    static_cast<int>(static_cast<float>(piece.PieceValue) * kHangingPenaltyRatio);
-
-                if (piece.PieceColor == ChessPieceColor::WHITE) {
-                    score -= hangingPenalty;
-                } else {
-                    score += hangingPenalty;
-                }
+                penalty += static_cast<int>(static_cast<float>(piece.PieceValue) *
+                                              HANGING_PENALTY_RATIO);
 
                 if (piece.PieceType == ChessPieceType::QUEEN) {
-                    if (piece.PieceColor == ChessPieceColor::WHITE) {
-                        score -= kHangingQueenPenalty;
-                    } else {
-                        score += kHangingQueenPenalty;
-                    }
+                    penalty += HANGING_QUEEN_PENALTY;
                 }
             }
         }
@@ -749,16 +615,15 @@ int evaluateHangingPieces(const Board& board) {
             int col = i % BOARD_SIZE;
 
             bool inEnemyTerritory =
-                (piece.PieceColor == ChessPieceColor::WHITE &&
-                 row >= kQueenEnemyTerritoryWhiteRow) ||
-                (piece.PieceColor == ChessPieceColor::BLACK && row <= kQueenEnemyTerritoryBlackRow);
+                (color == ChessPieceColor::WHITE && row >= QUEEN_ENEMY_TERRITORY_WHITE_ROW) ||
+                (color == ChessPieceColor::BLACK && row <= QUEEN_ENEMY_TERRITORY_BLACK_ROW);
 
             if (inEnemyTerritory) {
                 int supportCount = 0;
                 for (int j = 0; j < NUM_SQUARES; j++) {
                     const Piece& friendlyPiece = board.squares[j].piece;
                     if (friendlyPiece.PieceType == ChessPieceType::NONE ||
-                        friendlyPiece.PieceColor != piece.PieceColor || j == i ||
+                        friendlyPiece.PieceColor != color || j == i ||
                         friendlyPiece.PieceType == ChessPieceType::PAWN) {
                         continue;
                     }
@@ -768,16 +633,12 @@ int evaluateHangingPieces(const Board& board) {
                 }
 
                 if (supportCount == 0) {
-                    if (piece.PieceColor == ChessPieceColor::WHITE) {
-                        score -= kQueenUnsupportedPenalty;
-                    } else {
-                        score += kQueenUnsupportedPenalty;
-                    }
+                    penalty += QUEEN_UNSUPPORTED_PENALTY;
                 }
 
                 int nearbyEnemies = 0;
-                for (int dr = -kNearbyEnemyRadius; dr <= kNearbyEnemyRadius; dr++) {
-                    for (int dc = -kNearbyEnemyRadius; dc <= kNearbyEnemyRadius; dc++) {
+                for (int dr = -NEARBY_ENEMY_RADIUS; dr <= NEARBY_ENEMY_RADIUS; dr++) {
+                    for (int dc = -NEARBY_ENEMY_RADIUS; dc <= NEARBY_ENEMY_RADIUS; dc++) {
                         int checkRow = row + dr;
                         int checkCol = col + dc;
                         if (checkRow >= 0 && checkRow < BOARD_SIZE && checkCol >= 0 &&
@@ -791,12 +652,8 @@ int evaluateHangingPieces(const Board& board) {
                     }
                 }
 
-                if (nearbyEnemies >= kNearbyEnemyThreshold) {
-                    if (piece.PieceColor == ChessPieceColor::WHITE) {
-                        score -= kQueenCrowdedPenalty;
-                    } else {
-                        score += kQueenCrowdedPenalty;
-                    }
+                if (nearbyEnemies >= NEARBY_ENEMY_THRESHOLD) {
+                    penalty += QUEEN_CROWDED_PENALTY;
                 }
             }
         }
@@ -810,26 +667,22 @@ int evaluateHangingPieces(const Board& board) {
             bool isInCorner = ((row == 0 || row == 7) && (col == 0 || col == 7));
 
             if (isInCorner && piece.PieceType == ChessPieceType::QUEEN) {
-                if (piece.PieceColor == ChessPieceColor::WHITE) {
-                    score -= kQueenCornerTrapPenalty;
-                } else {
-                    score += kQueenCornerTrapPenalty;
-                }
+                penalty += QUEEN_CORNER_TRAP_PENALTY;
             } else if (isOnEdge && piece.PieceType == ChessPieceType::QUEEN) {
-                if (piece.PieceColor == ChessPieceColor::WHITE) {
-                    score -= kQueenEdgeTrapPenalty;
-                } else {
-                    score += kQueenEdgeTrapPenalty;
-                }
+                penalty += QUEEN_EDGE_TRAP_PENALTY;
             }
         }
     }
 
-    return score;
+    return penalty;
+}
+
+int evaluateHangingPieces(const Board& board) {
+    return evaluateHangingPieces(board, ChessPieceColor::BLACK) -
+           evaluateHangingPieces(board, ChessPieceColor::WHITE);
 }
 
 bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
-
     if (piecePos < 0 || piecePos >= NUM_SQUARES || targetPos < 0 || targetPos >= NUM_SQUARES) {
         return false;
     }
@@ -838,116 +691,32 @@ bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos) {
     if (piece.PieceType == ChessPieceType::NONE) {
         return false;
     }
-    int fromRow = piecePos / BOARD_SIZE;
-    int fromCol = piecePos % BOARD_SIZE;
-    int toRow = targetPos / BOARD_SIZE;
-    int toCol = targetPos % BOARD_SIZE;
-    int rowDiff = toRow - fromRow;
-    int colDiff = toCol - fromCol;
 
+    Bitboard attacks = 0;
     switch (piece.PieceType) {
-        case ChessPieceType::PAWN: {
-            int direction = (piece.PieceColor == ChessPieceColor::WHITE) ? 1 : -1;
-            return (rowDiff == direction && (colDiff == 1 || colDiff == -1));
-        }
-        case ChessPieceType::KNIGHT: {
-            return (abs(rowDiff) == 2 && abs(colDiff) == 1) ||
-                   (abs(rowDiff) == 1 && abs(colDiff) == 2);
-        }
-        case ChessPieceType::BISHOP: {
-            if (abs(rowDiff) != abs(colDiff)) {
-                return false;
-            }
-            int rowStep = (rowDiff > 0) ? 1 : -1;
-            int colStep = (colDiff > 0) ? 1 : -1;
-            for (int i = 1; i < abs(rowDiff); i++) {
-                int checkPos = ((fromRow + (i * rowStep)) * BOARD_SIZE) + (fromCol + (i * colStep));
-                if (checkPos < 0 || checkPos >= NUM_SQUARES) {
-                    return false;
-                }
-                if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        case ChessPieceType::ROOK: {
-            if (rowDiff != 0 && colDiff != 0) {
-                return false;
-            }
-            if (rowDiff == 0) {
-                int colStep = (colDiff > 0) ? 1 : -1;
-                for (int i = 1; i < abs(colDiff); i++) {
-                    int checkPos = (fromRow * BOARD_SIZE) + (fromCol + (i * colStep));
-                    if (checkPos < 0 || checkPos >= NUM_SQUARES) {
-                        return false;
-                    }
-                    if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) {
-                        return false;
-                    }
-                }
-            } else {
-                int rowStep = (rowDiff > 0) ? 1 : -1;
-                for (int i = 1; i < abs(rowDiff); i++) {
-                    int checkPos = ((fromRow + (i * rowStep)) * BOARD_SIZE) + fromCol;
-                    if (checkPos < 0 || checkPos >= NUM_SQUARES) {
-                        return false;
-                    }
-                    if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        case ChessPieceType::QUEEN: {
-            if (rowDiff == 0 || colDiff == 0 || abs(rowDiff) == abs(colDiff)) {
-                if (rowDiff == 0) {
-                    int colStep = (colDiff > 0) ? 1 : -1;
-                    for (int i = 1; i < abs(colDiff); i++) {
-                        int checkPos = (fromRow * BOARD_SIZE) + (fromCol + (i * colStep));
-                        if (checkPos < 0 || checkPos >= NUM_SQUARES) {
-                            return false;
-                        }
-                        if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) {
-                            return false;
-                        }
-                    }
-                } else if (colDiff == 0) {
-                    int rowStep = (rowDiff > 0) ? 1 : -1;
-                    for (int i = 1; i < abs(rowDiff); i++) {
-                        int checkPos = ((fromRow + (i * rowStep)) * BOARD_SIZE) + fromCol;
-                        if (checkPos < 0 || checkPos >= NUM_SQUARES) {
-                            return false;
-                        }
-                        if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) {
-                            return false;
-                        }
-                    }
-                } else {
-                    int rowStep = (rowDiff > 0) ? 1 : -1;
-                    int colStep = (colDiff > 0) ? 1 : -1;
-                    for (int i = 1; i < abs(rowDiff); i++) {
-                        int checkPos =
-                            ((fromRow + (i * rowStep)) * BOARD_SIZE) + (fromCol + (i * colStep));
-                        if (checkPos < 0 || checkPos >= NUM_SQUARES) {
-                            return false;
-                        }
-                        if (board.squares[checkPos].piece.PieceType != ChessPieceType::NONE) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            }
-            return false;
-        }
-        case ChessPieceType::KING: {
-            return abs(rowDiff) <= 1 && abs(colDiff) <= 1;
-        }
+        case ChessPieceType::PAWN:
+            attacks = pawnAttacks(piece.PieceColor, piecePos);
+            break;
+        case ChessPieceType::KNIGHT:
+            attacks = KnightAttacks[piecePos];
+            break;
+        case ChessPieceType::BISHOP:
+            attacks = bishopAttacks(piecePos, board.allPieces);
+            break;
+        case ChessPieceType::ROOK:
+            attacks = rookAttacks(piecePos, board.allPieces);
+            break;
+        case ChessPieceType::QUEEN:
+            attacks = queenAttacks(piecePos, board.allPieces);
+            break;
+        case ChessPieceType::KING:
+            attacks = KingAttacks[piecePos];
+            break;
         default:
             return false;
     }
+
+    return get_bit(attacks, targetPos);
 }
 
 int evaluateQueenTrapDanger(const Board& board) {
@@ -1006,8 +775,8 @@ int evaluateQueenTrapDanger(const Board& board) {
                 newRow += direction[0];
                 newCol += direction[1];
 
-                if (abs(newRow - row) > kQueenEscapeSearchRadius ||
-                    abs(newCol - col) > kQueenEscapeSearchRadius) {
+                if (abs(newRow - row) > QUEEN_ESCAPE_SEARCH_RADIUS ||
+                    abs(newCol - col) > QUEEN_ESCAPE_SEARCH_RADIUS) {
                     break;
                 }
             }
@@ -1015,38 +784,38 @@ int evaluateQueenTrapDanger(const Board& board) {
 
         if (escapeSquares == 0) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
-                score -= kQueenTrapNoEscapePenalty;
+                score -= QUEEN_TRAP_NO_ESCAPE_PENALTY;
             } else {
-                score += kQueenTrapNoEscapePenalty;
+                score += QUEEN_TRAP_NO_ESCAPE_PENALTY;
             }
-        } else if (escapeSquares <= kQueenTrapLowEscapeThreshold) {
+        } else if (escapeSquares <= QUEEN_TRAP_LOW_ESCAPE_THRESHOLD) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
-                score -= kQueenTrapLowEscapePenalty;
+                score -= QUEEN_TRAP_LOW_ESCAPE_PENALTY;
             } else {
-                score += kQueenTrapLowEscapePenalty;
+                score += QUEEN_TRAP_LOW_ESCAPE_PENALTY;
             }
-        } else if (escapeSquares <= kQueenTrapMediumEscapeThreshold) {
+        } else if (escapeSquares <= QUEEN_TRAP_MEDIUM_ESCAPE_THRESHOLD) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
-                score -= kQueenTrapMediumEscapePenalty;
+                score -= QUEEN_TRAP_MEDIUM_ESCAPE_PENALTY;
             } else {
-                score += kQueenTrapMediumEscapePenalty;
+                score += QUEEN_TRAP_MEDIUM_ESCAPE_PENALTY;
             }
         }
 
         bool isOnEdge = (row == 0 || row == 7 || col == 0 || col == 7);
         bool isInCorner = ((row == 0 || row == 7) && (col == 0 || col == 7));
 
-        if (isInCorner && escapeSquares <= kQueenTrapCornerEscapeThreshold) {
+        if (isInCorner && escapeSquares <= QUEEN_TRAP_CORNER_ESCAPE_THRESHOLD) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
-                score -= kQueenTrapCornerPenalty;
+                score -= QUEEN_TRAP_CORNER_PENALTY;
             } else {
-                score += kQueenTrapCornerPenalty;
+                score += QUEEN_TRAP_CORNER_PENALTY;
             }
-        } else if (isOnEdge && escapeSquares <= kQueenTrapEdgeEscapeThreshold) {
+        } else if (isOnEdge && escapeSquares <= QUEEN_TRAP_EDGE_ESCAPE_THRESHOLD) {
             if (piece.PieceColor == ChessPieceColor::WHITE) {
-                score -= kQueenTrapEdgePenalty;
+                score -= QUEEN_TRAP_EDGE_PENALTY;
             } else {
-                score += kQueenTrapEdgePenalty;
+                score += QUEEN_TRAP_EDGE_PENALTY;
             }
         }
     }
@@ -1087,7 +856,7 @@ int evaluateTacticalSafety(const Board& board) {
             }
 
             if (attackers > defenders) {
-                int dangerLevel = (attackers - defenders) * kDangerLevelScale;
+                int dangerLevel = (attackers - defenders) * DANGER_LEVEL_SCALE;
                 if (piece.PieceColor == ChessPieceColor::WHITE) {
                     score -= dangerLevel;
                 } else {
@@ -1106,9 +875,9 @@ int evaluateTacticalSafety(const Board& board) {
 
                     if (weakestAttacker < piece.PieceValue) {
                         if (piece.PieceColor == ChessPieceColor::WHITE) {
-                            score -= kQueenTacticalPenalty;
+                            score -= QUEEN_TACTICAL_PENALTY;
                         } else {
-                            score += kQueenTacticalPenalty;
+                            score += QUEEN_TACTICAL_PENALTY;
                         }
                     }
                 }
@@ -1122,23 +891,23 @@ int evaluateTacticalSafety(const Board& board) {
                     int kingCol = j % BOARD_SIZE;
                     int distance = (abs(row - kingRow) > abs(col - kingCol)) ? abs(row - kingRow)
                                                                              : abs(col - kingCol);
-                    if (distance <= kNearEnemyKingDistance) {
+                    if (distance <= NEAR_ENEMY_KING_DISTANCE) {
                         nearEnemyKing = true;
                         break;
                     }
                 }
             }
 
-            if (nearEnemyKing && defenders < kNearEnemyKingLowDefenderThreshold) {
+            if (nearEnemyKing && defenders < NEAR_ENEMY_KING_LOW_DEFENDER_THRESHOLD) {
                 if (piece.PieceColor == ChessPieceColor::WHITE) {
-                    score -= kNearEnemyKingPenalty;
+                    score -= NEAR_ENEMY_KING_PENALTY;
                 } else {
-                    score += kNearEnemyKingPenalty;
+                    score += NEAR_ENEMY_KING_PENALTY;
                 }
             }
         }
 
-        else if (piece.PieceValue >= kHighValuePieceThreshold) {
+        else if (piece.PieceValue >= HIGH_VALUE_PIECE_THRESHOLD) {
             int attackers = 0;
             int defenders = 0;
             ChessPieceColor enemyColor = (piece.PieceColor == ChessPieceColor::WHITE)
@@ -1160,7 +929,7 @@ int evaluateTacticalSafety(const Board& board) {
             }
 
             if (attackers > defenders) {
-                int penalty = (attackers - defenders) * piece.PieceValue / kPenaltyDivisor;
+                int penalty = (attackers - defenders) * piece.PieceValue / PENALTY_DIVISOR;
                 if (piece.PieceColor == ChessPieceColor::WHITE) {
                     score -= penalty;
                 } else {

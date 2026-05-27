@@ -81,93 +81,14 @@ Bitboard pawnAttacks(ChessPieceColor color, int sq) {
 }
 
 Bitboard rookAttacks(int sq, Bitboard occupancy) {
-    Bitboard attacks = 0;
-    int rank = sq / 8;
-    int file = sq % 8;
-
-    for (int f = file + 1; f < 8; f++) {
-        int target = (rank * 8) + f;
-        set_bit(attacks, target);
-        if (get_bit(occupancy, target)) {
-            break;
-        }
-    }
-    for (int f = file - 1; f >= 0; f--) {
-        int target = (rank * 8) + f;
-        set_bit(attacks, target);
-        if (get_bit(occupancy, target)) {
-            break;
-        }
-    }
-
-    for (int r = rank + 1; r < 8; r++) {
-        int target = (r * 8) + file;
-        set_bit(attacks, target);
-        if (get_bit(occupancy, target)) {
-            break;
-        }
-    }
-    for (int r = rank - 1; r >= 0; r--) {
-        int target = (r * 8) + file;
-        set_bit(attacks, target);
-        if (get_bit(occupancy, target)) {
-            break;
-        }
-    }
-
-    return attacks;
-}
-
-Bitboard bishopAttacks(int sq, Bitboard occupancy) {
-    Bitboard attacks = 0;
-    int rank = sq / 8;
-    int file = sq % 8;
-
-    for (int r = rank + 1, f = file + 1; r < 8 && f < 8; r++, f++) {
-        int target = (r * 8) + f;
-        set_bit(attacks, target);
-        if (get_bit(occupancy, target)) {
-            break;
-        }
-    }
-    for (int r = rank + 1, f = file - 1; r < 8 && f >= 0; r++, f--) {
-        int target = (r * 8) + f;
-        set_bit(attacks, target);
-        if (get_bit(occupancy, target)) {
-            break;
-        }
-    }
-    for (int r = rank - 1, f = file + 1; r >= 0 && f < 8; r--, f++) {
-        int target = (r * 8) + f;
-        set_bit(attacks, target);
-        if (get_bit(occupancy, target)) {
-            break;
-        }
-    }
-    for (int r = rank - 1, f = file - 1; r >= 0 && f >= 0; r--, f--) {
-        int target = (r * 8) + f;
-        set_bit(attacks, target);
-        if (get_bit(occupancy, target)) {
-            break;
-        }
-    }
-
-    return attacks;
-}
-
-Bitboard queenAttacks(int sq, Bitboard occupancy) {
-    return rookAttacks(sq, occupancy) | bishopAttacks(sq, occupancy);
-}
-
-Bitboard fastRookAttacks(int sq, Bitboard occupancy) {
     return MagicBitboards::getRookAttacks(sq, occupancy);
 }
 
-Bitboard fastBishopAttacks(int sq, Bitboard occupancy) {
+Bitboard bishopAttacks(int sq, Bitboard occupancy) {
     return MagicBitboards::getBishopAttacks(sq, occupancy);
 }
 
-Bitboard fastQueenAttacks(int sq, Bitboard occupancy) {
+Bitboard queenAttacks(int sq, Bitboard occupancy) {
     return MagicBitboards::getQueenAttacks(sq, occupancy);
 }
 
@@ -212,7 +133,7 @@ Bitboard rookMoves(Bitboard rooks, Bitboard ownPieces, Bitboard occupancy) {
     Bitboard moves = 0;
     while (rooks) {
         int sq = lsb(rooks);
-        moves |= fastRookAttacks(sq, occupancy);
+        moves |= rookAttacks(sq, occupancy);
         clear_bit(rooks, sq);
     }
     return moves & ~ownPieces;
@@ -222,7 +143,7 @@ Bitboard bishopMoves(Bitboard bishops, Bitboard ownPieces, Bitboard occupancy) {
     Bitboard moves = 0;
     while (bishops) {
         int sq = lsb(bishops);
-        moves |= fastBishopAttacks(sq, occupancy);
+        moves |= bishopAttacks(sq, occupancy);
         clear_bit(bishops, sq);
     }
     return moves & ~ownPieces;
@@ -232,7 +153,7 @@ Bitboard queenMoves(Bitboard queens, Bitboard ownPieces, Bitboard occupancy) {
     Bitboard moves = 0;
     while (queens) {
         int sq = lsb(queens);
-        moves |= fastQueenAttacks(sq, occupancy);
+        moves |= queenAttacks(sq, occupancy);
         clear_bit(queens, sq);
     }
     return moves & ~ownPieces;

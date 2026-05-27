@@ -1,4 +1,5 @@
 #include "AdvancedSearch.h"
+#include "../core/MaterialValues.h"
 #include "../evaluation/GamePhaseConstants.h"
 #include "../search/SearchTuning.h"
 #include "../utils/engine_globals.h"
@@ -30,11 +31,11 @@ constexpr int kInvalidSquare = -1;
 
 constexpr int kShallowDepthLimit = 3;
 constexpr int kTacticalBonusPerMissingPly = 50;
-constexpr int kDeltaMarginBase = 975;
+constexpr int kDeltaMarginBase = MaterialValues::kQueenValue;
 constexpr int kDeltaMarginPerDepth = 50;
 
 constexpr int kStaticNullDepthLimit = 4;
-constexpr int kStaticNullMarginBase = 900;
+constexpr int kStaticNullMarginBase = MaterialValues::kQueenValue;
 constexpr int kStaticNullMarginPerDepth = 50;
 
 constexpr int kNullMoveMinDepth = 3;
@@ -183,7 +184,7 @@ bool AdvancedSearch::multiCutPruning(Board& board, int depth, int alpha, int bet
         return false;
     }
 
-    GenValidMoves(board);
+    UpdateCheckState(board);
     std::vector<Move> moves = GetAllMoves(board, board.turn);
 
     if (moves.size() < kMultiCutMinMoves) {

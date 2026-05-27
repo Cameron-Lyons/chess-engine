@@ -153,10 +153,10 @@ public:
                                     ? (previousFullmoveNumber + 1)
                                     : previousFullmoveNumber;
 
-        GenValidMoves(board_);
+        UpdateCheckState(board_);
         if (IsKingInCheck(board_, piece.PieceColor)) {
             board_ = previousBoard_;
-            GenValidMoves(board_);
+            UpdateCheckState(board_);
             return std::unexpected(ChessError::MoveLeavesKingInCheck);
         }
 

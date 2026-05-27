@@ -4,11 +4,6 @@
 
 using namespace ValidMovesInternal;
 
-thread_local bool BlackAttackBoard[kValidMovesBoardSquareCount] = {false};
-thread_local bool WhiteAttackBoard[kValidMovesBoardSquareCount] = {false};
-thread_local int BlackKingPosition = kZero;
-thread_local int WhiteKingPosition = kZero;
-
 bool IsKingInCheck(const Board& board, ChessPieceColor color) {
     const Bitboard king = (color == ChessPieceColor::WHITE) ? board.whiteKings : board.blackKings;
     if (king == EMPTY) {
@@ -114,133 +109,94 @@ bool IsMoveLegal(Board& board, int srcPos, int destPos) {
     return !IsKingInCheck(tempBoard, piece.PieceColor);
 }
 
+namespace ValidMovesInternal {
+namespace {
+
+bool kingPathIsSafe(const Board& board, const CastlingSideConfig& config, int firstTransit,
+                    int finalSquare) {
+    if (IsKingInCheck(board, config.color)) {
+        return false;
+    }
+
+    Board tempBoard = board;
+    tempBoard.movePiece(config.kingStart, firstTransit);
+    tempBoard.updateBitboards();
+    if (IsKingInCheck(tempBoard, config.color)) {
+        return false;
+    }
+
+    if (finalSquare != firstTransit) {
+        tempBoard.movePiece(firstTransit, finalSquare);
+        tempBoard.updateBitboards();
+        if (IsKingInCheck(tempBoard, config.color)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool rookIsReady(const Board& board, int rookSquare, ChessPieceColor color) {
+    const Piece& rook = board.squares[rookSquare].piece;
+    return rook.PieceType == ChessPieceType::ROOK && rook.PieceColor == color && !rook.moved;
+}
+
+} // namespace
+
+bool canCastleKingside(const Board& board, const CastlingSideConfig& config, Bitboard occupancy) {
+    if (!board.hasCastlingRight(config.kingsideCastlingRight)) {
+        return false;
+    }
+    if ((occupancy & (1ULL << config.kingsideTransitSquare)) ||
+        (occupancy & (1ULL << config.kingsideDestination))) {
+        return false;
+    }
+    if (!rookIsReady(board, config.kingsideRookSquare, config.color)) {
+        return false;
+    }
+
+    return kingPathIsSafe(board, config, config.kingsideTransitSquare,
+                        config.kingsideDestination);
+}
+
+bool canCastleQueenside(const Board& board, const CastlingSideConfig& config, Bitboard occupancy) {
+    if (!board.hasCastlingRight(config.queensideCastlingRight)) {
+        return false;
+    }
+    if ((occupancy & (1ULL << config.queensideEmptySquare)) ||
+        (occupancy & (1ULL << config.queensideSecondTransit)) ||
+        (occupancy & (1ULL << config.queensideFirstTransit))) {
+        return false;
+    }
+    if (!rookIsReady(board, config.queensideRookSquare, config.color)) {
+        return false;
+    }
+
+    return kingPathIsSafe(board, config, config.queensideFirstTransit,
+                          config.queensideSecondTransit);
+}
+
+} // namespace ValidMovesInternal
+
 void addCastlingMovesBitboard(Board& board, ChessPieceColor color,
                               std::vector<Move>* generatedMoves) {
-    int kingStart =
-        (color == ChessPieceColor::WHITE) ? kWhiteKingStartSquare : kBlackKingStartSquare;
-    const Piece& king = board.squares[kingStart].piece;
+    const CastlingSideConfig& config =
+        color == ChessPieceColor::WHITE ? kWhiteCastlingSide : kBlackCastlingSide;
+    const Piece& king = board.squares[config.kingStart].piece;
     if (king.PieceType != ChessPieceType::KING || king.PieceColor != color || king.moved) {
         return;
     }
 
-    Bitboard occ = board.allPieces;
-    bool canCastleKingside = false;
-    bool canCastleQueenside = false;
-    if (color == ChessPieceColor::WHITE) {
-        const Piece& kingsideRook = board.squares[kWhiteKingsideRookSquare].piece;
-        const Piece& queensideRook = board.squares[kWhiteQueensideRookSquare].piece;
-        const bool hasKingsideRight =
-            board.hasCastlingRight(CastlingConstants::kWhiteKingsideCastlingRight);
-        const bool hasQueensideRight =
-            board.hasCastlingRight(CastlingConstants::kWhiteQueensideCastlingRight);
-
-        if (hasKingsideRight && !(occ & (1ULL << kWhiteKingsideTransitSquare)) &&
-            !(occ & (1ULL << kWhiteKingsideDestination)) &&
-            kingsideRook.PieceType == ChessPieceType::ROOK &&
-            kingsideRook.PieceColor == ChessPieceColor::WHITE && !kingsideRook.moved) {
-            if (!IsKingInCheck(board, color)) {
-                Board temp = board;
-                temp.movePiece(kWhiteKingStartSquare, kWhiteKingsideTransitSquare);
-                temp.updateBitboards();
-                if (!IsKingInCheck(temp, color)) {
-                    temp.movePiece(kWhiteKingsideTransitSquare, kWhiteKingsideDestination);
-                    temp.updateBitboards();
-                    if (!IsKingInCheck(temp, color)) {
-                        canCastleKingside = true;
-                    }
-                }
-            }
-        }
-        if (hasQueensideRight && !(occ & (1ULL << kWhiteQueensideEmptySquare)) &&
-            !(occ & (1ULL << kWhiteQueensideSecondTransit)) &&
-            !(occ & (1ULL << kWhiteQueensideFirstTransit)) &&
-            queensideRook.PieceType == ChessPieceType::ROOK &&
-            queensideRook.PieceColor == ChessPieceColor::WHITE && !queensideRook.moved) {
-            if (!IsKingInCheck(board, color)) {
-                Board temp = board;
-                temp.movePiece(kWhiteKingStartSquare, kWhiteQueensideFirstTransit);
-                temp.updateBitboards();
-                if (!IsKingInCheck(temp, color)) {
-                    temp.movePiece(kWhiteQueensideFirstTransit, kWhiteQueensideSecondTransit);
-                    temp.updateBitboards();
-                    if (!IsKingInCheck(temp, color)) {
-                        canCastleQueenside = true;
-                    }
-                }
-            }
-        }
-    } else if (color == ChessPieceColor::BLACK) {
-        const Piece& kingsideRook = board.squares[kBlackKingsideRookSquare].piece;
-        const Piece& queensideRook = board.squares[kBlackQueensideRookSquare].piece;
-        const bool hasKingsideRight =
-            board.hasCastlingRight(CastlingConstants::kBlackKingsideCastlingRight);
-        const bool hasQueensideRight =
-            board.hasCastlingRight(CastlingConstants::kBlackQueensideCastlingRight);
-
-        if (hasKingsideRight && !(occ & (1ULL << kBlackKingsideTransitSquare)) &&
-            !(occ & (1ULL << kBlackKingsideDestination)) &&
-            kingsideRook.PieceType == ChessPieceType::ROOK &&
-            kingsideRook.PieceColor == ChessPieceColor::BLACK && !kingsideRook.moved) {
-            if (!IsKingInCheck(board, color)) {
-                Board temp = board;
-                temp.movePiece(kBlackKingStartSquare, kBlackKingsideTransitSquare);
-                temp.updateBitboards();
-                if (!IsKingInCheck(temp, color)) {
-                    temp.movePiece(kBlackKingsideTransitSquare, kBlackKingsideDestination);
-                    temp.updateBitboards();
-                    if (!IsKingInCheck(temp, color)) {
-                        canCastleKingside = true;
-                    }
-                }
-            }
-        }
-        if (hasQueensideRight && !(occ & (1ULL << kBlackQueensideEmptySquare)) &&
-            !(occ & (1ULL << kBlackQueensideSecondTransit)) &&
-            !(occ & (1ULL << kBlackQueensideFirstTransit)) &&
-            queensideRook.PieceType == ChessPieceType::ROOK &&
-            queensideRook.PieceColor == ChessPieceColor::BLACK && !queensideRook.moved) {
-            if (!IsKingInCheck(board, color)) {
-                Board temp = board;
-                temp.movePiece(kBlackKingStartSquare, kBlackQueensideFirstTransit);
-                temp.updateBitboards();
-                if (!IsKingInCheck(temp, color)) {
-                    temp.movePiece(kBlackQueensideFirstTransit, kBlackQueensideSecondTransit);
-                    temp.updateBitboards();
-                    if (!IsKingInCheck(temp, color)) {
-                        canCastleQueenside = true;
-                    }
-                }
-            }
-        }
+    const Bitboard occupancy = board.allPieces;
+    if (canCastleKingside(board, config, occupancy) && generatedMoves != nullptr) {
+        generatedMoves->emplace_back(config.kingStart, config.kingsideDestination);
     }
-    if (canCastleKingside) {
-        int dest = (color == ChessPieceColor::WHITE) ? kWhiteKingsideDestination
-                                                     : kBlackKingsideDestination;
-        if (generatedMoves != nullptr) {
-            generatedMoves->emplace_back(kingStart, dest);
-        }
-    }
-    if (canCastleQueenside) {
-        int dest = (color == ChessPieceColor::WHITE) ? kWhiteQueensideSecondTransit
-                                                     : kBlackQueensideSecondTransit;
-        if (generatedMoves != nullptr) {
-            generatedMoves->emplace_back(kingStart, dest);
-        }
+    if (canCastleQueenside(board, config, occupancy) && generatedMoves != nullptr) {
+        generatedMoves->emplace_back(config.kingStart, config.queensideSecondTransit);
     }
 }
 
-void GenValidMoves(Board& board) {
-    board.whiteChecked = false;
-    board.blackChecked = false;
-
-    for (int i = kZero; i < kBoardSquareCount; i++) {
-        BlackAttackBoard[i] = false;
-        WhiteAttackBoard[i] = false;
-    }
-
-    WhiteKingPosition = board.whiteKings ? lsb(board.whiteKings) : kInvalidSquare;
-    BlackKingPosition = board.blackKings ? lsb(board.blackKings) : kInvalidSquare;
-
+void UpdateCheckState(Board& board) {
     board.whiteChecked = IsKingInCheck(board, ChessPieceColor::WHITE);
     board.blackChecked = IsKingInCheck(board, ChessPieceColor::BLACK);
 }

@@ -53,14 +53,17 @@ int getPieceSquareValue(ChessPieceType pieceType, int position, ChessPieceColor 
 int evaluatePawnStructure(const Board& board);
 int evaluateMobility(const Board& board);
 int evaluateCenterControl(const Board& board);
+int evaluateCenterControl(const Board& board, ChessPieceColor color);
 int evaluateKingSafety(const Board& board, ChessPieceColor color);
 int evaluateHangingPieces(const Board& board);
+int evaluateHangingPieces(const Board& board, ChessPieceColor color);
 int evaluateQueenTrapDanger(const Board& board);
 int evaluateTacticalSafety(const Board& board);
 bool canPieceAttackSquare(const Board& board, int piecePos, int targetPos);
 int evaluatePosition(const Board& board, int contempt = 0);
 int evaluateKingSafetyForColor(const Board& board, int kingPos, ChessPieceColor color);
 int evaluatePassedPawns(const Board& board);
+int evaluatePassedPawns(const Board& board, ChessPieceColor color);
 int evaluateBishopPair(const Board& board);
 int evaluateRooksOnOpenFiles(const Board& board);
 int evaluateEndgame(const Board& board);

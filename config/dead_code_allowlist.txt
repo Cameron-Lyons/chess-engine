@@ -5,12 +5,9 @@ checkRootSplitTimeLimit	src/search/search.cpp
 chooseRootSplitWorkerCount	src/search/search.cpp
 getComputerMove	src/main.cpp
 hasAnyLegalMoves	src/main.cpp
-initializeZobrist	src/core/BitboardOnly.cpp
 isPreferredRootMove	src/search/search.cpp
 legalMoveDisambiguation	src/main.cpp
-makeMove	src/core/BitboardOnly.cpp
 moveToSan	src/main.cpp
 parseAlgebraicMoveLegacy	src/utils/engine_globals.cpp
 searchRootMovesYBWC	src/search/search.cpp
-setFromFEN	src/core/BitboardOnly.cpp
 toTtScore	src/search/search.cpp

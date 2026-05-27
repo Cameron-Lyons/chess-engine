@@ -69,7 +69,7 @@ int clampScore(int score) {
 
 Move selectFallbackRootMove(const Board& board) {
     Board rootBoard = board;
-    GenValidMoves(rootBoard);
+    UpdateCheckState(rootBoard);
     const auto moves = GetAllMoves(rootBoard, rootBoard.turn);
     for (const auto& move : moves) {
         Board testBoard = rootBoard;

@@ -7,8 +7,6 @@
 
 class MagicBitboards {
 public:
-    static const std::array<uint64_t, 64> ROOK_MAGIC;
-    static const std::array<uint64_t, 64> BISHOP_MAGIC;
     static std::array<std::array<uint64_t, 4096>, 64> rookAttacks;
     static std::array<std::array<uint64_t, 512>, 64> bishopAttacks;
     static std::array<uint64_t, 64> rookMasks;

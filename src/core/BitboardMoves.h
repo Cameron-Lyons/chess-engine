@@ -18,10 +18,6 @@ Bitboard rookAttacks(int sq, Bitboard occupancy);
 Bitboard bishopAttacks(int sq, Bitboard occupancy);
 Bitboard queenAttacks(int sq, Bitboard occupancy);
 
-Bitboard fastRookAttacks(int sq, Bitboard occupancy);
-Bitboard fastBishopAttacks(int sq, Bitboard occupancy);
-Bitboard fastQueenAttacks(int sq, Bitboard occupancy);
-
 Bitboard knightMoves(Bitboard knights, Bitboard ownPieces);
 Bitboard kingMoves(Bitboard king, Bitboard ownPieces);
 Bitboard pawnPushes(Bitboard pawns, Bitboard empty, ChessPieceColor color);
