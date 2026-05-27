@@ -50,10 +50,9 @@ public:
             return ZERO_VALUE;
         }
 
-        const double base =
-            SearchTuning::lmrBaseOffset() +
-            (std::log(clampedDepth) * std::log(clampedMoves + ONE_STEP) /
-             SearchTuning::lmrLogDivisor());
+        const double base = SearchTuning::lmrBaseOffset() +
+                            (std::log(clampedDepth) * std::log(clampedMoves + ONE_STEP) /
+                             SearchTuning::lmrLogDivisor());
         int reduction = static_cast<int>(base);
         reduction = std::min(reduction, clampedDepth - DEPTH_REDUCTION_OFFSET);
         return reduction;

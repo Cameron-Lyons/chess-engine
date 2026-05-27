@@ -8,10 +8,10 @@
 #include "ChessPiece.h"
 #include "LMR.h"
 #include "LazySMP.h"
+#include "SearchTuning.h"
 #include "evaluation/Evaluation.h"
 #include "search/ValidMoves.h"
 #include "search_internal.h"
-#include "SearchTuning.h"
 
 #include <algorithm>
 #include <array>

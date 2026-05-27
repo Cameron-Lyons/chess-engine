@@ -2,7 +2,6 @@
 #include "BitboardMoves.h"
 #include "ChessBoard.h"
 #include "ChessPiece.h"
-#include "utils/ChessFormat.h"
 #include "ai/NeuralNetwork.h"
 #include "core/ChessEngine.h"
 #include "core/GameRules.h"
@@ -12,6 +11,7 @@
 #include "evaluation/PositionAnalysis.h"
 #include "search/ValidMoves.h"
 #include "search/search.h"
+#include "utils/ChessFormat.h"
 #include "utils/engine_globals.h"
 
 #include <algorithm>

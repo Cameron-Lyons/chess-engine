@@ -5,8 +5,8 @@
 #include "../core/SquareSentinel.h"
 #include "AdvancedSearch.h"
 #include "LMR.h"
-#include "search.h"
 #include "ZobristKeys.h"
+#include "search.h"
 
 #include <array>
 #include <atomic>

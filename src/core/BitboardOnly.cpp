@@ -1,8 +1,8 @@
 #include "BitboardOnly.h"
+#include "../utils/ChessFormat.h"
 #include "Bitboard.h"
 #include "CastlingConstants.h"
 #include "ChessPiece.h"
-#include "../utils/ChessFormat.h"
 
 #include <bit>
 #include <cctype>
@@ -337,10 +337,9 @@ std::string BitboardPosition::toFEN() const {
         castling += 'q';
     }
 
-    const std::string enPassantField =
-        epSquare < CastlingConstants::kNoEnPassantSquareBitboard
-            ? chess::format::squareName(epSquare)
-            : "-";
+    const std::string enPassantField = epSquare < CastlingConstants::kNoEnPassantSquareBitboard
+                                           ? chess::format::squareName(epSquare)
+                                           : "-";
 
     return std::format("{} {} {} {} {} {}", fen, sideToMove == WHITE ? 'w' : 'b',
                        castling.empty() ? "-" : castling, enPassantField,

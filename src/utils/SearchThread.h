@@ -23,7 +23,8 @@ public:
     SearchThread(const SearchThread&) = delete;
     SearchThread& operator=(const SearchThread&) = delete;
 
-    SearchThread(SearchThread&& other) noexcept : handle_(std::exchange(other.handle_, std::monostate{})) {}
+    SearchThread(SearchThread&& other) noexcept
+        : handle_(std::exchange(other.handle_, std::monostate{})) {}
 
     SearchThread& operator=(SearchThread&& other) noexcept {
         if (this != &other) {
@@ -39,14 +40,15 @@ public:
         join();
 
         auto task = std::make_shared<std::decay_t<Callable>>(std::forward<Callable>(callable));
-        auto runner = std::make_shared<std::function<void(std::stop_token)>>([task](std::stop_token token) {
-            if constexpr (requires { (*task)(token); }) {
-                (*task)(token);
-            } else {
-                (void)token;
-                (*task)();
-            }
-        });
+        auto runner =
+            std::make_shared<std::function<void(std::stop_token)>>([task](std::stop_token token) {
+                if constexpr (requires { (*task)(token); }) {
+                    (*task)(token);
+                } else {
+                    (void)token;
+                    (*task)();
+                }
+            });
 
 #if defined(__APPLE__) || defined(__linux__)
         if (stackBytes > 0) {
@@ -57,14 +59,14 @@ public:
                     auto handle = std::make_shared<PthreadHandle>();
                     handle->runner = runner;
                     handle->stopToken = stopToken;
-                    const int createResult =
-                        pthread_create(&handle->thread, &attr,
-                                       +[](void* arg) -> void* {
-                                           auto* ctx = static_cast<PthreadHandle*>(arg);
-                                           (*ctx->runner)(ctx->stopToken);
-                                           return nullptr;
-                                       },
-                                       handle.get());
+                    const int createResult = pthread_create(
+                        &handle->thread, &attr,
+                        +[](void* arg) -> void* {
+                            auto* ctx = static_cast<PthreadHandle*>(arg);
+                            (*ctx->runner)(ctx->stopToken);
+                            return nullptr;
+                        },
+                        handle.get());
                     pthread_attr_destroy(&attr);
 
                     if (createResult == 0) {

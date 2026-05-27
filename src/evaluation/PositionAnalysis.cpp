@@ -9,7 +9,6 @@
 #include "../utils/ChessFormat.h"
 
 #include <format>
-#include <format>
 #include <iostream>
 #include <string>
 #include <utility>
@@ -409,8 +408,8 @@ std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
 
             const Piece& captured = board.squares[move.second].piece;
             if (captured.PieceType != ChessPieceType::NONE && captured.PieceColor == currentColor) {
-                threats.push_back(
-                    std::format("Piece capture threat on square {}", chess::format::squareName(move.second)));
+                threats.push_back(std::format("Piece capture threat on square {}",
+                                              chess::format::squareName(move.second)));
             }
         }
     }

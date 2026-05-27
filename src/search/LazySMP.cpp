@@ -10,9 +10,9 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <flat_map>
 #include <format>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -277,7 +277,7 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit,
             int depth = kZero;
             int score = kInvalidScore;
         };
-        std::flat_map<std::uint16_t, MoveStats> moveVotes;
+        std::map<std::uint16_t, MoveStats> moveVotes;
 
         for (const auto& thread : threads) {
             const Move move = thread->bestMove;

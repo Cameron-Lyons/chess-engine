@@ -6,8 +6,8 @@
 #include "Move.h"
 #include "SquareSentinel.h"
 
-#include "../utils/Concepts.h"
 #include "../utils/ChessFormat.h"
+#include "../utils/Concepts.h"
 
 #include <algorithm>
 #include <array>
@@ -85,21 +85,20 @@ struct StateInfo {
     ChessTimePoint lastMoveTime = ChessClock::now();
 };
 
-#define BOARD_REF_MEMBERS_(pos, st)                                                                  \
-    squares((pos).squares), turn((st).turn), enPassantSquare((st).enPassantSquare),                  \
-          halfmoveClock((st).halfmoveClock), fullmoveNumber((st).fullmoveNumber),                    \
-          whiteChecked((st).whiteChecked), blackChecked((st).blackChecked),                          \
-          LastMove((st).lastMove), whitePawns((pos).whitePawns),                                   \
-          whiteKnights((pos).whiteKnights), whiteBishops((pos).whiteBishops),                        \
-          whiteRooks((pos).whiteRooks), whiteQueens((pos).whiteQueens),                             \
-          whiteKings((pos).whiteKings), blackPawns((pos).blackPawns),                               \
-          blackKnights((pos).blackKnights), blackBishops((pos).blackBishops),                        \
-          blackRooks((pos).blackRooks), blackQueens((pos).blackQueens),                              \
-          blackKings((pos).blackKings), whitePieces((pos).whitePieces),                             \
-          blackPieces((pos).blackPieces), allPieces((pos).allPieces),                                \
-          lastMoveTime((st).lastMoveTime),                                                           \
-          whiteCanCastle((st), CastlingConstants::kWhiteCastlingRightsMask),                        \
-          blackCanCastle((st), CastlingConstants::kBlackCastlingRightsMask)
+#define BOARD_REF_MEMBERS_(pos, st)                                                                \
+    squares((pos).squares), turn((st).turn), enPassantSquare((st).enPassantSquare),                \
+        halfmoveClock((st).halfmoveClock), fullmoveNumber((st).fullmoveNumber),                    \
+        whiteChecked((st).whiteChecked), blackChecked((st).blackChecked), LastMove((st).lastMove), \
+        whitePawns((pos).whitePawns), whiteKnights((pos).whiteKnights),                            \
+        whiteBishops((pos).whiteBishops), whiteRooks((pos).whiteRooks),                            \
+        whiteQueens((pos).whiteQueens), whiteKings((pos).whiteKings),                              \
+        blackPawns((pos).blackPawns), blackKnights((pos).blackKnights),                            \
+        blackBishops((pos).blackBishops), blackRooks((pos).blackRooks),                            \
+        blackQueens((pos).blackQueens), blackKings((pos).blackKings),                              \
+        whitePieces((pos).whitePieces), blackPieces((pos).blackPieces),                            \
+        allPieces((pos).allPieces), lastMoveTime((st).lastMoveTime),                               \
+        whiteCanCastle((st), CastlingConstants::kWhiteCastlingRightsMask),                         \
+        blackCanCastle((st), CastlingConstants::kBlackCastlingRightsMask)
 
 struct Board {
     class CastlingSideProxy {
@@ -159,14 +158,14 @@ struct Board {
     CastlingSideProxy whiteCanCastle;
     CastlingSideProxy blackCanCastle;
 
-    Board()
-        : BOARD_REF_MEMBERS_(position, state) {
+    Board() : BOARD_REF_MEMBERS_(position, state) {
         for (int i = 0; i < 64; ++i) {
             squares[i] = Square(i);
         }
     }
 
-    Board(const Board& other) : position(other.position), state(other.state), BOARD_REF_MEMBERS_(position, state) {}
+    Board(const Board& other)
+        : position(other.position), state(other.state), BOARD_REF_MEMBERS_(position, state) {}
 
     Board& operator=(const Board& other) {
         if (this == &other) {

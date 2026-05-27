@@ -24,10 +24,12 @@ inline constexpr int kBoardDimension = 8;
     if (!move.isValid()) {
         return "0000";
     }
-    return std::format("{}{}{}{}", static_cast<char>(kMinFileChar + (static_cast<int>(move.first) % kBoardDimension)),
-                       static_cast<char>(kMinRankChar + (static_cast<int>(move.first) / kBoardDimension)),
-                       static_cast<char>(kMinFileChar + (static_cast<int>(move.second) % kBoardDimension)),
-                       static_cast<char>(kMinRankChar + (static_cast<int>(move.second) / kBoardDimension)));
+    return std::format(
+        "{}{}{}{}",
+        static_cast<char>(kMinFileChar + (static_cast<int>(move.first) % kBoardDimension)),
+        static_cast<char>(kMinRankChar + (static_cast<int>(move.first) / kBoardDimension)),
+        static_cast<char>(kMinFileChar + (static_cast<int>(move.second) % kBoardDimension)),
+        static_cast<char>(kMinRankChar + (static_cast<int>(move.second) / kBoardDimension)));
 }
 
 [[nodiscard]] inline std::string pieceLabel(const Piece& piece) {

@@ -1,5 +1,5 @@
-#include "search_internal.h"
 #include "SearchTuning.h"
+#include "search_internal.h"
 
 #include "../ai/SyzygyTablebase.h"
 

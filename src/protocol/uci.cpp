@@ -409,11 +409,10 @@ void UCIEngine::handleGo(const std::string& command) {
     activeSearchStopToken = searchStopSource.get_token();
     activeSearchTask = SearchTask{searchDepth, timeForMove, optimalTime, maxTime, board};
 
-    const int createResult = searchThread.start(
-        [this, task = activeSearchTask, token = activeSearchStopToken]() {
-            searchThreadEntry(task, token);
-        },
-        kSearchThreadStackBytes, activeSearchStopToken);
+    const int createResult =
+        searchThread.start([this, task = activeSearchTask,
+                            token = activeSearchStopToken]() { searchThreadEntry(task, token); },
+                           kSearchThreadStackBytes, activeSearchStopToken);
 
     if (createResult != 0) {
         isSearching.store(false);
@@ -464,15 +463,14 @@ void UCIEngine::handleBookStats() {
     }
 
     const EnhancedOpeningBook::BookStats stats = openingBook->getStats();
-    std::cout << std::format(
-        "info string Book Statistics:\n"
-        "info string   Positions: {}\n"
-        "info string   Moves: {}\n"
-        "info string   Total Games: {}\n"
-        "info string   Average Win Rate: {}\n"
-        "info string   Average Rating: {}\n",
-        stats.totalPositions, stats.totalMoves, stats.totalGames, stats.averageWinRate,
-        stats.averageRating);
+    std::cout << std::format("info string Book Statistics:\n"
+                             "info string   Positions: {}\n"
+                             "info string   Moves: {}\n"
+                             "info string   Total Games: {}\n"
+                             "info string   Average Win Rate: {}\n"
+                             "info string   Average Rating: {}\n",
+                             stats.totalPositions, stats.totalMoves, stats.totalGames,
+                             stats.averageWinRate, stats.averageRating);
 }
 
 void UCIEngine::reportBestMove(const Move& move, const std::optional<Move>& ponderMove) {
@@ -507,9 +505,8 @@ void UCIEngine::reportInfo(int depth, int seldepth, int time, int nodes, int nps
             line += std::format(" score mate {}",
                                 (kMateScoreThreshold - score + kMatePlyOffset) / kMatePlyDivisor);
         } else if (score < -kMateScoreThreshold) {
-            line += std::format(
-                " score mate {}",
-                -(kMateScoreThreshold + score + kMatePlyOffset) / kMatePlyDivisor);
+            line += std::format(" score mate {}",
+                                -(kMateScoreThreshold + score + kMatePlyOffset) / kMatePlyDivisor);
         } else {
             line += std::format(" score cp {}", score);
         }
