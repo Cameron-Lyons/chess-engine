@@ -2,6 +2,7 @@
 #include "BitboardMoves.h"
 #include "ChessBoard.h"
 #include "ChessPiece.h"
+#include "utils/ChessFormat.h"
 #include "ai/NeuralNetwork.h"
 #include "core/ChessEngine.h"
 #include "core/GameRules.h"
@@ -19,6 +20,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <exception>
+#include <format>
 #include <iostream>
 #include <stack>
 #include <string>
@@ -258,12 +260,7 @@ Move getComputerMove(Board& board, int timeLimitMs = kDefaultComputerMoveTimeMs)
 }
 
 std::string positionToNotation(int pos) {
-    if (pos < 0 || pos >= NUM_SQUARES) {
-        return "??";
-    }
-    int row = pos / BOARD_SIZE;
-    int col = pos % BOARD_SIZE;
-    return std::string(1, static_cast<char>('a' + col)) + std::to_string(row + 1);
+    return chess::format::squareName(pos);
 }
 
 char pieceToSanSymbol(ChessPieceType pieceType) {
@@ -320,12 +317,12 @@ std::string legalMoveDisambiguation(const Board& board, int from, int to,
         return "";
     }
     if (!sameFileConflict) {
-        return std::string(1, static_cast<char>('a' + fromFile));
+        return std::format("{}", static_cast<char>('a' + fromFile));
     }
     if (!sameRankConflict) {
-        return std::to_string(fromRank + 1);
+        return std::format("{}", fromRank + 1);
     }
-    return std::string(1, static_cast<char>('a' + fromFile)) + std::to_string(fromRank + 1);
+    return std::format("{}{}", static_cast<char>('a' + fromFile), fromRank + 1);
 }
 
 std::string moveToSan(const Board& board, int from, int to,

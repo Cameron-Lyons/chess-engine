@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <format>
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -104,7 +105,7 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
             searchContext.threads = candidateThreads;
 
             BenchRow row;
-            row.id = "threads:" + std::to_string(candidateThreads);
+            row.id = std::format("threads:{}", candidateThreads);
             row.threads = candidateThreads;
             for (int round = 0; round < rounds; ++round) {
                 for (const auto& position : positions) {

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <algorithm>
+#include "../core/SquareSentinel.h"
+
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -11,12 +12,12 @@
 #include <future>
 #include <iostream>
 #include <limits>
-#include <map>
 #include <mutex>
 #include <optional>
 #include <queue>
 #include <random>
 #include <string>
+#include <stop_token>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -32,7 +33,7 @@ constexpr int kOne = 1;
 constexpr int kTwo = 2;
 constexpr int kThree = 3;
 constexpr int kFour = 4;
-constexpr int kInvalidSquare = -1;
+constexpr int kInvalidSquare = chess::kInvalidSquare;
 constexpr int kDefaultTranspositionTableMb = 32;
 constexpr int kBoardSquareCount = 64;
 constexpr int kPieceTypeCount = 6;
@@ -201,6 +202,7 @@ struct KillerMoves {
 struct ParallelSearchContext {
     bool stopSearch;
     std::atomic<bool>* externalStop = nullptr;
+    const std::stop_token* externalStopToken = nullptr;
     int nodeCount;
     TranspositionTableAdapter transTable;
     ThreadSafeHistory historyTable;
@@ -295,6 +297,7 @@ struct SearchConfig {
     int maxTimeMs = SearchConstants::kZero;
     std::vector<uint64_t> previousPositionHashes;
     std::atomic<bool>* externalStop = nullptr;
+    const std::stop_token* externalStopToken = nullptr;
 };
 
 struct SearchContext {

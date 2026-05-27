@@ -11,6 +11,7 @@
 #include "evaluation/Evaluation.h"
 #include "search/ValidMoves.h"
 #include "search_internal.h"
+#include "SearchTuning.h"
 
 #include <algorithm>
 #include <array>
@@ -31,11 +32,6 @@
 #include <vector>
 
 namespace SearchInternal {
-uint64_t ZobristTable[kBoardSquareCount][12];
-uint64_t ZobristBlackToMove = 0;
-uint64_t ZobristCastling[kZobristCastlingStateCount];
-uint64_t ZobristEnPassant[kBoardSquareCount];
-
 void recordUndoSquare(MoveApplicationData& moveData, const Board& board, int square) {
     if (square < kZero || square >= kBoardSquareCount) {
         return;
@@ -265,12 +261,11 @@ uint64_t computeChildZobrist(uint64_t parentKey, const Board& childBoard, int fr
     childKey ^= ZobristCastling[parentCastle];
     childKey ^= ZobristCastling[childCastle];
 
-    if (moveData.previousEnPassantSquare >= kZero &&
-        moveData.previousEnPassantSquare < kBoardSquareCount) {
-        childKey ^= ZobristEnPassant[moveData.previousEnPassantSquare];
+    if (const auto previousEnPassant = moveData.previousEnPassantSquare.target()) {
+        childKey ^= ZobristEnPassant[*previousEnPassant];
     }
-    if (childBoard.enPassantSquare >= kZero && childBoard.enPassantSquare < kBoardSquareCount) {
-        childKey ^= ZobristEnPassant[childBoard.enPassantSquare];
+    if (const auto enPassant = childBoard.enPassantSquare.target()) {
+        childKey ^= ZobristEnPassant[*enPassant];
     }
 
     childKey ^= ZobristBlackToMove;
@@ -434,7 +429,7 @@ bool applySearchMoveWithData(Board& board, int fromSquare, int toSquare, bool au
         }
     }
 
-    board.enPassantSquare = kNoEpSquare;
+    board.enPassantSquare = std::nullopt;
     if (movingPiece.PieceType == ChessPieceType::PAWN &&
         std::abs(toSquare - fromSquare) == (2 * kBoardDimension)) {
         board.enPassantSquare = (fromSquare + toSquare) / kTwo;
@@ -576,25 +571,7 @@ SearchResult::SearchResult()
     : bestMove({kInvalidSquare, kInvalidSquare}), score(kZero), depth(kZero), nodes(kZero),
       timeMs(kZero) {}
 
-void InitZobrist() {
-    static std::once_flag initFlag;
-    std::call_once(initFlag, []() {
-        std::mt19937_64 rng(kZobristSeed); // NOLINT(bugprone-random-generator-seed)
-        std::uniform_int_distribution<uint64_t> dist;
-        for (auto& squareKeys : ZobristTable) {
-            for (auto& pieceKey : squareKeys) {
-                pieceKey = dist(rng);
-            }
-        }
-        ZobristBlackToMove = dist(rng);
-        for (auto& castlingKey : ZobristCastling) {
-            castlingKey = dist(rng);
-        }
-        for (auto& epKey : ZobristEnPassant) {
-            epKey = dist(rng);
-        }
-    });
-}
+void InitZobrist() {}
 
 int pieceToZobristIndex(const Piece& p) {
     if (p.PieceType == ChessPieceType::NONE) {
@@ -619,8 +596,8 @@ uint64_t ComputeZobrist(const Board& board) {
     if (castlingState >= kZero && castlingState < kZobristCastlingStateCount) {
         h ^= ZobristCastling[castlingState];
     }
-    if (board.enPassantSquare >= kZero && board.enPassantSquare < kBoardSquareCount) {
-        h ^= ZobristEnPassant[board.enPassantSquare];
+    if (const auto enPassant = board.enPassantSquare.target()) {
+        h ^= ZobristEnPassant[*enPassant];
     }
     return h;
 }
@@ -669,11 +646,11 @@ bool SearchInternal::hasNonPawnMaterial(const Board& board, ChessPieceColor side
 }
 
 int SearchInternal::computeNullMoveReduction(int depth, int evalMargin) {
-    int reduction = kNullMoveBaseReduction + (depth / kNullMoveDepthDivisor);
+    int reduction = SearchTuning::nullMoveReduction() + (depth / kNullMoveDepthDivisor);
     if (evalMargin > kZero) {
         reduction += std::min(kTwo, evalMargin / kNullMoveEvalDivisor);
     }
-    return std::clamp(reduction, kNullMoveBaseReduction, kNullMoveMaxReduction);
+    return std::clamp(reduction, SearchTuning::nullMoveReduction(), kNullMoveMaxReduction);
 }
 
 int SearchInternal::toTtScore(int score, int ply) {

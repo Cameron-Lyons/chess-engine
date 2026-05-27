@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cstddef>
 #include <expected>
+#include <format>
 #include <sstream>
 #include <string>
 
@@ -316,7 +317,7 @@ bool Board::movePiece(int from, int to) {
         }
     }
 
-    enPassantSquare = CastlingConstants::kNoEnPassantSquareMailbox;
+    enPassantSquare = std::nullopt;
     int moveDelta = to - from;
     if (movingPieceBefore.PieceType == ChessPieceType::PAWN &&
         (moveDelta == CastlingConstants::kPawnDoublePushDistance ||
@@ -349,7 +350,7 @@ std::string Board::toFEN() const {
                 emptyCount++;
             } else {
                 if (emptyCount > 0) {
-                    fen += std::to_string(emptyCount);
+                    fen += std::format("{}", emptyCount);
                     emptyCount = 0;
                 }
 
@@ -365,7 +366,7 @@ std::string Board::toFEN() const {
         }
 
         if (emptyCount > 0) {
-            fen += std::to_string(emptyCount);
+            fen += std::format("{}", emptyCount);
         }
 
         if (row > 0) {
@@ -373,7 +374,7 @@ std::string Board::toFEN() const {
         }
     }
 
-    fen += " " + std::string(turn == ChessPieceColor::WHITE ? "w" : "b");
+    fen += std::format(" {}", turn == ChessPieceColor::WHITE ? "w" : "b");
     std::string castling;
     if (hasCastlingRight(CastlingConstants::kWhiteKingsideCastlingRight)) {
         castling += 'K';
@@ -387,18 +388,13 @@ std::string Board::toFEN() const {
     if (hasCastlingRight(CastlingConstants::kBlackQueensideCastlingRight)) {
         castling += 'q';
     }
-    fen += " " + (castling.empty() ? "-" : castling);
-    if (enPassantSquare >= 0 && enPassantSquare < NUM_SQUARES) {
-        int epFile = enPassantSquare % BOARD_SIZE;
-        int epRank = enPassantSquare / BOARD_SIZE;
-        fen += " ";
-        fen += static_cast<char>('a' + epFile);
-        fen += static_cast<char>('1' + epRank);
+    fen += std::format(" {}", castling.empty() ? "-" : castling);
+    if (const auto enPassant = enPassantSquare.target()) {
+        fen += std::format(" {}", chess::format::squareName(*enPassant));
     } else {
         fen += " -";
     }
-    fen += " " + std::to_string(halfmoveClock);
-    fen += " " + std::to_string(fullmoveNumber);
+    fen += std::format(" {} {}", halfmoveClock, fullmoveNumber);
     return fen;
 }
 
@@ -445,7 +441,7 @@ void Board::InitializeFromFEN(ChessString fen) {
 
     turn = ChessPieceColor::WHITE;
     state.castlingRights = 0;
-    enPassantSquare = CastlingConstants::kNoEnPassantSquareMailbox;
+    enPassantSquare = std::nullopt;
     halfmoveClock = 0;
     fullmoveNumber = 1;
     whiteChecked = false;

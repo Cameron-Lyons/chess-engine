@@ -5,9 +5,11 @@
 #include "src/search/search.h"
 
 #include <algorithm>
+#include <format>
 #include <iostream>
 #include <ranges>
 #include <sstream>
+#include <string>
 
 namespace BenchmarkSuite {
 namespace {
@@ -81,41 +83,43 @@ std::string outputFormatName(OutputFormat format) {
 }
 
 std::string jsonEscape(const std::string& value) {
-    std::ostringstream escaped;
-    for (char c : value) {
-        switch (c) {
+    std::string escaped;
+    escaped.reserve(value.size());
+    for (char character : value) {
+        switch (character) {
             case '\\':
-                escaped << "\\\\";
+                escaped += "\\\\";
                 break;
             case '"':
-                escaped << "\\\"";
+                escaped += "\\\"";
                 break;
             case '\n':
-                escaped << "\\n";
+                escaped += "\\n";
                 break;
             case '\r':
-                escaped << "\\r";
+                escaped += "\\r";
                 break;
             case '\t':
-                escaped << "\\t";
+                escaped += "\\t";
                 break;
             default:
-                escaped << c;
+                escaped += character;
                 break;
         }
     }
-    return escaped.str();
+    return escaped;
 }
 
 std::string joinTags(std::span<const std::string> tags, std::string_view separator) {
-    std::ostringstream out;
-    for (std::size_t i = 0; i < tags.size(); ++i) {
-        if (i > 0) {
-            out << separator;
-        }
-        out << tags[i];
+    if (tags.empty()) {
+        return {};
     }
-    return out.str();
+
+    std::string joined = tags.front();
+    for (std::size_t index = 1; index < tags.size(); ++index) {
+        joined += std::format("{}{}", separator, tags[index]);
+    }
+    return joined;
 }
 
 void initializeEngineState() {

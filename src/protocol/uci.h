@@ -5,12 +5,13 @@
 #include "../core/ChessBoard.h"
 #include "../search/AdvancedSearch.h"
 #include "../search/search.h"
-#include "../utils/ScopedPThread.h"
+#include "../utils/SearchThread.h"
 
 #include <atomic>
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <stop_token>
 #include <string>
 #include <vector>
 
@@ -67,8 +68,7 @@ private:
 
     static constexpr std::size_t kSearchThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
 
-    static void* searchThreadStart(void* arg);
-    void searchThreadEntry(const SearchTask& task);
+    void searchThreadEntry(const SearchTask& task, std::stop_token stopToken);
     void joinSearchThread();
 
     Board board;
@@ -81,15 +81,17 @@ private:
     std::atomic_bool isSearching{false};
     std::atomic_bool isPondering{false};
     std::atomic_bool stopRequested{false};
+    std::stop_source searchStopSource;
+    std::stop_token activeSearchStopToken{};
     std::chrono::steady_clock::time_point searchStartTime;
     int searchTimeLimit = 0;
     int searchDepthLimit = 0;
-    ScopedPThread searchThread;
+    SearchThread searchThread;
     SearchTask activeSearchTask{};
     SearchContext searchContext;
 
     SearchResult performSearch(const Board& board, int depth, int timeLimit, int optimalTime = 0,
-                               int maxTime = 0);
+                               int maxTime = 0, std::stop_token stopToken = {});
 
     void setHashSize(int size);
     void setThreads(int num);

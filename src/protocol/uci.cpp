@@ -3,6 +3,7 @@
 #include "../core/BitboardMoves.h"
 #include "../evaluation/Evaluation.h"
 #include "../search/search.h"
+#include "../utils/ChessFormat.h"
 #include "../utils/TunableParams.h"
 #include "ChessBoard.h"
 #include "ChessPiece.h"
@@ -17,6 +18,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -80,19 +82,10 @@ UCIEngine::~UCIEngine() {
     handleStop();
 }
 
-void* UCIEngine::searchThreadStart(void* arg) {
-    auto* engine = static_cast<UCIEngine*>(arg);
-    if (engine == nullptr) {
-        return nullptr;
-    }
-    engine->searchThreadEntry(engine->activeSearchTask);
-    return nullptr;
-}
-
-void UCIEngine::searchThreadEntry(const SearchTask& task) {
+void UCIEngine::searchThreadEntry(const SearchTask& task, std::stop_token stopToken) {
     try {
         SearchResult result = performSearch(task.boardSnapshot, task.depth, task.timeForMove,
-                                            task.optimalTime, task.maxTime);
+                                            task.optimalTime, task.maxTime, stopToken);
 
         if (isSearching.load()) {
             std::optional<Move> ponderMove;
@@ -178,8 +171,8 @@ void UCIEngine::handleUCI() {
     std::cout << "option name Contempt type spin default 0 min -100 max 100" << '\n';
 
     for (const auto& p : TunableRegistry::instance().all()) {
-        std::cout << "option name " << p.name << " type spin default " << p.defaultValue << " min "
-                  << p.minValue << " max " << p.maxValue << '\n';
+        std::cout << std::format("option name {} type spin default {} min {} max {}\n", p.name,
+                                 p.defaultValue, p.minValue, p.maxValue);
     }
 
     std::cout << "uciok" << '\n';
@@ -412,13 +405,15 @@ void UCIEngine::handleGo(const std::string& command) {
 
     joinSearchThread();
 
+    searchStopSource = std::stop_source{};
+    activeSearchStopToken = searchStopSource.get_token();
     activeSearchTask = SearchTask{searchDepth, timeForMove, optimalTime, maxTime, board};
 
-    ScopedPThreadAttr attr;
-    const int stackResult = attr.setStackSize(kSearchThreadStackBytes);
-    const int createResult =
-        (stackResult == 0) ? searchThread.start(attr.get(), &UCIEngine::searchThreadStart, this)
-                           : stackResult;
+    const int createResult = searchThread.start(
+        [this, task = activeSearchTask, token = activeSearchStopToken]() {
+            searchThreadEntry(task, token);
+        },
+        kSearchThreadStackBytes, activeSearchStopToken);
 
     if (createResult != 0) {
         isSearching.store(false);
@@ -430,6 +425,7 @@ void UCIEngine::handleGo(const std::string& command) {
 
 void UCIEngine::handleStop() {
     stopRequested.store(true);
+    searchStopSource.request_stop();
     isSearching.store(false);
     isPondering.store(false);
     joinSearchThread();
@@ -463,69 +459,76 @@ void UCIEngine::handleInfo(const std::string& command) {
 
 void UCIEngine::handleBookStats() {
     if (!openingBook) {
-        std::cout << "info string Opening book not available" << '\n';
+        std::cout << "info string Opening book not available\n";
         return;
     }
 
-    EnhancedOpeningBook::BookStats stats = openingBook->getStats();
-    std::cout << "info string Book Statistics:" << '\n';
-    std::cout << "info string   Positions: " << stats.totalPositions << '\n';
-    std::cout << "info string   Moves: " << stats.totalMoves << '\n';
-    std::cout << "info string   Total Games: " << stats.totalGames << '\n';
-    std::cout << "info string   Average Win Rate: " << stats.averageWinRate << '\n';
-    std::cout << "info string   Average Rating: " << stats.averageRating << '\n';
+    const EnhancedOpeningBook::BookStats stats = openingBook->getStats();
+    std::cout << std::format(
+        "info string Book Statistics:\n"
+        "info string   Positions: {}\n"
+        "info string   Moves: {}\n"
+        "info string   Total Games: {}\n"
+        "info string   Average Win Rate: {}\n"
+        "info string   Average Rating: {}\n",
+        stats.totalPositions, stats.totalMoves, stats.totalGames, stats.averageWinRate,
+        stats.averageRating);
 }
 
 void UCIEngine::reportBestMove(const Move& move, const std::optional<Move>& ponderMove) {
-    std::cout << "bestmove " << UCINotation::moveToUCI(move)
-              << (ponderMove ? " ponder " + UCINotation::moveToUCI(*ponderMove) : "") << '\n';
+    if (ponderMove) {
+        std::cout << std::format("bestmove {} ponder {}\n", UCINotation::moveToUCI(move),
+                                 UCINotation::moveToUCI(*ponderMove));
+        return;
+    }
+    std::cout << std::format("bestmove {}\n", UCINotation::moveToUCI(move));
 }
 
 void UCIEngine::reportInfo(int depth, int seldepth, int time, int nodes, int nps,
                            const std::vector<Move>& pv, int score, int hashfull) {
-    std::cout << "info depth " << depth;
+    std::string line = std::format("info depth {}", depth);
     if (seldepth > 0) {
-        std::cout << " seldepth " << seldepth;
+        line += std::format(" seldepth {}", seldepth);
     }
     if (time > 0) {
-        std::cout << " time " << time;
+        line += std::format(" time {}", time);
     }
     if (nodes > 0) {
-        std::cout << " nodes " << nodes;
+        line += std::format(" nodes {}", nodes);
     }
     if (nps > 0) {
-        std::cout << " nps " << nps;
+        line += std::format(" nps {}", nps);
     }
     if (hashfull > 0) {
-        std::cout << " hashfull " << hashfull;
+        line += std::format(" hashfull {}", hashfull);
     }
     if (score != 0) {
-        std::cout << " score ";
         if (score > kMateScoreThreshold) {
-            std::cout << "mate "
-                      << (kMateScoreThreshold - score + kMatePlyOffset) / kMatePlyDivisor;
+            line += std::format(" score mate {}",
+                                (kMateScoreThreshold - score + kMatePlyOffset) / kMatePlyDivisor);
         } else if (score < -kMateScoreThreshold) {
-            std::cout << "mate "
-                      << -(kMateScoreThreshold + score + kMatePlyOffset) / kMatePlyDivisor;
+            line += std::format(
+                " score mate {}",
+                -(kMateScoreThreshold + score + kMatePlyOffset) / kMatePlyDivisor);
         } else {
-            std::cout << "cp " << score;
+            line += std::format(" score cp {}", score);
         }
     }
     if (!pv.empty()) {
-        std::cout << " pv";
+        line += " pv";
         for (const auto& move : pv) {
-            std::cout << " " << UCINotation::moveToUCI(move);
+            line += std::format(" {}", UCINotation::moveToUCI(move));
         }
     }
-    std::cout << '\n';
+    std::cout << line << '\n';
 }
 
 void UCIEngine::reportInfo(const std::string& info) {
-    std::cout << "info string " << info << '\n';
+    std::cout << std::format("info string {}\n", info);
 }
 
 SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLimit, int optimalTime,
-                                      int maxTime) {
+                                      int maxTime, std::stop_token stopToken) {
     SearchResult result;
 
     if (options.useTablebases && tablebase) {
@@ -575,6 +578,7 @@ SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLim
                                              positionHistoryHashes.end() - 1);
     }
     config.externalStop = &stopRequested;
+    config.externalStopToken = stopToken.stop_possible() ? &stopToken : nullptr;
     searchContext.threads = options.threads;
     searchContext.hashSizeMb = options.hashSize;
     result = iterativeDeepeningParallel(searchBoard, config, searchContext);
@@ -643,20 +647,7 @@ void UCIEngine::setShowCurrLine(bool enabled) {
 }
 
 std::string UCINotation::moveToUCI(const Move& move) {
-    if (move.first == kInvalidSquare || move.second == kInvalidSquare) {
-        return "0000";
-    }
-
-    int fromFile = move.first % kBoardDimension;
-    int fromRank = move.first / kBoardDimension;
-    int toFile = move.second % kBoardDimension;
-    int toRank = move.second / kBoardDimension;
-    std::string result;
-    result += static_cast<char>(kMinFileChar + fromFile);
-    result += static_cast<char>(kMinRankChar + fromRank);
-    result += static_cast<char>(kMinFileChar + toFile);
-    result += static_cast<char>(kMinRankChar + toRank);
-    return result;
+    return chess::format::moveToUci(move);
 }
 
 std::optional<Move> UCINotation::uciToMove(const std::string& uciMove) {

@@ -1,4 +1,5 @@
 #include "search_internal.h"
+#include "SearchTuning.h"
 
 #include "../ai/SyzygyTablebase.h"
 
@@ -36,6 +37,11 @@ bool countNodeAndCheckTime(ParallelSearchContext& context) {
     }
 
     if (context.externalStop != nullptr && context.externalStop->load()) {
+        context.stopSearch = true;
+        return false;
+    }
+
+    if (context.externalStopToken != nullptr && context.externalStopToken->stop_requested()) {
         context.stopSearch = true;
         return false;
     }
@@ -393,12 +399,12 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
             }
             int reduction = computeNullMoveReduction(depth, sideEval - beta);
             int nullDepth = std::max(kOne, depth - reduction);
-            int previousEnPassant = board.enPassantSquare;
+            const chess::EnPassantSquare previousEnPassant = board.enPassantSquare;
             uint64_t nullZobristKey = nodeZobristKey ^ ZobristBlackToMove;
-            if (previousEnPassant >= kZero && previousEnPassant < kBoardSquareCount) {
-                nullZobristKey ^= ZobristEnPassant[previousEnPassant];
+            if (const auto enPassant = previousEnPassant.target()) {
+                nullZobristKey ^= ZobristEnPassant[*enPassant];
             }
-            board.enPassantSquare = kNoEpSquare;
+            board.enPassantSquare = std::nullopt;
             board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                                 : ChessPieceColor::WHITE;
             int nullScore = kZero;
@@ -779,13 +785,13 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
     if (depth >= kNullMoveMinDepth && depth <= kNullMoveMaxDepth && ply < kNullMovePlyLimit &&
         !sideInCheck && hasNonPawnMaterial(board, currentColor)) {
         const ChessPieceColor previousTurn = board.turn;
-        const int previousEnPassant = board.enPassantSquare;
-        board.enPassantSquare = kNoEpSquare;
+        const chess::EnPassantSquare previousEnPassant = board.enPassantSquare;
+        board.enPassantSquare = std::nullopt;
         board.turn = (board.turn == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
                                                             : ChessPieceColor::WHITE;
         uint64_t nullZobristKey = nodeZobristKey ^ ZobristBlackToMove;
-        if (previousEnPassant >= kZero && previousEnPassant < kBoardSquareCount) {
-            nullZobristKey ^= ZobristEnPassant[previousEnPassant];
+        if (const auto enPassant = previousEnPassant.target()) {
+            nullZobristKey ^= ZobristEnPassant[*enPassant];
         }
         int evalMargin = maximizingPlayer ? (staticEval - beta) : (alpha - staticEval);
         int reducedDepth = std::max(kOne, depth - computeNullMoveReduction(depth, evalMargin));
@@ -845,9 +851,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 
             if (depth <= kFutilityDepthLimit && !foundPV && !isCaptureMove && !isCheckMove &&
                 !sideInCheck) {
-                const int futilityMargins[kFutilityMarginTableSize] = {
-                    kZero, kFutilityMarginDepth1, kFutilityMarginDepth2, kFutilityMarginDepth3};
-                int futilityValue = staticEval + futilityMargins[depth];
+                const int futilityValueMargin = SearchTuning::futilityMargin(depth);
+                int futilityValue = staticEval + futilityValueMargin;
 
                 if (futilityValue <= alpha) {
                     moveCount++;
@@ -1006,9 +1011,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
 
             if (depth <= kFutilityDepthLimit && !foundPV && !isCaptureMove && !isCheckMove &&
                 !sideInCheck) {
-                const int futilityMargins[kFutilityMarginTableSize] = {
-                    kZero, kFutilityMarginDepth1, kFutilityMarginDepth2, kFutilityMarginDepth3};
-                int futilityValue = staticEval - futilityMargins[depth];
+                const int futilityValueMargin = SearchTuning::futilityMargin(depth);
+                int futilityValue = staticEval - futilityValueMargin;
 
                 if (futilityValue >= beta) {
                     moveCount++;

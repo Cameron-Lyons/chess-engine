@@ -216,11 +216,17 @@ public:
             }
         }
 
-        auto now = std::chrono::system_clock::now();
-        auto time_t = std::chrono::system_clock::to_time_t(now);
-        std::stringstream ss;
-        ss << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S");
-        version.timestamp = ss.str();
+        const auto now = std::chrono::system_clock::now();
+        const auto timeValue = std::chrono::system_clock::to_time_t(now);
+        std::tm localTime{};
+#if defined(_WIN32)
+        localtime_s(&localTime, &timeValue);
+#else
+        localtime_r(&timeValue, &localTime);
+#endif
+        char buffer[32];
+        std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &localTime);
+        version.timestamp = buffer;
         file.write(reinterpret_cast<const char*>(&version.major), sizeof(int));
         file.write(reinterpret_cast<const char*>(&version.minor), sizeof(int));
         file.write(reinterpret_cast<const char*>(&version.patch), sizeof(int));

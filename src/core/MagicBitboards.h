@@ -17,8 +17,8 @@ public:
     static uint64_t getRookAttacks(int square, uint64_t occupancy);
     static uint64_t getBishopAttacks(int square, uint64_t occupancy);
     static uint64_t getQueenAttacks(int square, uint64_t occupancy);
-    static uint64_t generateRookMask(int square);
-    static uint64_t generateBishopMask(int square);
+    static constexpr uint64_t generateRookMask(int square);
+    static constexpr uint64_t generateBishopMask(int square);
     static uint64_t generateRookAttacks(int square, uint64_t occupancy);
     static uint64_t generateBishopAttacks(int square, uint64_t occupancy);
 

@@ -3,8 +3,11 @@
 #include "src/core/ChessBoard.h"
 #include "src/search/search.h"
 
+#include "src/utils/ChessFormat.h"
+
 #include <algorithm>
 #include <chrono>
+#include <format>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -29,19 +32,6 @@ struct SearchRow {
     Move bestMove{SearchConstants::kInvalidSquare, SearchConstants::kInvalidSquare};
 };
 
-std::string moveToUci(const Move& move) {
-    if (move.first < 0 || move.second < 0) {
-        return "0000";
-    }
-
-    std::string uci;
-    uci += static_cast<char>('a' + (move.first % 8));
-    uci += static_cast<char>('1' + (move.first / 8));
-    uci += static_cast<char>('a' + (move.second % 8));
-    uci += static_cast<char>('1' + (move.second / 8));
-    return uci;
-}
-
 void printTextReport(const std::vector<SearchRow>& rows, int rounds, int depthLimit, int timeMs,
                      int threads) {
     long long totalNodes = 0;
@@ -56,7 +46,7 @@ void printTextReport(const std::vector<SearchRow>& rows, int rounds, int depthLi
         totalNodes += row.nodes;
         totalElapsedMs += row.elapsedMs;
         std::cout << row.id << '\t' << row.depthReached << '\t' << row.score << '\t' << row.nodes
-                  << '\t' << row.elapsedMs << '\t' << row.nps << '\t' << moveToUci(row.bestMove)
+                  << '\t' << row.elapsedMs << '\t' << row.nps << '\t' << chess::format::moveToUci(row.bestMove)
                   << '\t' << BenchmarkSuite::joinTags(row.tags, ",") << '\n';
     }
 
@@ -87,7 +77,7 @@ void printJsonReport(const std::vector<SearchRow>& rows, int rounds, int depthLi
                   << "\", \"round\": " << row.round << ", \"depth_reached\": " << row.depthReached
                   << ", \"score\": " << row.score << ", \"nodes\": " << row.nodes
                   << ", \"elapsed_ms\": " << row.elapsedMs << ", \"nps\": " << row.nps
-                  << ", \"bestmove\": \"" << BenchmarkSuite::jsonEscape(moveToUci(row.bestMove))
+                  << ", \"bestmove\": \"" << BenchmarkSuite::jsonEscape(chess::format::moveToUci(row.bestMove))
                   << "\", \"fen\": \"" << BenchmarkSuite::jsonEscape(row.fen) << "\", \"tags\": [";
         for (std::size_t tagIndex = 0; tagIndex < row.tags.size(); ++tagIndex) {
             if (tagIndex > 0) {
@@ -152,7 +142,7 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
                                            .count();
 
                 SearchRow row;
-                row.id = "round" + std::to_string(round) + ":" + position.id;
+                row.id = std::format("round{}:{}", round, position.id);
                 row.positionName = position.name;
                 row.fen = position.fen;
                 row.tags = position.tags;

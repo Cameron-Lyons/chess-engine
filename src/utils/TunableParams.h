@@ -2,11 +2,12 @@
 
 #include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 struct TunableParam {
     std::string name;
-    int* value;
+    std::reference_wrapper<int> value;
     int defaultValue;
     int minValue;
     int maxValue;
@@ -23,20 +24,21 @@ public:
         return reg;
     }
 
-    void add(const std::string& name, int* value, int def, int min, int max, int step) {
-        *value = def;
-        params.push_back({name, value, def, min, max, step});
+    void add(std::string_view name, std::reference_wrapper<int> value, int def, int min, int max,
+             int step) {
+        value.get() = def;
+        params.push_back({std::string(name), value, def, min, max, step});
     }
 
-    const std::vector<TunableParam>& all() const {
+    [[nodiscard]] const std::vector<TunableParam>& all() const {
         return params;
     }
 
-    bool set(const std::string& name, int val) {
-        for (auto& p : params) {
-            if (p.name == name) {
-                if (val >= p.minValue && val <= p.maxValue) {
-                    *p.value = val;
+    bool set(std::string_view name, int val) {
+        for (auto& param : params) {
+            if (param.name == name) {
+                if (val >= param.minValue && val <= param.maxValue) {
+                    param.value.get() = val;
                     return true;
                 }
                 return false;
@@ -45,31 +47,28 @@ public:
         return false;
     }
 
-    const TunableParam* find(const std::string& name) const {
-        for (const auto& p : params) {
-            if (p.name == name) {
-                return &p;
+    [[nodiscard]] const TunableParam* find(std::string_view name) const {
+        for (const auto& param : params) {
+            if (param.name == name) {
+                return &param;
             }
         }
         return nullptr;
     }
 
     void reset() {
-        for (auto& p : params) {
-            *p.value = p.defaultValue;
+        for (auto& param : params) {
+            param.value.get() = param.defaultValue;
         }
-    }
-};
-
-struct TunableInit {
-    TunableInit(const std::string& name, int* value, int def, int min, int max, int step) {
-        TunableRegistry::instance().add(name, value, def, min, max, step);
     }
 };
 
 #define TUNABLE(name, def, min, max, step)                                                         \
     inline int TUNABLE_##name = def;                                                               \
-    inline TunableInit TUNABLE_INIT_##name(#name, &TUNABLE_##name, def, min, max, step)
+    inline const bool TUNABLE_REGISTERED_##name = [] {                                             \
+        TunableRegistry::instance().add(#name, std::ref(TUNABLE_##name), def, min, max, step);     \
+        return true;                                                                               \
+    }()
 
 TUNABLE(LMR_BASE, 75, 50, 120, 5);
 TUNABLE(LMR_DIVISOR, 300, 200, 500, 10);
