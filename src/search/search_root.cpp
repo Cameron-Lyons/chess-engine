@@ -1,7 +1,8 @@
+#include "SearchTuning.h"
 #include "search_internal.h"
 
 #include "../ai/SyzygyTablebase.h"
-#include "../utils/ScopedPThread.h"
+#include "../utils/SearchThread.h"
 #include "../utils/engine_globals.h"
 #include "BookUtils.h"
 #include "LazySMP.h"
@@ -117,14 +118,7 @@ void commitRootSplitResult(RootSplitSharedState& shared, int eval, Move move) {
     }
 }
 
-void* rootSplitWorkerEntry(void* arg) {
-    auto* workerArgs = static_cast<RootSplitWorkerArgs*>(arg);
-    if (workerArgs == nullptr || workerArgs->shared == nullptr ||
-        workerArgs->shared->rootMoves == nullptr) {
-        return nullptr;
-    }
-
-    RootSplitSharedState& shared = *workerArgs->shared;
+void rootSplitWorker(RootSplitSharedState& shared) {
     while (!shared.stop.load(std::memory_order_relaxed)) {
         if (checkRootSplitTimeLimit(shared)) {
             break;
@@ -153,8 +147,6 @@ void* rootSplitWorkerEntry(void* arg) {
         shared.nodes.fetch_add(nodes, std::memory_order_relaxed);
         commitRootSplitResult(shared, eval, move);
     }
-
-    return nullptr;
 }
 
 RootSplitResult searchRootMovesYBWC(const Board& board, int depth, int alpha, int beta,
@@ -241,18 +233,13 @@ RootSplitResult searchRootMovesYBWC(const Board& board, int depth, int alpha, in
     const int remainingMoves = static_cast<int>(rootMoves.size()) - (seededIndex + kOne);
     const int workerCount = chooseRootSplitWorkerCount(depth, numThreads, remainingMoves);
     if (workerCount > kZero && !shared.stop.load(std::memory_order_relaxed)) {
-        std::vector<ScopedPThread> workers(static_cast<std::size_t>(workerCount));
-        std::vector<RootSplitWorkerArgs> workerArgs(static_cast<std::size_t>(workerCount));
-
-        ScopedPThreadAttr attr;
-        (void)attr.setStackSize(kRootSplitThreadStackBytes);
+        std::vector<SearchThread> workers(static_cast<std::size_t>(workerCount));
 
         for (int i = kZero; i < workerCount; ++i) {
-            workerArgs[static_cast<std::size_t>(i)] = {&shared};
             const int createResult = workers[static_cast<std::size_t>(i)].start(
-                attr.get(), &rootSplitWorkerEntry, &workerArgs[static_cast<std::size_t>(i)]);
+                [&shared]() { rootSplitWorker(shared); }, kRootSplitThreadStackBytes);
             if (createResult != 0) {
-                rootSplitWorkerEntry(&workerArgs[static_cast<std::size_t>(i)]);
+                rootSplitWorker(shared);
             }
         }
 
@@ -319,11 +306,12 @@ SearchResult iterativeDeepeningParallel(Board& board, const SearchConfig& config
     context.optimalTimeMs = optimalTimeMs;
     context.maxTimeMs = maxTimeMs;
     context.externalStop = config.externalStop;
+    context.externalStopToken = config.externalStopToken;
     context.useSyzygy = !Syzygy::getPath().empty();
     context.transTable.resize(std::max(SearchConstants::kOne, hashSizeMb));
     context.transTable.newSearch();
     int lastScore = kZero;
-    const int aspirationWindow = kAspirationWindow;
+    const int aspirationWindow = SearchTuning::aspirationWindow();
     std::string fen = getFEN(board);
     std::string bookMove = getBookMove(fen);
     if (!bookMove.empty()) {

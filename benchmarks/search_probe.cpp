@@ -3,6 +3,8 @@
 #include "src/core/ChessBoard.h"
 #include "src/search/search.h"
 
+#include "src/utils/ChessFormat.h"
+
 #include <algorithm>
 #include <chrono>
 #include <iostream>
@@ -18,18 +20,6 @@ bool moveMatches(const Move& lhs, const Move& rhs) {
     return lhs.first == rhs.first && lhs.second == rhs.second;
 }
 
-std::string moveToUci(const Move& move) {
-    if (move.first < 0 || move.second < 0) {
-        return "0000";
-    }
-
-    std::string uci;
-    uci += static_cast<char>('a' + (move.first % 8));
-    uci += static_cast<char>('1' + (move.first / 8));
-    uci += static_cast<char>('a' + (move.second % 8));
-    uci += static_cast<char>('1' + (move.second / 8));
-    return uci;
-}
 } // namespace
 
 int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
@@ -93,7 +83,7 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
         std::cout << "  \"config\": {\"depth\": " << depthLimit << ", \"time_ms\": " << timeMs
                   << ", \"threads\": " << threads << "},\n";
         std::cout << "  \"result\": {\"fen\": \"" << BenchmarkSuite::jsonEscape(fen)
-                  << "\", \"bestmove\": \"" << moveToUci(result.bestMove)
+                  << "\", \"bestmove\": \"" << chess::format::moveToUci(result.bestMove)
                   << "\", \"score\": " << result.score << ", \"depth\": " << result.depth
                   << ", \"nodes\": " << result.nodes << ", \"time_ms\": " << elapsedMs
                   << ", \"legal\": " << (legal ? "true" : "false")
@@ -102,7 +92,7 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
         std::cout << "}\n";
     } else {
         std::cout << "fen=" << fen << '\n';
-        std::cout << "bestmove=" << moveToUci(result.bestMove) << '\n';
+        std::cout << "bestmove=" << chess::format::moveToUci(result.bestMove) << '\n';
         std::cout << "score=" << result.score << '\n';
         std::cout << "depth=" << result.depth << '\n';
         std::cout << "nodes=" << result.nodes << '\n';

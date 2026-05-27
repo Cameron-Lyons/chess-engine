@@ -1,4 +1,5 @@
 #include "BitboardOnly.h"
+#include "../utils/ChessFormat.h"
 #include "Bitboard.h"
 #include "CastlingConstants.h"
 #include "ChessPiece.h"
@@ -7,8 +8,41 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
+#include <format>
 #include <sstream>
 #include <string>
+
+namespace {
+char fenPieceChar(ChessPieceType piece, ChessPieceColor color) {
+    char pieceChar = '?';
+    switch (piece) {
+        case ChessPieceType::PAWN:
+            pieceChar = 'p';
+            break;
+        case ChessPieceType::KNIGHT:
+            pieceChar = 'n';
+            break;
+        case ChessPieceType::BISHOP:
+            pieceChar = 'b';
+            break;
+        case ChessPieceType::ROOK:
+            pieceChar = 'r';
+            break;
+        case ChessPieceType::QUEEN:
+            pieceChar = 'q';
+            break;
+        case ChessPieceType::KING:
+            pieceChar = 'k';
+            break;
+        default:
+            break;
+    }
+    if (color == ChessPieceColor::WHITE) {
+        pieceChar = static_cast<char>(std::toupper(static_cast<unsigned char>(pieceChar)));
+    }
+    return pieceChar;
+}
+} // namespace
 
 static uint64_t zobristPieces[2][6][64];
 static uint64_t zobristSideToMove;
@@ -262,66 +296,33 @@ void BitboardPosition::setFromFEN(const std::string& fen) {
 }
 
 std::string BitboardPosition::toFEN() const {
-    std::stringstream ss;
+    std::string fen;
 
     for (int rank = 7; rank >= 0; --rank) {
         int emptyCount = 0;
         for (int file = 0; file < 8; ++file) {
-            int square = (rank * 8) + file;
-            ChessPieceType piece = getPieceAt(square);
+            const int square = (rank * 8) + file;
+            const ChessPieceType piece = getPieceAt(square);
 
             if (piece == ChessPieceType::NONE) {
-                emptyCount++;
+                ++emptyCount;
             } else {
                 if (emptyCount > 0) {
-                    ss << emptyCount;
+                    fen += std::format("{}", emptyCount);
                     emptyCount = 0;
                 }
-
-                char pieceChar = 0;
-                switch (piece) {
-                    case ChessPieceType::PAWN:
-                        pieceChar = 'p';
-                        break;
-                    case ChessPieceType::KNIGHT:
-                        pieceChar = 'n';
-                        break;
-                    case ChessPieceType::BISHOP:
-                        pieceChar = 'b';
-                        break;
-                    case ChessPieceType::ROOK:
-                        pieceChar = 'r';
-                        break;
-                    case ChessPieceType::QUEEN:
-                        pieceChar = 'q';
-                        break;
-                    case ChessPieceType::KING:
-                        pieceChar = 'k';
-                        break;
-                    default:
-                        pieceChar = '?';
-                }
-
-                if (getColorAt(square) == ChessPieceColor::WHITE) {
-                    pieceChar =
-                        static_cast<char>(std::toupper(static_cast<unsigned char>(pieceChar)));
-                }
-
-                ss << pieceChar;
+                fen += fenPieceChar(piece, getColorAt(square));
             }
         }
 
         if (emptyCount > 0) {
-            ss << emptyCount;
+            fen += std::format("{}", emptyCount);
         }
-
         if (rank > 0) {
-            ss << '/';
+            fen += '/';
         }
     }
 
-    ss << ' ' << (sideToMove == WHITE ? 'w' : 'b');
-    ss << ' ';
     std::string castling;
     if (castlingRights & CastlingConstants::kWhiteKingsideCastlingRight) {
         castling += 'K';
@@ -335,66 +336,32 @@ std::string BitboardPosition::toFEN() const {
     if (castlingRights & CastlingConstants::kBlackQueensideCastlingRight) {
         castling += 'q';
     }
-    ss << (castling.empty() ? "-" : castling);
-    ss << ' ';
-    if (epSquare < CastlingConstants::kNoEnPassantSquareBitboard) {
-        ss << char('a' + (epSquare & 7)) << char('1' + (epSquare >> 3));
-    } else {
-        ss << '-';
-    }
 
-    ss << ' ' << int(halfmoveClock) << ' ' << fullmoveNumber;
-    return ss.str();
+    const std::string enPassantField = epSquare < CastlingConstants::kNoEnPassantSquareBitboard
+                                           ? chess::format::squareName(epSquare)
+                                           : "-";
+
+    return std::format("{} {} {} {} {} {}", fen, sideToMove == WHITE ? 'w' : 'b',
+                       castling.empty() ? "-" : castling, enPassantField,
+                       static_cast<int>(halfmoveClock), fullmoveNumber);
 }
 
 std::string BitboardPosition::toString() const {
-    std::stringstream ss;
-    ss << "  a b c d e f g h\n";
+    std::string result = "  a b c d e f g h\n";
     for (int rank = 7; rank >= 0; --rank) {
-        ss << (rank + 1) << ' ';
+        result += std::format("{} ", rank + 1);
         for (int file = 0; file < 8; ++file) {
-            int square = (rank * 8) + file;
-            ChessPieceType piece = getPieceAt(square);
-
+            const int square = (rank * 8) + file;
+            const ChessPieceType piece = getPieceAt(square);
             if (piece == ChessPieceType::NONE) {
-                ss << ". ";
+                result += ". ";
             } else {
-                char pieceChar = 0;
-                switch (piece) {
-                    case ChessPieceType::PAWN:
-                        pieceChar = 'p';
-                        break;
-                    case ChessPieceType::KNIGHT:
-                        pieceChar = 'n';
-                        break;
-                    case ChessPieceType::BISHOP:
-                        pieceChar = 'b';
-                        break;
-                    case ChessPieceType::ROOK:
-                        pieceChar = 'r';
-                        break;
-                    case ChessPieceType::QUEEN:
-                        pieceChar = 'q';
-                        break;
-                    case ChessPieceType::KING:
-                        pieceChar = 'k';
-                        break;
-                    default:
-                        pieceChar = '?';
-                }
-
-                if (getColorAt(square) == ChessPieceColor::WHITE) {
-                    pieceChar =
-                        static_cast<char>(std::toupper(static_cast<unsigned char>(pieceChar)));
-                }
-
-                ss << pieceChar << ' ';
+                result += std::format("{} ", fenPieceChar(piece, getColorAt(square)));
             }
         }
-        ss << (rank + 1) << '\n';
+        result += std::format("{}\n", rank + 1);
     }
-    ss << "  a b c d e f g h\n";
-    ss << "Turn: " << (sideToMove == WHITE ? "White" : "Black") << '\n';
-    ss << "FEN: " << toFEN() << '\n';
-    return ss.str();
+    result += std::format("  a b c d e f g h\nTurn: {}\nFEN: {}\n",
+                          sideToMove == WHITE ? "White" : "Black", toFEN());
+    return result;
 }

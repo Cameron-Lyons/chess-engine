@@ -84,7 +84,7 @@ uint64_t MagicBitboards::getQueenAttacks(int square, uint64_t occupancy) {
     return getRookAttacks(square, occupancy) | getBishopAttacks(square, occupancy);
 }
 
-uint64_t MagicBitboards::generateRookMask(int square) {
+constexpr uint64_t MagicBitboards::generateRookMask(int square) {
     uint64_t mask = 0ULL;
     int rank = square / 8;
     int file = square % 8;
@@ -115,7 +115,7 @@ uint64_t MagicBitboards::generateRookMask(int square) {
     return mask;
 }
 
-uint64_t MagicBitboards::generateBishopMask(int square) {
+constexpr uint64_t MagicBitboards::generateBishopMask(int square) {
     uint64_t mask = 0ULL;
     int rank = square / 8;
     int file = square % 8;

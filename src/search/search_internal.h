@@ -2,8 +2,10 @@
 
 #include <compare>
 
+#include "../core/SquareSentinel.h"
 #include "AdvancedSearch.h"
 #include "LMR.h"
+#include "ZobristKeys.h"
 #include "search.h"
 
 #include <array>
@@ -36,12 +38,11 @@ inline constexpr int kMvvLvaVictimRook = 53;
 inline constexpr int kBoardDimension = 8;
 inline constexpr int kBoardSquareCount = kBoardDimension * kBoardDimension;
 inline constexpr int kPieceTypePerColorCount = 6;
-inline constexpr int kInvalidSquare = -1;
+inline constexpr int kInvalidSquare = chess::kInvalidSquare;
 
 inline constexpr int kKillerBaseScore = 5000;
 inline constexpr int kKillerSlotPenalty = 100;
 inline constexpr int kDefaultThreadFallback = 4;
-inline constexpr std::uint64_t kZobristSeed = 202406ULL;
 
 inline constexpr int kPawnValue = 100;
 inline constexpr int kMinorPieceValue = 300;
@@ -143,7 +144,7 @@ inline constexpr int kFastEvalDepthThreshold = 6;
 inline constexpr int kFastEvalQuiescencePlyThreshold = 2;
 inline constexpr std::uint64_t kUnsetZobristKey = std::numeric_limits<std::uint64_t>::max();
 inline constexpr int kZobristCastlingStateCount = 16;
-inline constexpr int kNoEpSquare = -1;
+inline constexpr int kNoEpSquare = chess::kNoEnPassantSquare;
 inline constexpr int kMoveUndoMaxSquares = 5;
 inline constexpr std::size_t kRootSplitThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
 inline constexpr int kRootSplitMinDepth = 4;
@@ -165,11 +166,6 @@ struct ScoredMove {
     bool operator==(const ScoredMove& other) const = default;
 };
 
-extern uint64_t ZobristTable[kBoardSquareCount][12];
-extern uint64_t ZobristBlackToMove;
-extern uint64_t ZobristCastling[kZobristCastlingStateCount];
-extern uint64_t ZobristEnPassant[kBoardSquareCount];
-
 struct MoveApplicationData {
     Piece movingPiece;
     Piece capturedPiece;
@@ -182,7 +178,7 @@ struct MoveApplicationData {
     int changedSquareCount = kZero;
     ChessPieceColor previousTurn = ChessPieceColor::WHITE;
     std::uint8_t previousCastlingRights = 0;
-    int previousEnPassantSquare = kNoEpSquare;
+    chess::EnPassantSquare previousEnPassantSquare{};
     int previousHalfmoveClock = 0;
     int previousFullmoveNumber = 1;
     bool previousWhiteChecked = false;
@@ -364,10 +360,6 @@ struct RootSplitSharedState {
     bool hasBestMove = false;
 };
 
-struct RootSplitWorkerArgs {
-    RootSplitSharedState* shared = nullptr;
-};
-
 void recordUndoSquare(MoveApplicationData& moveData, const Board& board, int square);
 void initializeBitboardsFromBoard(const Board& board, Bitboard pieces[2][kPieceTypePerColorCount],
                                   Bitboard& occupancy);
@@ -403,7 +395,7 @@ bool checkRootSplitTimeLimit(RootSplitSharedState& shared);
 bool evaluateRootSplitMove(const RootSplitSharedState& shared, Move move, int alphaWindow,
                            int betaWindow, int& evalOut, int& nodesOut);
 void commitRootSplitResult(RootSplitSharedState& shared, int eval, Move move);
-void* rootSplitWorkerEntry(void* arg);
+void rootSplitWorker(RootSplitSharedState& shared);
 RootSplitResult searchRootMovesYBWC(const Board& board, int depth, int alpha, int beta,
                                     bool maximizingPlayer, const ThreadSafeHistory& historyTable,
                                     const ParallelSearchContext& context, int numThreads,

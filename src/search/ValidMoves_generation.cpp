@@ -44,8 +44,8 @@ void appendPawnMoves(Board& board, ChessPieceColor color, std::vector<Move>& mov
             clear_bit(captures, dest);
         }
 
-        if (board.enPassantSquare >= kZero && board.enPassantSquare < kBoardSquareCount) {
-            int epSquare = board.enPassantSquare;
+        if (const auto enPassantTarget = board.enPassantSquare.target()) {
+            const int epSquare = *enPassantTarget;
             int srcFile = src % kBoardDimension;
             if (color == ChessPieceColor::WHITE) {
                 if ((srcFile > kMinFile && epSquare == src + kWhiteEnPassantCaptureLeftOffset) ||
@@ -167,8 +167,8 @@ void appendPawnCaptures(Board& board, ChessPieceColor color, std::vector<Move>& 
             clear_bit(captures, dest);
         }
 
-        if (board.enPassantSquare >= kZero && board.enPassantSquare < kBoardSquareCount) {
-            int epSquare = board.enPassantSquare;
+        if (const auto enPassantTarget = board.enPassantSquare.target()) {
+            const int epSquare = *enPassantTarget;
             int srcFile = src % kBoardDimension;
             if (color == ChessPieceColor::WHITE) {
                 if ((srcFile > kMinFile && epSquare == src + kWhiteEnPassantCaptureLeftOffset) ||

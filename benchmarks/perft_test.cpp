@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <format>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -128,7 +129,7 @@ int main(int argc, char** argv) { // NOLINT(bugprone-exception-escape)
                                            .count();
                 const double elapsedSeconds =
                     std::max(0.001, static_cast<double>(elapsedMs) / 1000.0);
-                rows.push_back({position.id + ":d" + std::to_string(depth), position.name, depth,
+                rows.push_back({std::format("{}:d{}", position.id, depth), position.name, depth,
                                 nodes, elapsedMs, static_cast<double>(nodes) / elapsedSeconds});
             }
         }

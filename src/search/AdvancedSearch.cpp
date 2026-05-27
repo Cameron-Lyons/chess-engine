@@ -1,5 +1,6 @@
 #include "AdvancedSearch.h"
 #include "../evaluation/GamePhaseConstants.h"
+#include "../search/SearchTuning.h"
 #include "../utils/engine_globals.h"
 #include "Bitboard.h"
 #include "BookUtils.h"
@@ -27,7 +28,6 @@ constexpr int kBoardSquareCount = 64;
 constexpr int kBoardDimension = 8;
 constexpr int kInvalidSquare = -1;
 
-constexpr int kFutilityMarginPerDepth = 150;
 constexpr int kShallowDepthLimit = 3;
 constexpr int kTacticalBonusPerMissingPly = 50;
 constexpr int kDeltaMarginBase = 975;
@@ -113,7 +113,7 @@ bool AdvancedSearch::futilityPruning(const Board& board, int depth, int alpha, i
         return false;
     }
 
-    int futilityMargin = kFutilityMarginPerDepth * depth;
+    int futilityMargin = SearchTuning::futilityMargin(depth);
 
     if (depth <= kShallowDepthLimit) {
         int tacticalBonus = kTacticalBonusPerMissingPly * (kShallowDepthLimit - depth);

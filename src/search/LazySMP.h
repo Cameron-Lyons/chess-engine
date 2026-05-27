@@ -1,10 +1,13 @@
 #pragma once
 
 #include "../core/ChessBoard.h"
-#include "search.h"
+#include "../core/SquareSentinel.h"
+#include "../search/search.h"
+#include "../utils/SearchThread.h"
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 class LazySMP {
@@ -12,7 +15,7 @@ public:
     static constexpr int kAutoThreadCount = 0;
     static constexpr int kInitialDepth = 0;
     static constexpr int kInitialScore = -999999;
-    static constexpr int kInvalidMoveSquare = -1;
+    static constexpr int kInvalidMoveSquare = chess::kInvalidSquare;
 
     struct ThreadData {
         int id;
@@ -47,26 +50,6 @@ public:
               bestScore(kInitialScore), bestMove({kInvalidMoveSquare, kInvalidMoveSquare}) {}
     };
 
-private:
-    struct SearchThreadArgs {
-        const LazySMP* self;
-        ThreadData* data;
-        int maxDepth;
-        int timeLimit;
-        const std::vector<Move>* excludedRootMoves;
-    };
-
-    static void* searchThreadEntry(void* arg);
-
-    int numThreads;
-    int hashSizeMb;
-    int contempt;
-    std::vector<std::unique_ptr<ThreadData>> threads;
-    std::unique_ptr<SharedData> shared;
-    void searchThread(ThreadData* data, int maxDepth, int timeLimit,
-                      const std::vector<Move>& excludedRootMoves) const;
-
-public:
     explicit LazySMP(int threadCount = kAutoThreadCount,
                      int hashMb = SearchConstants::kDefaultTranspositionTableMb,
                      int contemptValue = SearchConstants::kZero);
@@ -84,6 +67,16 @@ public:
 
     static int getAspirationDelta(int threadId);
     static int getDepthOffset(int threadId);
+
+private:
+    void searchThread(ThreadData* data, int maxDepth, int timeLimit,
+                      const std::vector<Move>& excludedRootMoves) const;
+
+    int numThreads;
+    int hashSizeMb;
+    int contempt;
+    std::vector<std::unique_ptr<ThreadData>> threads;
+    std::unique_ptr<SharedData> shared;
 };
 
 class SMPTimeManager {

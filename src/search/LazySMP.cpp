@@ -3,12 +3,14 @@
 #include "ChessPiece.h"
 #include "search/ValidMoves.h"
 #include "search/search.h"
-#include "utils/ScopedPThread.h"
+#include "utils/ChessFormat.h"
+#include "utils/SearchThread.h"
 
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -35,9 +37,6 @@ constexpr int kMaxAspirationAttempts = 6;
 constexpr int kMaxSmpSearchDepth = 20;
 constexpr int kRootPly = 0;
 constexpr int kStartDepthBase = 1;
-constexpr int kBoardDimension = 8;
-constexpr char kFileOffset = 'a';
-constexpr int kRankDisplayOffset = 1;
 constexpr int kMoveSquareLimit = 64;
 constexpr int kMovePackShift = 6;
 constexpr int kDepthOffsetModulus = 4;
@@ -84,7 +83,7 @@ Move selectFallbackRootMove(const Board& board) {
     if (!moves.empty()) {
         return moves.front();
     }
-    return {LazySMP::kInvalidMoveSquare, LazySMP::kInvalidMoveSquare};
+    return chess::invalidMove();
 }
 
 std::uint16_t packMoveKey(Move move) {
@@ -102,7 +101,7 @@ LazySMP::LazySMP(int threadCount, int hashMb, int contemptValue)
         numThreads = kDefaultThreadCount;
     }
 
-    std::cout << "Initializing Lazy SMP with " << numThreads << " threads" << '\n';
+    std::cout << std::format("Initializing Lazy SMP with {} threads\n", numThreads);
     shared = std::make_unique<SharedData>();
 
     for (int i = kZero; i < numThreads; ++i) {
@@ -113,12 +112,6 @@ LazySMP::LazySMP(int threadCount, int hashMb, int contemptValue)
 }
 
 LazySMP::~LazySMP() = default;
-
-void* LazySMP::searchThreadEntry(void* arg) {
-    auto* args = static_cast<SearchThreadArgs*>(arg);
-    args->self->searchThread(args->data, args->maxDepth, args->timeLimit, *args->excludedRootMoves);
-    return nullptr;
-}
 
 void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit,
                            const std::vector<Move>& excludedRootMoves) const {
@@ -172,7 +165,7 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit,
         }
 
         score = clampScore(score);
-        Move candidateMove = {kInvalidMoveSquare, kInvalidMoveSquare};
+        Move candidateMove = chess::invalidMove();
         if (const auto entry = context->transTable.find(rootHash);
             entry && isValidMove(entry->bestMove)) {
             candidateMove = entry->bestMove;
@@ -196,13 +189,9 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit,
                 shared->bestMove = candidateMove;
 
                 if (data->id == kZero) {
-                    std::cout << "info depth " << depth << " score cp " << score << " nodes "
-                              << shared->nodesSearched.load() << " pv "
-                              << char(kFileOffset + (candidateMove.first % kBoardDimension))
-                              << ((candidateMove.first / kBoardDimension) + kRankDisplayOffset)
-                              << char(kFileOffset + (candidateMove.second % kBoardDimension))
-                              << ((candidateMove.second / kBoardDimension) + kRankDisplayOffset)
-                              << '\n';
+                    std::cout << std::format("info depth {} score cp {} nodes {} pv {}\n", depth,
+                                             score, shared->nodesSearched.load(),
+                                             chess::format::moveToUci(candidateMove));
                 }
             }
         }
@@ -223,7 +212,7 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit,
     shared->nodesSearched = kZero;
     shared->bestDepth = kZero;
     shared->bestScore = kInvalidScore;
-    shared->bestMove = {kInvalidMoveSquare, kInvalidMoveSquare};
+    shared->bestMove = chess::invalidMove();
 
     for (int i = kZero; i < numThreads; ++i) {
         threads[i]->board = board;
@@ -232,20 +221,18 @@ SearchResult LazySMP::search(const Board& board, int maxDepth, int timeLimit,
         threads[i]->depth = kZero;
         threads[i]->bestScore = kInvalidScore;
         threads[i]->bestDepth = kZero;
-        threads[i]->bestMove = {kInvalidMoveSquare, kInvalidMoveSquare};
+        threads[i]->bestMove = chess::invalidMove();
     }
 
-    std::vector<ScopedPThread> searchThreads(static_cast<std::size_t>(numThreads));
-    std::vector<SearchThreadArgs> searchArgs(static_cast<std::size_t>(numThreads));
-    ScopedPThreadAttr attr;
-    (void)attr.setStackSize(kSearchThreadStackBytes);
+    std::vector<SearchThread> searchThreads(static_cast<std::size_t>(numThreads));
 
     for (int i = kZero; i < numThreads; ++i) {
-        searchArgs[static_cast<std::size_t>(i)] = {this, threads[i].get(), effectiveMaxDepth,
-                                                   timeLimit, &excludedRootMoves};
+        ThreadData* threadData = threads[static_cast<std::size_t>(i)].get();
         if (searchThreads[static_cast<std::size_t>(i)].start(
-                attr.get(), &LazySMP::searchThreadEntry,
-                &searchArgs[static_cast<std::size_t>(i)]) != 0) {
+                [this, threadData, effectiveMaxDepth, timeLimit, &excludedRootMoves]() {
+                    searchThread(threadData, effectiveMaxDepth, timeLimit, excludedRootMoves);
+                },
+                kSearchThreadStackBytes) != 0) {
             threads[i]->stopFlag = true;
             threads[i]->searching = false;
         }

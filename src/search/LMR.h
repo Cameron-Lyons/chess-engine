@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/ChessBoard.h"
+#include "../search/SearchTuning.h"
 #include "search.h"
 
 #include <algorithm>
@@ -43,8 +44,18 @@ public:
     }
 
     int getReduction(int depth, int moveNumber) const {
-        return table[std::min(depth, MAX_DEPTH - ONE_STEP)]
-                    [std::min(moveNumber, MAX_MOVES - ONE_STEP)];
+        const int clampedDepth = std::min(depth, MAX_DEPTH - ONE_STEP);
+        const int clampedMoves = std::min(moveNumber, MAX_MOVES - ONE_STEP);
+        if (clampedDepth < MIN_DEPTH_FOR_REDUCTION || clampedMoves < MIN_MOVES_FOR_REDUCTION) {
+            return ZERO_VALUE;
+        }
+
+        const double base = SearchTuning::lmrBaseOffset() +
+                            (std::log(clampedDepth) * std::log(clampedMoves + ONE_STEP) /
+                             SearchTuning::lmrLogDivisor());
+        int reduction = static_cast<int>(base);
+        reduction = std::min(reduction, clampedDepth - DEPTH_REDUCTION_OFFSET);
+        return reduction;
     }
 };
 

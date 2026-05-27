@@ -6,8 +6,10 @@
 #include "Evaluation.h"
 #include "GamePhaseConstants.h"
 
+#include "../utils/ChessFormat.h"
+
+#include <format>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -130,89 +132,79 @@ PositionAnalysis PositionAnalyzer::analyzePosition(const Board& board) {
 }
 
 std::string PositionAnalyzer::formatAnalysis(const PositionAnalysis& analysis) {
-    std::ostringstream oss;
-    oss << "=== Position Analysis ===\n\n";
-
-    // Material
-    oss << "Material:\n";
-    oss << "  White: " << analysis.whiteMaterial << " (" << analysis.whitePieces << " pieces)\n";
-    oss << "  Black: " << analysis.blackMaterial << " (" << analysis.blackPieces << " pieces)\n";
-    oss << "  Balance: " << (analysis.materialBalance > 0 ? "+" : "") << analysis.materialBalance
-        << "\n\n";
-
-    // Piece counts
-    oss << "Piece Counts:\n";
-    oss << "  White - Pawns: " << analysis.whitePawns << ", Knights: " << analysis.whiteKnights
-        << ", Bishops: " << analysis.whiteBishops << ", Rooks: " << analysis.whiteRooks
-        << ", Queens: " << analysis.whiteQueens << "\n";
-    oss << "  Black - Pawns: " << analysis.blackPawns << ", Knights: " << analysis.blackKnights
-        << ", Bishops: " << analysis.blackBishops << ", Rooks: " << analysis.blackRooks
-        << ", Queens: " << analysis.blackQueens << "\n\n";
-
-    // Positional factors
-    oss << "Positional Factors:\n";
-    oss << "  Center Control: " << analysis.centerControl << "\n";
-    oss << "  Mobility: " << analysis.mobility << "\n";
-    oss << "  King Safety: " << analysis.kingSafety << "\n";
-    oss << "  Pawn Structure: " << analysis.pawnStructure << "\n";
-    oss << "  Piece Activity: " << analysis.pieceActivity << "\n\n";
-
-    // Tactical factors
-    oss << "Tactical Factors:\n";
-    oss << "  Hanging Pieces: " << analysis.hangingPieces << "\n";
-    oss << "  Pins: " << analysis.pins << "\n";
-    oss << "  Forks: " << analysis.forks << "\n";
-    oss << "  Discovered Attacks: " << analysis.discoveredAttacks << "\n\n";
-
-    // Game phase
-    oss << "Game Phase: ";
-    switch (analysis.gamePhase) {
-        case PositionAnalysis::OPENING:
-            oss << "Opening\n";
-            break;
-        case PositionAnalysis::MIDDLEGAME:
-            oss << "Middlegame\n";
-            break;
-        case PositionAnalysis::ENDGAME:
-            oss << "Endgame\n";
-            break;
-    }
-    oss << "\n";
-
-    // Evaluation breakdown
-    oss << "Evaluation Breakdown:\n";
-    oss << "  Static Evaluation: " << analysis.staticEvaluation << "\n";
-    oss << "  Material: " << analysis.materialScore << "\n";
-    oss << "  Positional: " << analysis.positionalScore << "\n";
-    oss << "  Tactical: " << analysis.tacticalScore << "\n";
-    oss << "  Endgame: " << analysis.endgameScore << "\n\n";
-
-    // Threats and opportunities
-    if (!analysis.threats.empty()) {
-        oss << "Threats:\n";
-        for (const auto& threat : analysis.threats) {
-            oss << "  - " << threat << "\n";
+    const auto gamePhaseName = [&analysis]() -> std::string_view {
+        switch (analysis.gamePhase) {
+            case PositionAnalysis::OPENING:
+                return "Opening";
+            case PositionAnalysis::MIDDLEGAME:
+                return "Middlegame";
+            case PositionAnalysis::ENDGAME:
+                return "Endgame";
         }
-        oss << "\n";
+        return "Unknown";
+    }();
+
+    std::string report = std::format(
+        "=== Position Analysis ===\n\n"
+        "Material:\n"
+        "  White: {} ({} pieces)\n"
+        "  Black: {} ({} pieces)\n"
+        "  Balance: {:+}\n\n"
+        "Piece Counts:\n"
+        "  White - Pawns: {}, Knights: {}, Bishops: {}, Rooks: {}, Queens: {}\n"
+        "  Black - Pawns: {}, Knights: {}, Bishops: {}, Rooks: {}, Queens: {}\n\n"
+        "Positional Factors:\n"
+        "  Center Control: {}\n"
+        "  Mobility: {}\n"
+        "  King Safety: {}\n"
+        "  Pawn Structure: {}\n"
+        "  Piece Activity: {}\n\n"
+        "Tactical Factors:\n"
+        "  Hanging Pieces: {}\n"
+        "  Pins: {}\n"
+        "  Forks: {}\n"
+        "  Discovered Attacks: {}\n\n"
+        "Game Phase: {}\n\n"
+        "Evaluation Breakdown:\n"
+        "  Static Evaluation: {}\n"
+        "  Material: {}\n"
+        "  Positional: {}\n"
+        "  Tactical: {}\n"
+        "  Endgame: {}\n\n",
+        analysis.whiteMaterial, analysis.whitePieces, analysis.blackMaterial, analysis.blackPieces,
+        analysis.materialBalance, analysis.whitePawns, analysis.whiteKnights, analysis.whiteBishops,
+        analysis.whiteRooks, analysis.whiteQueens, analysis.blackPawns, analysis.blackKnights,
+        analysis.blackBishops, analysis.blackRooks, analysis.blackQueens, analysis.centerControl,
+        analysis.mobility, analysis.kingSafety, analysis.pawnStructure, analysis.pieceActivity,
+        analysis.hangingPieces, analysis.pins, analysis.forks, analysis.discoveredAttacks,
+        gamePhaseName, analysis.staticEvaluation, analysis.materialScore, analysis.positionalScore,
+        analysis.tacticalScore, analysis.endgameScore);
+
+    if (!analysis.threats.empty()) {
+        report += "Threats:\n";
+        for (const auto& threat : analysis.threats) {
+            report += std::format("  - {}\n", threat);
+        }
+        report += '\n';
     }
 
     if (!analysis.opportunities.empty()) {
-        oss << "Opportunities:\n";
-        for (const auto& opp : analysis.opportunities) {
-            oss << "  - " << opp << "\n";
+        report += "Opportunities:\n";
+        for (const auto& opportunity : analysis.opportunities) {
+            report += std::format("  - {}\n", opportunity);
         }
-        oss << "\n";
+        report += '\n';
     }
 
     if (!analysis.weaknesses.empty()) {
-        oss << "Weaknesses:\n";
+        report += "Weaknesses:\n";
         for (const auto& weakness : analysis.weaknesses) {
-            oss << "  - " << weakness << "\n";
+            report += std::format("  - {}\n", weakness);
         }
-        oss << "\n";
+        report += '\n';
     }
 
-    return oss.str();
+    return report;
 }
 
 void PositionAnalyzer::printDetailedAnalysis(const PositionAnalysis& analysis) {
@@ -416,7 +408,8 @@ std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
 
             const Piece& captured = board.squares[move.second].piece;
             if (captured.PieceType != ChessPieceType::NONE && captured.PieceColor == currentColor) {
-                threats.push_back("Piece capture threat on square " + std::to_string(move.second));
+                threats.push_back(std::format("Piece capture threat on square {}",
+                                              chess::format::squareName(move.second)));
             }
         }
     }
@@ -434,8 +427,9 @@ std::vector<std::string> PositionAnalyzer::identifyOpportunities(const Board& bo
         const Piece& target = board.squares[move.second].piece;
         if (target.PieceType != ChessPieceType::NONE &&
             target.PieceColor != board.squares[move.first].piece.PieceColor) {
-            opportunities.push_back("Capture opportunity: " + std::to_string(move.first) + " to " +
-                                    std::to_string(move.second));
+            opportunities.push_back(std::format("Capture opportunity: {} to {}",
+                                                chess::format::squareName(move.first),
+                                                chess::format::squareName(move.second)));
         }
     }
 
@@ -446,12 +440,12 @@ std::vector<std::string> PositionAnalyzer::identifyWeaknesses(const Board& board
     std::vector<std::string> weaknesses;
     int hanging = findHangingPieces(board);
     if (hanging > 0) {
-        weaknesses.push_back(std::to_string(hanging) + " hanging piece(s)");
+        weaknesses.push_back(std::format("{} hanging piece(s)", hanging));
     }
 
     int pins = findPins(board);
     if (pins > 0) {
-        weaknesses.push_back(std::to_string(pins) + " pinned piece(s)");
+        weaknesses.push_back(std::format("{} pinned piece(s)", pins));
     }
 
     return weaknesses;

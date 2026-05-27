@@ -1,5 +1,7 @@
 #pragma once
 
+#include "SquareSentinel.h"
+
 #include <cstdint>
 
 namespace CastlingConstants {
@@ -20,7 +22,7 @@ inline constexpr int kBlackQueensideRookCastleDest = 59;
 
 inline constexpr int kPawnDoublePushDistance = 16;
 inline constexpr int kKingCastlingDistance = 2;
-inline constexpr int kNoEnPassantSquareMailbox = -1;
+inline constexpr int kNoEnPassantSquareMailbox = chess::kNoEnPassantSquare;
 inline constexpr int kNoEnPassantSquareBitboard = 64;
 
 inline constexpr std::uint8_t kWhiteKingsideCastlingRight = 0x1;

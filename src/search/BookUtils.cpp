@@ -1,6 +1,6 @@
 #include "BookUtils.h"
 
-#include <cstddef>
+#include <format>
 #include <random>
 #include <sstream>
 #include <string>
@@ -36,10 +36,8 @@ std::string normalizeBookFen(const std::string& fen, bool clearEnPassant) {
         enPassant = "-";
     }
 
-    std::ostringstream normalized;
-    normalized << piecePlacement << ' ' << sideToMove << ' ' << castling << ' ' << enPassant << ' '
-               << halfmoveClock << ' ' << fullmoveNumber;
-    return normalized.str();
+    return std::format("{} {} {} {} {} {}", piecePlacement, sideToMove, castling, enPassant,
+                       halfmoveClock, fullmoveNumber);
 }
 
 std::string lookupBookMoveString(
