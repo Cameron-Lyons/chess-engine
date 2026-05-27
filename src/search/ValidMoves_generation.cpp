@@ -47,8 +47,7 @@ void appendKnightPieceMoves(Board& board, ChessPieceColor color, Bitboard target
     }
 }
 
-void appendPawnQuietPushes(Board& board, ChessPieceColor color, int src,
-                           std::vector<Move>& moves) {
+void appendPawnQuietPushes(Board& board, ChessPieceColor color, int src, std::vector<Move>& moves) {
     const Bitboard occupied = board.allPieces;
     if (color == ChessPieceColor::WHITE) {
         const int oneStep = src + kSinglePawnPush;

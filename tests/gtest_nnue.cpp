@@ -148,8 +148,7 @@ TEST_F(NNUETest, GeneratedBitboardModelLoadsAndEvaluatesFromBoard) {
 
     const BitboardPosition pos = BitboardPosition::fromBoard(board);
     EXPECT_EQ(pos.getSideToMove(), ChessPieceColor::WHITE);
-    EXPECT_EQ(pos.getPieceBitboard(ChessPieceType::KING, ChessPieceColor::WHITE),
-              board.whiteKings);
+    EXPECT_EQ(pos.getPieceBitboard(ChessPieceType::KING, ChessPieceColor::WHITE), board.whiteKings);
     EXPECT_EQ(pos.getAllPieces(), board.allPieces);
 
     std::filesystem::remove(path);
