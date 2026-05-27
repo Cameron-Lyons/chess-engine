@@ -92,14 +92,12 @@ inline void tryAppendEnPassantMove(const Board& board, ChessPieceColor color, in
 
     const bool canCaptureLeft =
         srcFile > kMinFile &&
-        epSquare == (color == ChessPieceColor::WHITE
-                         ? src + kWhiteEnPassantCaptureLeftOffset
-                         : src - kBlackEnPassantCaptureLeftOffset);
+        epSquare == (color == ChessPieceColor::WHITE ? src + kWhiteEnPassantCaptureLeftOffset
+                                                     : src - kBlackEnPassantCaptureLeftOffset);
     const bool canCaptureRight =
         srcFile < kMaxFile &&
-        epSquare == (color == ChessPieceColor::WHITE
-                         ? src + kWhiteEnPassantCaptureRightOffset
-                         : src - kBlackEnPassantCaptureRightOffset);
+        epSquare == (color == ChessPieceColor::WHITE ? src + kWhiteEnPassantCaptureRightOffset
+                                                     : src - kBlackEnPassantCaptureRightOffset);
     if (!canCaptureLeft && !canCaptureRight) {
         return;
     }
@@ -111,8 +109,7 @@ inline void tryAppendEnPassantMove(const Board& board, ChessPieceColor color, in
     }
 
     const Piece& capturedPawn = board.squares[capturedPawnSquare].piece;
-    if (capturedPawn.PieceType != ChessPieceType::PAWN ||
-        capturedPawn.PieceColor != enemyColor ||
+    if (capturedPawn.PieceType != ChessPieceType::PAWN || capturedPawn.PieceColor != enemyColor ||
         board.squares[epSquare].piece.PieceType != ChessPieceType::NONE) {
         return;
     }

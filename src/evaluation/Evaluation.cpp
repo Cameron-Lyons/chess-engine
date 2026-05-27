@@ -304,7 +304,8 @@ int evaluatePassedPawns(const Board& board, ChessPieceColor color) {
                     }
                 }
                 if (isPassed) {
-                    score += (((BOARD_SIZE - 2) - row) * PASSED_PAWN_RANK_SCALE) + PASSED_PAWN_BASE_BONUS;
+                    score += (((BOARD_SIZE - 2) - row) * PASSED_PAWN_RANK_SCALE) +
+                             PASSED_PAWN_BASE_BONUS;
                 }
             }
         }
@@ -572,8 +573,8 @@ int evaluateHangingPieces(const Board& board, ChessPieceColor color) {
         bool isUnderAttack = false;
         bool isDefended = false;
 
-        ChessPieceColor enemyColor = (color == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK
-                                                                       : ChessPieceColor::WHITE;
+        ChessPieceColor enemyColor =
+            (color == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
 
         for (int j = 0; j < NUM_SQUARES; j++) {
             const Piece& enemyPiece = board.squares[j].piece;
@@ -601,8 +602,8 @@ int evaluateHangingPieces(const Board& board, ChessPieceColor color) {
             }
 
             if (!isDefended) {
-                penalty += static_cast<int>(static_cast<float>(piece.PieceValue) *
-                                              HANGING_PENALTY_RATIO);
+                penalty +=
+                    static_cast<int>(static_cast<float>(piece.PieceValue) * HANGING_PENALTY_RATIO);
 
                 if (piece.PieceType == ChessPieceType::QUEEN) {
                     penalty += HANGING_QUEEN_PENALTY;

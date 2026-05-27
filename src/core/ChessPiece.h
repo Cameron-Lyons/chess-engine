@@ -32,10 +32,13 @@ public:
           moved(false) {}
 
     static constexpr short getPieceValue(ChessPieceType pieceType) {
-        constexpr std::array<short, 7> values = {
-            MaterialValues::kPawnValue,   MaterialValues::kKnightValue, MaterialValues::kBishopValue,
-            MaterialValues::kRookValue,   MaterialValues::kQueenValue,  MaterialValues::kKingValue,
-            0};
+        constexpr std::array<short, 7> values = {MaterialValues::kPawnValue,
+                                                 MaterialValues::kKnightValue,
+                                                 MaterialValues::kBishopValue,
+                                                 MaterialValues::kRookValue,
+                                                 MaterialValues::kQueenValue,
+                                                 MaterialValues::kKingValue,
+                                                 0};
         const auto index = static_cast<std::size_t>(std::to_underlying(pieceType));
         return index < values.size() ? values[index] : 0;
     }

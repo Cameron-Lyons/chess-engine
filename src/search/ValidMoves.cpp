@@ -155,8 +155,7 @@ bool canCastleKingside(const Board& board, const CastlingSideConfig& config, Bit
         return false;
     }
 
-    return kingPathIsSafe(board, config, config.kingsideTransitSquare,
-                        config.kingsideDestination);
+    return kingPathIsSafe(board, config, config.kingsideTransitSquare, config.kingsideDestination);
 }
 
 bool canCastleQueenside(const Board& board, const CastlingSideConfig& config, Bitboard occupancy) {
