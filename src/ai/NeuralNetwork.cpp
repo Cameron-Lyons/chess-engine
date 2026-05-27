@@ -440,23 +440,23 @@ auto FeatureExtractor::extractFeatures(const Board& board) -> PositionFeatures {
                          Piece::getPieceValue(static_cast<ChessPieceType>(piece + 1));
     }
     features.materialBalance = static_cast<float>(whiteMaterial - blackMaterial);
-    features.centerControl[0] = evaluateCenterControl(board);
-    features.centerControl[1] = evaluateCenterControl(board);
+    features.centerControl[0] = evaluateCenterControl(board, ChessPieceColor::WHITE);
+    features.centerControl[1] = evaluateCenterControl(board, ChessPieceColor::BLACK);
     features.mobility[0] = calculateMobility(board, ChessPieceColor::WHITE);
     features.mobility[1] = calculateMobility(board, ChessPieceColor::BLACK);
     features.kingSafety[0] = calculateKingSafety(board, ChessPieceColor::WHITE);
     features.kingSafety[1] = calculateKingSafety(board, ChessPieceColor::BLACK);
     features.pawnStructure[0] = calculatePawnStructure(board, ChessPieceColor::WHITE);
     features.pawnStructure[1] = calculatePawnStructure(board, ChessPieceColor::BLACK);
-    features.hangingPieces[0] = evaluateHangingPieces(board);
-    features.hangingPieces[1] = evaluateHangingPieces(board);
+    features.hangingPieces[0] = evaluateHangingPieces(board, ChessPieceColor::WHITE);
+    features.hangingPieces[1] = evaluateHangingPieces(board, ChessPieceColor::BLACK);
     features.pinnedPieces[0] = 0;
     features.pinnedPieces[1] = 0;
     features.discoveredAttacks[0] = 0;
     features.discoveredAttacks[1] = 0;
     features.gamePhase = calculateGamePhase(board);
-    features.passedPawns[0] = evaluatePassedPawns(board);
-    features.passedPawns[1] = evaluatePassedPawns(board);
+    features.passedPawns[0] = evaluatePassedPawns(board, ChessPieceColor::WHITE);
+    features.passedPawns[1] = evaluatePassedPawns(board, ChessPieceColor::BLACK);
     features.kingDistance = 0;
     return features;
 }

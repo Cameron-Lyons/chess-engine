@@ -288,7 +288,7 @@ int PositionAnalyzer::evaluatePawnStructure(const Board& board) {
 int PositionAnalyzer::evaluatePieceActivity(const Board& board) {
     int activity = 0;
     Board mutableBoard = board;
-    GenValidMoves(mutableBoard);
+    UpdateCheckState(mutableBoard);
     std::vector<Move> whiteMoves = GetAllMoves(mutableBoard, ChessPieceColor::WHITE);
     std::vector<Move> blackMoves = GetAllMoves(mutableBoard, ChessPieceColor::BLACK);
     activity = static_cast<int>(whiteMoves.size() - blackMoves.size());
@@ -395,7 +395,7 @@ std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
         (currentColor == ChessPieceColor::WHITE) ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
 
     Board mutableBoard = board;
-    GenValidMoves(mutableBoard);
+    UpdateCheckState(mutableBoard);
     std::vector<Move> enemyMoves = GetAllMoves(mutableBoard, enemyColor);
 
     for (const auto& move : enemyMoves) {
@@ -420,7 +420,7 @@ std::vector<std::string> PositionAnalyzer::identifyThreats(const Board& board) {
 std::vector<std::string> PositionAnalyzer::identifyOpportunities(const Board& board) {
     std::vector<std::string> opportunities;
     Board mutableBoard = board;
-    GenValidMoves(mutableBoard);
+    UpdateCheckState(mutableBoard);
     std::vector<Move> moves = GetAllMoves(mutableBoard, board.turn);
 
     for (const auto& move : moves) {

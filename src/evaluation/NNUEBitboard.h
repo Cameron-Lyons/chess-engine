@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BitboardOnly.h"
+#include "core/ChessBoard.h"
 
 #include <algorithm>
 #include <array>
@@ -158,6 +159,9 @@ public:
     ~NNUEEvaluator() = default;
     bool loadNetwork(const std::string& filename);
     int evaluate(const BitboardPosition& pos) const;
+    int evaluate(const Board& board) const {
+        return evaluate(BitboardPosition::fromBoard(board));
+    }
 
     void updateBeforeMove(const BitboardPosition& pos, int from, int to, ChessPieceType piece,
                           ChessPieceType captured);
@@ -167,6 +171,10 @@ public:
     void refreshAccumulator(const BitboardPosition& pos) {
         accumulator.refresh(pos);
     }
+
+    void refreshAccumulator(const Board& board) {
+        refreshAccumulator(BitboardPosition::fromBoard(board));
+    }
 };
 
 extern std::unique_ptr<NNUEEvaluator> globalEvaluator;
@@ -174,5 +182,6 @@ extern std::unique_ptr<NNUEEvaluator> globalEvaluator;
 bool init(const std::string& networkPath);
 
 int evaluate(const BitboardPosition& pos);
+int evaluate(const Board& board);
 
 } // namespace NNUEBitboard

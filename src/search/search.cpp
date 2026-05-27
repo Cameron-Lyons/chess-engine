@@ -101,10 +101,10 @@ Bitboard attackersToSquare(const Bitboard pieces[2][kPieceTypePerColorCount], Bi
         KnightAttacks[targetSquare] & pieces[colorIndex][pieceTypeIndex(ChessPieceType::KNIGHT)];
     attackers |=
         KingAttacks[targetSquare] & pieces[colorIndex][pieceTypeIndex(ChessPieceType::KING)];
-    attackers |= fastBishopAttacks(targetSquare, occupancy) &
+    attackers |= bishopAttacks(targetSquare, occupancy) &
                  (pieces[colorIndex][pieceTypeIndex(ChessPieceType::BISHOP)] |
                   pieces[colorIndex][pieceTypeIndex(ChessPieceType::QUEEN)]);
-    attackers |= fastRookAttacks(targetSquare, occupancy) &
+    attackers |= rookAttacks(targetSquare, occupancy) &
                  (pieces[colorIndex][pieceTypeIndex(ChessPieceType::ROOK)] |
                   pieces[colorIndex][pieceTypeIndex(ChessPieceType::QUEEN)]);
     return attackers;
@@ -683,8 +683,9 @@ int SearchInternal::getPieceValue(ChessPieceType pieceType) {
         case ChessPieceType::PAWN:
             return kPawnValue;
         case ChessPieceType::KNIGHT:
+            return kKnightValue;
         case ChessPieceType::BISHOP:
-            return kMinorPieceValue;
+            return kBishopValue;
         case ChessPieceType::ROOK:
             return kRookValue;
         case ChessPieceType::QUEEN:

@@ -36,6 +36,93 @@ inline constexpr int kBlackKingsideRookSquare = 63;
 inline constexpr int kBlackQueensideRookSquare = 56;
 inline constexpr std::size_t kTypicalMoveCapacity = 96;
 
+struct CastlingSideConfig {
+    ChessPieceColor color;
+    int kingStart;
+    int kingsideRookSquare;
+    int queensideRookSquare;
+    int kingsideTransitSquare;
+    int kingsideDestination;
+    int queensideEmptySquare;
+    int queensideFirstTransit;
+    int queensideSecondTransit;
+    std::uint8_t kingsideCastlingRight;
+    std::uint8_t queensideCastlingRight;
+};
+
+inline constexpr CastlingSideConfig kWhiteCastlingSide{
+    ChessPieceColor::WHITE,
+    kWhiteKingStartSquare,
+    kWhiteKingsideRookSquare,
+    kWhiteQueensideRookSquare,
+    kWhiteKingsideTransitSquare,
+    kWhiteKingsideDestination,
+    kWhiteQueensideEmptySquare,
+    kWhiteQueensideFirstTransit,
+    kWhiteQueensideSecondTransit,
+    CastlingConstants::kWhiteKingsideCastlingRight,
+    CastlingConstants::kWhiteQueensideCastlingRight,
+};
+
+inline constexpr CastlingSideConfig kBlackCastlingSide{
+    ChessPieceColor::BLACK,
+    kBlackKingStartSquare,
+    kBlackKingsideRookSquare,
+    kBlackQueensideRookSquare,
+    kBlackKingsideTransitSquare,
+    kBlackKingsideDestination,
+    kBlackQueensideEmptySquare,
+    kBlackQueensideFirstTransit,
+    kBlackQueensideSecondTransit,
+    CastlingConstants::kBlackKingsideCastlingRight,
+    CastlingConstants::kBlackQueensideCastlingRight,
+};
+
+inline void tryAppendEnPassantMove(const Board& board, ChessPieceColor color, int src,
+                                   std::vector<Move>& moves) {
+    const auto enPassantTarget = board.enPassantSquare.target();
+    if (!enPassantTarget) {
+        return;
+    }
+
+    const int epSquare = *enPassantTarget;
+    const int srcFile = src % kBoardDimension;
+    const ChessPieceColor enemyColor =
+        color == ChessPieceColor::WHITE ? ChessPieceColor::BLACK : ChessPieceColor::WHITE;
+
+    const bool canCaptureLeft =
+        srcFile > kMinFile &&
+        epSquare == (color == ChessPieceColor::WHITE
+                         ? src + kWhiteEnPassantCaptureLeftOffset
+                         : src - kBlackEnPassantCaptureLeftOffset);
+    const bool canCaptureRight =
+        srcFile < kMaxFile &&
+        epSquare == (color == ChessPieceColor::WHITE
+                         ? src + kWhiteEnPassantCaptureRightOffset
+                         : src - kBlackEnPassantCaptureRightOffset);
+    if (!canCaptureLeft && !canCaptureRight) {
+        return;
+    }
+
+    const int capturedPawnSquare =
+        epSquare + (color == ChessPieceColor::WHITE ? -kSinglePawnPush : kSinglePawnPush);
+    if (capturedPawnSquare < kZero || capturedPawnSquare >= kBoardSquareCount) {
+        return;
+    }
+
+    const Piece& capturedPawn = board.squares[capturedPawnSquare].piece;
+    if (capturedPawn.PieceType != ChessPieceType::PAWN ||
+        capturedPawn.PieceColor != enemyColor ||
+        board.squares[epSquare].piece.PieceType != ChessPieceType::NONE) {
+        return;
+    }
+
+    moves.emplace_back(src, epSquare);
+}
+
+bool canCastleKingside(const Board& board, const CastlingSideConfig& config, Bitboard occupancy);
+bool canCastleQueenside(const Board& board, const CastlingSideConfig& config, Bitboard occupancy);
+
 void appendPawnMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves);
 void appendKnightMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves);
 void appendBishopMoves(Board& board, ChessPieceColor color, std::vector<Move>& moves);

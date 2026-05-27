@@ -83,8 +83,10 @@ const PieceSquareTable TUNED_KING_EG = {
     -27, -11, 4,   13,  14,  4,  -5, -17, -53, -34, -21, -11, -28, -14, -24, -43};
 
 int getMaterialValue(ChessPieceType piece) {
-    constexpr std::array<int, 7> values = {
-        PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE, 0};
+    constexpr std::array<int, 7> values = {MaterialValues::kPawnValue,   MaterialValues::kKnightValue,
+                                           MaterialValues::kBishopValue, MaterialValues::kRookValue,
+                                           MaterialValues::kQueenValue,  MaterialValues::kKingValue,
+                                           0};
     return values[static_cast<int>(piece)];
 }
 

@@ -16,7 +16,7 @@ TEST(EngineImprovements, QuiescenceSearch) {
     ParallelSearchContext context(1);
     context.startTime = std::chrono::steady_clock::now();
     context.timeLimitMs = 3000;
-    GenValidMoves(tacticalBoard);
+    UpdateCheckState(tacticalBoard);
     int qScore = QuiescenceSearch(tacticalBoard, -10000, 10000, true, historyTable, context, 0);
     ASSERT_GE(qScore, staticEval);
 }

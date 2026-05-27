@@ -12,7 +12,7 @@ static uint64_t perft(Board& board, ChessPieceColor color, int depth) {
         return 1;
     }
 
-    GenValidMoves(board);
+    UpdateCheckState(board);
     auto moves = generateBitboardMoves(board, color);
 
     ChessPieceColor nextColor =

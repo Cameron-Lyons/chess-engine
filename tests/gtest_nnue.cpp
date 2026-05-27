@@ -138,11 +138,19 @@ TEST_F(NNUETest, GeneratedModelLoadsAndDrivesEvaluation) {
     std::filesystem::remove(path);
 }
 
-TEST_F(NNUETest, GeneratedBitboardModelLoadsAndEvaluates) {
+TEST_F(NNUETest, GeneratedBitboardModelLoadsAndEvaluatesFromBoard) {
     const auto path = writeGeneratedBitboardNnueModel();
+    Board board;
+    board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     ASSERT_TRUE(NNUEBitboard::init(path.string()));
     ASSERT_NE(NNUEBitboard::globalEvaluator.get(), nullptr);
+
+    const BitboardPosition pos = BitboardPosition::fromBoard(board);
+    EXPECT_EQ(pos.getSideToMove(), ChessPieceColor::WHITE);
+    EXPECT_EQ(pos.getPieceBitboard(ChessPieceType::KING, ChessPieceColor::WHITE),
+              board.whiteKings);
+    EXPECT_EQ(pos.getAllPieces(), board.allPieces);
 
     std::filesystem::remove(path);
 }

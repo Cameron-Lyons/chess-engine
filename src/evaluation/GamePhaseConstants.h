@@ -1,15 +1,17 @@
 #pragma once
 
+#include "EvaluationTuning.h"
+
 namespace GamePhaseConstants {
-inline constexpr int kQueenMaterialValue = 900;
-inline constexpr int kRookMaterialValue = 500;
-inline constexpr int kMinorMaterialValue = 300;
-inline constexpr int kPawnMaterialValue = 100;
+inline constexpr int kQueenMaterialValue = EvaluationParams::QUEEN_VALUE;
+inline constexpr int kRookMaterialValue = EvaluationParams::ROOK_VALUE;
+inline constexpr int kMinorMaterialValue = EvaluationParams::KNIGHT_VALUE;
+inline constexpr int kPawnMaterialValue = EvaluationParams::PAWN_VALUE;
 
-inline constexpr int kOpeningMaterialThreshold = 6000;
-inline constexpr int kOpeningPieceCountThreshold = 20;
-inline constexpr int kOpeningMinQueenCount = 1;
+inline constexpr int kOpeningMaterialThreshold = EvaluationParams::OPENING_MATERIAL_THRESHOLD;
+inline constexpr int kOpeningPieceCountThreshold = EvaluationParams::OPENING_PIECE_COUNT_THRESHOLD;
+inline constexpr int kOpeningMinQueenCount = EvaluationParams::OPENING_MIN_QUEEN_COUNT;
 
-inline constexpr int kEndgameMaterialThreshold = 2000;
-inline constexpr int kEndgamePieceCountThreshold = 10;
+inline constexpr int kEndgameMaterialThreshold = EvaluationParams::ENDGAME_MATERIAL_THRESHOLD;
+inline constexpr int kEndgamePieceCountThreshold = EvaluationParams::ENDGAME_PIECE_COUNT_THRESHOLD;
 } // namespace GamePhaseConstants

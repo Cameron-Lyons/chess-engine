@@ -73,11 +73,8 @@ int HybridEvaluator::evaluatePositional(const Board& board) const {
     for (int square = 0; square < kBoardSquareCount; ++square) {
         const Piece& piece = board.squares[square].piece;
         if (piece.PieceType != ChessPieceType::NONE) {
-            int pstValue = getPieceSquareValue(piece.PieceType, square, piece.PieceColor);
-            if (piece.PieceColor == ChessPieceColor::BLACK) {
-                pstValue *= kBlackScoreMultiplier;
-            }
-            positionalScore += pstValue;
+            // getPieceSquareValue already returns white-oriented PST values.
+            positionalScore += getPieceSquareValue(piece.PieceType, square, piece.PieceColor);
         }
     }
 

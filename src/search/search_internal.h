@@ -2,6 +2,7 @@
 
 #include <compare>
 
+#include "../core/MaterialValues.h"
 #include "../core/SquareSentinel.h"
 #include "AdvancedSearch.h"
 #include "LMR.h"
@@ -44,11 +45,12 @@ inline constexpr int kKillerBaseScore = 5000;
 inline constexpr int kKillerSlotPenalty = 100;
 inline constexpr int kDefaultThreadFallback = 4;
 
-inline constexpr int kPawnValue = 100;
-inline constexpr int kMinorPieceValue = 300;
-inline constexpr int kRookValue = 500;
-inline constexpr int kQueenValue = 975;
-inline constexpr int kKingValue = 10000;
+inline constexpr int kPawnValue = MaterialValues::kPawnValue;
+inline constexpr int kKnightValue = MaterialValues::kKnightValue;
+inline constexpr int kBishopValue = MaterialValues::kBishopValue;
+inline constexpr int kRookValue = MaterialValues::kRookValue;
+inline constexpr int kQueenValue = MaterialValues::kQueenValue;
+inline constexpr int kKingValue = MaterialValues::kKingValue;
 
 inline constexpr int kCounterMoveQuietBonus = 12000;
 inline constexpr int kMvvLvaScale = 1000;
