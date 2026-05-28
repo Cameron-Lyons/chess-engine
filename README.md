@@ -1,6 +1,6 @@
 # Chess Engine
 
-Modern C++23 chess engine with:
+Modern C++26 chess engine with:
 - Console play mode (play against the engine in your terminal)
 - UCI mode (for chess GUIs)
 - Bitboard move generation and alpha-beta style search enhancements

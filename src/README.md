@@ -74,7 +74,7 @@ Contains utility functions and performance optimizations:
 
 ## Build System
 
-Bazel with `MODULE.bazel` (bzlmod) for dependency management. C++23 standard with `-Werror`.
+Bazel with `MODULE.bazel` (bzlmod) for dependency management. C++26 standard with `-Werror`.
 
 ## Dependencies
 

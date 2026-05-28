@@ -1,4 +1,4 @@
-build --cxxopt=-std=c++23
+build --cxxopt=-std=c++26
 build --cxxopt=-Wall
 build --cxxopt=-Wextra
 build --cxxopt=-Wpedantic

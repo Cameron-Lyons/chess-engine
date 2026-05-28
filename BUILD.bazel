@@ -7,7 +7,7 @@ x86_avx2_copts = select({
     "//conditions:default": [],
 })
 
-common_copts = ["-Werror", "-std=c++23"]
+common_copts = ["-Werror", "-std=c++26"]
 arm64_tune_copts = select({
     "@bazel_tools//src/conditions:darwin_arm64": ["-mcpu=apple-m1"],
     "@bazel_tools//src/conditions:darwin_arm64e": ["-mcpu=apple-m1"],

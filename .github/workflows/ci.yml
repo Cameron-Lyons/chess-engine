@@ -104,4 +104,4 @@ jobs:
         run: |
           find src -type f -name '*.cpp' -print0 | \
             xargs -0 -P "$(nproc)" -I{} sh -c \
-              'clang-tidy-20 "$1" -- -std=c++23 -Isrc -Isrc/core -mavx2 -march=x86-64-v3' _ {} || true
+              'clang-tidy-20 "$1" -- -std=c++26 -Isrc -Isrc/core -mavx2 -march=x86-64-v3' _ {} || true

@@ -5,7 +5,7 @@ common_test_copts = [
     "-Wno-sign-compare",
     "-Wno-unknown-warning-option",
     "-Wno-character-conversion",
-    "-std=c++23",
+    "-std=c++26",
 ]
 
 [
