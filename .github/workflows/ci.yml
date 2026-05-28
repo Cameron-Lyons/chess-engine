@@ -82,8 +82,11 @@ jobs:
       - name: Install dead code dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y universal-ctags ripgrep
+          sudo apt-get install -y universal-ctags ripgrep g++-14
       - name: Run dead code checks
+        env:
+          CC: gcc-14
+          CXX: g++-14
         run: |
           ./scripts/check_dead_code.sh
 
