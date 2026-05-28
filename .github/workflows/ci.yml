@@ -7,45 +7,60 @@ on:
     branches: [main]
 
 jobs:
-  format-check:
+  clang-format:
     name: clang-format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Install latest clang-format
+      - uses: actions/checkout@v6
+      - name: Install clang-format
         run: |
-          pip install clang-format
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          sudo add-apt-repository -y "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main"
+          sudo apt-get update
+          sudo apt-get install -y clang-format-21
       - name: Check formatting
+        run: ./scripts/check_clang_format.sh
+
+  clang-tidy:
+    name: clang-tidy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install clang-tidy
         run: |
-          find src tests -type f \( -name '*.cpp' -o -name '*.h' \) -print0 | \
-            xargs -0 -P "$(nproc)" -n 20 clang-format --dry-run --Werror
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          sudo add-apt-repository -y "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main"
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy-21
+      - name: Run clang-tidy
+        run: ./scripts/run_clang_tidy.sh
 
   build-and-test:
     name: Build & Test (${{ matrix.compiler }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         include:
           - compiler: gcc-14
             cc: gcc-14
             cxx: g++-14
-          - compiler: clang-20
-            cc: clang-20
-            cxx: clang++-20
+          - compiler: clang-21
+            cc: clang-21
+            cxx: clang++-21
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: bazelbuild/setup-bazelisk@v3
 
-      - name: Install Clang 20
-        if: matrix.compiler == 'clang-20'
+      - name: Install Clang 21
+        if: matrix.compiler == 'clang-21'
         run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository -y "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main"
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          sudo add-apt-repository -y "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main"
           sudo apt-get update
-          sudo apt-get install -y clang-20
+          sudo apt-get install -y clang-21
 
       - name: Mount bazel cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/bazel
           key: bazel-${{ matrix.compiler }}-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc') }}
@@ -75,9 +90,9 @@ jobs:
 
   dead-code:
     name: Dead Code Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: bazelbuild/setup-bazelisk@v3
       - name: Install dead code dependencies
         run: |
@@ -87,24 +102,4 @@ jobs:
         env:
           CC: gcc-14
           CXX: g++-14
-        run: |
-          ./scripts/check_dead_code.sh
-
-  clang-tidy:
-    name: clang-tidy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install clang-tidy-20
-        run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository -y "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main"
-          sudo apt-get update
-          sudo apt-get install -y clang-tidy-20
-
-      - name: Run clang-tidy
-        run: |
-          find src -type f -name '*.cpp' -print0 | \
-            xargs -0 -P "$(nproc)" -I{} sh -c \
-              'clang-tidy-20 "$1" -- -std=c++26 -Isrc -Isrc/core -mavx2 -march=x86-64-v3' _ {} || true
+        run: ./scripts/check_dead_code.sh
