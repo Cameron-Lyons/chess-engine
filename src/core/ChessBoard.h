@@ -177,15 +177,14 @@ struct Board {
     }
 
     Board(Board&& other) noexcept
-        : position(std::move(other.position)), state(std::move(other.state)),
-          BOARD_REF_MEMBERS_(position, state) {}
+        : position(other.position), state(other.state), BOARD_REF_MEMBERS_(position, state) {}
 
     Board& operator=(Board&& other) noexcept {
         if (this == &other) {
             return *this;
         }
-        position = std::move(other.position);
-        state = std::move(other.state);
+        position = other.position;
+        state = other.state;
         return *this;
     }
 

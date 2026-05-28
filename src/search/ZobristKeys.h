@@ -8,7 +8,7 @@ namespace SearchInternal {
 inline constexpr std::uint64_t kZobristSeed = 202406ULL;
 
 constexpr std::uint64_t zobristNext(std::uint64_t& state) {
-    state = state * 6364136223846793005ULL + 1ULL;
+    state = (state * 6364136223846793005ULL) + 1ULL;
     return (state >> 11U) * 2862933555777941757ULL;
 }
 

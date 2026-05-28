@@ -15,7 +15,7 @@
 
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
 #define NNUEBITBOARD_X86_SIMD 1
-#if defined(__has_include)
+#ifdef __has_include
 #if __has_include(<cpuid.h>)
 #define NNUEBITBOARD_HAS_CPUID_H 1
 #include <cpuid.h>

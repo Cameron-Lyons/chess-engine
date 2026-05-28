@@ -13,7 +13,7 @@ namespace SearchTuning {
 }
 
 [[nodiscard]] inline int futilityMargin(int depth) {
-    return TUNABLE_FUTILITY_BASE + depth * (TUNABLE_FUTILITY_MULT / 2);
+    return TUNABLE_FUTILITY_BASE + (depth * (TUNABLE_FUTILITY_MULT / 2));
 }
 
 [[nodiscard]] inline double lmrBaseOffset() {

@@ -85,7 +85,7 @@ UCIEngine::~UCIEngine() {
 void UCIEngine::searchThreadEntry(const SearchTask& task, std::stop_token stopToken) {
     try {
         SearchResult result = performSearch(task.boardSnapshot, task.depth, task.timeForMove,
-                                            task.optimalTime, task.maxTime, stopToken);
+                                            task.optimalTime, task.maxTime, std::move(stopToken));
 
         if (isSearching.load()) {
             std::optional<Move> ponderMove;

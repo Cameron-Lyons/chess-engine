@@ -36,12 +36,12 @@ public:
 
     template <typename Callable>
     [[nodiscard]] int start(Callable&& callable, std::size_t stackBytes = 0,
-                            std::stop_token stopToken = {}) {
+                            const std::stop_token& stopToken = {}) {
         join();
 
         auto task = std::make_shared<std::decay_t<Callable>>(std::forward<Callable>(callable));
-        auto runner =
-            std::make_shared<std::function<void(std::stop_token)>>([task](std::stop_token token) {
+        auto runner = std::make_shared<std::function<void(std::stop_token)>>(
+            [task](const std::stop_token& token) {
                 if constexpr (requires { (*task)(token); }) {
                     (*task)(token);
                 } else {
@@ -114,14 +114,14 @@ private:
         pthread_t thread{};
         bool joinable = false;
         std::shared_ptr<std::function<void(std::stop_token)>> runner;
-        std::stop_token stopToken{};
+        std::stop_token stopToken;
     };
 
     using PthreadHandlePtr = std::shared_ptr<PthreadHandle>;
 
     [[nodiscard]] int startWithJthread(const std::function<void(std::stop_token)>& runner,
-                                       std::stop_token stopToken) {
-        handle_ = std::jthread([runner, stopToken](std::stop_token threadToken) {
+                                       const std::stop_token& stopToken) {
+        handle_ = std::jthread([runner, stopToken](const std::stop_token& threadToken) {
             if (threadToken.stop_requested() || stopToken.stop_requested()) {
                 return;
             }

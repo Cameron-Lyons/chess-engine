@@ -82,7 +82,7 @@ private:
     std::atomic_bool isPondering{false};
     std::atomic_bool stopRequested{false};
     std::stop_source searchStopSource;
-    std::stop_token activeSearchStopToken{};
+    std::stop_token activeSearchStopToken;
     std::chrono::steady_clock::time_point searchStartTime;
     int searchTimeLimit = 0;
     int searchDepthLimit = 0;
