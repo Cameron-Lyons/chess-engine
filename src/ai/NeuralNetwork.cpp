@@ -219,7 +219,7 @@ public:
         const auto now = std::chrono::system_clock::now();
         const auto timeValue = std::chrono::system_clock::to_time_t(now);
         std::tm localTime{};
-#if defined(_WIN32)
+#ifdef _WIN32
         localtime_s(&localTime, &timeValue);
 #else
         localtime_r(&timeValue, &localTime);

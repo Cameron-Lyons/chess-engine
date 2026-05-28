@@ -180,7 +180,7 @@ struct MoveApplicationData {
     int changedSquareCount = kZero;
     ChessPieceColor previousTurn = ChessPieceColor::WHITE;
     std::uint8_t previousCastlingRights = 0;
-    chess::EnPassantSquare previousEnPassantSquare{};
+    chess::EnPassantSquare previousEnPassantSquare;
     int previousHalfmoveClock = 0;
     int previousFullmoveNumber = 1;
     bool previousWhiteChecked = false;

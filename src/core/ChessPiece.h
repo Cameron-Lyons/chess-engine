@@ -32,21 +32,21 @@ public:
           moved(false) {}
 
     static constexpr short getPieceValue(ChessPieceType pieceType) {
-        constexpr std::array<short, 7> values = {MaterialValues::kPawnValue,
-                                                 MaterialValues::kKnightValue,
-                                                 MaterialValues::kBishopValue,
-                                                 MaterialValues::kRookValue,
-                                                 MaterialValues::kQueenValue,
-                                                 MaterialValues::kKingValue,
-                                                 0};
+        constexpr std::array<int, 7> values = {MaterialValues::kPawnValue,
+                                               MaterialValues::kKnightValue,
+                                               MaterialValues::kBishopValue,
+                                               MaterialValues::kRookValue,
+                                               MaterialValues::kQueenValue,
+                                               MaterialValues::kKingValue,
+                                               0};
         const auto index = static_cast<std::size_t>(std::to_underlying(pieceType));
-        return index < values.size() ? values[index] : 0;
+        return static_cast<short>(index < values.size() ? values[index] : 0);
     }
 
     static constexpr short getPieceActionValue(ChessPieceType pieceType) {
-        constexpr std::array<short, 7> values = {6, 3, 3, 2, 2, 1, 0};
+        constexpr std::array<int, 7> values = {6, 3, 3, 2, 2, 1, 0};
         const auto index = static_cast<std::size_t>(std::to_underlying(pieceType));
-        return index < values.size() ? values[index] : 0;
+        return static_cast<short>(index < values.size() ? values[index] : 0);
     }
 
     static constexpr ChessPieceType fromFenChar(char fenChar) {
