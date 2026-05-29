@@ -11,7 +11,6 @@
 #include <format>
 #include <iostream>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace {

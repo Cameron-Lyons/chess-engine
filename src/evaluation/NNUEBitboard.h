@@ -92,10 +92,6 @@ public:
     bool isComputed(int perspective) const {
         return computed[perspective];
     }
-
-    void setComputed(int perspective) {
-        computed[perspective] = true;
-    }
 };
 
 class alignas(SIMD_ALIGN) LinearLayer {

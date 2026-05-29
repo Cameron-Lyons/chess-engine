@@ -58,13 +58,6 @@ public:
                         const std::vector<Move>& excludedRootMoves = {});
     void stop();
 
-    int getNodesSearched() const {
-        return shared->nodesSearched.load();
-    }
-    int getBestDepth() const {
-        return shared->bestDepth.load();
-    }
-
     static int getAspirationDelta(int threadId);
     static int getDepthOffset(int threadId);
 

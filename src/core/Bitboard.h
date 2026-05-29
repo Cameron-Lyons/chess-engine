@@ -19,10 +19,6 @@ inline int lsb(Bitboard b) {
     return b ? std::countr_zero(b) : -1;
 }
 
-inline int msb(Bitboard b) {
-    return b ? std::bit_width(b) - 1 : -1;
-}
-
 inline void set_bit(Bitboard& b, int sq) {
     b |= (1ULL << sq);
 }

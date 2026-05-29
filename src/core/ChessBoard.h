@@ -6,23 +6,12 @@
 #include "Move.h"
 #include "SquareSentinel.h"
 
-#include "../utils/ChessFormat.h"
-#include "../utils/Concepts.h"
-
-#include <algorithm>
 #include <array>
 #include <chrono>
-#include <concepts>
 #include <cstdint>
 #include <expected>
-#include <format>
-#include <functional>
-#include <memory>
 #include <string>
 #include <string_view>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 using ChessString = std::string_view;
 
@@ -48,10 +37,6 @@ struct Square {
 
     Square() : loc(0) {}
     Square(int location) : loc(location) {}
-
-    std::string toString() const {
-        return chess::format::pieceLabel(piece);
-    }
 };
 
 struct Position {
@@ -188,68 +173,6 @@ struct Board {
         return *this;
     }
 
-    template <std::integral T>
-    bool isValidIndex(T index) const {
-        if constexpr (std::is_signed_v<T>) {
-            return index >= 0 && index < static_cast<T>(NUM_SQUARES);
-        }
-        return index < static_cast<T>(NUM_SQUARES);
-    }
-
-    template <std::integral T>
-    ChessPieceColor getPieceColor(T pos) const {
-        if (!isValidIndex(pos)) {
-            return ChessPieceColor::WHITE;
-        }
-        return squares[pos].piece.PieceColor;
-    }
-
-    template <std::integral T>
-    ChessPieceType getPieceType(T pos) const {
-        if (!isValidIndex(pos)) {
-            return ChessPieceType::NONE;
-        }
-        return squares[pos].piece.PieceType;
-    }
-
-    std::vector<int> getPiecesOfType(ChessPieceType type) const {
-        std::vector<int> result;
-        for (int i = 0; i < 64; ++i) {
-            if (squares[i].piece.PieceType == type) {
-                result.push_back(i);
-            }
-        }
-        return result;
-    }
-
-    std::vector<int> getPiecesOfColor(ChessPieceColor color) const {
-        std::vector<int> result;
-        for (int i = 0; i < 64; ++i) {
-            if (squares[i].piece.PieceColor == color) {
-                result.push_back(i);
-            }
-        }
-        return result;
-    }
-
-    std::string toString() const {
-        std::string result = "Board:\n";
-        for (int row = 7; row >= 0; --row) {
-            result += std::format("{} ", row + 1);
-            for (int col = 0; col < 8; ++col) {
-                result += std::format("{} ", squares[(row * 8) + col].toString());
-            }
-            result += std::format("{}\n", row + 1);
-        }
-        result += std::format("  a b c d e f g h\nTurn: {}\n",
-                              turn == ChessPieceColor::WHITE ? "White" : "Black");
-        return result;
-    }
-
-    ChessTimePoint getCurrentTime() const {
-        return ChessClock::now();
-    }
-
     ChessDuration getTimeSinceLastMove() const {
         return std::chrono::duration_cast<ChessDuration>(ChessClock::now() - lastMoveTime);
     }
@@ -274,27 +197,6 @@ struct Board {
         state.castlingRights &= static_cast<std::uint8_t>(~mask);
     }
 
-    bool canCastleAny(ChessPieceColor color) const {
-        const std::uint8_t mask = (color == ChessPieceColor::WHITE)
-                                      ? CastlingConstants::kWhiteCastlingRightsMask
-                                      : CastlingConstants::kBlackCastlingRightsMask;
-        return hasCastlingRight(mask);
-    }
-
-    bool canCastleKingside(ChessPieceColor color) const {
-        const std::uint8_t mask = (color == ChessPieceColor::WHITE)
-                                      ? CastlingConstants::kWhiteKingsideCastlingRight
-                                      : CastlingConstants::kBlackKingsideCastlingRight;
-        return hasCastlingRight(mask);
-    }
-
-    bool canCastleQueenside(ChessPieceColor color) const {
-        const std::uint8_t mask = (color == ChessPieceColor::WHITE)
-                                      ? CastlingConstants::kWhiteQueensideCastlingRight
-                                      : CastlingConstants::kBlackQueensideCastlingRight;
-        return hasCastlingRight(mask);
-    }
-
     std::string toFEN() const;
     std::expected<void, ChessError> fromFEN(ChessString fen);
     void InitializeFromFEN(ChessString fen);
@@ -304,79 +206,7 @@ struct Board {
     void updateOccupancy();
     Bitboard getPieceBitboard(ChessPieceType type, ChessPieceColor color) const;
 
-    template <chess::SquareCallback Func>
-    void forEachPiece(Func&& func) const {
-        for (int i = 0; i < 64; ++i) {
-            if (squares[i].piece.PieceType != ChessPieceType::NONE) {
-                func(i, squares[i].piece);
-            }
-        }
-    }
-
-    template <chess::SquarePredicate Func>
-    std::vector<int> filterPositions(Func&& predicate) const {
-        std::vector<int> result;
-        for (int i = 0; i < 64; ++i) {
-            if (predicate(i, squares[i].piece)) {
-                result.push_back(i);
-            }
-        }
-        return result;
-    }
-
     void recordMoveTime() {
         lastMoveTime = ChessClock::now();
     }
 };
-
-namespace ChessUtils {
-
-inline bool isValidPosition(int row, int col) {
-    return row >= 0 && row < 8 && col >= 0 && col < 8;
-}
-
-inline int positionToIndex(int row, int col) {
-    return (row * 8) + col;
-}
-
-inline std::pair<int, int> indexToPosition(int index) {
-    return {index / 8, index % 8};
-}
-
-template <chess::SquareIndexContainer Container>
-inline std::vector<int> filterValidMoves(const Container& moves) {
-    std::vector<int> result;
-    std::copy_if(moves.begin(), moves.end(), std::back_inserter(result),
-                 [](int move) { return move >= 0 && move < 64; });
-    return result;
-}
-
-inline std::string formatMove(int from, int to) {
-    return chess::format::debugMove(from, to);
-}
-
-inline std::string formatError(ChessError error) {
-    switch (error) {
-        case ChessError::None:
-            return "No error";
-        case ChessError::InvalidMove:
-            return "Invalid move";
-        case ChessError::NoPieceAtSource:
-            return "No piece at source position";
-        case ChessError::WrongTurn:
-            return "Wrong player's turn";
-        case ChessError::MoveLeavesKingInCheck:
-            return "Move leaves king in check";
-        case ChessError::InvalidPosition:
-            return "Invalid position";
-        case ChessError::InvalidFEN:
-            return "Invalid FEN string";
-        case ChessError::Timeout:
-            return "Operation timed out";
-        case ChessError::OutOfMemory:
-            return "Out of memory";
-        default:
-            return "Unknown error";
-    }
-}
-} // namespace ChessUtils

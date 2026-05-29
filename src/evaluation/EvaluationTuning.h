@@ -167,7 +167,4 @@ public:
     void optimize(int iterations);
     void exportParams(const std::string& filename) const;
     void initParams();
-    double getError() const {
-        return computeError(params);
-    }
 };
