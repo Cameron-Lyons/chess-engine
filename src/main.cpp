@@ -18,14 +18,11 @@
 #include <cctype>
 #include <chrono>
 #include <cstddef>
-#include <cstdint>
 #include <exception>
 #include <format>
 #include <iostream>
-#include <stack>
 #include <string>
 #include <thread>
-#include <utility>
 #include <vector>
 
 using ChessClock = std::chrono::steady_clock;

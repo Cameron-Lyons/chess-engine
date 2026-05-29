@@ -1,8 +1,8 @@
 #include "ChessBoard.h"
-#include "../search/ValidMoves.h"
 #include "Bitboard.h"
 #include "CastlingConstants.h"
 #include "ChessPiece.h"
+#include "utils/ChessFormat.h"
 
 #include <algorithm>
 #include <cctype>

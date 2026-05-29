@@ -4,6 +4,7 @@
 #include "search/ValidMoves.h"
 #include "search/search.h"
 
+#include <algorithm>
 #include <ranges>
 
 namespace {

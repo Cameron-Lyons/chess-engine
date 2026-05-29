@@ -12,7 +12,6 @@ Contains the fundamental chess data structures and basic functionality:
 - `BitboardMoves.h/cpp` - Bitboard-based move generation
 - `BitboardOnly.h/cpp` - Bitboard-only board representation
 - `MagicBitboards.h/cpp` - Magic bitboard implementation for sliding pieces
-- `MoveContent.h` - Move representation and utilities
 
 ### `search/` - Search Algorithms and Move Generation
 Contains all search-related functionality:
@@ -45,7 +44,6 @@ Contains advanced AI and machine learning components:
 ### `utils/` - Utilities and Optimizations
 Contains utility functions and performance optimizations:
 - `engine_globals.h/cpp` - Global engine state and configuration
-- `Profiler.h` - Performance profiling tools
 
 ## Implementation Status
 

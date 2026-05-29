@@ -1,7 +1,7 @@
 #include "BitboardOnly.h"
 #include "ChessBoard.h"
 
-BitboardPosition::BitboardPosition() : sideToMove(WHITE), lastMoveTime(ChessClock::now()) {
+BitboardPosition::BitboardPosition() : sideToMove(WHITE) {
     for (auto& color : pieces) {
         for (auto& piece : color) {
             piece = 0;
@@ -34,7 +34,6 @@ BitboardPosition BitboardPosition::fromBoard(const Board& board) {
     pos.occupancy[2] = board.allPieces;
 
     pos.sideToMove = (board.turn == ChessPieceColor::WHITE) ? WHITE : BLACK;
-    pos.lastMoveTime = board.lastMoveTime;
 
     return pos;
 }

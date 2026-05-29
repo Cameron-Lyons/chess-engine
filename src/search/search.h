@@ -179,9 +179,6 @@ struct ThreadSafeHistory {
     int getScore(int srcPos, int destPos) const {
         return get(srcPos, destPos);
     }
-    void updateScore(int srcPos, int destPos, int score) {
-        update(srcPos, destPos, score);
-    }
 
 private:
     static constexpr int index(int srcPos, int destPos) {

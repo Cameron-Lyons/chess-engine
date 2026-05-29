@@ -1,7 +1,5 @@
 #include "ValidMoves_internal.h"
 
-#include <utility>
-
 namespace ValidMovesInternal {
 namespace {
 

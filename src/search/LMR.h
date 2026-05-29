@@ -74,10 +74,6 @@ struct LMRParams {
     static constexpr double BASE_PHASE_FACTOR = 1.0;
     static constexpr double PHASE_NORMALIZATION = 512.0;
     static constexpr double PHASE_REDUCTION_SCALE = 0.2;
-    static constexpr int VERIFY_REDUCTION_THRESHOLD = 2;
-    static constexpr int VERIFY_SCORE_MARGIN = 50;
-    static constexpr int FAIL_COUNT_THRESHOLD = 2;
-    static constexpr int REDUCTION_STEP = 1;
     static constexpr double CAPTURE_FACTOR = 0.5;
     static constexpr double CHECK_FACTOR = 0.3;
     static constexpr double KILLER_FACTOR = 0.6;
@@ -198,26 +194,6 @@ inline int calculateReduction(int depth, const MoveClassification& move,
     reduction = std::max(LMRParams::NO_REDUCTION, std::min(reduction, LMRParams::MAX_REDUCTION));
     reduction = std::min(reduction, depth - LMRParams::MIN_DEPTH_REMAINING);
     return reduction;
-}
-
-inline bool shouldVerifyReduction(int reduction, int score, int alpha, int beta) {
-
-    return reduction >= LMRParams::VERIFY_REDUCTION_THRESHOLD &&
-           (score > alpha - LMRParams::VERIFY_SCORE_MARGIN ||
-            score < beta + LMRParams::VERIFY_SCORE_MARGIN);
-}
-
-inline int adjustReduction(int baseReduction, int failCount, bool improving) {
-
-    if (failCount > LMRParams::FAIL_COUNT_THRESHOLD) {
-        return baseReduction + LMRParams::REDUCTION_STEP;
-    }
-
-    if (improving) {
-        return std::max(LMRParams::NO_REDUCTION, baseReduction - LMRParams::REDUCTION_STEP);
-    }
-
-    return baseReduction;
 }
 
 } // namespace LMREnhanced
