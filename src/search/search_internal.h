@@ -185,7 +185,7 @@ struct MoveApplicationData {
     int previousFullmoveNumber = 1;
     bool previousWhiteChecked = false;
     bool previousBlackChecked = false;
-    SquareIndex previousLastMove{};
+    SquareIndex previousLastMove;
     ChessTimePoint previousLastMoveTime;
     Bitboard previousWhitePawns = EMPTY;
     Bitboard previousWhiteKnights = EMPTY;

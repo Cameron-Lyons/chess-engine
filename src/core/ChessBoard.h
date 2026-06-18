@@ -67,7 +67,7 @@ struct StateInfo {
     int fullmoveNumber = 1;
     bool whiteChecked = false;
     bool blackChecked = false;
-    SquareIndex lastMove{};
+    SquareIndex lastMove;
     ChessTimePoint lastMoveTime = ChessClock::now();
 };
 
@@ -131,19 +131,18 @@ struct Board {
 
 private:
     Board(Position pos, StateInfo st)
-        : position(std::move(pos)), state(std::move(st)), squares(position.squares),
-          turn(state.turn), enPassantSquare(state.enPassantSquare),
-          halfmoveClock(state.halfmoveClock), fullmoveNumber(state.fullmoveNumber),
-          whiteChecked(state.whiteChecked), blackChecked(state.blackChecked),
-          LastMove(state.lastMove), whitePawns(position.whitePawns),
-          whiteKnights(position.whiteKnights), whiteBishops(position.whiteBishops),
-          whiteRooks(position.whiteRooks), whiteQueens(position.whiteQueens),
-          whiteKings(position.whiteKings), blackPawns(position.blackPawns),
-          blackKnights(position.blackKnights), blackBishops(position.blackBishops),
-          blackRooks(position.blackRooks), blackQueens(position.blackQueens),
-          blackKings(position.blackKings), whitePieces(position.whitePieces),
-          blackPieces(position.blackPieces), allPieces(position.allPieces),
-          lastMoveTime(state.lastMoveTime),
+        : position(pos), state(st), squares(position.squares), turn(state.turn),
+          enPassantSquare(state.enPassantSquare), halfmoveClock(state.halfmoveClock),
+          fullmoveNumber(state.fullmoveNumber), whiteChecked(state.whiteChecked),
+          blackChecked(state.blackChecked), LastMove(state.lastMove),
+          whitePawns(position.whitePawns), whiteKnights(position.whiteKnights),
+          whiteBishops(position.whiteBishops), whiteRooks(position.whiteRooks),
+          whiteQueens(position.whiteQueens), whiteKings(position.whiteKings),
+          blackPawns(position.blackPawns), blackKnights(position.blackKnights),
+          blackBishops(position.blackBishops), blackRooks(position.blackRooks),
+          blackQueens(position.blackQueens), blackKings(position.blackKings),
+          whitePieces(position.whitePieces), blackPieces(position.blackPieces),
+          allPieces(position.allPieces), lastMoveTime(state.lastMoveTime),
           whiteCanCastle(state, CastlingConstants::kWhiteCastlingRightsMask),
           blackCanCastle(state, CastlingConstants::kBlackCastlingRightsMask) {}
 
@@ -165,14 +164,14 @@ public:
         return *this;
     }
 
-    Board(Board&& other) noexcept : Board(std::move(other.position), std::move(other.state)) {}
+    Board(Board&& other) noexcept : Board(other.position, other.state) {}
 
     Board& operator=(Board&& other) noexcept {
         if (this == &other) {
             return *this;
         }
-        position = std::move(other.position);
-        state = std::move(other.state);
+        position = other.position;
+        state = other.state;
         return *this;
     }
 
