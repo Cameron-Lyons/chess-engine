@@ -33,10 +33,11 @@ enum class ChessError : std::uint8_t {
 
 struct Square {
     Piece piece;
-    int loc;
+    SquareIndex loc;
 
     Square() : loc(0) {}
-    Square(int location) : loc(location) {}
+    explicit Square(SquareIndex location) : loc(location) {}
+    explicit Square(int location) : loc(location) {}
 };
 
 struct Position {
@@ -66,24 +67,9 @@ struct StateInfo {
     int fullmoveNumber = 1;
     bool whiteChecked = false;
     bool blackChecked = false;
-    int lastMove = 0;
+    SquareIndex lastMove{};
     ChessTimePoint lastMoveTime = ChessClock::now();
 };
-
-#define BOARD_REF_MEMBERS_(pos, st)                                                                \
-    squares((pos).squares), turn((st).turn), enPassantSquare((st).enPassantSquare),                \
-        halfmoveClock((st).halfmoveClock), fullmoveNumber((st).fullmoveNumber),                    \
-        whiteChecked((st).whiteChecked), blackChecked((st).blackChecked), LastMove((st).lastMove), \
-        whitePawns((pos).whitePawns), whiteKnights((pos).whiteKnights),                            \
-        whiteBishops((pos).whiteBishops), whiteRooks((pos).whiteRooks),                            \
-        whiteQueens((pos).whiteQueens), whiteKings((pos).whiteKings),                              \
-        blackPawns((pos).blackPawns), blackKnights((pos).blackKnights),                            \
-        blackBishops((pos).blackBishops), blackRooks((pos).blackRooks),                            \
-        blackQueens((pos).blackQueens), blackKings((pos).blackKings),                              \
-        whitePieces((pos).whitePieces), blackPieces((pos).blackPieces),                            \
-        allPieces((pos).allPieces), lastMoveTime((st).lastMoveTime),                               \
-        whiteCanCastle((st), CastlingConstants::kWhiteCastlingRightsMask),                         \
-        blackCanCastle((st), CastlingConstants::kBlackCastlingRightsMask)
 
 struct Board {
     class CastlingSideProxy {
@@ -103,7 +89,7 @@ struct Board {
             return *this;
         }
 
-        operator bool() const {
+        explicit operator bool() const {
             return (state->castlingRights & mask) != 0;
         }
 
@@ -123,7 +109,7 @@ struct Board {
     int& fullmoveNumber;
     bool& whiteChecked;
     bool& blackChecked;
-    int& LastMove;
+    SquareIndex& LastMove;
     Bitboard& whitePawns;
     Bitboard& whiteKnights;
     Bitboard& whiteBishops;
@@ -143,14 +129,32 @@ struct Board {
     CastlingSideProxy whiteCanCastle;
     CastlingSideProxy blackCanCastle;
 
-    Board() : BOARD_REF_MEMBERS_(position, state) {
+private:
+    Board(Position pos, StateInfo st)
+        : position(std::move(pos)), state(std::move(st)), squares(position.squares),
+          turn(state.turn), enPassantSquare(state.enPassantSquare),
+          halfmoveClock(state.halfmoveClock), fullmoveNumber(state.fullmoveNumber),
+          whiteChecked(state.whiteChecked), blackChecked(state.blackChecked),
+          LastMove(state.lastMove), whitePawns(position.whitePawns),
+          whiteKnights(position.whiteKnights), whiteBishops(position.whiteBishops),
+          whiteRooks(position.whiteRooks), whiteQueens(position.whiteQueens),
+          whiteKings(position.whiteKings), blackPawns(position.blackPawns),
+          blackKnights(position.blackKnights), blackBishops(position.blackBishops),
+          blackRooks(position.blackRooks), blackQueens(position.blackQueens),
+          blackKings(position.blackKings), whitePieces(position.whitePieces),
+          blackPieces(position.blackPieces), allPieces(position.allPieces),
+          lastMoveTime(state.lastMoveTime),
+          whiteCanCastle(state, CastlingConstants::kWhiteCastlingRightsMask),
+          blackCanCastle(state, CastlingConstants::kBlackCastlingRightsMask) {}
+
+public:
+    Board() : Board(Position{}, StateInfo{}) {
         for (int i = 0; i < 64; ++i) {
             squares[i] = Square(i);
         }
     }
 
-    Board(const Board& other)
-        : position(other.position), state(other.state), BOARD_REF_MEMBERS_(position, state) {}
+    Board(const Board& other) : Board(other.position, other.state) {}
 
     Board& operator=(const Board& other) {
         if (this == &other) {
@@ -161,15 +165,14 @@ struct Board {
         return *this;
     }
 
-    Board(Board&& other) noexcept
-        : position(other.position), state(other.state), BOARD_REF_MEMBERS_(position, state) {}
+    Board(Board&& other) noexcept : Board(std::move(other.position), std::move(other.state)) {}
 
     Board& operator=(Board&& other) noexcept {
         if (this == &other) {
             return *this;
         }
-        position = other.position;
-        state = other.state;
+        position = std::move(other.position);
+        state = std::move(other.state);
         return *this;
     }
 
@@ -200,7 +203,10 @@ struct Board {
     std::string toFEN() const;
     std::expected<void, ChessError> fromFEN(ChessString fen);
     void InitializeFromFEN(ChessString fen);
-    bool movePiece(int from, int to);
+    bool movePiece(SquareIndex from, SquareIndex to);
+    bool movePiece(int from, int to) {
+        return movePiece(SquareIndex(from), SquareIndex(to));
+    }
     void clearBitboards();
     void updateBitboards();
     void updateOccupancy();

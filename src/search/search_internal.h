@@ -146,7 +146,7 @@ inline constexpr int kFastEvalDepthThreshold = 6;
 inline constexpr int kFastEvalQuiescencePlyThreshold = 2;
 inline constexpr std::uint64_t kUnsetZobristKey = std::numeric_limits<std::uint64_t>::max();
 inline constexpr int kZobristCastlingStateCount = 16;
-inline constexpr int kNoEpSquare = chess::kNoEnPassantSquare;
+inline constexpr int kNoEpSquare = kInvalidSquare;
 inline constexpr int kMoveUndoMaxSquares = 5;
 inline constexpr std::size_t kRootSplitThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
 inline constexpr int kRootSplitMinDepth = 4;
@@ -185,7 +185,7 @@ struct MoveApplicationData {
     int previousFullmoveNumber = 1;
     bool previousWhiteChecked = false;
     bool previousBlackChecked = false;
-    int previousLastMove = kZero;
+    SquareIndex previousLastMove{};
     ChessTimePoint previousLastMoveTime;
     Bitboard previousWhitePawns = EMPTY;
     Bitboard previousWhiteKnights = EMPTY;

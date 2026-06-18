@@ -20,6 +20,10 @@ inline constexpr int kBoardDimension = 8;
                        static_cast<char>(kMinRankChar + (square / kBoardDimension)));
 }
 
+[[nodiscard]] inline std::string squareName(SquareIndex square) {
+    return squareName(static_cast<int>(square));
+}
+
 [[nodiscard]] inline std::string moveToUci(const Move& move) {
     if (!move.isValid()) {
         return "0000";
