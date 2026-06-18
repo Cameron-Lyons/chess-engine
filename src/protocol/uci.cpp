@@ -1,5 +1,4 @@
 #include "uci.h"
-#include "uci_output.h"
 #include "../ai/SyzygyTablebase.h"
 #include "../core/BitboardMoves.h"
 #include "../evaluation/Evaluation.h"
@@ -12,6 +11,7 @@
 #include "ai/NeuralNetwork.h"
 #include "evaluation/NNUE.h"
 #include "search/AdvancedSearch.h"
+#include "uci_output.h"
 
 #include <algorithm>
 #include <cctype>
@@ -170,7 +170,8 @@ void UCIEngine::handleUCI() {
     uci::output::println("option name Contempt type spin default 0 min -100 max 100");
 
     for (const auto& p : TunableRegistry::instance().all()) {
-        uci::output::println("option name {} type spin default {} min {} max {}", p.name, p.defaultValue, p.minValue, p.maxValue);
+        uci::output::println("option name {} type spin default {} min {} max {}", p.name,
+                             p.defaultValue, p.minValue, p.maxValue);
     }
 
     uci::output::println("uciok");
@@ -462,18 +463,19 @@ void UCIEngine::handleBookStats() {
 
     const EnhancedOpeningBook::BookStats stats = openingBook->getStats();
     uci::output::print("info string Book Statistics:\n"
-               "info string   Positions: {}\n"
-               "info string   Moves: {}\n"
-               "info string   Total Games: {}\n"
-               "info string   Average Win Rate: {}\n"
-               "info string   Average Rating: {}\n",
-               stats.totalPositions, stats.totalMoves, stats.totalGames, stats.averageWinRate,
-               stats.averageRating);
+                       "info string   Positions: {}\n"
+                       "info string   Moves: {}\n"
+                       "info string   Total Games: {}\n"
+                       "info string   Average Win Rate: {}\n"
+                       "info string   Average Rating: {}\n",
+                       stats.totalPositions, stats.totalMoves, stats.totalGames,
+                       stats.averageWinRate, stats.averageRating);
 }
 
 void UCIEngine::reportBestMove(const Move& move, const std::optional<Move>& ponderMove) {
     if (ponderMove) {
-        uci::output::println("bestmove {} ponder {}", UCINotation::moveToUCI(move), UCINotation::moveToUCI(*ponderMove));
+        uci::output::println("bestmove {} ponder {}", UCINotation::moveToUCI(move),
+                             UCINotation::moveToUCI(*ponderMove));
         return;
     }
     uci::output::println("bestmove {}", UCINotation::moveToUCI(move));
@@ -617,7 +619,8 @@ void UCIEngine::setUseNeuralNetwork(bool enabled) {
             setNNUEEnabled(true);
         } else {
             setNNUEEnabled(false);
-            uci::output::println("info string NNUE requested but no model loaded; using classical eval");
+            uci::output::println(
+                "info string NNUE requested but no model loaded; using classical eval");
         }
     } else {
         setNNUEEnabled(false);

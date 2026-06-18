@@ -446,7 +446,7 @@ void Board::InitializeFromFEN(ChessString fen) {
     fullmoveNumber = 1;
     whiteChecked = false;
     blackChecked = false;
-    LastMove = SquareIndex{};
+    LastMove = SquareIndex();
 
     std::string fenString(fen);
     std::istringstream iss(fenString);

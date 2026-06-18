@@ -1,7 +1,7 @@
 #include "LazySMP.h"
+#include "../protocol/uci_output.h"
 #include "ChessBoard.h"
 #include "ChessPiece.h"
-#include "../protocol/uci_output.h"
 #include "search/ValidMoves.h"
 #include "search/search.h"
 #include "utils/ChessFormat.h"
