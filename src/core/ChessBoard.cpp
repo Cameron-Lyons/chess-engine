@@ -119,8 +119,8 @@ Bitboard Board::getPieceBitboard(ChessPieceType type, ChessPieceColor color) con
     }
 }
 
-bool Board::movePiece(int from, int to) {
-    if (from < 0 || from >= NUM_SQUARES || to < 0 || to >= NUM_SQUARES) {
+bool Board::movePiece(SquareIndex from, SquareIndex to) {
+    if (!from.isValid() || !to.isValid()) {
         return false;
     }
     Piece& fromPiece = squares[from].piece;
@@ -389,7 +389,7 @@ std::string Board::toFEN() const {
         castling += 'q';
     }
     fen += std::format(" {}", castling.empty() ? "-" : castling);
-    if (const auto enPassant = enPassantSquare.target()) {
+    if (const auto& enPassant = enPassantSquare.target(); enPassant.has_value()) {
         fen += std::format(" {}", chess::format::squareName(*enPassant));
     } else {
         fen += " -";
@@ -446,7 +446,7 @@ void Board::InitializeFromFEN(ChessString fen) {
     fullmoveNumber = 1;
     whiteChecked = false;
     blackChecked = false;
-    LastMove = 0;
+    LastMove = SquareIndex{};
 
     std::string fenString(fen);
     std::istringstream iss(fenString);

@@ -7,11 +7,10 @@
 
 namespace chess {
 
-inline constexpr int kInvalidSquare = -1;
-inline constexpr int kNoEnPassantSquare = -1;
+inline constexpr int kBoardSquareCount = 64;
 
 [[nodiscard]] constexpr bool isValidSquare(int square) {
-    return square >= 0 && square < 64;
+    return square >= 0 && square < kBoardSquareCount;
 }
 
 [[nodiscard]] constexpr bool isValidSquare(SquareIndex square) {
@@ -23,24 +22,30 @@ inline constexpr int kNoEnPassantSquare = -1;
 }
 
 struct EnPassantSquare {
-    std::optional<int> square;
+    std::optional<SquareIndex> square;
 
     constexpr EnPassantSquare() = default;
 
-    constexpr explicit EnPassantSquare(int value)
-        : square(isValidSquare(value) ? std::optional<int>{value} : std::nullopt) {}
+    constexpr explicit EnPassantSquare(SquareIndex value)
+        : square(value.isValid() ? std::optional{value} : std::nullopt) {}
+
+    constexpr explicit EnPassantSquare(int value) : EnPassantSquare(SquareIndex(value)) {}
 
     [[nodiscard]] constexpr bool hasTarget() const {
         return square.has_value();
     }
 
-    [[nodiscard]] constexpr const std::optional<int>& target() const {
+    [[nodiscard]] constexpr const std::optional<SquareIndex>& target() const {
         return square;
     }
 
-    constexpr EnPassantSquare& operator=(int value) {
-        square = isValidSquare(value) ? std::optional<int>{value} : std::nullopt;
+    constexpr EnPassantSquare& operator=(SquareIndex value) {
+        square = value.isValid() ? std::optional{value} : std::nullopt;
         return *this;
+    }
+
+    constexpr EnPassantSquare& operator=(int value) {
+        return *this = SquareIndex(value);
     }
 
     constexpr EnPassantSquare& operator=(std::nullopt_t) {
@@ -48,12 +53,28 @@ struct EnPassantSquare {
         return *this;
     }
 
+    [[nodiscard]] constexpr friend bool operator==(const EnPassantSquare& lhs, SquareIndex rhs) {
+        return lhs.square.has_value() && lhs.square->value == rhs.value;
+    }
+
+    [[nodiscard]] constexpr friend bool operator==(SquareIndex lhs, const EnPassantSquare& rhs) {
+        return rhs == lhs;
+    }
+
     [[nodiscard]] constexpr friend bool operator==(const EnPassantSquare& lhs, int rhs) {
-        return lhs.square.has_value() && *lhs.square == rhs;
+        return lhs.square.has_value() && lhs.square->value == rhs;
     }
 
     [[nodiscard]] constexpr friend bool operator==(int lhs, const EnPassantSquare& rhs) {
         return rhs == lhs;
+    }
+
+    [[nodiscard]] constexpr friend bool operator!=(const EnPassantSquare& lhs, SquareIndex rhs) {
+        return !(lhs == rhs);
+    }
+
+    [[nodiscard]] constexpr friend bool operator!=(SquareIndex lhs, const EnPassantSquare& rhs) {
+        return !(rhs == lhs);
     }
 
     [[nodiscard]] constexpr friend bool operator!=(const EnPassantSquare& lhs, int rhs) {
@@ -64,8 +85,13 @@ struct EnPassantSquare {
         return !(rhs == lhs);
     }
 
-    auto operator<=>(const EnPassantSquare& other) const = default;
-    bool operator==(const EnPassantSquare& other) const = default;
+    [[nodiscard]] constexpr bool operator==(const EnPassantSquare& other) const {
+        return square == other.square;
+    }
+
+    [[nodiscard]] constexpr bool operator!=(const EnPassantSquare& other) const {
+        return !(*this == other);
+    }
 };
 
 [[nodiscard]] constexpr EnPassantSquare noEnPassantSquare() {

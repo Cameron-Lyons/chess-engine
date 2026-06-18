@@ -1,4 +1,5 @@
 #include "uci.h"
+#include "uci_output.h"
 #include "../ai/SyzygyTablebase.h"
 #include "../core/BitboardMoves.h"
 #include "../evaluation/Evaluation.h"
@@ -93,7 +94,7 @@ void UCIEngine::searchThreadEntry(const SearchTask& task, std::stop_token stopTo
                        result.score, 0);
         }
     } catch (const std::exception& e) {
-        std::cout << "info string Search error: " << e.what() << '\n';
+        uci::output::println("info string Search error: {}", e.what());
     }
 
     isSearching.store(false);
@@ -146,38 +147,37 @@ void UCIEngine::processCommand(const std::string& command) {
         handleBookStats();
     } else {
 
-        std::cout << "info string Unknown command: " << cmd << '\n';
+        uci::output::println("info string Unknown command: {}", cmd);
     }
 }
 
 void UCIEngine::handleUCI() {
-    std::cout << "id name ModernChess v2.0" << '\n';
-    std::cout << "id author Chess Engine Team" << '\n';
-    std::cout << "option name Hash type spin default 32 min 1 max 1024" << '\n';
-    std::cout << "option name Threads type spin default 1 min 1 max 16" << '\n';
-    std::cout << "option name MultiPV type spin default 1 min 1 max 10" << '\n';
-    std::cout << "option name Ponder type check default false" << '\n';
-    std::cout << "option name OwnBook type check default true" << '\n';
-    std::cout << "option name Move Overhead type spin default 10 min 0 max 5000" << '\n';
-    std::cout << "option name Minimum Thinking Time type spin default 20 min 0 max 5000" << '\n';
-    std::cout << "option name Use Neural Network type check default false" << '\n';
-    std::cout << "option name Neural Network Weight type spin default 70 min 0 max 100" << '\n';
-    std::cout << "option name Use Tablebases type check default true" << '\n';
-    std::cout << "option name SyzygyPath type string default " << '\n';
-    std::cout << "option name Debug type check default false" << '\n';
-    std::cout << "option name Show Current Line type check default false" << '\n';
-    std::cout << "option name Contempt type spin default 0 min -100 max 100" << '\n';
+    uci::output::println("id name ModernChess v2.0");
+    uci::output::println("id author Chess Engine Team");
+    uci::output::println("option name Hash type spin default 32 min 1 max 1024");
+    uci::output::println("option name Threads type spin default 1 min 1 max 16");
+    uci::output::println("option name MultiPV type spin default 1 min 1 max 10");
+    uci::output::println("option name Ponder type check default false");
+    uci::output::println("option name OwnBook type check default true");
+    uci::output::println("option name Move Overhead type spin default 10 min 0 max 5000");
+    uci::output::println("option name Minimum Thinking Time type spin default 20 min 0 max 5000");
+    uci::output::println("option name Use Neural Network type check default false");
+    uci::output::println("option name Neural Network Weight type spin default 70 min 0 max 100");
+    uci::output::println("option name Use Tablebases type check default true");
+    uci::output::println("option name SyzygyPath type string default ");
+    uci::output::println("option name Debug type check default false");
+    uci::output::println("option name Show Current Line type check default false");
+    uci::output::println("option name Contempt type spin default 0 min -100 max 100");
 
     for (const auto& p : TunableRegistry::instance().all()) {
-        std::cout << std::format("option name {} type spin default {} min {} max {}\n", p.name,
-                                 p.defaultValue, p.minValue, p.maxValue);
+        uci::output::println("option name {} type spin default {} min {} max {}", p.name, p.defaultValue, p.minValue, p.maxValue);
     }
 
-    std::cout << "uciok" << '\n';
+    uci::output::println("uciok");
 }
 
 void UCIEngine::handleIsReady() {
-    std::cout << "readyok" << '\n';
+    uci::output::println("readyok");
 }
 
 void UCIEngine::handleSetOption(const std::string& command) {
@@ -237,7 +237,7 @@ void UCIEngine::handleNewGame() {
     board = Board();
     board.InitializeFromFEN(kStartingFen);
     positionHistoryHashes = {ComputeZobrist(board)};
-    std::cout << "info string New game started" << '\n';
+    uci::output::println("info string New game started");
 }
 
 void UCIEngine::handlePosition(const std::string& command) {
@@ -246,7 +246,7 @@ void UCIEngine::handlePosition(const std::string& command) {
     iss >> word;
 
     if (!(iss >> word)) {
-        std::cout << "info string Error: Invalid position command" << '\n';
+        uci::output::println("info string Error: Invalid position command");
         return;
     }
 
@@ -273,17 +273,17 @@ void UCIEngine::handlePosition(const std::string& command) {
             board = Board();
             if (auto parsed = board.fromFEN(fen); parsed.has_value()) {
                 positionHistoryHashes = {ComputeZobrist(board)};
-                std::cout << "info string FEN position set: " << fen << '\n';
+                uci::output::println("info string FEN position set: {}", fen);
             } else {
-                std::cout << "info string Error: Invalid FEN string" << '\n';
+                uci::output::println("info string Error: Invalid FEN string");
                 return;
             }
         } else {
-            std::cout << "info string Error: Invalid FEN string" << '\n';
+            uci::output::println("info string Error: Invalid FEN string");
             return;
         }
     } else {
-        std::cout << "info string Error: Expected 'startpos' or 'fen'" << '\n';
+        uci::output::println("info string Error: Expected 'startpos' or 'fen'");
         return;
     }
 
@@ -310,10 +310,10 @@ void UCIEngine::handlePosition(const std::string& command) {
                     board.updateBitboards();
                     positionHistoryHashes.push_back(ComputeZobrist(board));
                 } else {
-                    std::cout << "info string Warning: Invalid move " << move << '\n';
+                    uci::output::println("info string Warning: Invalid move {}", move);
                 }
             } else {
-                std::cout << "info string Warning: Could not parse move " << move << '\n';
+                uci::output::println("info string Warning: Could not parse move {}", move);
             }
         }
     }
@@ -321,7 +321,7 @@ void UCIEngine::handlePosition(const std::string& command) {
 
 void UCIEngine::handleGo(const std::string& command) {
     if (isSearching.load()) {
-        std::cout << "info string Search already in progress" << '\n';
+        uci::output::println("info string Search already in progress");
         return;
     }
 
@@ -415,7 +415,7 @@ void UCIEngine::handleGo(const std::string& command) {
     if (createResult != 0) {
         isSearching.store(false);
         isPondering.store(false);
-        std::cout << "info string Search thread creation failed" << '\n';
+        uci::output::println("info string Search thread creation failed");
         return;
     }
 }
@@ -441,43 +441,42 @@ void UCIEngine::handleQuit() {
 
 void UCIEngine::handleDebug(const std::string& command) const {
     (void)command;
-    std::cout << "info string Debug mode: " << (options.debug ? "enabled" : "disabled") << '\n';
+    uci::output::println("info string Debug mode: {}", options.debug ? "enabled" : "disabled");
 }
 
 void UCIEngine::handleRegister(const std::string& command) {
     (void)command;
-    std::cout << "info string Registration not required" << '\n';
+    uci::output::println("info string Registration not required");
 }
 
 void UCIEngine::handleInfo(const std::string& command) {
     (void)command;
-    std::cout << "info string Info command received" << '\n';
+    uci::output::println("info string Info command received");
 }
 
 void UCIEngine::handleBookStats() {
     if (!openingBook) {
-        std::cout << "info string Opening book not available\n";
+        uci::output::println("info string Opening book not available");
         return;
     }
 
     const EnhancedOpeningBook::BookStats stats = openingBook->getStats();
-    std::cout << std::format("info string Book Statistics:\n"
-                             "info string   Positions: {}\n"
-                             "info string   Moves: {}\n"
-                             "info string   Total Games: {}\n"
-                             "info string   Average Win Rate: {}\n"
-                             "info string   Average Rating: {}\n",
-                             stats.totalPositions, stats.totalMoves, stats.totalGames,
-                             stats.averageWinRate, stats.averageRating);
+    uci::output::print("info string Book Statistics:\n"
+               "info string   Positions: {}\n"
+               "info string   Moves: {}\n"
+               "info string   Total Games: {}\n"
+               "info string   Average Win Rate: {}\n"
+               "info string   Average Rating: {}\n",
+               stats.totalPositions, stats.totalMoves, stats.totalGames, stats.averageWinRate,
+               stats.averageRating);
 }
 
 void UCIEngine::reportBestMove(const Move& move, const std::optional<Move>& ponderMove) {
     if (ponderMove) {
-        std::cout << std::format("bestmove {} ponder {}\n", UCINotation::moveToUCI(move),
-                                 UCINotation::moveToUCI(*ponderMove));
+        uci::output::println("bestmove {} ponder {}", UCINotation::moveToUCI(move), UCINotation::moveToUCI(*ponderMove));
         return;
     }
-    std::cout << std::format("bestmove {}\n", UCINotation::moveToUCI(move));
+    uci::output::println("bestmove {}", UCINotation::moveToUCI(move));
 }
 
 void UCIEngine::reportInfo(int depth, int seldepth, int time, int nodes, int nps,
@@ -515,11 +514,11 @@ void UCIEngine::reportInfo(int depth, int seldepth, int time, int nodes, int nps
             line += std::format(" {}", UCINotation::moveToUCI(move));
         }
     }
-    std::cout << line << '\n';
+    uci::output::println("{}", line);
 }
 
 void UCIEngine::reportInfo(const std::string& info) {
-    std::cout << std::format("info string {}\n", info);
+    uci::output::println("info string {}", info);
 }
 
 SearchResult UCIEngine::performSearch(const Board& board, int depth, int timeLimit, int optimalTime,
@@ -618,7 +617,7 @@ void UCIEngine::setUseNeuralNetwork(bool enabled) {
             setNNUEEnabled(true);
         } else {
             setNNUEEnabled(false);
-            std::cout << "info string NNUE requested but no model loaded; using classical eval\n";
+            uci::output::println("info string NNUE requested but no model loaded; using classical eval");
         }
     } else {
         setNNUEEnabled(false);

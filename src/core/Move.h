@@ -4,8 +4,12 @@
 
 #include <compare>
 
+namespace chess {
+inline constexpr int kInvalidSquare = -1;
+} // namespace chess
+
 struct SquareIndex {
-    int value = -1;
+    int value = chess::kInvalidSquare;
 
     constexpr SquareIndex() = default;
     explicit constexpr SquareIndex(int square) : value(square) {}
@@ -17,6 +21,14 @@ struct SquareIndex {
 
     [[nodiscard]] constexpr bool isValid() const {
         return value >= 0 && value < 64;
+    }
+
+    [[nodiscard]] constexpr bool operator==(int rhs) const {
+        return value == rhs;
+    }
+
+    [[nodiscard]] constexpr bool operator!=(int rhs) const {
+        return value != rhs;
     }
 
     constexpr operator int() const {
@@ -34,7 +46,7 @@ struct Move {
     Move() = default;
 
     constexpr Move(int from, int to, ChessPieceType promo = ChessPieceType::NONE)
-        : first(SquareIndex(from)), second(SquareIndex(to)), promotion(promo) {}
+        : first(from), second(to), promotion(promo) {}
 
     constexpr Move(SquareIndex from, SquareIndex to, ChessPieceType promo = ChessPieceType::NONE)
         : first(from), second(to), promotion(promo) {}
@@ -60,5 +72,7 @@ struct Move {
         return std::strong_ordering::equal;
     }
 
-    bool operator==(const Move& other) const = default;
+    bool operator==(const Move& other) const {
+        return (*this <=> other) == std::strong_ordering::equal;
+    }
 };

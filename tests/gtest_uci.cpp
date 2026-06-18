@@ -1,40 +1,71 @@
 #include "gtest/gtest.h"
 #include "protocol/uci.h"
+#include "protocol/uci_output.h"
 
 #include <chrono>
-#include <iostream>
-#include <sstream>
-#include <streambuf>
+#include <cstdio>
+#include <cstdlib>
+#include <stdexcept>
 #include <string>
 #include <thread>
 
 namespace {
-class CoutCapture {
+class UciOutputCapture {
 public:
-    CoutCapture() : oldBuffer(std::cout.rdbuf(buffer.rdbuf())) {}
+    UciOutputCapture() {
+        writeStream_ = open_memstream(&buffer_, &size_);
+        if (writeStream_ == nullptr) {
+            throw std::runtime_error("open_memstream failed");
+        }
 
-    ~CoutCapture() {
-        std::cout.rdbuf(oldBuffer);
+        previousStream_ = uci::output::stream();
+        uci::output::stream() = writeStream_;
     }
 
-    std::string str() const {
-        return buffer.str();
+    ~UciOutputCapture() {
+        uci::output::stream() = previousStream_;
+        if (writeStream_ != nullptr) {
+            std::fflush(writeStream_);
+            fclose(writeStream_);
+            writeStream_ = nullptr;
+        }
+        if (buffer_ != nullptr) {
+            free(buffer_);
+            buffer_ = nullptr;
+        }
+    }
+
+    std::string str() {
+        if (writeStream_ != nullptr) {
+            std::fflush(writeStream_);
+        }
+        if (buffer_ == nullptr || size_ == 0) {
+            return {};
+        }
+        return std::string(buffer_, size_);
     }
 
     void clear() {
-        buffer.str("");
-        buffer.clear();
+        if (writeStream_ != nullptr) {
+            std::fflush(writeStream_);
+        }
+        if (buffer_ != nullptr) {
+            buffer_[0] = '\0';
+            size_ = 0;
+        }
     }
 
 private:
-    std::ostringstream buffer;
-    std::streambuf* oldBuffer;
+    FILE* writeStream_ = nullptr;
+    FILE* previousStream_ = stdout;
+    char* buffer_ = nullptr;
+    size_t size_ = 0;
 };
 } // namespace
 
 TEST(UCI, ReportsUciOptionsAndReady) {
     UCIEngine engine;
-    CoutCapture capture;
+    UciOutputCapture capture;
 
     engine.processCommand("uci");
     engine.processCommand("isready");
@@ -48,7 +79,7 @@ TEST(UCI, ReportsUciOptionsAndReady) {
 
 TEST(UCI, RejectsMalformedPositionCommands) {
     UCIEngine engine;
-    CoutCapture capture;
+    UciOutputCapture capture;
 
     engine.processCommand("position");
     engine.processCommand("position fen invalid fen");
@@ -60,7 +91,7 @@ TEST(UCI, RejectsMalformedPositionCommands) {
 
 TEST(UCI, WarnsAboutIllegalMoveInMoveList) {
     UCIEngine engine;
-    CoutCapture capture;
+    UciOutputCapture capture;
 
     engine.processCommand("position startpos moves e2e4 e7e5 g1f3 b8c6 c1g5");
 
@@ -70,7 +101,7 @@ TEST(UCI, WarnsAboutIllegalMoveInMoveList) {
 
 TEST(UCI, ReportsUnknownCommand) {
     UCIEngine engine;
-    CoutCapture capture;
+    UciOutputCapture capture;
 
     engine.processCommand("notacommand");
 
@@ -95,7 +126,7 @@ TEST(UCI, ConvertsMovesToAndFromUciNotation) {
 
 TEST(UCI, ReportsNnueFallbackWhenNoModelIsLoaded) {
     UCIEngine engine;
-    CoutCapture capture;
+    UciOutputCapture capture;
 
     engine.processCommand("setoption name Use Neural Network value true");
 
@@ -106,7 +137,7 @@ TEST(UCI, ReportsNnueFallbackWhenNoModelIsLoaded) {
 
 TEST(UCI, ReturnsBestmove0000OnStalematePosition) {
     UCIEngine engine;
-    CoutCapture capture;
+    UciOutputCapture capture;
 
     engine.processCommand("position fen 7k/5Q2/6K1/8/8/8/8/8 b - - 0 1");
     engine.processCommand("go movetime 30");
@@ -118,7 +149,7 @@ TEST(UCI, ReturnsBestmove0000OnStalematePosition) {
 
 TEST(UCI, RejectsSecondGoWhileSearchIsRunning) {
     UCIEngine engine;
-    CoutCapture capture;
+    UciOutputCapture capture;
 
     engine.processCommand("position startpos");
     engine.processCommand("go movetime 200");
@@ -132,7 +163,7 @@ TEST(UCI, RejectsSecondGoWhileSearchIsRunning) {
 
 TEST(UCI, CanSearchAgainAfterStop) {
     UCIEngine engine;
-    CoutCapture capture;
+    UciOutputCapture capture;
 
     engine.processCommand("position startpos");
     engine.processCommand("go movetime 200");
@@ -150,7 +181,7 @@ TEST(UCI, CanSearchAgainAfterStop) {
 
 TEST(UCI, SearchStillWorksAfterOptionUpdates) {
     UCIEngine engine;
-    CoutCapture capture;
+    UciOutputCapture capture;
 
     engine.processCommand("setoption name Hash value 64");
     engine.processCommand("setoption name Threads value 2");

@@ -1,6 +1,7 @@
 #include "LazySMP.h"
 #include "ChessBoard.h"
 #include "ChessPiece.h"
+#include "../protocol/uci_output.h"
 #include "search/ValidMoves.h"
 #include "search/search.h"
 #include "utils/ChessFormat.h"
@@ -101,7 +102,7 @@ LazySMP::LazySMP(int threadCount, int hashMb, int contemptValue)
         numThreads = kDefaultThreadCount;
     }
 
-    std::cout << std::format("Initializing Lazy SMP with {} threads\n", numThreads);
+    uci::output::println("Initializing Lazy SMP with {} threads", numThreads);
     shared = std::make_unique<SharedData>();
 
     for (int i = kZero; i < numThreads; ++i) {
@@ -189,9 +190,9 @@ void LazySMP::searchThread(ThreadData* data, int maxDepth, int timeLimit,
                 shared->bestMove = candidateMove;
 
                 if (data->id == kZero) {
-                    std::cout << std::format("info depth {} score cp {} nodes {} pv {}\n", depth,
-                                             score, shared->nodesSearched.load(),
-                                             chess::format::moveToUci(candidateMove));
+                    uci::output::println("info depth {} score cp {} nodes {} pv {}", depth, score,
+                                         shared->nodesSearched.load(),
+                                         chess::format::moveToUci(candidateMove));
                 }
             }
         }
