@@ -1,7 +1,6 @@
 #include "ChessBoard.h"
 #include "core/BitboardMoves.h"
 #include "gtest/gtest.h"
-#include "search/ValidMoves.h"
 #include "search/search.h"
 
 namespace {

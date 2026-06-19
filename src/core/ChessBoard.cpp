@@ -2,6 +2,7 @@
 #include "Bitboard.h"
 #include "CastlingConstants.h"
 #include "ChessPiece.h"
+#include "Move.h"
 #include "utils/ChessFormat.h"
 
 #include <algorithm>
@@ -9,6 +10,7 @@
 #include <cstddef>
 #include <expected>
 #include <format>
+#include <optional>
 #include <sstream>
 #include <string>
 

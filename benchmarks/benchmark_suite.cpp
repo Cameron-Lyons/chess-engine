@@ -5,11 +5,15 @@
 #include "src/search/search.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <format>
 #include <iostream>
-#include <ranges>
+#include <memory>
+#include <span>
 #include <sstream>
 #include <string>
+#include <string_view>
+#include <vector>
 
 namespace BenchmarkSuite {
 namespace {

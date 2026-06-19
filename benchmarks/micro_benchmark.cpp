@@ -2,10 +2,9 @@
 #include "benchmark_suite.h"
 #include "src/core/ChessBoard.h"
 #include "src/search/AdvancedSearch.h"
-#include "src/search/search.h"
 
-#include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <iostream>
 #include <string>
 #include <vector>

@@ -1,11 +1,15 @@
 #include "benchmark_args.h"
 #include "benchmark_suite.h"
 #include "src/core/ChessBoard.h"
+#include "src/core/ChessPiece.h"
+#include "src/core/Move.h"
 #include "src/search/search.h"
 
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <format>
 #include <iostream>
 #include <string>

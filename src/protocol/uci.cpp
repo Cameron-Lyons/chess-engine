@@ -1,20 +1,20 @@
 #include "uci.h"
+#include "../ai/EndgameTablebase.h"
+#include "../ai/NeuralNetwork.h"
 #include "../ai/SyzygyTablebase.h"
 #include "../core/BitboardMoves.h"
+#include "../core/ChessBoard.h"
+#include "../core/ChessPiece.h"
+#include "../core/Move.h"
 #include "../evaluation/Evaluation.h"
+#include "../evaluation/NNUE.h"
+#include "../search/AdvancedSearch.h"
 #include "../search/search.h"
 #include "../utils/ChessFormat.h"
 #include "../utils/TunableParams.h"
-#include "ChessBoard.h"
-#include "ChessPiece.h"
-#include "ai/EndgameTablebase.h"
-#include "ai/NeuralNetwork.h"
-#include "evaluation/NNUE.h"
-#include "search/AdvancedSearch.h"
 #include "uci_output.h"
 
 #include <algorithm>
-#include <cctype>
 #include <chrono>
 #include <cstdlib>
 #include <exception>
@@ -23,6 +23,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <stop_token>
 #include <string>
 #include <utility>
 #include <vector>

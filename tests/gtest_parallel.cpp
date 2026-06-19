@@ -1,7 +1,6 @@
 #include "core/ChessBoard.h"
 #include "gtest/gtest.h"
 #include "search/search.h"
-#include "utils/engine_globals.h"
 
 #include <algorithm>
 #include <thread>

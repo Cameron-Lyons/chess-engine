@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
-#include <ranges>
 
 using namespace SearchInternal;
 

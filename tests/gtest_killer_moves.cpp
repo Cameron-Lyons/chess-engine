@@ -1,5 +1,3 @@
-#include "core/BitboardMoves.h"
-#include "core/ChessBoard.h"
 #include "gtest/gtest.h"
 #include "search/search.h"
 
