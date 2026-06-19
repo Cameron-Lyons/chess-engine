@@ -1,6 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
-common_benchmark_copts = ["-Werror", "-std=c++26"]
+common_benchmark_copts = ["-Werror"]
 
 cc_library(
     name = "benchmark_args",

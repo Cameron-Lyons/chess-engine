@@ -5,7 +5,6 @@
 #include "search/search.h"
 
 #include <algorithm>
-#include <ranges>
 
 namespace {
 bool containsMove(const std::vector<Move>& moves, int from, int to) {

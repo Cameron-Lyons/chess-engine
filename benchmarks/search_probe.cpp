@@ -1,6 +1,8 @@
 #include "benchmark_args.h"
 #include "benchmark_suite.h"
 #include "src/core/ChessBoard.h"
+#include "src/core/ChessPiece.h"
+#include "src/core/Move.h"
 #include "src/search/search.h"
 
 #include "src/utils/ChessFormat.h"

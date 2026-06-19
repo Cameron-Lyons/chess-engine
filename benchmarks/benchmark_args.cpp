@@ -1,9 +1,14 @@
 #include "benchmark_args.h"
 
 #include <cerrno>
+#include <cstddef>
 #include <cstdlib>
 #include <limits>
+#include <span>
 #include <sstream>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace BenchmarkArgs {
 

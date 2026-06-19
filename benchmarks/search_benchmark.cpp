@@ -1,12 +1,14 @@
 #include "benchmark_args.h"
 #include "benchmark_suite.h"
 #include "src/core/ChessBoard.h"
+#include "src/core/Move.h"
 #include "src/search/search.h"
 
 #include "src/utils/ChessFormat.h"
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <format>
 #include <iostream>
 #include <string>
@@ -46,8 +48,9 @@ void printTextReport(const std::vector<SearchRow>& rows, int rounds, int depthLi
         totalNodes += row.nodes;
         totalElapsedMs += row.elapsedMs;
         std::cout << row.id << '\t' << row.depthReached << '\t' << row.score << '\t' << row.nodes
-                  << '\t' << row.elapsedMs << '\t' << row.nps << '\t' << chess::format::moveToUci(row.bestMove)
-                  << '\t' << BenchmarkSuite::joinTags(row.tags, ",") << '\n';
+                  << '\t' << row.elapsedMs << '\t' << row.nps << '\t'
+                  << chess::format::moveToUci(row.bestMove) << '\t'
+                  << BenchmarkSuite::joinTags(row.tags, ",") << '\n';
     }
 
     const long long totalNps = (totalNodes * 1000LL) / std::max(1LL, totalElapsedMs);
@@ -77,7 +80,8 @@ void printJsonReport(const std::vector<SearchRow>& rows, int rounds, int depthLi
                   << "\", \"round\": " << row.round << ", \"depth_reached\": " << row.depthReached
                   << ", \"score\": " << row.score << ", \"nodes\": " << row.nodes
                   << ", \"elapsed_ms\": " << row.elapsedMs << ", \"nps\": " << row.nps
-                  << ", \"bestmove\": \"" << BenchmarkSuite::jsonEscape(chess::format::moveToUci(row.bestMove))
+                  << ", \"bestmove\": \""
+                  << BenchmarkSuite::jsonEscape(chess::format::moveToUci(row.bestMove))
                   << "\", \"fen\": \"" << BenchmarkSuite::jsonEscape(row.fen) << "\", \"tags\": [";
         for (std::size_t tagIndex = 0; tagIndex < row.tags.size(); ++tagIndex) {
             if (tagIndex > 0) {
