@@ -40,8 +40,8 @@ import sys
 compile_commands_path = sys.argv[1]
 prefixes = tuple(
     prefix if prefix.endswith("/") else f"{prefix}/"
-    for prefix in (part.strip() for part in sys.argv[2].split(","))
-    if part.strip()
+    for part in sys.argv[2].split(",")
+    if (prefix := part.strip())
 )
 
 with open(compile_commands_path, encoding="utf-8") as handle:
@@ -65,6 +65,11 @@ if not files:
 print("\n".join(files))
 PY
 )
+
+if [[ "${#source_files[@]}" -eq 0 ]]; then
+    echo "no C++ sources matched CLANG_TIDY_PATHS=${CLANG_TIDY_PATHS:-src,tests}" >&2
+    exit 1
+fi
 
 echo "Running $CLANG_TIDY on ${#source_files[@]} translation unit(s)"
 

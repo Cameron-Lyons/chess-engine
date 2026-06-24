@@ -169,10 +169,11 @@ TEST(UCI, CanSearchAgainAfterStop) {
     engine.processCommand("go movetime 200");
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     engine.processCommand("stop");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     capture.clear();
 
     engine.processCommand("go movetime 30");
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     const std::string output = capture.str();
     EXPECT_NE(output.find("bestmove "), std::string::npos);
