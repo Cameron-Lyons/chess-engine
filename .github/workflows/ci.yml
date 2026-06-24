@@ -18,7 +18,7 @@ jobs:
     name: clang-format
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install clang-format
         uses: ./.github/actions/install-llvm-21
         with:
@@ -30,7 +30,7 @@ jobs:
     name: clang-tidy
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: bazelbuild/setup-bazelisk@v3
       - name: Install clang-tidy
         uses: ./.github/actions/install-llvm-21
@@ -62,7 +62,7 @@ jobs:
             cc: clang-21
             cxx: clang++-21
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: bazelbuild/setup-bazelisk@v3
 
       - name: Install Clang 21
@@ -102,7 +102,7 @@ jobs:
     name: Dead Code Check
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: bazelbuild/setup-bazelisk@v3
       - name: Install dead code dependencies
         run: |
@@ -124,7 +124,7 @@ jobs:
     name: Sanitizer (ASan+UBSan)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: bazelbuild/setup-bazelisk@v3
       - name: Install Clang 21
         uses: ./.github/actions/install-llvm-21
