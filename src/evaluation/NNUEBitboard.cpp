@@ -693,7 +693,7 @@ bool NNUEEvaluator::loadNetwork(const std::string& filename) {
 }
 
 void NNUEEvaluator::transformInput(const BitboardPosition& pos, int8_t* output) const {
-    int perspective =
+    const int perspective =
         pos.getSideToMove() == ChessPieceColor::WHITE ? WHITE_PERSPECTIVE : BLACK_PERSPECTIVE;
 
     if (!accumulator.isComputed(perspective)) {
@@ -737,7 +737,7 @@ int NNUEEvaluator::evaluate(const BitboardPosition& pos) const {
 void NNUEEvaluator::updateBeforeMove(const BitboardPosition& pos, int from, int to,
                                      ChessPieceType piece, ChessPieceType captured) {
 
-    int color =
+    const int color =
         pos.getColorAt(from) == ChessPieceColor::WHITE ? WHITE_PERSPECTIVE : BLACK_PERSPECTIVE;
     int kingSquare = std::countr_zero(pos.getPieceBitboard(
         ChessPieceType::KING,
@@ -762,7 +762,7 @@ void NNUEEvaluator::updateAfterMove(const BitboardPosition& pos, int from, int t
                                     ChessPieceType piece, ChessPieceType promotion) {
     (void)from;
 
-    int color =
+    const int color =
         pos.getColorAt(to) == ChessPieceColor::WHITE ? WHITE_PERSPECTIVE : BLACK_PERSPECTIVE;
     int kingSquare = std::countr_zero(pos.getPieceBitboard(
         ChessPieceType::KING,

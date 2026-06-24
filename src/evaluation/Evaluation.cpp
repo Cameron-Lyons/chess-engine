@@ -421,7 +421,7 @@ std::uint64_t computePawnHash(const Board& board) {
         const Piece& p = board.squares[sq].piece;
         if (p.PieceType == ChessPieceType::PAWN) {
             const std::uint64_t pawnKey =
-                static_cast<std::uint64_t>(sq + 1) |
+                (static_cast<std::uint64_t>(sq + 1)) |
                 (static_cast<std::uint64_t>(p.PieceColor == ChessPieceColor::BLACK) << 8);
             h ^= pawnKey;
             h *= 1099511628211ULL;

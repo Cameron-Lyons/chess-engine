@@ -7,3 +7,28 @@ build --copt=-march=native
 build:release --copt=-O3 --copt=-DNDEBUG
 build:debug --copt=-g --copt=-DDEBUG
 build:avx2 --copt=-mavx2
+build:ci --copt=-march=x86-64-v3 --copt=-mavx2
+
+# AddressSanitizer + UndefinedBehaviorSanitizer (Linux/clang or gcc).
+build:sanitize --strip=never
+build:sanitize --copt=-fsanitize=address,undefined
+build:sanitize --cxxopt=-fsanitize=address,undefined
+build:sanitize --linkopt=-fsanitize=address,undefined
+build:sanitize --linkopt=-fsanitize-link-c++-runtime
+build:sanitize --copt=-fno-omit-frame-pointer
+build:sanitize --cxxopt=-fno-omit-frame-pointer
+build:sanitize --copt=-O1
+build:sanitize --cxxopt=-O1
+build:sanitize --copt=-g
+build:sanitize --cxxopt=-g
+build:sanitize --action_env=ASAN_OPTIONS=abort_on_error=1:print_stacktrace=1
+build:sanitize --action_env=UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
+build:sanitize --test_env=ASAN_OPTIONS=abort_on_error=1:print_stacktrace=1
+build:sanitize --test_env=UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
+
+# Leak detection is supported on Linux only.
+build:linux --action_env=ASAN_OPTIONS=detect_leaks=1:abort_on_error=1:print_stacktrace=1
+build:linux --test_env=ASAN_OPTIONS=detect_leaks=1:abort_on_error=1:print_stacktrace=1
+
+build --enable_platform_specific_config
+

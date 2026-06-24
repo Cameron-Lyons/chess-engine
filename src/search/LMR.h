@@ -187,7 +187,7 @@ inline int calculateReduction(int depth, const MoveClassification& move,
         reduction = static_cast<int>(reduction * LMRParams::SINGULAR_FACTOR);
     }
 
-    double phaseFactor =
+    const double phaseFactor =
         LMRParams::BASE_PHASE_FACTOR -
         ((position.gamePhase / LMRParams::PHASE_NORMALIZATION) * LMRParams::PHASE_REDUCTION_SCALE);
     reduction = static_cast<int>(reduction * phaseFactor);

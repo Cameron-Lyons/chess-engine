@@ -72,11 +72,11 @@ constexpr char kBookRankOffset = '1';
 constexpr float kZeroFloat = 0.0F;
 
 struct MaterialSummary {
-    int nonKingPieceCount;
-    int totalMaterial;
-    int queenCount;
-    int rookCount;
-    int minorPieceCount;
+    int nonKingPieceCount = 0;
+    int totalMaterial = 0;
+    int queenCount = 0;
+    int rookCount = 0;
+    int minorPieceCount = 0;
 };
 
 MaterialSummary summarizeMaterial(const Board& board) {

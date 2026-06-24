@@ -491,9 +491,9 @@ void Board::InitializeFromFEN(ChessString fen) {
             file += (c - '0');
         } else {
             ChessPieceType type = Piece::fromFenChar(c);
-            ChessPieceColor color = std::isupper(static_cast<unsigned char>(c))
-                                        ? ChessPieceColor::WHITE
-                                        : ChessPieceColor::BLACK;
+            const ChessPieceColor color = std::isupper(static_cast<unsigned char>(c))
+                                              ? ChessPieceColor::WHITE
+                                              : ChessPieceColor::BLACK;
             if (type != ChessPieceType::NONE && fenRank >= 0 && fenRank < BOARD_SIZE && file >= 0 &&
                 file < BOARD_SIZE) {
                 int boardRow = fenRank;

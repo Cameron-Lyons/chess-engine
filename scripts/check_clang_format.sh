@@ -11,11 +11,34 @@ if ! command -v "$CLANG_FORMAT" >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! find src tests -type f \( -name '*.cpp' -o -name '*.h' \) -print -quit | grep -q .; then
-    echo "no C/C++ sources found under src/ or tests/" >&2
+dirs=(src tests)
+[[ -d benchmarks ]] && dirs+=(benchmarks)
+[[ -d examples ]] && dirs+=(examples)
+
+source_files=()
+while IFS= read -r -d '' file; do
+    source_files+=("$file")
+done < <(find "${dirs[@]}" -type f \( -name '*.cpp' -o -name '*.h' \) -print0)
+
+if [[ "${#source_files[@]}" -eq 0 ]]; then
+    echo "no C/C++ sources found under src/, tests/, benchmarks/, or examples/" >&2
     exit 1
 fi
 
-echo "Checking formatting with $CLANG_FORMAT"
-find src tests -type f \( -name '*.cpp' -o -name '*.h' \) -print0 | \
-    xargs -0 -P "$(nproc)" -n 20 "$CLANG_FORMAT" --dry-run --Werror
+echo "Checking formatting with $CLANG_FORMAT (${#source_files[@]} file(s))"
+
+if "$CLANG_FORMAT" --dry-run --Werror "${source_files[@]}"; then
+    exit 0
+fi
+
+echo "Formatting errors detected. Suggested fixes:" >&2
+for source_file in "${source_files[@]}"; do
+    if ! diff -u "$source_file" -L "$source_file" -L "$source_file (formatted)" \
+        "$source_file" <("$CLANG_FORMAT" "$source_file") >/dev/null 2>&1; then
+        echo "=== $source_file ===" >&2
+        diff -u "$source_file" -L "$source_file" -L "$source_file (formatted)" \
+            "$source_file" <("$CLANG_FORMAT" "$source_file") >&2 || true
+    fi
+done
+
+exit 1

@@ -3,3 +3,4 @@ build-debug/
 .cache/
 bazel-*
 compiler/target/
+compile_commands.json
