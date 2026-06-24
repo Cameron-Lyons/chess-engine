@@ -165,19 +165,30 @@ TEST(UCI, CanSearchAgainAfterStop) {
     UCIEngine engine;
     UciOutputCapture capture;
 
+    engine.processCommand("setoption name OwnBook value false");
+    engine.processCommand("setoption name Minimum Thinking Time value 0");
+    engine.processCommand("setoption name Move Overhead value 0");
     engine.processCommand("position startpos");
     engine.processCommand("go movetime 200");
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     engine.processCommand("stop");
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     capture.clear();
 
-    engine.processCommand("go movetime 30");
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    engine.processCommand("go movetime 100");
 
-    const std::string output = capture.str();
-    EXPECT_NE(output.find("bestmove "), std::string::npos);
-    EXPECT_NE(output.find("info depth "), std::string::npos);
+    const auto deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    std::string output;
+    while (std::chrono::steady_clock::now() < deadline) {
+        output = capture.str();
+        if (output.find("bestmove ") != std::string::npos) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    EXPECT_NE(output.find("bestmove "), std::string::npos) << output;
+    EXPECT_NE(output.find("info depth "), std::string::npos) << output;
 }
 
 TEST(UCI, SearchStillWorksAfterOptionUpdates) {
