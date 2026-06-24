@@ -176,8 +176,7 @@ TEST(UCI, CanSearchAgainAfterStop) {
 
     engine.processCommand("go movetime 100");
 
-    const auto deadline =
-        std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     std::string output;
     while (std::chrono::steady_clock::now() < deadline) {
         output = capture.str();
