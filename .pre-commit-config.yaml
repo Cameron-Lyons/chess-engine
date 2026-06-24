@@ -1,0 +1,12 @@
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  - repo: local
+    hooks:
+      - id: clang-format
+        name: clang-format
+        entry: scripts/check_clang_format.sh
+        language: system
+        pass_filenames: false
+        files: \.(cpp|h)$

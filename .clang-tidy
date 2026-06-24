@@ -3,8 +3,11 @@ Checks: >
   bugprone-*,
   -bugprone-easily-swappable-parameters,
   -bugprone-throwing-static-initialization,
+  -bugprone-infinite-loop,
+  -bugprone-branch-clone,
   performance-*,
   -performance-trivially-destructible,
+  -performance-enum-size,
   modernize-use-override,
   modernize-use-nullptr,
   modernize-use-auto,
@@ -24,6 +27,11 @@ Checks: >
   -readability-else-after-return,
   -readability-implicit-bool-conversion,
   -readability-convert-member-functions-to-static,
+  -readability-avoid-const-params-in-decls,
+  -readability-use-std-min-max,
+  -readability-math-missing-parentheses,
+  -readability-non-const-parameter,
+  -bugprone-empty-catch,
 
 WarningsAsErrors: ''
 

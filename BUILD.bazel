@@ -1,3 +1,4 @@
+load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 x86_avx2_copts = select({
@@ -65,4 +66,14 @@ cc_binary(
     copts = common_copts,
     srcs = ["src/protocol/uci_main.cpp"],
     deps = [":engine_lib"],
+)
+
+refresh_compile_commands(
+    name = "refresh_compile_commands",
+    targets = {
+        "//:engine_lib": "",
+        "//:engine_cli": "",
+        "//:engine_uci": "",
+        "//tests/...": "",
+    },
 )

@@ -499,9 +499,8 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
                    ttData.value < beta) {
             int seMargin = kSingularMarginPerDepth * depth;
             int seBeta = ttData.value - seMargin;
-            Board seBoard = board;
             int seVal = PrincipalVariationSearch(
-                seBoard, depth / kSingularReducedDepthDivisor, seBeta - kZeroWindowOffset, seBeta,
+                board, depth / kSingularReducedDepthDivisor, seBeta - kZeroWindowOffset, seBeta,
                 maximizingPlayer, ply + kOne, historyTable, context, false);
             if (seVal < seBeta) {
                 extension = kOne;
@@ -684,9 +683,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 int singularMargin = kSingularMarginPerDepth * depth;
                 int singularBeta = ttEntry->value - singularMargin;
                 if (singularBeta > alpha) {
-                    Board testBoard = board;
                     int singularValue =
-                        AlphaBetaSearch(testBoard, depth / kSingularReducedDepthDivisor,
+                        AlphaBetaSearch(board, depth / kSingularReducedDepthDivisor,
                                         singularBeta - kZeroWindowOffset, singularBeta,
                                         maximizingPlayer, ply + kOne, historyTable, context);
 
@@ -796,12 +794,16 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
         int evalMargin = maximizingPlayer ? (staticEval - beta) : (alpha - staticEval);
         int reducedDepth = std::max(kOne, depth - computeNullMoveReduction(depth, evalMargin));
         if (reducedDepth > kZero && reducedDepth <= kNullMoveMaxDepth) {
-            int nullValue =
-                maximizingPlayer
-                    ? AlphaBetaSearch(board, reducedDepth, beta - kOne, beta, !maximizingPlayer,
-                                      ply + kOne, historyTable, context, nullZobristKey)
-                    : AlphaBetaSearch(board, reducedDepth, alpha, alpha + kOne, !maximizingPlayer,
-                                      ply + kOne, historyTable, context, nullZobristKey);
+            int nullValue = 0;
+            if (maximizingPlayer) {
+                nullValue =
+                    AlphaBetaSearch(board, reducedDepth, beta - kOne, beta, !maximizingPlayer,
+                                    ply + kOne, historyTable, context, nullZobristKey);
+            } else {
+                nullValue =
+                    AlphaBetaSearch(board, reducedDepth, alpha, alpha + kOne, !maximizingPlayer,
+                                    ply + kOne, historyTable, context, nullZobristKey);
+            }
             board.turn = previousTurn;
             board.enPassantSquare = previousEnPassant;
             if (context.stopSearch) {
@@ -925,8 +927,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 pc.staticEval = staticEval;
                 int reduction = LMREnhanced::calculateReduction(depth, mc, pc);
                 if (reduction > kZero && !isCaptureMove && !isCheckMove) {
-                    int reducedDepth = std::max(kZero, depth - kOne - reduction);
-                    int reducedEval =
+                    const int reducedDepth = std::max(kZero, depth - kOne - reduction);
+                    const int reducedEval =
                         AlphaBetaSearch(board, reducedDepth, alpha, alpha + kOne, false, ply + kOne,
                                         historyTable, context, childZobristKey);
 
@@ -1085,8 +1087,8 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 pc.staticEval = staticEval;
                 int reduction = LMREnhanced::calculateReduction(depth, mc, pc);
                 if (reduction > kZero && !isCaptureMove && !isCheckMove) {
-                    int reducedDepth = std::max(kZero, depth - kOne - reduction);
-                    int reducedEval =
+                    const int reducedDepth = std::max(kZero, depth - kOne - reduction);
+                    const int reducedEval =
                         AlphaBetaSearch(board, reducedDepth, beta - kOne, beta, true, ply + kOne,
                                         historyTable, context, childZobristKey);
 

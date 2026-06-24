@@ -25,7 +25,7 @@ struct TBEntry {
     std::string name;
     void* data;
     uint64_t size;
-    int pieceCount;
+    int pieceCount = 0;
     bool hasPawns;
 };
 

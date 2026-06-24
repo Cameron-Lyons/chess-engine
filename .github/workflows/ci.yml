@@ -9,6 +9,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   clang-format:
     name: clang-format
@@ -16,11 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install clang-format
-        run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
-          sudo add-apt-repository -y "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main"
-          sudo apt-get update
-          sudo apt-get install -y clang-format-21
+        uses: ./.github/actions/install-llvm-21
+        with:
+          packages: clang-format-21
       - name: Check formatting
         run: ./scripts/check_clang_format.sh
 
@@ -29,13 +31,23 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
+      - uses: bazelbuild/setup-bazelisk@v3
       - name: Install clang-tidy
-        run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
-          sudo add-apt-repository -y "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main"
-          sudo apt-get update
-          sudo apt-get install -y clang-tidy-21
+        uses: ./.github/actions/install-llvm-21
+        with:
+          packages: clang-21 clang-tidy-21
+      - name: Mount bazel cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/bazel
+          key: bazel-clang-tidy-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
+          restore-keys: bazel-clang-tidy-
       - name: Run clang-tidy
+        env:
+          CC: clang-21
+          CXX: clang++-21
+          CLANG_TIDY_PATHS: src,tests
+          REFRESH_COMPILE_COMMANDS_BAZEL_ARGS: --config=ci
         run: ./scripts/run_clang_tidy.sh
 
   build-and-test:
@@ -56,17 +68,15 @@ jobs:
 
       - name: Install Clang 21
         if: matrix.compiler == 'clang-21'
-        run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
-          sudo add-apt-repository -y "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main"
-          sudo apt-get update
-          sudo apt-get install -y clang-21
+        uses: ./.github/actions/install-llvm-21
+        with:
+          packages: clang-21
 
       - name: Mount bazel cache
         uses: actions/cache@v5
         with:
           path: ~/.cache/bazel
-          key: bazel-${{ matrix.compiler }}-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc') }}
+          key: bazel-${{ matrix.compiler }}-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
           restore-keys: bazel-${{ matrix.compiler }}-
 
       - name: Build
@@ -76,8 +86,7 @@ jobs:
         run: >
           bazel build //:engine_cli //:engine_uci
           --jobs=$(nproc)
-          --copt=-march=x86-64-v3
-          --copt=-mavx2
+          --config=ci
 
       - name: Test
         env:
@@ -87,8 +96,7 @@ jobs:
           bazel test //tests/...
           --jobs=$(nproc)
           --config=release
-          --copt=-march=x86-64-v3
-          --copt=-mavx2
+          --config=ci
           --test_output=errors
 
   dead-code:
@@ -101,8 +109,43 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y universal-ctags ripgrep g++-14
+      - name: Mount bazel cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/bazel
+          key: bazel-dead-code-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
+          restore-keys: bazel-dead-code-
       - name: Run dead code checks
         env:
           CC: gcc-14
           CXX: g++-14
         run: ./scripts/check_dead_code.sh
+
+  sanitizer:
+    name: Sanitizer (ASan+UBSan)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: bazelbuild/setup-bazelisk@v3
+      - name: Install Clang 21
+        uses: ./.github/actions/install-llvm-21
+        with:
+          packages: clang-21
+      - name: Mount bazel cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/bazel
+          key: bazel-sanitize-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
+          restore-keys: bazel-sanitize-
+      - name: Test with ASan+UBSan
+        env:
+          CC: clang-21
+          CXX: clang++-21
+        run: >
+          bazel test //tests/...
+          --test_tag_filters=-noasan
+          --jobs=$(nproc)
+          --config=ci
+          --config=sanitize
+          --test_output=errors
+

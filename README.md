@@ -53,6 +53,27 @@ Run all tests:
 bazel test //tests/...
 ```
 
+Run the same checks as CI (format, tidy, tests, dead-code):
+```bash
+./scripts/check.sh --full
+```
+
+For a faster local loop (format + tests):
+```bash
+./scripts/check.sh
+```
+
+Optional pre-commit hook for formatting:
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Sanitizer tests (ASan+UBSan; skips `gtest_perft`):
+```bash
+./scripts/check.sh --sanitize
+```
+
 Run dead-code checks (unused-warning build + low-reference scan):
 ```bash
 ./scripts/check_dead_code.sh
