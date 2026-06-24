@@ -396,14 +396,14 @@ void UCIEngine::handleGo(const std::string& command) {
         }
     }
 
+    joinSearchThread();
+
     isSearching.store(true);
     isPondering.store(isPonder);
     stopRequested.store(false);
     searchStartTime = std::chrono::steady_clock::now();
     searchTimeLimit = timeForMove;
     searchDepthLimit = searchDepth;
-
-    joinSearchThread();
 
     searchStopSource = std::stop_source{};
     activeSearchStopToken = searchStopSource.get_token();
@@ -423,11 +423,18 @@ void UCIEngine::handleGo(const std::string& command) {
 }
 
 void UCIEngine::handleStop() {
+    if (!isSearching.load()) {
+        joinSearchThread();
+        stopRequested.store(false);
+        return;
+    }
+
     stopRequested.store(true);
     searchStopSource.request_stop();
+    joinSearchThread();
     isSearching.store(false);
     isPondering.store(false);
-    joinSearchThread();
+    stopRequested.store(false);
 }
 
 void UCIEngine::handlePonderHit() {
