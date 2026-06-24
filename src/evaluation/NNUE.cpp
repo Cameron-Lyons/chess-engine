@@ -202,7 +202,7 @@ void ClippedReLU::forward(const void* input, void* output) const {
 
 NNUEEvaluator::NNUEEvaluator() {
     inputLayer = std::make_unique<LinearLayer>(INPUT_DIMENSIONS, L1_SIZE);
-    activation1 = std::make_unique<ClippedReLU>(L1_SIZE);
+    activation1 = std::make_unique<ClippedReLU>(L2_SIZE);
     hidden1 = std::make_unique<LinearLayer>(2 * L1_SIZE, L2_SIZE);
     activation2 = std::make_unique<ClippedReLU>(L2_SIZE);
     hidden2 = std::make_unique<LinearLayer>(L2_SIZE, L3_SIZE);

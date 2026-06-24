@@ -47,7 +47,6 @@ jobs:
           CC: clang-21
           CXX: clang++-21
           CLANG_TIDY_PATHS: src,tests
-          REFRESH_COMPILE_COMMANDS_BAZEL_ARGS: --config=ci
         run: ./scripts/run_clang_tidy.sh
 
   build-and-test:
