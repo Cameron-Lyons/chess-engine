@@ -4,112 +4,118 @@ This directory contains the organized source code for the chess engine, structur
 
 ## Directory Structure
 
-### `core/` - Core Chess Data Structures
-Contains the fundamental chess data structures and basic functionality:
-- `ChessBoard.h/cpp` - Main board representation and state management
-- `ChessPiece.h` - Piece definitions and properties
-- `Bitboard.h` - Bitboard data structure for efficient piece tracking
-- `BitboardMoves.h/cpp` - Bitboard-based move generation
-- `BitboardOnly.h/cpp` - Bitboard-only board representation
-- `MagicBitboards.h/cpp` - Magic bitboard implementation for sliding pieces
+### `core/` — Core Chess Data Structures
+Fundamental chess data structures and rule enforcement:
+- `ChessBoard.h/cpp` — Board representation and state management
+- `ChessEngine.h` — High-level game engine wrapper
+- `ChessPiece.h`, `Move.h` — Piece and move definitions
+- `Bitboard.h`, `BitboardMoves.h/cpp` — Bitboard representation and move generation
+- `BitboardOnly.h/cpp` — Bitboard-only board representation
+- `MagicBitboards.h/cpp` — Magic bitboard sliding-piece attacks
+- `GameRules.h/cpp` — Check, checkmate, stalemate, draw detection
+- `CastlingConstants.h`, `MaterialValues.h`, `SquareSentinel.h` — Shared constants
 
-### `search/` - Search Algorithms and Move Generation
-Contains all search-related functionality:
-- `search.h/cpp` - Main search algorithms (minimax, alpha-beta)
-- `ValidMoves.h/cpp` - Legal move generation and validation
-- `AdvancedSearch.h/cpp` - Advanced search techniques (futility pruning, null move, extensions)
-- `LazySMP.h/cpp` - Lazy SMP (Symmetric Multi-Processing) parallel search
-- `LMR.h/cpp` - Enhanced Late Move Reductions
-- `TranspositionTableV2.h/cpp` - Advanced transposition table implementation
+### `search/` — Search and Move Generation
+Search algorithms, pruning, and supporting structures:
+- `search.h/cpp`, `search_pvs.cpp`, `search_root.cpp`, `search_move_picker.cpp` — Alpha-beta search with iterative deepening
+- `search_internal.h` — Shared search state, constants, and helpers
+- `ValidMoves.h/cpp`, `ValidMoves_generation.cpp`, `ValidMoves_internal.h` — Legal move generation
+- `AdvancedSearch.h/cpp` — Futility pruning, null move, extensions, aspiration windows
+- `LMR.h/cpp` — Late move reductions
+- `LazySMP.h/cpp` — Lazy SMP parallel search
+- `TranspositionTableV2.h/cpp` — Transposition table with Zobrist hashing
+- `BookUtils.h/cpp` — Opening book lookup
+- `ZobristKeys.h`, `SearchTuning.h` — Hash keys and tunable search parameters
 
-### `evaluation/` - Position Evaluation
-Contains position evaluation functions:
-- `Evaluation.h/cpp` - Basic position evaluation
-- `HybridEvaluator.h/cpp` - Hybrid evaluation with advanced features
-- `EvaluationTuning.h/cpp` - Tunable evaluation parameters
-- `NNUE.h` - NNUE (Efficiently Updatable Neural Network) evaluation
-- `NNUEBitboard.h/cpp` - Bitboard NNUE implementation
-- `PositionAnalysis.h/cpp` - Position analysis utilities
+### `evaluation/` — Position Evaluation
+Static evaluation and analysis:
+- `Evaluation.h/cpp` — Traditional heuristic evaluation
+- `HybridEvaluator.h/cpp` — Weighted blend of traditional and NNUE eval
+- `EvaluationTuning.h/cpp`, `TunableParams` (via `utils/`) — Texel-style parameter tuning
+- `NNUE.h/cpp`, `NNUEBitboard.h/cpp` — NNUE evaluation
+- `PositionAnalysis.h/cpp` — Detailed position analysis for CLI `analyze` mode
+- `GamePhaseConstants.h` — Opening/middlegame/endgame phase constants
 
-### `protocol/` - Communication Protocols
-Contains protocol implementations:
-- `uci.h/cpp` - Universal Chess Interface (UCI) protocol implementation
+### `protocol/` — Communication Protocols
+- `uci.h/cpp` — UCI protocol (options, `position`, `go`, tablebase/NNUE integration)
+- `uci_main.cpp` — UCI binary entry point
+- `uci_output.h` — Structured UCI output helpers
 
-### `ai/` - Advanced AI Features
-Contains advanced AI and machine learning components:
-- `NeuralNetwork.h/cpp` - Neural network evaluation and training
-- `EndgameTablebase.h/cpp` - Endgame tablebase support
-- `SyzygyTablebase.h/cpp` - Syzygy tablebase integration
+### `ai/` — Neural Networks and Tablebases
+- `NeuralNetwork.h/cpp` — Neural network eval, self-play training, and data generation
+- `SyzygyTablebase.h/cpp` — Syzygy WDL/DTZ probing (used in search and UCI root moves)
+- `EndgameTablebase.h/cpp` — Generic endgame tablebase wrapper and endgame knowledge heuristics
 
-### `utils/` - Utilities and Optimizations
-Contains utility functions and performance optimizations:
-- `engine_globals.h/cpp` - Global engine state and configuration
+### `utils/` — Shared Utilities
+- `engine_globals.h/cpp` — Global engine initialization and state
+- `ChessFormat.h` — FEN, move, and display formatting
+- `SearchThread.h` — Search thread helpers
+- `TunableParams.h` — Runtime-tunable engine parameters exposed via UCI
+
+### Entry Points (outside subdirectories)
+- `main.cpp` — Interactive CLI, training/tuning subcommands
+- `protocol/uci_main.cpp` — Dedicated UCI binary
 
 ## Implementation Status
 
-### Completed Features ✅
-- Core chess rules and board representation
+### Completed
+- Core chess rules, FEN parsing, and board representation
 - Bitboard move generation with magic bitboards
-- Alpha-beta search with iterative deepening
+- Alpha-beta search with iterative deepening and quiescence search
 - Transposition table with Zobrist hashing
-- Advanced pruning techniques (futility, null move, LMR)
+- Advanced pruning (futility, null move, LMR, aspiration windows)
 - Move ordering (MVV-LVA, history heuristic, killer moves)
-- Neural network evaluation framework
-- UCI protocol support
-- Time management system
-- Parallel search (Lazy SMP)
+- Opening book support (`BookUtils`, UCI `OwnBook` option)
+- Lazy SMP parallel search
+- Traditional evaluation with tunable parameters (Texel tuning via CLI)
+- NNUE evaluation and hybrid evaluator
+- Neural network self-play training and data generation (CLI `train` / `generate`)
+- Position analysis tooling (CLI `analyze`)
+- UCI protocol with Hash, Threads, MultiPV, NNUE, and tablebase options
+- Syzygy tablebase probing in search and at the root
+- Adaptive time management in CLI and UCI modes
 
-### In Progress 🔄
-- Endgame tablebase integration
-- Neural network training pipeline
-- Advanced time management features
+### In Progress
+- EndgameTablebase generic wrapper (Syzygy path is the primary integration today)
+- Neural network training pipeline polish (model versioning, stronger default nets)
+- SIMD-optimized evaluation paths
 
-### Planned 📋
-- Syzygy tablebase integration
+### Planned
+- Tournament / match mode
 - Advanced neural network architectures
-- Tournament mode
-- Position analysis tools
+- Lock-free transposition table
+- Broader Nalimov/custom tablebase support via `EndgameTablebase`
 
 ## Build System
 
-Bazel with `MODULE.bazel` (bzlmod) for dependency management. C++26 standard with `-Werror`.
+Bazel with `MODULE.bazel` (bzlmod) for dependency management. C++26 (`-std=c++26`) with `-Werror`.
 
-## Dependencies
+## Module Dependencies
 
-- Core modules have minimal dependencies
-- Search depends on core and evaluation
-- Evaluation depends on core
-- Protocol depends on search, evaluation, and AI
-- AI depends on core
-- Utils depend on core and search
+```
+core  ←  evaluation, search, ai, utils, protocol
+evaluation  ←  search, protocol
+search  ←  protocol, main
+ai  ←  evaluation, search, protocol
+utils  ←  search, protocol
+protocol  ←  (entry point; depends on search, evaluation, ai)
+```
+
+Search and evaluation both depend on `core`. The UCI and CLI entry points sit at the top and wire modules together at runtime.
 
 ## Usage
 
-To build the project:
+Build binaries:
 ```bash
 bazel build //:engine_cli //:engine_uci
 ```
 
-To run tests:
+Run tests:
 ```bash
 bazel test //tests/...
 ```
 
-The CLI executable is built as `engine_cli` and the UCI executable as `engine_uci`.
+- `engine_cli` — interactive play plus `analyze`, `train`, `test`, `generate`, and `tune` subcommands
+- `engine_uci` — UCI-only binary for GUIs
 
-## Next Steps
-
-1. **Endgame Tablebase Integration**
-   - Complete Syzygy tablebase support
-   - Add tablebase probing in search
-   - Implement endgame-specific evaluation
-
-2. **Neural Network Training**
-   - Complete training data generation
-   - Implement batch training pipeline
-   - Add model versioning and management
-
-3. **Performance Optimizations**
-   - SIMD-optimized evaluation
-   - Lock-free transposition table
-   - Cache-optimized data structures
+See the [root README](../README.md) for benchmarks, CI checks, and IDE setup.

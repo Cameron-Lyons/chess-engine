@@ -536,7 +536,7 @@ int main(int argc, char* argv[]) {
         initKingAttacks();
         InitZobrist();
         initializeHybridEvaluator();
-        std::cout << "Chess Engine v2.0 - Advanced Features Edition\n";
+        std::cout << "Chess Engine\n";
         std::cout << "=============================================\n";
         std::cout << "Features: Magic bitboards, Neural network evaluation, Pattern recognition\n";
         std::cout << "Use './engine_uci' for UCI mode\n\n";

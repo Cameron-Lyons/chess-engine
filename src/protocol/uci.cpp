@@ -201,7 +201,7 @@ void UCIEngine::processCommand(std::string_view command) {
 }
 
 void UCIEngine::handleUCI(std::string_view /*args*/) {
-    uci::output::println("id name ModernChess v2.0");
+    uci::output::println("id name ModernChess 1.0");
     uci::output::println("id author Chess Engine Team");
     uci::output::println("option name Hash type spin default 32 min 1 max 1024");
     uci::output::println("option name Threads type spin default 1 min 1 max 16");
