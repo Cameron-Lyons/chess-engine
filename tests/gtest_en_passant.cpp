@@ -42,8 +42,9 @@ TEST_F(EnPassantTest, DoublePushSetsEnPassantTargetSquare) {
     board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     ASSERT_TRUE(board.movePiece(12, 28));
-    ASSERT_TRUE(board.enPassantSquare.target().has_value());
-    EXPECT_EQ(*board.enPassantSquare.target(), 20);
+    const auto target = board.enPassantSquare.target();
+    ASSERT_TRUE(target.has_value());
+    EXPECT_EQ(target.value(), 20);
 }
 
 TEST_F(EnPassantTest, EnPassantRoundTripPreservesFenAndHash) {

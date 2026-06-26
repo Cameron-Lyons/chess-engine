@@ -30,9 +30,10 @@ TEST(Format, PieceLabelDescribesOccupiedSquares) {
 TEST(Format, UciNotationParsesStandardMoves) {
     const auto parsed = UCINotation::uciToMove("e2e4");
     ASSERT_TRUE(parsed.has_value());
-    EXPECT_EQ(parsed->first, 12);
-    EXPECT_EQ(parsed->second, 28);
-    EXPECT_EQ(UCINotation::moveToUCI(*parsed), "e2e4");
+    const auto move = parsed.value();
+    EXPECT_EQ(move.first, 12);
+    EXPECT_EQ(move.second, 28);
+    EXPECT_EQ(UCINotation::moveToUCI(move), "e2e4");
 }
 
 TEST(Format, UciNotationRejectsInvalidInput) {
