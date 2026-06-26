@@ -1,5 +1,5 @@
-#include "core/CastlingConstants.h"
 #include "core/BitboardMoves.h"
+#include "core/CastlingConstants.h"
 #include "core/ChessBoard.h"
 #include "gtest/gtest.h"
 #include "search/ValidMoves.h"

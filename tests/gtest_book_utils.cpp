@@ -33,12 +33,10 @@ TEST(BookUtils, LookupBookMoveFindsExactFenMatch) {
 TEST(BookUtils, LookupBookMoveFallsBackToNormalizedFen) {
     std::unordered_map<std::string, std::vector<std::string>> options;
     std::unordered_map<std::string, std::string> legacy;
-    const std::string normalized =
-        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+    const std::string normalized = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
     options[normalized] = {"e7e5"};
 
-    const std::string fenWithEp =
-        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
+    const std::string fenWithEp = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
     EXPECT_EQ(lookupBookMoveString(fenWithEp, options, legacy, false), "e7e5");
 }
 

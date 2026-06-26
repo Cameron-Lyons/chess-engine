@@ -93,7 +93,7 @@ TEST(TranspositionTable, HashfullReportsUsage) {
         bool found = false;
         TTv2::TTEntry* entry = table.probe(i * 0x10007ULL, found);
         entry->save(i * 0x10007ULL, static_cast<int16_t>(i), 0, TTv2::BOUND_EXACT, 6,
-                  TTv2::packMove(static_cast<int>(i % 64), static_cast<int>((i + 1) % 64)), 0);
+                    TTv2::packMove(static_cast<int>(i % 64), static_cast<int>((i + 1) % 64)), 0);
     }
 
     EXPECT_GT(table.hashfull(), 0);
