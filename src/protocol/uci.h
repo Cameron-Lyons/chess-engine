@@ -1,18 +1,16 @@
 #pragma once
 
-#include "../ai/EndgameTablebase.h"
-#include "../ai/NeuralNetwork.h"
 #include "../core/ChessBoard.h"
 #include "../search/AdvancedSearch.h"
 #include "../search/search.h"
 #include "../utils/SearchThread.h"
 
 #include <atomic>
-#include <cstddef>
 #include <memory>
 #include <optional>
 #include <stop_token>
 #include <string>
+#include <string_view>
 #include <vector>
 
 class UCIEngine {
@@ -27,7 +25,7 @@ public:
         int moveOverhead = 10;
         int minimumThinkingTime = 20;
         bool useNeuralNetwork = false;
-        float nnWeight = 0.7F;
+        std::string evalFile;
         bool useTablebases = true;
         std::string syzygyPath;
         bool debug = false;
@@ -37,20 +35,20 @@ public:
     UCIEngine();
     ~UCIEngine();
     void run();
-    void processCommand(const std::string& command);
-    void handleUCI();
-    void handleIsReady();
-    void handleSetOption(const std::string& command);
-    void handleNewGame();
-    void handlePosition(const std::string& command);
-    void handleGo(const std::string& command);
-    void handleStop();
-    void handlePonderHit();
-    void handleQuit();
-    void handleDebug(const std::string& command) const;
-    void handleRegister(const std::string& command);
-    void handleInfo(const std::string& command);
-    void handleBookStats();
+    void processCommand(std::string_view command);
+    void handleUCI(std::string_view args = {});
+    void handleIsReady(std::string_view args = {});
+    void handleSetOption(std::string_view command);
+    void handleNewGame(std::string_view args = {});
+    void handlePosition(std::string_view command);
+    void handleGo(std::string_view command);
+    void handleStop(std::string_view args = {});
+    void handlePonderHit(std::string_view args = {});
+    void handleQuit(std::string_view args = {});
+    void handleDebug(std::string_view command) const;
+    void handleRegister(std::string_view command);
+    void handleInfo(std::string_view command);
+    void handleBookStats(std::string_view args = {});
 
     void reportBestMove(const Move& move, const std::optional<Move>& ponderMove = std::nullopt);
     void reportInfo(int depth, int seldepth, int time, int nodes, int nps,
@@ -66,18 +64,13 @@ private:
         Board boardSnapshot;
     };
 
-    static constexpr std::size_t kSearchThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
-
     void searchThreadEntry(const SearchTask& task, std::stop_token stopToken);
     void joinSearchThread();
 
     Board board;
     std::vector<uint64_t> positionHistoryHashes;
     UCIOptions options;
-    std::unique_ptr<NeuralNetworkEvaluator> nnEvaluator;
-    std::unique_ptr<EndgameTablebase> tablebase;
     std::unique_ptr<EnhancedOpeningBook> openingBook;
-    std::unique_ptr<TimeManager> timeManager;
     std::atomic_bool isSearching{false};
     std::atomic_bool isPondering{false};
     std::atomic_bool stopRequested{false};
@@ -101,7 +94,7 @@ private:
     void setMoveOverhead(int overhead);
     void setMinimumThinkingTime(int time);
     void setUseNeuralNetwork(bool enabled);
-    void setNNWeight(float weight);
+    void setEvalFile(std::string_view path);
     void setUseTablebases(bool enabled);
     void setDebug(bool enabled);
     void setShowCurrLine(bool enabled);
@@ -110,7 +103,7 @@ private:
 class UCINotation {
 public:
     static std::string moveToUCI(const Move& move);
-    static std::optional<Move> uciToMove(const std::string& uciMove);
+    static std::optional<Move> uciToMove(std::string_view uciMove);
 };
 
 int runUCIEngine();

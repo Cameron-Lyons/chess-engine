@@ -10,40 +10,15 @@
 namespace LMREnhanced {
 
 class ReductionTable {
-private:
-    static constexpr int MAX_DEPTH = 64;
-    static constexpr int MAX_MOVES = 64;
-    static constexpr int ZERO_VALUE = 0;
-    static constexpr int ONE_STEP = 1;
-    static constexpr int MIN_DEPTH_FOR_REDUCTION = 3;
-    static constexpr int MIN_MOVES_FOR_REDUCTION = 2;
-    static constexpr double REDUCTION_BASE_OFFSET = 0.7;
-    static constexpr double REDUCTION_LOG_DIVISOR = 2.25;
-    static constexpr int DEPTH_REDUCTION_OFFSET = 2;
-    int table[MAX_DEPTH][MAX_MOVES];
-
 public:
-    ReductionTable() {
-
-        for (int depth = ZERO_VALUE; depth < MAX_DEPTH; ++depth) {
-            for (int moves = ZERO_VALUE; moves < MAX_MOVES; ++moves) {
-                if (depth < MIN_DEPTH_FOR_REDUCTION || moves < MIN_MOVES_FOR_REDUCTION) {
-                    table[depth][moves] = ZERO_VALUE;
-                } else {
-
-                    double base =
-                        REDUCTION_BASE_OFFSET +
-                        (std::log(depth) * std::log(moves + ONE_STEP) / REDUCTION_LOG_DIVISOR);
-                    table[depth][moves] = static_cast<int>(base);
-
-                    table[depth][moves] =
-                        std::min(table[depth][moves], depth - DEPTH_REDUCTION_OFFSET);
-                }
-            }
-        }
-    }
-
     int getReduction(int depth, int moveNumber) const {
+        static constexpr int MAX_DEPTH = 64;
+        static constexpr int MAX_MOVES = 64;
+        static constexpr int ZERO_VALUE = 0;
+        static constexpr int ONE_STEP = 1;
+        static constexpr int MIN_DEPTH_FOR_REDUCTION = 3;
+        static constexpr int MIN_MOVES_FOR_REDUCTION = 2;
+        static constexpr int DEPTH_REDUCTION_OFFSET = 2;
         const int clampedDepth = std::min(depth, MAX_DEPTH - ONE_STEP);
         const int clampedMoves = std::min(moveNumber, MAX_MOVES - ONE_STEP);
         if (clampedDepth < MIN_DEPTH_FOR_REDUCTION || clampedMoves < MIN_MOVES_FOR_REDUCTION) {
@@ -89,42 +64,32 @@ struct LMRParams {
 struct MoveClassification {
     static constexpr int DEFAULT_HISTORY_SCORE = 0;
     static constexpr int INITIAL_MOVE_NUMBER = 0;
-    bool isCapture;
-    bool givesCheck;
-    bool isKiller;
-    bool isCounter;
-    bool isHashMove;
-    bool isPromotion;
-    bool isCastling;
-    bool isPassed;
-    bool isTactical;
-    int historyScore;
-    int moveNumber;
-
-    MoveClassification()
-        : isCapture(false), givesCheck(false), isKiller(false), isCounter(false), isHashMove(false),
-          isPromotion(false), isCastling(false), isPassed(false), isTactical(false),
-          historyScore(DEFAULT_HISTORY_SCORE), moveNumber(INITIAL_MOVE_NUMBER) {}
+    bool isCapture = false;
+    bool givesCheck = false;
+    bool isKiller = false;
+    bool isCounter = false;
+    bool isHashMove = false;
+    bool isPromotion = false;
+    bool isCastling = false;
+    bool isPassed = false;
+    bool isTactical = false;
+    int historyScore = DEFAULT_HISTORY_SCORE;
+    int moveNumber = INITIAL_MOVE_NUMBER;
 };
 
 struct PositionContext {
     static constexpr int INITIAL_GAME_PHASE = 0;
     static constexpr int INITIAL_STATIC_EVAL = 0;
     static constexpr int INITIAL_EVAL_TREND = 0;
-    bool inCheck;
-    bool isPVNode;
-    bool isEndgame;
-    bool isTactical;
-    bool isImproving;
-    bool isSingular;
-    int gamePhase;
-    int staticEval;
-    int evalTrend;
-
-    PositionContext()
-        : inCheck(false), isPVNode(false), isEndgame(false), isTactical(false), isImproving(false),
-          isSingular(false), gamePhase(INITIAL_GAME_PHASE), staticEval(INITIAL_STATIC_EVAL),
-          evalTrend(INITIAL_EVAL_TREND) {}
+    bool inCheck = false;
+    bool isPVNode = false;
+    bool isEndgame = false;
+    bool isTactical = false;
+    bool isImproving = false;
+    bool isSingular = false;
+    int gamePhase = INITIAL_GAME_PHASE;
+    int staticEval = INITIAL_STATIC_EVAL;
+    int evalTrend = INITIAL_EVAL_TREND;
 };
 
 inline int calculateReduction(int depth, const MoveClassification& move,
