@@ -531,23 +531,25 @@ int PrincipalVariationSearch(Board& board, int depth, int alpha, int beta, bool 
         int searchDepth = std::max(kZero, depth - kOne + extension);
 
         if (movesSearched >= kLateMoveCountThreshold && searchDepth >= kLateMoveCountThreshold) {
-            LMREnhanced::MoveClassification mc;
-            mc.isCapture = isCaptureMove;
-            mc.givesCheck = givesCheckMove;
-            mc.isKiller = context.killerMoves.isKiller(ply, move);
-            mc.isHashMove = (move == ttData.bestMove);
-            mc.isCounter = (prevDest >= kZero && prevDest < kCounterMoveArrayLimit &&
-                            context.counterMoves[colorIdx][prevDest] == move);
-            mc.isPromotion = isPromotionMove;
-            mc.isCastling = isCastlingMove;
-            mc.historyScore = historyTable.get(move.first, move.second);
-            mc.moveNumber = movesSearched + kOne;
-            LMREnhanced::PositionContext pc;
-            pc.inCheck = sideInCheck;
-            pc.isPVNode = isPVNode;
-            pc.isEndgame = (gamePhase < kLmrEndgamePhaseThreshold);
-            pc.gamePhase = gamePhase;
-            pc.staticEval = staticEval;
+            LMREnhanced::MoveClassification mc{
+                .isCapture = isCaptureMove,
+                .givesCheck = givesCheckMove,
+                .isKiller = context.killerMoves.isKiller(ply, move),
+                .isCounter = (prevDest >= kZero && prevDest < kCounterMoveArrayLimit &&
+                              context.counterMoves[colorIdx][prevDest] == move),
+                .isHashMove = (move == ttData.bestMove),
+                .isPromotion = isPromotionMove,
+                .isCastling = isCastlingMove,
+                .historyScore = historyTable.get(move.first, move.second),
+                .moveNumber = movesSearched + kOne,
+            };
+            LMREnhanced::PositionContext pc{
+                .inCheck = sideInCheck,
+                .isPVNode = isPVNode,
+                .isEndgame = (gamePhase < kLmrEndgamePhaseThreshold),
+                .gamePhase = gamePhase,
+                .staticEval = staticEval,
+            };
             int reduction = LMREnhanced::calculateReduction(searchDepth, mc, pc);
             if (reduction > kZero) {
                 searchDepth = std::max(kOne, searchDepth - reduction);
@@ -911,20 +913,19 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 eval = AlphaBetaSearch(board, depth - kOne, alpha, beta, false, ply + kOne,
                                        historyTable, context, childZobristKey);
             } else {
-                LMREnhanced::MoveClassification mc;
-                mc.isCapture = isCaptureMove;
-                mc.givesCheck = isCheckMove;
-                mc.isKiller = context.killerMoves.isKiller(ply, move);
-                mc.isHashMove = (move == hashMove);
-                mc.isCounter = (abCounterMove.first >= kZero && move == abCounterMove);
-                mc.historyScore = histScore + contHistScore;
-                mc.moveNumber = moveCount + kOne;
-                LMREnhanced::PositionContext pc;
-                pc.inCheck = sideInCheck;
-                pc.isPVNode = false;
-                pc.isEndgame = false;
-                pc.gamePhase = kZero;
-                pc.staticEval = staticEval;
+                LMREnhanced::MoveClassification mc{
+                    .isCapture = isCaptureMove,
+                    .givesCheck = isCheckMove,
+                    .isKiller = context.killerMoves.isKiller(ply, move),
+                    .isCounter = (abCounterMove.first >= kZero && move == abCounterMove),
+                    .isHashMove = (move == hashMove),
+                    .historyScore = histScore + contHistScore,
+                    .moveNumber = moveCount + kOne,
+                };
+                LMREnhanced::PositionContext pc{
+                    .inCheck = sideInCheck,
+                    .staticEval = staticEval,
+                };
                 int reduction = LMREnhanced::calculateReduction(depth, mc, pc);
                 if (reduction > kZero && !isCaptureMove && !isCheckMove) {
                     const int reducedDepth = std::max(kZero, depth - kOne - reduction);
@@ -1071,20 +1072,19 @@ int AlphaBetaSearch(Board& board, int depth, int alpha, int beta, bool maximizin
                 eval = AlphaBetaSearch(board, depth - kOne, alpha, beta, true, ply + kOne,
                                        historyTable, context, childZobristKey);
             } else {
-                LMREnhanced::MoveClassification mc;
-                mc.isCapture = isCaptureMove;
-                mc.givesCheck = isCheckMove;
-                mc.isKiller = context.killerMoves.isKiller(ply, move);
-                mc.isHashMove = (move == hashMove);
-                mc.isCounter = (abCounterMove.first >= kZero && move == abCounterMove);
-                mc.historyScore = histScore + contHistScore;
-                mc.moveNumber = moveCount + kOne;
-                LMREnhanced::PositionContext pc;
-                pc.inCheck = sideInCheck;
-                pc.isPVNode = false;
-                pc.isEndgame = false;
-                pc.gamePhase = kZero;
-                pc.staticEval = staticEval;
+                LMREnhanced::MoveClassification mc{
+                    .isCapture = isCaptureMove,
+                    .givesCheck = isCheckMove,
+                    .isKiller = context.killerMoves.isKiller(ply, move),
+                    .isCounter = (abCounterMove.first >= kZero && move == abCounterMove),
+                    .isHashMove = (move == hashMove),
+                    .historyScore = histScore + contHistScore,
+                    .moveNumber = moveCount + kOne,
+                };
+                LMREnhanced::PositionContext pc{
+                    .inCheck = sideInCheck,
+                    .staticEval = staticEval,
+                };
                 int reduction = LMREnhanced::calculateReduction(depth, mc, pc);
                 if (reduction > kZero && !isCaptureMove && !isCheckMove) {
                     const int reducedDepth = std::max(kZero, depth - kOne - reduction);
