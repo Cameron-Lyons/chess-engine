@@ -1,4 +1,4 @@
-load("@rules_cc//cc:defs.bzl", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 common_test_copts = [
     "-Werror",
@@ -6,23 +6,39 @@ common_test_copts = [
     "-Wno-character-conversion",
 ]
 
+cc_library(
+    name = "test_helpers",
+    hdrs = ["test_helpers.h"],
+    testonly = True,
+    deps = [
+        "//:engine_lib",
+        "@googletest//:gtest",
+    ],
+)
+
 [
     cc_test(
         name = test_name,
         srcs = [test_name + ".cpp"],
         copts = common_test_copts,
         deps = [
+            ":test_helpers",
             "//:engine_lib",
             "@googletest//:gtest_main",
         ],
     )
     for test_name in [
         "gtest_bitboard_moves",
+        "gtest_book_utils",
+        "gtest_castling",
         "gtest_comprehensive",
         "gtest_crash",
         "gtest_draw_rules",
+        "gtest_en_passant",
         "gtest_engine_improvements",
+        "gtest_evaluation",
         "gtest_fen",
+        "gtest_format",
         "gtest_game_rules",
         "gtest_legality_regressions",
         "gtest_killer_moves",
@@ -35,6 +51,7 @@ common_test_copts = [
         "gtest_search_terminal",
         "gtest_tablebase",
         "gtest_tactical_suite",
+        "gtest_transposition_table",
         "gtest_uci",
         "gtest_wac",
     ]
@@ -47,6 +64,7 @@ cc_test(
     tags = ["noasan"],
     copts = common_test_copts,
     deps = [
+        ":test_helpers",
         "//:engine_lib",
         "@googletest//:gtest_main",
     ],

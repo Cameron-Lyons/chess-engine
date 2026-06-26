@@ -71,7 +71,7 @@ TEST(UCI, ReportsUciOptionsAndReady) {
     engine.processCommand("isready");
 
     const std::string output = capture.str();
-    EXPECT_NE(output.find("id name ModernChess v2.0"), std::string::npos);
+    EXPECT_NE(output.find("id name ModernChess 1.0"), std::string::npos);
     EXPECT_NE(output.find("option name Hash"), std::string::npos);
     EXPECT_NE(output.find("uciok"), std::string::npos);
     EXPECT_NE(output.find("readyok"), std::string::npos);
