@@ -42,9 +42,11 @@ TEST_F(EnPassantTest, DoublePushSetsEnPassantTargetSquare) {
     board.InitializeFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     ASSERT_TRUE(board.movePiece(12, 28));
-    const auto target = board.enPassantSquare.target();
-    ASSERT_TRUE(target.has_value());
-    EXPECT_EQ(target.value(), 20);
+    if (const auto target = board.enPassantSquare.target(); target.has_value()) {
+        EXPECT_EQ(*target, 20);
+    } else {
+        FAIL() << "Expected en passant target after pawn double push";
+    }
 }
 
 TEST_F(EnPassantTest, EnPassantRoundTripPreservesFenAndHash) {
