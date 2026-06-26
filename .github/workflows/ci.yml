@@ -18,7 +18,7 @@ jobs:
     name: clang-format
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install clang-format
         uses: ./.github/actions/install-llvm-21
         with:
@@ -30,14 +30,14 @@ jobs:
     name: clang-tidy
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: bazelbuild/setup-bazelisk@v3
       - name: Install clang-tidy
         uses: ./.github/actions/install-llvm-21
         with:
           packages: clang-21 clang-tidy-21
       - name: Mount bazel cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/bazel
           key: bazel-clang-tidy-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
@@ -62,7 +62,7 @@ jobs:
             cc: clang-21
             cxx: clang++-21
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: bazelbuild/setup-bazelisk@v3
 
       - name: Install Clang 21
@@ -72,7 +72,7 @@ jobs:
           packages: clang-21
 
       - name: Mount bazel cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/bazel
           key: bazel-${{ matrix.compiler }}-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
@@ -102,14 +102,14 @@ jobs:
     name: Dead Code Check
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: bazelbuild/setup-bazelisk@v3
       - name: Install dead code dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y universal-ctags ripgrep g++-14
       - name: Mount bazel cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/bazel
           key: bazel-dead-code-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
@@ -124,14 +124,14 @@ jobs:
     name: Sanitizer (ASan+UBSan)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: bazelbuild/setup-bazelisk@v3
       - name: Install Clang 21
         uses: ./.github/actions/install-llvm-21
         with:
           packages: clang-21
       - name: Mount bazel cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/bazel
           key: bazel-sanitize-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
