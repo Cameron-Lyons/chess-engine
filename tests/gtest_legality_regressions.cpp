@@ -4,15 +4,6 @@
 #include "search/ValidMoves.h"
 #include "search/search.h"
 
-#include <algorithm>
-
-namespace {
-bool containsMove(const std::vector<Move>& moves, int from, int to) {
-    return std::ranges::any_of(
-        moves, [&](const Move& move) { return move.first == from && move.second == to; });
-}
-} // namespace
-
 class LegalityRegressionTest : public ::testing::Test {
 protected:
     void SetUp() override {
