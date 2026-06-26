@@ -37,7 +37,7 @@ jobs:
         with:
           packages: clang-21 clang-tidy-21
       - name: Mount bazel cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/bazel
           key: bazel-clang-tidy-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
@@ -72,7 +72,7 @@ jobs:
           packages: clang-21
 
       - name: Mount bazel cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/bazel
           key: bazel-${{ matrix.compiler }}-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
@@ -109,7 +109,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y universal-ctags ripgrep g++-14
       - name: Mount bazel cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/bazel
           key: bazel-dead-code-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
@@ -131,7 +131,7 @@ jobs:
         with:
           packages: clang-21
       - name: Mount bazel cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/bazel
           key: bazel-sanitize-${{ hashFiles('MODULE.bazel', 'BUILD.bazel', '.bazelrc', 'tests/BUILD.bazel') }}
