@@ -59,7 +59,8 @@ constexpr std::string_view kStartingFen =
     return start == std::string_view::npos ? std::string_view{} : value.substr(start);
 }
 
-[[nodiscard]] std::pair<std::string_view, std::string_view> splitFirstToken(std::string_view value) {
+[[nodiscard]] std::pair<std::string_view, std::string_view> splitFirstToken(
+    std::string_view value) {
     value = ltrim(value);
     if (value.empty()) {
         return {{}, {}};
@@ -99,7 +100,8 @@ private:
     return parsed;
 }
 
-[[nodiscard]] std::pair<std::string_view, std::string_view> parseSetOption(std::string_view command) {
+[[nodiscard]] std::pair<std::string_view, std::string_view> parseSetOption(
+    std::string_view command) {
     const std::size_t namePos = command.find("name ");
     if (namePos == std::string_view::npos) {
         return {{}, {}};
@@ -173,22 +175,14 @@ void UCIEngine::processCommand(std::string_view command) {
     }
 
     static constexpr std::array<CommandHandler, 12> kCommands = {
-        &UCIEngine::handleUCI,
-        &UCIEngine::handleIsReady,
-        &UCIEngine::handleSetOption,
-        &UCIEngine::handleNewGame,
-        &UCIEngine::handlePosition,
-        &UCIEngine::handleGo,
-        &UCIEngine::handleStop,
-        &UCIEngine::handlePonderHit,
-        &UCIEngine::handleQuit,
-        &UCIEngine::handleRegister,
-        &UCIEngine::handleInfo,
-        &UCIEngine::handleBookStats,
+        &UCIEngine::handleUCI,      &UCIEngine::handleIsReady,   &UCIEngine::handleSetOption,
+        &UCIEngine::handleNewGame,  &UCIEngine::handlePosition,  &UCIEngine::handleGo,
+        &UCIEngine::handleStop,     &UCIEngine::handlePonderHit, &UCIEngine::handleQuit,
+        &UCIEngine::handleRegister, &UCIEngine::handleInfo,      &UCIEngine::handleBookStats,
     };
     static constexpr std::array<std::string_view, kCommands.size()> kCommandNames = {
-        "uci",       "isready",   "setoption", "ucinewgame", "position", "go",
-        "stop",      "ponderhit", "quit",      "register",   "info",     "bookstats",
+        "uci",  "isready",   "setoption", "ucinewgame", "position", "go",
+        "stop", "ponderhit", "quit",      "register",   "info",     "bookstats",
     };
 
     if (cmd == "debug") {
@@ -242,12 +236,12 @@ void UCIEngine::handleSetOption(std::string_view command) {
         return;
     }
 
-    static constexpr std::array<std::pair<std::string_view, void (UCIEngine::*)(int)>, 5> kSpinOptions =
-        {{{"Hash", &UCIEngine::setHashSize},
-          {"Threads", &UCIEngine::setThreads},
-          {"MultiPV", &UCIEngine::setMultiPV},
-          {"Move Overhead", &UCIEngine::setMoveOverhead},
-          {"Minimum Thinking Time", &UCIEngine::setMinimumThinkingTime}}};
+    static constexpr std::array<std::pair<std::string_view, void (UCIEngine::*)(int)>, 5>
+        kSpinOptions = {{{"Hash", &UCIEngine::setHashSize},
+                         {"Threads", &UCIEngine::setThreads},
+                         {"MultiPV", &UCIEngine::setMultiPV},
+                         {"Move Overhead", &UCIEngine::setMoveOverhead},
+                         {"Minimum Thinking Time", &UCIEngine::setMinimumThinkingTime}}};
 
     for (const auto& [optionName, setter] : kSpinOptions) {
         if (name == optionName) {

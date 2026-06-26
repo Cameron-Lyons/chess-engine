@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gtest/gtest.h"
 #include "core/BitboardMoves.h"
 #include "core/ChessBoard.h"
+#include "gtest/gtest.h"
 #include "search/ValidMoves.h"
 #include "search/search.h"
 
@@ -16,8 +16,9 @@ inline void initEngineForTests() {
     InitZobrist();
 }
 
-inline SearchResult runSearch(Board& board, int depth, int timeMs, int threads = 1, int contempt = 0,
-                              int multiPV = 1, int optimalTime = 0, int maxTime = 0) {
+inline SearchResult runSearch(Board& board, int depth, int timeMs, int threads = 1,
+                              int contempt = 0, int multiPV = 1, int optimalTime = 0,
+                              int maxTime = 0) {
     SearchConfig config;
     config.maxDepth = depth;
     config.timeLimitMs = timeMs;

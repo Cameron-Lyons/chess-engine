@@ -6,6 +6,7 @@
 #include "../utils/SearchThread.h"
 
 #include <atomic>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <stop_token>
@@ -82,6 +83,7 @@ private:
     SearchThread searchThread;
     SearchTask activeSearchTask{};
     SearchContext searchContext;
+    static constexpr std::size_t kSearchThreadStackBytes = 8ULL * 1024ULL * 1024ULL;
 
     SearchResult performSearch(const Board& board, int depth, int timeLimit, int optimalTime = 0,
                                int maxTime = 0, std::stop_token stopToken = {});
